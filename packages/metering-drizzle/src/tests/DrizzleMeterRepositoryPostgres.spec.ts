@@ -1,4 +1,4 @@
-import { MeterRegistry } from "@croco/metering-core";
+import { InvalidMeterMetadataProblem, MeterRegistry } from "@croco/metering-core";
 import type { BillableUsageJournal } from "@croco/metering-core";
 import { TxManager } from "@croco/tx-core";
 import { createDrizzleTxAdapter } from "@croco/tx-drizzle";
@@ -199,6 +199,29 @@ describe.skipIf(connectionString.length === 0)(
             value: firstRecord.value,
           }),
         ]);
+      } finally {
+        await client.end();
+      }
+    });
+
+    it("rejects native JSONB null and string definitions instead of coercing metadata", async () => {
+      const client = new Client({ connectionString });
+      await client.connect();
+      try {
+        await createLegacyMetersTable(client);
+        const db = drizzle(client);
+        await addMeterDefinitionFieldsPostgres(db);
+        const repository = createRepository(db);
+        await repository.save({ tenantId: "t1", meterId: "api_calls", type: "COUNT" });
+        for (const metadata of [null, "{}"]) {
+          await client.query("UPDATE meters SET metadata = $1::jsonb WHERE tenant_id = $2", [
+            JSON.stringify(metadata),
+            "t1",
+          ]);
+          await expect(repository.findByMeterIdAndTenant("api_calls", "t1")).rejects.toBeInstanceOf(
+            InvalidMeterMetadataProblem,
+          );
+        }
       } finally {
         await client.end();
       }

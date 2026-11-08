@@ -29018,6 +29018,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "InvalidMeterMetadataProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/InvalidMeterMetadataProblem",
+              "declarationKind": "class"
+            },
+            {
               "name": "InvalidMeterProblem",
               "exportKind": "named",
               "source": "./libs/problems/InvalidMeterProblem",
@@ -29196,6 +29202,12 @@
               "exportKind": "named",
               "source": "./libs/decorators/Metered",
               "declarationKind": "function"
+            },
+            {
+              "name": "snapshotMeterMetadata",
+              "exportKind": "named",
+              "source": "./libs/meterMetadata",
+              "declarationKind": "function"
             }
           ],
           "typeExports": [
@@ -29291,6 +29303,16 @@
             },
             {
               "name": "MeterDefinition",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "MeterDefinitionMetadata",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "MeterDefinitionMetadataValue",
               "exportKind": "named",
               "source": "./libs/types"
             },

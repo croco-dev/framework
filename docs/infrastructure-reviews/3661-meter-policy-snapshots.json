@@ -4,52 +4,169 @@
     {
       "package": "metering-core",
       "classification": "pure-contract",
-      "reason": "Caller and repository mutations cannot alter cached quota, billing intent, nested metadata or dates without registration or tenant refresh.",
+      "reason": "Meter definitions admit only JSON and valid Date metadata, reject unsupported data with a stable Problem, and isolate registration, repository and reader snapshots before installing policy cache entries.",
       "files": {
-        "packages/metering-core/src/libs/MeterRegistry.ts": "ac044ea94ac4ea6db3b667514b4ece1fe56688787db19edb0e26473b47cf7b3e"
+        "packages/metering-core/src/index.ts": "e0a3fe89742d5498c2eb9fc0188811ea3641b5f4a685504f30b71adcf4c46f19",
+        "packages/metering-core/src/libs/MeterRegistry.ts": "6ae17b67a111e6cec0ece667b02941c2ea4314ae5defd7866217ac18ab9d25f8",
+        "packages/metering-core/src/libs/MeterRepository.ts": "50b0c8c85283ec00abf8666ed6abab6018afb7a410bf6400ce533f95e6d95c5b",
+        "packages/metering-core/src/libs/meterMetadata.ts": "b701757906751d6bf6786c9599739f1ebc68c4ac3a996500bf4e24ddf50869e0",
+        "packages/metering-core/src/libs/problems/InvalidMeterMetadataProblem.ts": "2cae95ca35d90fff4b08cbc1c11c695bcf9e2142ba8524b987ef8e17f10fec29",
+        "packages/metering-core/src/libs/types.ts": "f5924a7a1ea35c7f5c1b795eec182df0e43b3d64bb3602adf4b2965fcfd96e70"
       },
       "catalogRuntimes": [],
       "profiles": {
         "kubernetes": {
           "result": "not-applicable",
-          "reason": "Registry snapshots copy local meter data at cache and caller boundaries. They require no host capability, storage operation, transport or lifecycle integration. Existing repository and journal contracts remain the owners of persistence and billing durability.",
+          "reason": "This change owns local definition-data admission, copying and diagnostics. It introduces no host capability, transport, initialization, flush or shutdown boundary. Existing provider runtime claims remain unchanged.",
           "providers": [],
           "constraints": [
-            "No new deployment support or live provider certification is claimed. Existing TTL and refresh generation fencing are preserved."
+            "No storage engine, runtime manifest or infrastructure support claim changes."
           ],
           "references": [
-            "packages/metering-core/src/libs/MeterRegistry.ts",
-            "packages/metering-core/src/tests/MeterRegistry.spec.ts",
-            "packages/metering-core/src/tests/MeteringService.spec.ts",
-            "packages/metering-core/src/libs/MeterRepository.ts"
+            "packages/metering-core/src/libs/meterMetadata.ts",
+            "packages/metering-core/src/libs/problems/InvalidMeterMetadataProblem.ts",
+            "packages/metering-core/src/tests/MeterDefinitionMetadata.spec.ts"
           ]
         },
         "aws-lambda": {
           "result": "not-applicable",
-          "reason": "Registry snapshots copy local meter data at cache and caller boundaries. They require no host capability, storage operation, transport or lifecycle integration. Existing repository and journal contracts remain the owners of persistence and billing durability.",
+          "reason": "This change owns local definition-data admission, copying and diagnostics. It introduces no host capability, transport, initialization, flush or shutdown boundary. Existing provider runtime claims remain unchanged.",
           "providers": [],
           "constraints": [
-            "No new deployment support or live provider certification is claimed. Existing TTL and refresh generation fencing are preserved."
+            "No storage engine, runtime manifest or infrastructure support claim changes."
           ],
           "references": [
-            "packages/metering-core/src/libs/MeterRegistry.ts",
-            "packages/metering-core/src/tests/MeterRegistry.spec.ts",
-            "packages/metering-core/src/tests/MeteringService.spec.ts",
-            "packages/metering-core/src/libs/MeterRepository.ts"
+            "packages/metering-core/src/libs/meterMetadata.ts",
+            "packages/metering-core/src/libs/problems/InvalidMeterMetadataProblem.ts",
+            "packages/metering-core/src/tests/MeterDefinitionMetadata.spec.ts"
           ]
         },
         "cloudflare": {
           "result": "not-applicable",
-          "reason": "Registry snapshots copy local meter data at cache and caller boundaries. They require no host capability, storage operation, transport or lifecycle integration. Existing repository and journal contracts remain the owners of persistence and billing durability.",
+          "reason": "This change owns local definition-data admission, copying and diagnostics. It introduces no host capability, transport, initialization, flush or shutdown boundary. Existing provider runtime claims remain unchanged.",
           "providers": [],
           "constraints": [
-            "No new deployment support or live provider certification is claimed. Existing TTL and refresh generation fencing are preserved."
+            "No storage engine, runtime manifest or infrastructure support claim changes."
           ],
           "references": [
-            "packages/metering-core/src/libs/MeterRegistry.ts",
-            "packages/metering-core/src/tests/MeterRegistry.spec.ts",
-            "packages/metering-core/src/tests/MeteringService.spec.ts",
-            "packages/metering-core/src/libs/MeterRepository.ts"
+            "packages/metering-core/src/libs/meterMetadata.ts",
+            "packages/metering-core/src/libs/problems/InvalidMeterMetadataProblem.ts",
+            "packages/metering-core/src/tests/MeterDefinitionMetadata.spec.ts"
+          ]
+        }
+      }
+    },
+    {
+      "package": "metering-drizzle",
+      "classification": "pure-contract",
+      "reason": "The existing Drizzle provider reuses the core metadata snapshot contract before writes and after JSON decoding. Invalid stored metadata fails explicitly; schema, codec representation and transaction ownership are unchanged.",
+      "files": {
+        "packages/metering-drizzle/src/libs/DrizzleMeterRepository.ts": "b7e43282bfc48726671d33b0d8f4edcd3ceaa037d4c96d8d5048a6f8f3a1ee3a"
+      },
+      "catalogRuntimes": ["node", "lambda"],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "This change owns local definition-data admission, copying and diagnostics. It introduces no host capability, transport, initialization, flush or shutdown boundary. Existing provider runtime claims remain unchanged.",
+          "providers": ["@croco/metering-drizzle"],
+          "constraints": [
+            "No deployment support or live infrastructure certification is established. The Drizzle provider retains its existing Node/Lambda runtime boundary; Workers support is not introduced."
+          ],
+          "references": [
+            "packages/metering-core/src/libs/meterMetadata.ts",
+            "packages/metering-core/src/libs/problems/InvalidMeterMetadataProblem.ts",
+            "packages/metering-core/src/tests/MeterDefinitionMetadata.spec.ts",
+            "packages/metering-drizzle/src/libs/DrizzleMeterRepository.ts",
+            "packages/metering-drizzle/src/libs/schema.ts",
+            "packages/metering-drizzle/src/tests/DrizzleMeterRepository.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "This change owns local definition-data admission, copying and diagnostics. It introduces no host capability, transport, initialization, flush or shutdown boundary. Existing provider runtime claims remain unchanged.",
+          "providers": ["@croco/metering-drizzle"],
+          "constraints": [
+            "No deployment support or live infrastructure certification is established. The Drizzle provider retains its existing Node/Lambda runtime boundary; Workers support is not introduced."
+          ],
+          "references": [
+            "packages/metering-core/src/libs/meterMetadata.ts",
+            "packages/metering-core/src/libs/problems/InvalidMeterMetadataProblem.ts",
+            "packages/metering-core/src/tests/MeterDefinitionMetadata.spec.ts",
+            "packages/metering-drizzle/src/libs/DrizzleMeterRepository.ts",
+            "packages/metering-drizzle/src/libs/schema.ts",
+            "packages/metering-drizzle/src/tests/DrizzleMeterRepository.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "This change owns local definition-data admission, copying and diagnostics. It introduces no host capability, transport, initialization, flush or shutdown boundary. Existing provider runtime claims remain unchanged.",
+          "providers": ["@croco/metering-drizzle"],
+          "constraints": [
+            "No deployment support or live infrastructure certification is established. The Drizzle provider retains its existing Node/Lambda runtime boundary; Workers support is not introduced."
+          ],
+          "references": [
+            "packages/metering-core/src/libs/meterMetadata.ts",
+            "packages/metering-core/src/libs/problems/InvalidMeterMetadataProblem.ts",
+            "packages/metering-core/src/tests/MeterDefinitionMetadata.spec.ts",
+            "packages/metering-drizzle/src/libs/DrizzleMeterRepository.ts",
+            "packages/metering-drizzle/src/libs/schema.ts",
+            "packages/metering-drizzle/src/tests/DrizzleMeterRepository.spec.ts"
+          ]
+        }
+      }
+    },
+    {
+      "package": "problems-core",
+      "classification": "pure-contract",
+      "reason": "The generated Problem registry exposes the new metering metadata validation diagnostic and its canonical source location.",
+      "files": {
+        "packages/problems-core/src/generated/problem-code-registry.ts": "91db46f9786df056683877379f578ab632fb49f8950514d997c8fa73b8eff387"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "This change owns local definition-data admission, copying and diagnostics. It introduces no host capability, transport, initialization, flush or shutdown boundary. Existing provider runtime claims remain unchanged.",
+          "providers": [],
+          "constraints": [
+            "No storage engine, runtime manifest or infrastructure support claim changes."
+          ],
+          "references": [
+            "packages/metering-core/src/libs/meterMetadata.ts",
+            "packages/metering-core/src/libs/problems/InvalidMeterMetadataProblem.ts",
+            "packages/metering-core/src/tests/MeterDefinitionMetadata.spec.ts",
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "docs/problem-code-registry.json"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "This change owns local definition-data admission, copying and diagnostics. It introduces no host capability, transport, initialization, flush or shutdown boundary. Existing provider runtime claims remain unchanged.",
+          "providers": [],
+          "constraints": [
+            "No storage engine, runtime manifest or infrastructure support claim changes."
+          ],
+          "references": [
+            "packages/metering-core/src/libs/meterMetadata.ts",
+            "packages/metering-core/src/libs/problems/InvalidMeterMetadataProblem.ts",
+            "packages/metering-core/src/tests/MeterDefinitionMetadata.spec.ts",
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "docs/problem-code-registry.json"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "This change owns local definition-data admission, copying and diagnostics. It introduces no host capability, transport, initialization, flush or shutdown boundary. Existing provider runtime claims remain unchanged.",
+          "providers": [],
+          "constraints": [
+            "No storage engine, runtime manifest or infrastructure support claim changes."
+          ],
+          "references": [
+            "packages/metering-core/src/libs/meterMetadata.ts",
+            "packages/metering-core/src/libs/problems/InvalidMeterMetadataProblem.ts",
+            "packages/metering-core/src/tests/MeterDefinitionMetadata.spec.ts",
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "docs/problem-code-registry.json"
           ]
         }
       }

@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MeterRegistry } from "../libs/MeterRegistry";
 import type { MeterRepository } from "../libs/MeterRepository";
+import { InvalidMeterMetadataProblem } from "../libs/problems/InvalidMeterMetadataProblem";
 import { InvalidMeterProblem } from "../libs/problems/InvalidMeterProblem";
 import type { BillableUsageJournal } from "../libs/BillableUsageJournal";
 import type { MeterDefinition, MeterRegistrationOptions } from "../libs/types";
@@ -34,6 +35,7 @@ describe("MeterRegistry", () => {
   });
 
   afterEach(() => {
+    vi.restoreAllMocks();
     vi.useRealTimers();
   });
 
@@ -137,14 +139,14 @@ describe("MeterRegistry", () => {
     });
 
     it("should replace snapshots only through registration and expired tenant refresh", async () => {
-      vi.useFakeTimers();
+      const now = vi.spyOn(Date, "now").mockReturnValue(1_700_000_000_000);
       vi.mocked(mockRepository.findAll).mockResolvedValue([policy()]);
       await registry.loadAll();
       vi.mocked(mockRepository.save).mockResolvedValue({ ...policy(), quota: 23 });
       const registered = await registry.register({ ...policy(), quota: 23 });
       expect(registered.quota).toBe(23);
       changePolicy(registered);
-      vi.advanceTimersByTime(60_000);
+      now.mockReturnValue(1_700_000_060_000);
       const replacement = policy();
       replacement.quota = 41;
       vi.mocked(mockRepository.findByTenant).mockResolvedValue([replacement]);
@@ -153,6 +155,62 @@ describe("MeterRegistry", () => {
       changePolicy(refreshed[0]);
       changePolicy(replacement);
       expect((await registry.getOrThrow("tenant-1", "api_calls")).quota).toBe(41);
+    });
+  });
+
+  describe("metadata admission", () => {
+    const invalid = () =>
+      createMeter({
+        metadata: { callback: () => "private" } as unknown as MeterDefinition["metadata"],
+      });
+
+    it("rejects invalid registration metadata before repository I/O", async () => {
+      await expect(registry.register(invalid())).rejects.toMatchObject({
+        code: "metering/invalid-meter-metadata",
+        extensions: { path: "/metadata/callback" },
+      });
+      expect(mockRepository.save).not.toHaveBeenCalled();
+    });
+
+    it.each(["loadAll", "get", "register", "getByTenant"] as const)(
+      "rejects invalid repository metadata from %s without installing it",
+      async (operation) => {
+        const previous = createMeter({ meterId: "previous", quota: 17 });
+        vi.mocked(mockRepository.findAll).mockResolvedValue([previous]);
+        await registry.loadAll();
+        const unsupported = invalid();
+        vi.mocked(mockRepository.findAll).mockResolvedValue([
+          createMeter({ meterId: "replacement" }),
+          unsupported,
+        ]);
+        vi.mocked(mockRepository.findByMeterIdAndTenant).mockResolvedValue(unsupported);
+        vi.mocked(mockRepository.findByTenant).mockResolvedValue([unsupported]);
+        vi.mocked(mockRepository.save).mockResolvedValue(unsupported);
+        const reading =
+          operation === "loadAll"
+            ? registry.loadAll()
+            : operation === "get"
+              ? registry.get("tenant-1", "api_calls")
+              : operation === "register"
+                ? registry.register({ tenantId: "tenant-1", meterId: "api_calls", type: "COUNT" })
+                : (registry.clearCache(), registry.getByTenant("tenant-1"));
+        await expect(reading).rejects.toBeInstanceOf(InvalidMeterMetadataProblem);
+        if (operation !== "getByTenant")
+          expect(await registry.getOrThrow("tenant-1", "previous")).toEqual(previous);
+        vi.mocked(mockRepository.findByMeterIdAndTenant).mockResolvedValue(null);
+        expect(await registry.get("tenant-1", "api_calls")).toBeNull();
+      },
+    );
+
+    it("preserves a fresh cached meter after a rejected tenant refresh", async () => {
+      const previous = createMeter({ quota: 17 });
+      vi.mocked(mockRepository.findByMeterIdAndTenant).mockResolvedValue(previous);
+      await registry.getOrThrow("tenant-1", "api_calls");
+      vi.mocked(mockRepository.findByTenant).mockResolvedValue([invalid()]);
+      await expect(registry.getByTenant("tenant-1")).rejects.toBeInstanceOf(
+        InvalidMeterMetadataProblem,
+      );
+      expect(await registry.getOrThrow("tenant-1", "api_calls")).toEqual(previous);
     });
   });
 

@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export type CrocoProblemRegistry = {
   readonly version: "croco.problem-code-registry.v1";
-  readonly problemCount: 1163;
+  readonly problemCount: 1164;
   readonly problems: readonly [
     {
       readonly code: "ACCESS_DENIED";
@@ -20683,7 +20683,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/metering-drizzle/src/libs/DrizzleMeterRepository.ts";
-          readonly line: 272;
+          readonly line: 280;
           readonly column: 13;
           readonly kind: "problem-factory";
         },
@@ -20711,7 +20711,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/metering-drizzle/src/libs/DrizzleMeterRepository.ts";
-          readonly line: 186;
+          readonly line: 192;
           readonly column: 17;
           readonly kind: "problem-factory";
         },
@@ -21056,6 +21056,34 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/metering-core/src/libs/problems/InvalidMeterDimensionProblem.ts";
+          readonly line: 6;
+          readonly column: 5;
+          readonly kind: "problem-constructor";
+        },
+      ];
+    },
+    {
+      readonly code: "metering/invalid-meter-metadata";
+      readonly category: "ValidationError";
+      readonly status: 422;
+      readonly title: "Validation Error";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#metering-invalid-meter-metadata";
+      readonly recovery: {
+        readonly cause: "The request or generated contract failed schema or semantic validation.";
+        readonly userAction: "Fix the invalid fields and retry with schema-conformant input.";
+        readonly operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/metering-core/src/libs/problems/InvalidMeterMetadataProblem.ts";
           readonly line: 6;
           readonly column: 5;
           readonly kind: "problem-constructor";
@@ -32878,7 +32906,7 @@ export type CrocoProblemRegistry = {
 
 export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 1163,
+  problemCount: 1164,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -55944,7 +55972,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/metering-drizzle/src/libs/DrizzleMeterRepository.ts",
-          line: 272,
+          line: 280,
           column: 13,
           kind: "problem-factory",
         },
@@ -55977,7 +56005,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/metering-drizzle/src/libs/DrizzleMeterRepository.ts",
-          line: 186,
+          line: 192,
           column: 17,
           kind: "problem-factory",
         },
@@ -56370,6 +56398,36 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/metering-core/src/libs/problems/InvalidMeterDimensionProblem.ts",
+          line: 6,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "metering/invalid-meter-metadata",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#metering-invalid-meter-metadata",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/metering-core/src/libs/problems/InvalidMeterMetadataProblem.ts",
           line: 6,
           column: 5,
           kind: "problem-constructor",

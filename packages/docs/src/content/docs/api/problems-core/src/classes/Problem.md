@@ -444,6 +444,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`BillableUsageJournalRequiredProblem`](/api/metering-core/src/classes/billableusagejournalrequiredproblem/)
 - [`DuplicateRecordProblem`](/api/metering-core/src/classes/duplicaterecordproblem/)
 - [`InvalidMeterDimensionProblem`](/api/metering-core/src/classes/invalidmeterdimensionproblem/)
+- [`InvalidMeterMetadataProblem`](/api/metering-core/src/classes/invalidmetermetadataproblem/)
 - [`InvalidMeterProblem`](/api/metering-core/src/classes/invalidmeterproblem/)
 - [`InvalidUsageEnvelopeProblem`](/api/metering-core/src/classes/invalidusageenvelopeproblem/)
 - [`InvalidUsageQueryProblem`](/api/metering-core/src/classes/invalidusagequeryproblem/)

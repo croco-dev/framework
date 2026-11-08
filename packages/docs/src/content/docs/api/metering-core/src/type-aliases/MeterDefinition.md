@@ -43,7 +43,7 @@ Meter 정의 (DB 저장)
 
 ### metadata?
 
-> `optional` **metadata?**: `Record`\<`string`, `unknown`\>
+> `optional` **metadata?**: [`MeterDefinitionMetadata`](/api/metering-core/src/type-aliases/meterdefinitionmetadata/)
 
 ---
 

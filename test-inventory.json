@@ -4032,6 +4032,12 @@
       "owner": "@croco/metering-core"
     },
     {
+      "path": "packages/metering-core/src/tests/MeterDefinitionMetadata.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/metering-core"
+    },
+    {
       "path": "packages/metering-core/src/tests/MeterRef.spec.ts",
       "lane": "fast",
       "qualifiers": [],

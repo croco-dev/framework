@@ -11,6 +11,19 @@ export type MeterType = "COUNT" | "UNIQUE_COUNT" | "CUSTOM_EVENT";
  */
 export type AggregationPeriod = "hour" | "day" | "billing_cycle";
 
+/** JSON data plus valid Date values; executable and opaque values are not meter definition metadata. */
+export type MeterDefinitionMetadataValue =
+  | null
+  | string
+  | number
+  | boolean
+  | Date
+  | readonly MeterDefinitionMetadataValue[]
+  | MeterDefinitionMetadata;
+
+/** A plain string-keyed object. Registry admission also rejects non-finite numbers, cycles and accessors. */
+export type MeterDefinitionMetadata = { [key: string]: MeterDefinitionMetadataValue };
+
 /**
  * Meter 정의 (DB 저장)
  */
@@ -24,7 +37,7 @@ export type MeterDefinition = {
   unit?: string;
   quota?: number;
   allowOverQuota?: boolean;
-  metadata?: Record<string, unknown>;
+  metadata?: MeterDefinitionMetadata;
   createdAt: Date;
   updatedAt: Date;
 };

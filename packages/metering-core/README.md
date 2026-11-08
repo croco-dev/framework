@@ -46,6 +46,55 @@ key와 enum 값만 허용되며 provider billing dimension과 자유 형식 appl
 합니다. 소수, 0, 음수, 비유한 수, 이 범위를 벗어난 값은 idempotency key를 획득하거나 usage를 저장하기
 전에 `InvalidUsageValueProblem`으로 거부됩니다.
 
+## Meter 정의 metadata와 호환성
+
+`MeterDefinition.metadata`와 `MeterRegistrationOptions.metadata`는 `MeterDefinitionMetadata` 타입을 사용합니다.
+최상위 값은 일반 객체 또는 prototype이 없는 객체이며, 중첩 값은 문자열, 유한한 수, boolean, `null`,
+빈칸 없는 배열, 일반 객체, 유효한 `Date`만 허용합니다. 같은 객체를 여러 위치에서 참조하는 것은 허용하지만
+순환 참조는 허용하지 않습니다. 이 계약은 meter 정의에 적용되며 usage record의 application metadata는
+기존 계약을 따릅니다.
+
+```ts typecheck
+import { snapshotMeterMetadata, type MeterDefinitionMetadata } from "@croco/metering-core";
+
+export const metadata: MeterDefinitionMetadata = snapshotMeterMetadata(
+  {
+    plan: "starter",
+    effectiveAt: new Date("2026-01-02T03:04:05Z"),
+    flags: [true, null, 17],
+  },
+  { tenantId: "tenant-123", meterId: "api_calls" },
+);
+```
+
+함수, 중첩 `undefined`, symbol, bigint, `NaN`·Infinity, `Map`·`Set`, 클래스 인스턴스, 유효하지 않은 날짜는
+거절됩니다. 객체의 속성은 열거 가능한 문자열 key의 data property여야 하므로 getter/setter, 숨겨진 속성,
+symbol key도 거절합니다. 배열의 빈칸·추가 속성과 `Date`의 사용자 정의 데이터 속성도 지원하지 않습니다.
+검증 중 getter를 실행하거나 잘못된 값을 문자열·`null`로 바꾸지 않습니다.
+
+잘못된 값은 `InvalidMeterMetadataProblem` (`metering/invalid-meter-metadata`)으로 실패합니다.
+`extensions`의 `tenantId`, `meterId`, JSON Pointer `path`, `reason`으로 수정할 위치를 확인할 수 있으며
+거절한 값 자체는 오류에 포함하지 않습니다. `snapshotMeterMetadata()`는 외부 입력이나 커스텀 repository의
+반환값을 검증하고 독립 복사본을 반환하는 동일한 경계입니다. 호출자 객체를 freeze하지 않습니다.
+
+`MeterRegistry`는 등록 입력을 repository I/O 전에 검증하고 복사합니다. repository 반환값도 캐시 설치 전에
+검증하므로 잘못된 `loadAll`이나 tenant refresh는 이전 캐시를 교체하지 않습니다. 해당 호출은 Problem으로
+실패하며, 잘못된 정책을 조용히 사용하지 않습니다. 조회 결과와 입력의 중첩 객체·`Date`를 변경해도 캐시의
+quota·billing 정책은 바뀌지 않으며, 정책 갱신에는 정상적인 등록 또는 refresh가 필요합니다.
+
+이전 `Record<string, unknown>` 계약에서 함수 등 임의 값을 넣었던 호출자는 업그레이드 전에 값을 정리해야
+합니다. 함수·외부 객체는 제품 의미에 맞는 식별자나 데이터로, `Map`·`Set`은 일반 객체·배열로 바꾸고,
+중첩 `undefined`는 제거하거나 의미가 맞는 경우 `null`을 사용하세요. bigint는 정밀도를 잃는 숫자 변환 대신
+명시적인 문자열 표현 등을 선택해야 합니다. 새 타입으로 typecheck하고 JavaScript 호출자와 기존 저장 데이터도
+등록·조회 테스트로 검증하세요. 자동 데이터 정리나 DB migration은 실행하지 않습니다.
+
+`@croco/metering-drizzle`도 저장 전에 같은 검증을 실행하며, 잘못된 저장 JSON이나 계약 밖의 조회 결과를
+빈 metadata로 대체하지 않습니다. 기존 행이 거절되면 오류의 meter/경로를 확인해 데이터를 수정한 후 다시
+조회·refresh해야 합니다. 최상위 JSON `null`·문자열이나 NULL metadata도 일반 객체로 정리해야 합니다.
+TEXT 컬럼의 JSON만 디코딩하며, 네이티브 JSON 컬럼의 문자열을 객체로 다시 해석하지 않습니다.
+저장 형식은 바뀌지 않습니다. 기본 Drizzle JSON codec은 metadata의 `Date`를 ISO
+문자열로 저장하고 조회에서도 문자열로 반환합니다. 메모리 내 `Date` 보존과 저장 후 날짜 복원은 별개입니다.
+
 ## Durable billable usage delivery
 
 `billing: "required"` meter를 등록하거나 기록하려면 `durability: "persistent"`를 선언하는

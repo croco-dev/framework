@@ -5,6 +5,8 @@ import type { MeterDefinition, MeterRegistrationOptions, UsageRecord } from "./t
  *
  * @description
  * 구현체는 사용자가 제공 (예: Drizzle, Prisma 등)
+ * Meter definition metadata must satisfy MeterDefinitionMetadata. Validate externally decoded data with
+ * snapshotMeterMetadata and use its returned snapshot; do not silently drop unsupported values.
  * metering-core는 이 추상 클래스만 의존
  */
 export abstract class MeterRepository {
