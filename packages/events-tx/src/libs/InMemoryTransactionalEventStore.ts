@@ -59,8 +59,51 @@ function cloneDate(value: Date | undefined): Date | undefined {
   return value ? new Date(value.getTime()) : undefined;
 }
 
+function cloneValue(value: unknown, copies = new WeakMap<object, object>()): unknown {
+  if (typeof value === "function" || typeof value === "symbol") {
+    throw new OutboxStorageProblem(
+      "In-memory event snapshots cannot contain executable or symbol values.",
+    );
+  }
+  if (value === null || typeof value !== "object") {
+    return value;
+  }
+  const existing = copies.get(value);
+  if (existing) {
+    return existing;
+  }
+
+  const prototype: unknown = Object.getPrototypeOf(value);
+  let copy: object;
+  if (prototype === Date.prototype && value instanceof Date) {
+    copy = new Date(value.getTime());
+  } else if (Array.isArray(value) && prototype === Array.prototype) {
+    const entries: unknown[] = [];
+    entries.length = value.length;
+    copy = entries;
+  } else if (prototype === Object.prototype || prototype === null) {
+    copy = Object.create(prototype) as object;
+  } else {
+    throw new OutboxStorageProblem(
+      "In-memory event snapshots require plain records, arrays, or Date values.",
+    );
+  }
+  copies.set(value, copy);
+  for (const key of Reflect.ownKeys(value)) {
+    if (Object.prototype.propertyIsEnumerable.call(value, key)) {
+      Object.defineProperty(copy, key, {
+        value: cloneValue(Reflect.get(value, key), copies),
+        enumerable: true,
+        configurable: true,
+        writable: true,
+      });
+    }
+  }
+  return copy;
+}
+
 function cloneRecord(value: Record<string, unknown>): Record<string, unknown> {
-  return { ...value };
+  return cloneValue(value) as Record<string, unknown>;
 }
 
 function cloneDiagnostic(diagnostic: TransactionalEventDiagnostic): TransactionalEventDiagnostic {
@@ -266,6 +309,20 @@ export class InMemoryTransactionalEventStore implements TransactionalEventStore<
     input: AppendOutboxMessageInput,
     context?: TransactionalEventStoreContext<InMemoryTransactionalEventStoreClient>,
   ): Promise<TransactionalOutboxMessage> {
+    input = {
+      id: input.id,
+      eventId: input.eventId,
+      eventType: input.eventType,
+      aggregateId: input.aggregateId,
+      idempotencyKey: input.idempotencyKey,
+      payload: cloneRecord(input.payload),
+      metadata: cloneRecord(input.metadata ?? {}),
+      traceContext: input.traceContext ? { ...input.traceContext } : undefined,
+      maxAttempts: input.maxAttempts,
+      visibleAt: new Date(input.visibleAt.getTime()),
+      occurredAt: new Date(input.occurredAt.getTime()),
+      diagnostics: input.diagnostics?.map(cloneDiagnostic),
+    };
     const directOwner = await this.acquireOutboxReservation(input.idempotencyKey, context?.client);
     try {
       assertNotAborted(
@@ -527,6 +584,7 @@ export class InMemoryTransactionalEventStore implements TransactionalEventStore<
     input: InboxStartInput,
     context?: TransactionalEventStoreContext<InMemoryTransactionalEventStoreClient>,
   ): Promise<InboxStartResult> {
+    const metadata = cloneRecord(input.metadata ?? {});
     await this.waitForPendingCommits(context);
     const lockedUntil = resolveInboxLockedUntil(input);
     const state = this.resolveState(context);
@@ -574,7 +632,7 @@ export class InMemoryTransactionalEventStore implements TransactionalEventStore<
       createdAt: new Date(input.now.getTime()),
       updatedAt: new Date(input.now.getTime()),
       lockedUntil,
-      metadata: cloneRecord(input.metadata ?? {}),
+      metadata,
       diagnostics: [
         createTransactionalEventDiagnostic(
           "events-tx/inbox-started",
@@ -597,6 +655,7 @@ export class InMemoryTransactionalEventStore implements TransactionalEventStore<
     input: InboxCompletionInput,
     context?: TransactionalEventStoreContext<InMemoryTransactionalEventStoreClient>,
   ): Promise<TransactionalInboxRecord> {
+    const diagnostic = input.diagnostic ? cloneDiagnostic(input.diagnostic) : undefined;
     await this.waitForPendingCommits(context);
     const state = this.resolveState(context);
     const storageKey = inboxStorageKey(input.consumerId, input.inboxKey);
@@ -609,7 +668,7 @@ export class InMemoryTransactionalEventStore implements TransactionalEventStore<
       processedAt: new Date(input.now.getTime()),
       diagnostics: [
         ...record.diagnostics.map(cloneDiagnostic),
-        ...(input.diagnostic ? [cloneDiagnostic(input.diagnostic)] : []),
+        ...(diagnostic ? [diagnostic] : []),
       ],
     };
     delete updated.lockedUntil;
@@ -621,6 +680,7 @@ export class InMemoryTransactionalEventStore implements TransactionalEventStore<
     input: InboxFailureInput,
     context?: TransactionalEventStoreContext<InMemoryTransactionalEventStoreClient>,
   ): Promise<TransactionalInboxRecord> {
+    const diagnostic = input.diagnostic ? cloneDiagnostic(input.diagnostic) : undefined;
     await this.waitForPendingCommits(context);
     const state = this.resolveState(context);
     const storageKey = inboxStorageKey(input.consumerId, input.inboxKey);
@@ -635,7 +695,7 @@ export class InMemoryTransactionalEventStore implements TransactionalEventStore<
       failureReason: input.reason,
       diagnostics: [
         ...record.diagnostics.map(cloneDiagnostic),
-        ...(input.diagnostic ? [cloneDiagnostic(input.diagnostic)] : []),
+        ...(diagnostic ? [diagnostic] : []),
       ],
     };
     delete updated.lockedUntil;

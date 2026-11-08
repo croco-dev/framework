@@ -120,6 +120,16 @@ Operators can reconcile interrupted work by listing `processing` records and com
 - `InMemoryTransactionalEventStore` provides test/local storage plus a `createTxAdapter()` helper for `TxManager` rollback and savepoint fixtures.
 - `DrizzleTransactionalEventStore` uses Drizzle query-client methods and exported PostgreSQL table definitions: `transactionalOutboxMessages` and `transactionalInboxRecords`. It uses unique-key conflict handling for outbox idempotency and inbox dedupe.
 
+The in-memory adapter owns independent snapshots of payload, metadata and diagnostic details on input,
+query, claim and transaction boundaries. Changing a returned object does not update storage. Transaction
+and savepoint rollback discard nested changes; committed state also stays independent of retained transaction clients.
+Snapshots preserve primitive data, `undefined`, arrays (including holes), plain or null-prototype records and
+`Date` values, including shared references and cycles within each record. Functions, symbol values and other
+instances (such as `Map`, `Set`, buffers and custom classes) throw `OutboxStorageProblem` before that write
+changes storage. Callers that previously passed these values must convert them to plain data first. The
+existing JSON storage comparison for idempotent outbox replay is unchanged; snapshot support does not make
+cyclic or bigint payloads compatible with that comparison. This adapter remains process-local test storage.
+
 PostgreSQL outbox claims select and update a batch in one statement with `FOR UPDATE SKIP LOCKED`. Concurrent workers skip locked messages and claim other eligible aggregates. The store uses the supplied transaction client when present; claims in an explicit transaction hold their locks until that transaction ends.
 
 For each non-null `aggregateId`, only the first unfinished message in `(createdAt, id)` order can be claimed. A `pending`, `publishing`, or `retrying` predecessor blocks its successors even during a retry delay or an expired lease; an expired predecessor can be reclaimed only while `attempts < maxAttempts`. Published, poisoned, and dead-lettered predecessors no longer block. Messages without an aggregate can be claimed independently, and eligible aggregates retain visibility-time priority.
