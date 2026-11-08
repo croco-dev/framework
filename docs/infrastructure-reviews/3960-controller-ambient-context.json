@@ -47,6 +47,53 @@
           ]
         }
       }
+    },
+    {
+      "package": "problems-core",
+      "classification": "pure-contract",
+      "reason": "Synchronize generated Problem source-location line metadata after the loader change; no error code, serialization format or host execution contract changes.",
+      "files": {
+        "packages/problems-core/src/generated/problem-code-registry.ts": "157be163a136f09e3a6a690e75f31e651452b8d2e21ea865827dac05b34661f9"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Generated Problem source-location metadata follows the build-time loader source. Diagnostic codes, status, recovery behavior and deployed host requirements are unchanged.",
+          "providers": [],
+          "constraints": [
+            "The existing generator requires Node filesystem and compiler access in the build environment; this is not a deployed host support claim."
+          ],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "docs/problem-code-registry.json"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Generated Problem source-location metadata follows the build-time loader source. Diagnostic codes, status, recovery behavior and deployed host requirements are unchanged.",
+          "providers": [],
+          "constraints": [
+            "The existing generator requires Node filesystem and compiler access in the build environment; this is not a deployed host support claim."
+          ],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "docs/problem-code-registry.json"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Generated Problem source-location metadata follows the build-time loader source. Diagnostic codes, status, recovery behavior and deployed host requirements are unchanged.",
+          "providers": [],
+          "constraints": [
+            "The existing generator requires Node filesystem and compiler access in the build environment; this is not a deployed host support claim."
+          ],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "docs/problem-code-registry.json"
+          ]
+        }
+      }
     }
   ]
 }
