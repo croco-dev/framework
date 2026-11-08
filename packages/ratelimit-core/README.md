@@ -48,6 +48,11 @@ bucket을 공유하려면 같은 `policy` 이름을 명시하세요. 이름까�
 영수증으로 새 quota를 되돌릴 수 없습니다. 이 보장은 프로세스·Worker isolate·Lambda 인스턴스 사이에
 공유되지 않습니다. 여러 인스턴스의 공통 한도에는 원자적 연산을 제공하는 외부 저장소가 필요합니다.
 
+`increment()`·`getCount()`·`expire()`는 같은 키의 요청 허용량과 분리된 counter를 사용합니다.
+counter의 증감·만료는 허용량과 유효한 환급 영수증을 바꾸지 않으며, check·refund·윈도우 교체도
+counter 값과 TTL을 바꾸지 않습니다. `reset(key)`는 해당 키의 counter, 요청 허용량과 영수증을 모두
+초기화합니다. `getCount()`는 요청 허용 횟수를 조회하는 API가 아닙니다.
+
 ## API 레퍼런스
 
 ### 핵심 클래스

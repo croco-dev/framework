@@ -403,7 +403,8 @@ describe("InMemoryRateLimitStore", () => {
         await fixedStore.expire("user:window", ttlMs);
 
         expect(await fixedStore.getCount("user:counter")).toBe(0);
-        expect(await fixedStore.getCount("user:window")).toBe(1);
+        expect(await fixedStore.getCount("user:window")).toBe(0);
+        expect((await fixedStore.check("user:window", fixedPolicy)).remaining).toBe(8);
       },
     );
 
@@ -420,16 +421,17 @@ describe("InMemoryRateLimitStore", () => {
       expect(await fixedStore.getCount("user:missing")).toBe(3);
     });
 
-    it("should continue incrementing and resetting existing policy windows", async () => {
+    it("should increment counters independently and reset both counters and policy windows", async () => {
       await fixedStore.check("user:window", fixedPolicy);
 
-      expect(await fixedStore.increment("user:window", 5)).toBe(6);
-      expect(await fixedStore.getCount("user:window")).toBe(6);
-      expect((await fixedStore.check("user:window", fixedPolicy)).remaining).toBe(3);
+      expect(await fixedStore.increment("user:window", 5)).toBe(5);
+      expect(await fixedStore.getCount("user:window")).toBe(5);
+      expect((await fixedStore.check("user:window", fixedPolicy)).remaining).toBe(8);
 
       await fixedStore.reset("user:window");
 
       expect(await fixedStore.getCount("user:window")).toBe(0);
+      expect((await fixedStore.check("user:window", fixedPolicy)).remaining).toBe(9);
       expect(await fixedStore.increment("user:window", 2)).toBe(2);
       expect(await fixedStore.getCount("user:window")).toBe(2);
     });
@@ -444,19 +446,44 @@ describe("InMemoryRateLimitStore", () => {
       expect(await fixedStore.getCount("user:window")).toBe(0);
     });
 
-    it("should replace a standalone counter with a policy window without restoring it after pruning", async () => {
+    it("should preserve a counter and its TTL when creating a policy window", async () => {
       await fixedStore.increment("user:counter", 5);
       await fixedStore.expire("user:counter", 100);
 
       expect((await fixedStore.check("user:counter", fixedPolicy)).remaining).toBe(9);
-      expect(await fixedStore.increment("user:counter", 2)).toBe(3);
+      expect(await fixedStore.increment("user:counter", 2)).toBe(7);
+      now = 99;
+      expect(await fixedStore.getCount("user:counter")).toBe(7);
       now = 100;
-      expect(await fixedStore.getCount("user:counter")).toBe(3);
+      expect(await fixedStore.getCount("user:counter")).toBe(0);
       now = 1001;
 
       expect(await fixedStore.pruneExpired()).toBe(1);
       expect(await fixedStore.getCount("user:counter")).toBe(0);
       expect(await fixedStore.increment("user:counter")).toBe(1);
+    });
+
+    it("should keep the counter TTL across a full refund, window rollover and pruning", async () => {
+      await fixedStore.increment("user:counter", 5);
+      await fixedStore.expire("user:counter", 2000);
+      const first = await fixedStore.check("user:counter", fixedPolicy);
+      expect(
+        (await fixedStore.refund("user:counter", fixedPolicy, first.refundReceipt)).refunded,
+      ).toBe(true);
+      expect(await fixedStore.getCount("user:counter")).toBe(5);
+      const second = await fixedStore.check("user:counter", fixedPolicy);
+      now = 1000;
+      expect((await fixedStore.check("user:counter", fixedPolicy)).remaining).toBe(9);
+      expect(
+        (await fixedStore.refund("user:counter", fixedPolicy, second.refundReceipt)).refunded,
+      ).toBe(false);
+      expect(await fixedStore.getCount("user:counter")).toBe(5);
+      now = 1999;
+      expect(await fixedStore.getCount("user:counter")).toBe(5);
+      now = 2000;
+      expect(await fixedStore.pruneExpired()).toBe(1);
+      expect(await fixedStore.getCount("user:counter")).toBe(0);
+      expect((await fixedStore.check("user:counter", fixedPolicy)).remaining).toBe(9);
     });
   });
 
@@ -1198,3 +1225,129 @@ describe.each([FixedWindowInMemoryStore, SlidingWindowInMemoryStore, TokenBucket
     });
   },
 );
+
+describe.each([
+  {
+    name: "fixed",
+    Store: FixedWindowInMemoryStore,
+    policy: { name: "mixed", algorithm: "fixed", limit: 3, windowMs: 60_000 },
+  },
+  {
+    name: "sliding",
+    Store: SlidingWindowInMemoryStore,
+    policy: { name: "mixed", algorithm: "sliding", limit: 3, windowMs: 60_000 },
+  },
+  {
+    name: "token-bucket",
+    Store: TokenBucketInMemoryStore,
+    policy: {
+      name: "mixed",
+      algorithm: "token-bucket",
+      capacity: 3,
+      refillRate: 1,
+      refillIntervalMs: 60_000,
+    },
+  },
+] as const)("$name mixed counter/admission conformance", ({ Store, policy }) => {
+  let now: number;
+  let store: DistributedRateLimitStore & { close(): void };
+  const key = "user:mixed";
+
+  beforeEach(() => {
+    now = 60_000;
+    store = new Store({ now: () => now, pruneIntervalMs: 0 });
+  });
+
+  afterEach(() => store.close());
+
+  it("preserves counters across admission and partial or full refunds", async () => {
+    expect(await store.increment(key, 5)).toBe(5);
+    const first = await store.check(key, policy);
+    expect(first).toMatchObject({ success: true, remaining: 2 });
+    expect(await store.getCount(key)).toBe(5);
+    expect(await store.increment(key, 5)).toBe(10);
+    const second = await store.check(key, policy);
+    expect(second).toMatchObject({ success: true, remaining: 1 });
+    expect(await store.getCount(key)).toBe(10);
+
+    expect(await store.refund(key, policy, first.refundReceipt)).toMatchObject({
+      refunded: true,
+      remaining: 2,
+    });
+    expect(await store.getCount(key)).toBe(10);
+    expect(await store.refund(key, policy, second.refundReceipt)).toMatchObject({
+      refunded: true,
+      remaining: 3,
+    });
+    expect(await store.getCount(key)).toBe(10);
+    expect((await store.refund(key, policy, second.refundReceipt)).refunded).toBe(false);
+    expect((await store.check(key, policy)).remaining).toBe(2);
+    expect(await store.getCount(key)).toBe(10);
+  });
+
+  it.each([0, -1000, 1000])(
+    "expires only the counter for TTL %s, preserving quota and a valid refund receipt",
+    async (ttlMs) => {
+      const first = await store.check(key, policy);
+      await store.check(key, policy);
+      await store.check(key, policy);
+      expect(await store.increment(key, 5)).toBe(5);
+      await store.expire(key, ttlMs);
+      expect(await store.getCount(key)).toBe(ttlMs > 0 ? 5 : 0);
+      expect((await store.check(key, policy)).success).toBe(false);
+      if (ttlMs > 0) {
+        now += ttlMs - 1;
+        expect(await store.increment(key, 2)).toBe(7);
+        expect(await store.getCount(key)).toBe(7);
+        now++;
+      }
+      expect(await store.pruneExpired()).toBe(ttlMs > 0 ? 1 : 0);
+      expect(await store.getCount(key)).toBe(0);
+      expect((await store.check(key, policy)).success).toBe(false);
+      now++;
+      expect(await store.getCount(key)).toBe(0);
+      expect(await store.refund(key, policy, first.refundReceipt)).toMatchObject({
+        refunded: true,
+        remaining: 1,
+      });
+      expect(await store.getCount(key)).toBe(0);
+      expect((await store.check(key, policy)).success).toBe(true);
+      expect((await store.check(key, policy)).success).toBe(false);
+    },
+  );
+
+  it("resets both states for one key and invalidates its old refund receipts", async () => {
+    const first = await store.check(key, policy);
+    await store.increment(key, 5);
+    await store.expire(key, 1000);
+    await store.increment("other", 8);
+    await store.reset(key);
+    const next = await store.check(key, policy);
+    expect(next.remaining).toBe(2);
+    expect(await store.getCount(key)).toBe(0);
+    expect((await store.refund(key, policy, first.refundReceipt)).refunded).toBe(false);
+    expect((await store.check(key, policy)).remaining).toBe(1);
+    expect(await store.increment(key, 2)).toBe(2);
+    now += 1000;
+    expect(await store.getCount(key)).toBe(2);
+    expect(await store.getCount("other")).toBe(8);
+  });
+
+  it("keeps admission bounded when concurrent counter operations include negative amounts", async () => {
+    const [first, increment, second, decrement, third] = await Promise.all([
+      store.check(key, policy),
+      store.increment(key, 5),
+      store.check(key, policy),
+      store.increment(key, -12),
+      store.check(key, policy),
+    ]);
+    expect([first.remaining, second.remaining, third.remaining]).toEqual([2, 1, 0]);
+    expect([increment, decrement]).toEqual([5, -7]);
+    expect(await store.getCount(key)).toBe(-7);
+    expect((await store.check(key, policy)).success).toBe(false);
+    expect((await store.refund(key, policy, first.refundReceipt)).refunded).toBe(true);
+    expect((await store.check(key, policy)).success).toBe(true);
+    expect((await store.check(key, policy)).success).toBe(false);
+    expect(await store.getCount(key)).toBe(-7);
+  });
+});

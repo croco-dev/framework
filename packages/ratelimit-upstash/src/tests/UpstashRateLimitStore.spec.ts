@@ -45,6 +45,78 @@ function createMockRedis(): {
   };
 }
 
+describe.each([
+  {
+    name: "fixed",
+    Store: UpstashFixedWindowStore,
+    policy: createFixedWindowPolicy("mixed", 3, 60_000),
+  },
+  {
+    name: "sliding",
+    Store: UpstashSlidingWindowStore,
+    policy: createSlidingWindowPolicy("mixed", 3, 60_000),
+  },
+  {
+    name: "token-bucket",
+    Store: UpstashTokenBucketStore,
+    policy: createTokenBucketPolicy("mixed", 3, 1, 60_000),
+  },
+])("$name mixed counter/admission Redis fixture", ({ Store, policy }) => {
+  it("keeps mixed counter values independent from admission, refunds and counter expiration", async () => {
+    const redis = createMockRedis();
+    const values = new Map<string, number>();
+    redis.incrbyfloat.mockImplementation((key: string, amount: number) => {
+      const next = (values.get(key) ?? 0) + amount;
+      values.set(key, next);
+      return next;
+    });
+    redis.get.mockImplementation((key: string) => values.get(key) ?? null);
+    redis.del.mockImplementation((key: string) => Number(values.delete(key)));
+    redis.expire.mockImplementation((key: string, ttl: number) => {
+      if (ttl <= 0) values.delete(key);
+      return 1;
+    });
+    // Admission/refund responses are protocol fixtures, not execution of Redis Lua.
+    redis.eval
+      .mockResolvedValueOnce([1, 1, 2, "60000"])
+      .mockResolvedValueOnce([1, 2, 1, "60000"])
+      .mockResolvedValueOnce([1, 1, 2, "60000"])
+      .mockResolvedValueOnce([1, 0, 3, "60000"])
+      .mockResolvedValueOnce([1, 1, 2, "60000"]);
+    const prefix = "mixed-fixture";
+    const key = "user:mixed";
+    const store = new Store({ redis: redis as never, prefix, now: () => 60_000 });
+
+    expect(await store.increment(key, 5)).toBe(5);
+    const first = await store.check(key, policy);
+    expect(first).toMatchObject({ success: true, remaining: 2 });
+    expect(await store.getCount(key)).toBe(5);
+    expect(await store.increment(key, 5)).toBe(10);
+    const second = await store.check(key, policy);
+    expect(second).toMatchObject({ success: true, remaining: 1 });
+    expect(await store.getCount(key)).toBe(10);
+    expect((await store.refund(key, policy, first.refundReceipt)).refunded).toBe(true);
+    expect(await store.getCount(key)).toBe(10);
+    expect((await store.refund(key, policy, second.refundReceipt)).refunded).toBe(true);
+    expect(await store.getCount(key)).toBe(10);
+    await store.expire(key, 0);
+    expect(await store.getCount(key)).toBe(0);
+    expect((await store.check(key, policy)).remaining).toBe(2);
+
+    const counterKey = `${prefix}:${key}:increment`;
+    expect(redis.incrbyfloat.mock.calls).toEqual([
+      [counterKey, 5],
+      [counterKey, 5],
+    ]);
+    expect(redis.get.mock.calls.every(([readKey]) => readKey === counterKey)).toBe(true);
+    expect(redis.expire).toHaveBeenCalledWith(counterKey, 0);
+    for (const [, keys] of redis.eval.mock.calls) expect(keys).not.toContain(counterKey);
+    await store.increment(key, 4);
+    await store.reset(key);
+    expect(await store.getCount(key)).toBe(0);
+  });
+});
+
 function redisClusterSlot(key: string): number {
   const open = key.indexOf("{");
   const close = key.indexOf("}", open + 1);
