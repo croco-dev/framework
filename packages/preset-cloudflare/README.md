@@ -97,6 +97,11 @@ Add a Worker-compatible `@Component` service under that root and annotate its me
 `CLOUDFLARE_ENV_TOKEN` for native bindings. Select an application-owned `ExecutionManager`
 in `workerScheduling.ts` before enabling a schedule; the scaffold supplies no default store.
 
+The generated Worker API package is ESM. Keep services, codegen and the ESM-only scheduled
+entrypoint on that module boundary: mixing CommonJS and ESM copies of the metadata registry
+cannot discover the same decorators. The separate Worker build configuration scans only its
+native services and preserves the `dist/worker.mjs` artifact. Node/Lambda generation is unchanged.
+
 `worker:crons:write` updates the reviewed `worker-crons.manifest.json` and the owned
 Wrangler `[triggers].crons` block. The check rebuilds DI/runtime artifacts and fails when
 the declaration or Wrangler output is stale. Build, development and smoke run this check;

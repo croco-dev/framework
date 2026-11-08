@@ -3,6 +3,8 @@ import { spawnSync } from "node:child_process";
 import { createRequire } from "node:module";
 import {
   copyFileSync,
+  cpSync,
+  existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -38,7 +40,7 @@ async function scaffold(root: string) {
   const nodeModules = join(api, "node_modules");
   mkdirSync(join(nodeModules, "@croco"), { recursive: true });
   const repositoryPackages = resolve(import.meta.dirname, "../../..");
-  for (const name of [
+  const packages = new Set([
     "framework-context",
     "framework-module",
     "preset-cloudflare",
@@ -47,8 +49,47 @@ async function scaffold(root: string) {
     "execution-core",
     "esbuild-plugin",
     "problems-core",
-  ]) {
-    symlinkSync(join(repositoryPackages, name), join(nodeModules, "@croco", name), "dir");
+  ]);
+  const pending = [...packages];
+  while (pending.length > 0) {
+    const name = pending.pop();
+    if (!name) continue;
+    const source = join(repositoryPackages, name);
+    const manifest = JSON.parse(readFileSync(join(source, "package.json"), "utf8")) as {
+      dependencies?: Record<string, string>;
+      publishConfig?: Record<string, unknown>;
+    };
+    const installed = join(nodeModules, "@croco", name);
+    mkdirSync(installed);
+    writeFileSync(
+      join(installed, "package.json"),
+      JSON.stringify({ ...manifest, ...manifest.publishConfig }),
+    );
+    cpSync(join(source, "dist"), join(installed, "dist"), { recursive: true });
+    for (const dependency of Object.keys(manifest.dependencies ?? {})) {
+      if (dependency.startsWith("@croco/")) {
+        const sibling = dependency.slice("@croco/".length);
+        if (!packages.has(sibling)) {
+          packages.add(sibling);
+          pending.push(sibling);
+        }
+      } else {
+        const link = join(nodeModules, dependency);
+        if (!existsSync(link)) {
+          mkdirSync(resolve(link, ".."), { recursive: true });
+          symlinkSync(join(source, "node_modules", dependency), link, "dir");
+        }
+      }
+    }
+  }
+  // The compiler's peer dependencies belong to the generated toolchain.
+  for (const dependency of ["typescript", "esbuild"]) {
+    if (!existsSync(join(nodeModules, dependency)))
+      symlinkSync(
+        join(repositoryPackages, "esbuild-plugin/node_modules", dependency),
+        join(nodeModules, dependency),
+        "dir",
+      );
   }
   symlinkSync(
     resolve(repositoryPackages, "create-croco-app/node_modules/smol-toml"),
@@ -58,7 +99,7 @@ async function scaffold(root: string) {
   return { api, nodeModules, repositoryPackages };
 }
 
-it("compiles generated Cron services into Wrangler and invokes the same DI graph in workerd", async () => {
+it("compiles published Cron services into Wrangler and invokes the same DI graph in workerd", async () => {
   const root = mkdtempSync(join(tmpdir(), "croco-worker-crons-"));
   let mf: Miniflare | undefined;
   try {
@@ -134,6 +175,8 @@ it("compiles generated Cron services into Wrangler and invokes the same DI graph
       format: "esm",
       platform: "neutral",
       external: ["node:*"],
+      // Match Wrangler's nodejs_compat resolution of Node-built package artifacts.
+      alias: { async_hooks: "node:async_hooks", crypto: "node:crypto" },
       mainFields: ["module", "main"],
       conditions: ["worker", "browser"],
       tsconfig: join(api, "tsconfig.json"),

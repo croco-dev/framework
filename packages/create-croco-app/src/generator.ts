@@ -489,6 +489,7 @@ function writeSaasProviderPackageDependencies(
     dependencies?: Record<string, string>;
     devDependencies?: Record<string, string>;
     main?: string;
+    type?: string;
     scripts?: Record<string, string>;
   };
   const dependencies = packageJson.dependencies ?? {};
@@ -516,6 +517,8 @@ function writeSaasProviderPackageDependencies(
   if (manifest.profile.runtimeTarget === "node") {
     scripts["dev"] = "tsx watch src/index.ts";
   } else if (manifest.profile.runtimeTarget === "cloudflare-workers") {
+    // The ESM-only native Host and decorated services must share one metadata module identity.
+    packageJson.type = "module";
     scripts["worker:crons:write"] = "tsx scripts/worker-crons.ts --write";
     scripts["worker:crons:check"] = "tsx scripts/worker-crons.ts";
     scripts["di:generate"] =
@@ -548,6 +551,7 @@ function writeSaasProviderPackageDependencies(
   if (manifest.profile.runtimeTarget !== "cloudflare-workers") {
     for (const path of [
       "worker.di.config.ts",
+      "tsup.worker.config.ts",
       "worker-crons.manifest.json",
       "scripts/worker-crons.ts",
       "src/workerScheduling.ts",
@@ -612,7 +616,7 @@ const SAAS_HOST_ARTIFACTS = {
   "cloudflare-workers": {
     source: "worker.ts",
     entry: "./src/worker.ts",
-    build: "pnpm di:generate && tsup src/worker.ts --format esm --platform browser --clean --dts",
+    build: "pnpm di:generate && tsup --config tsup.worker.config.ts",
   },
 } as const;
 

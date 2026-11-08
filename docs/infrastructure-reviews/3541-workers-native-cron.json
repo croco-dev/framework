@@ -54,7 +54,8 @@
             "Select an application-owned Worker-compatible durable ExecutionManager with atomic identity and attempt fencing before enabling Cron declarations.",
             "Local tests use a synthetic in-memory execution store; no distributed durability, exactly-once effects, live Cloudflare deployment, provider certification or npm release is claimed.",
             "UTC five-field subset only; numeric weekdays use the native 1=Sunday through 7=Saturday dialect.",
-            "Task timeout is cooperative and bounded; long work is dispatched separately."
+            "Task timeout is cooperative and bounded; long work is dispatched separately.",
+            "Decorated services and the native entry must use the same ESM metadata graph; mixing CommonJS decorator state with this ESM-only entry is unsupported."
           ],
           "references": [
             "packages/preset-cloudflare/README.md",
@@ -78,7 +79,7 @@
       "reason": "The generator emits Worker-only DI scanning, Cron/Wrangler drift gates and a native scheduled entry without choosing an execution store or introducing a scheduler.",
       "files": {
         "packages/create-croco-app/package.json": "ce446393b0d6f3e0e783f4be91cb161216864e5b19091b3cea2c450af74c8684",
-        "packages/create-croco-app/src/generator.ts": "76e64b54ee222fa716d149a6af291cc69dc78fac26218f3410eba1921702398c",
+        "packages/create-croco-app/src/generator.ts": "d26d6cef544efa94d01fa2122ac859b71e02779bab305638e90d5544e4b9837d",
         "packages/create-croco-app/src/helpers/croco-ranges.ts": "204fd6e18bab947e9040f6d7a6f1073155bcb01b6894987d5ddc13f6a6c1caf8",
         "packages/create-croco-app/templates/saas/apps/api-server/scripts/worker-crons.ts": "27d3efdca077ea22174bf87f5c603351245f9b02305c47cc8e51a3ff23677e8f",
         "packages/create-croco-app/templates/saas/apps/api-server/src/worker.ts": "f9a7d8162f39e7d92432e15142cde879c018f07ac2400bda7659764843937325",
@@ -88,7 +89,8 @@
         "packages/create-croco-app/templates/saas/apps/api-server/worker-crons.manifest.json": "2e566842ba0c2693710b81ce0b6233885d81ab81e708ed6b1de4b85d8a29f99c",
         "packages/create-croco-app/templates/saas/apps/api-server/wrangler.toml.hbs": "768a0f7fb9ca145822a8641084f463acbeba1b67ac41b3cc71077c2521aac7bb",
         "packages/create-croco-app/src/saas-provider-profiles.ts": "8dccb110fc9d2f8ff765ca132d4f460a281b247529a4295feede8fcca428fa98",
-        "packages/create-croco-app/templates/saas/apps/api-server/scripts/generate-di.ts": "8b0a5000b2427aee51eb9b16e15a0ac075b1665d63b2435d861152aac1546569"
+        "packages/create-croco-app/templates/saas/apps/api-server/scripts/generate-di.ts": "8b0a5000b2427aee51eb9b16e15a0ac075b1665d63b2435d861152aac1546569",
+        "packages/create-croco-app/templates/saas/apps/api-server/tsup.worker.config.ts": "e7b13e52871d9a117a8dcf2759230e1497bd96857d183b9a42f096a30f78e523"
       },
       "catalogRuntimes": [],
       "profiles": {
@@ -126,7 +128,8 @@
           "providers": [],
           "constraints": [
             "Tooling catalog runtimes remain unclaimed.",
-            "Generated Worker services use an explicit scan root and selected durable store; bootstrap-only SaaS capability states and live certification limits are unchanged."
+            "Generated Worker services use an explicit scan root and selected durable store; bootstrap-only SaaS capability states and live certification limits are unchanged.",
+            "The generated Worker API uses ESM and its dedicated build config preserves worker.mjs; decorated services and the ESM-only Host share metadata identity."
           ],
           "references": [
             "packages/create-croco-app/src/generator.ts",

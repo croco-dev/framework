@@ -2,6 +2,8 @@
 
 Put Worker-compatible `@Component` classes here. Add `@Cron` to a string-named method;
 the Worker compiler discovers it without a second handler/provider list.
+The generated Worker API package uses ESM so decorated services, the generated graph and
+the native Host read the same metadata module. Keep that module boundary when adding services.
 Inject `CLOUDFLARE_ENV_TOKEN` from `@croco/preset-cloudflare/application` for native bindings.
 The method receives `{ cron, scheduledTime }` and the common `TaskExecutionContext`.
 

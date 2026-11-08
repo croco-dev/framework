@@ -42,6 +42,7 @@ If every first-party option is unavailable, incompatible with the runtime, too i
 Use `@croco/preset-cloudflare/scheduled` for the native `scheduled` event. Compile only the
 application's generated DI graph with `compileCloudflareCrons`; bind its reviewed manifest,
 native env and explicitly selected `ExecutionManager` through `createCloudflareScheduledHandler`.
+Keep the generated Worker API package on ESM so services and the native entry share decorator metadata.
 The `saas-cloudflare` scaffold discovers `@Component` / `@Cron` services under `src/worker`
 and owns `worker:crons:write` / `worker:crons:check` plus the Wrangler schedule block. Do not
 maintain a second provider/handler list or expose scheduled dispatch as an unauthenticated HTTP route.

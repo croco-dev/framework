@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export type CrocoProblemRegistry = {
   readonly version: "croco.problem-code-registry.v1";
-  readonly problemCount: 1166;
+  readonly problemCount: 1177;
   readonly problems: readonly [
     {
       readonly code: "ACCESS_DENIED";
@@ -310,6 +310,314 @@ export type CrocoProblemRegistry = {
           readonly line: 6;
           readonly column: 1;
           readonly kind: "problem-class";
+        },
+      ];
+    },
+    {
+      readonly code: "CLOUDFLARE_CRON_APPLICATION_INVALID";
+      readonly category: "BadRequest";
+      readonly status: 400;
+      readonly title: "Bad Request";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#cloudflare-cron-application-invalid";
+      readonly recovery: {
+        readonly cause: "The caller sent malformed input or unsupported request options.";
+        readonly userAction: "Correct the request input and retry after validation passes.";
+        readonly operatorAction: "Inspect validation details and request logs; do not retry unchanged input.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/preset-cloudflare/src/scheduled.ts";
+          readonly line: 64;
+          readonly column: 11;
+          readonly kind: "problem-factory";
+        },
+      ];
+    },
+    {
+      readonly code: "CLOUDFLARE_CRON_CONFIG_INVALID";
+      readonly category: "BadRequest";
+      readonly status: 400;
+      readonly title: "Bad Request";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#cloudflare-cron-config-invalid";
+      readonly recovery: {
+        readonly cause: "The caller sent malformed input or unsupported request options.";
+        readonly userAction: "Correct the request input and retry after validation passes.";
+        readonly operatorAction: "Inspect validation details and request logs; do not retry unchanged input.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/create-croco-app/templates/saas/apps/api-server/scripts/worker-crons.ts";
+          readonly line: 25;
+          readonly column: 13;
+          readonly kind: "problem-factory";
+        },
+      ];
+    },
+    {
+      readonly code: "CLOUDFLARE_CRON_ENV_MISMATCH";
+      readonly category: "InternalServerError";
+      readonly status: 500;
+      readonly title: "Internal Server Error";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#cloudflare-cron-env-mismatch";
+      readonly recovery: {
+        readonly cause: "Croco or an upstream dependency failed after accepting the request.";
+        readonly userAction: "Retry later only when the operation is idempotent or the caller owns retry safety.";
+        readonly operatorAction: "Use traces, logs, and upstream diagnostics to isolate the failing boundary.";
+        readonly retryability: "conditional";
+        readonly redactionPolicy: "operator-only";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.error";
+          readonly severity: "error";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/preset-cloudflare/src/scheduled.ts";
+          readonly line: 116;
+          readonly column: 15;
+          readonly kind: "problem-factory";
+        },
+      ];
+    },
+    {
+      readonly code: "CLOUDFLARE_CRON_EVENT_INVALID";
+      readonly category: "BadRequest";
+      readonly status: 400;
+      readonly title: "Bad Request";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#cloudflare-cron-event-invalid";
+      readonly recovery: {
+        readonly cause: "The caller sent malformed input or unsupported request options.";
+        readonly userAction: "Correct the request input and retry after validation passes.";
+        readonly operatorAction: "Inspect validation details and request logs; do not retry unchanged input.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/preset-cloudflare/src/scheduled.ts";
+          readonly line: 122;
+          readonly column: 15;
+          readonly kind: "problem-factory";
+        },
+      ];
+    },
+    {
+      readonly code: "CLOUDFLARE_CRON_EXECUTION_UNAVAILABLE";
+      readonly category: "InternalServerError";
+      readonly status: 500;
+      readonly title: "Internal Server Error";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#cloudflare-cron-execution-unavailable";
+      readonly recovery: {
+        readonly cause: "Croco or an upstream dependency failed after accepting the request.";
+        readonly userAction: "Retry later only when the operation is idempotent or the caller owns retry safety.";
+        readonly operatorAction: "Use traces, logs, and upstream diagnostics to isolate the failing boundary.";
+        readonly retryability: "conditional";
+        readonly redactionPolicy: "operator-only";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.error";
+          readonly severity: "error";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/preset-cloudflare/src/scheduled.ts";
+          readonly line: 46;
+          readonly column: 10;
+          readonly kind: "problem-factory";
+        },
+      ];
+    },
+    {
+      readonly code: "CLOUDFLARE_CRON_MANIFEST_DRIFT";
+      readonly category: "InternalServerError";
+      readonly status: 500;
+      readonly title: "Internal Server Error";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#cloudflare-cron-manifest-drift";
+      readonly recovery: {
+        readonly cause: "Croco or an upstream dependency failed after accepting the request.";
+        readonly userAction: "Retry later only when the operation is idempotent or the caller owns retry safety.";
+        readonly operatorAction: "Use traces, logs, and upstream diagnostics to isolate the failing boundary.";
+        readonly retryability: "conditional";
+        readonly redactionPolicy: "operator-only";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.error";
+          readonly severity: "error";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/preset-cloudflare/src/scheduled.ts";
+          readonly line: 58;
+          readonly column: 11;
+          readonly kind: "problem-factory";
+        },
+      ];
+    },
+    {
+      readonly code: "CLOUDFLARE_CRON_OUTPUT_DRIFT";
+      readonly category: "BadRequest";
+      readonly status: 400;
+      readonly title: "Bad Request";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#cloudflare-cron-output-drift";
+      readonly recovery: {
+        readonly cause: "The caller sent malformed input or unsupported request options.";
+        readonly userAction: "Correct the request input and retry after validation passes.";
+        readonly operatorAction: "Inspect validation details and request logs; do not retry unchanged input.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/create-croco-app/templates/saas/apps/api-server/scripts/worker-crons.ts";
+          readonly line: 43;
+          readonly column: 11;
+          readonly kind: "problem-factory";
+        },
+      ];
+    },
+    {
+      readonly code: "CLOUDFLARE_CRON_TARGET_INVALID";
+      readonly category: "InternalServerError";
+      readonly status: 500;
+      readonly title: "Internal Server Error";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#cloudflare-cron-target-invalid";
+      readonly recovery: {
+        readonly cause: "Croco or an upstream dependency failed after accepting the request.";
+        readonly userAction: "Retry later only when the operation is idempotent or the caller owns retry safety.";
+        readonly operatorAction: "Use traces, logs, and upstream diagnostics to isolate the failing boundary.";
+        readonly retryability: "conditional";
+        readonly redactionPolicy: "operator-only";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.error";
+          readonly severity: "error";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/preset-cloudflare/src/scheduled.ts";
+          readonly line: 79;
+          readonly column: 13;
+          readonly kind: "problem-factory";
+        },
+      ];
+    },
+    {
+      readonly code: "CLOUDFLARE_CRON_TIMEOUT_INVALID";
+      readonly category: "BadRequest";
+      readonly status: 400;
+      readonly title: "Bad Request";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#cloudflare-cron-timeout-invalid";
+      readonly recovery: {
+        readonly cause: "The caller sent malformed input or unsupported request options.";
+        readonly userAction: "Correct the request input and retry after validation passes.";
+        readonly operatorAction: "Inspect validation details and request logs; do not retry unchanged input.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/preset-cloudflare/src/scheduled.ts";
+          readonly line: 95;
+          readonly column: 13;
+          readonly kind: "problem-factory";
+        },
+      ];
+    },
+    {
+      readonly code: "CLOUDFLARE_CRON_UNREGISTERED";
+      readonly category: "BadRequest";
+      readonly status: 400;
+      readonly title: "Bad Request";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#cloudflare-cron-unregistered";
+      readonly recovery: {
+        readonly cause: "The caller sent malformed input or unsupported request options.";
+        readonly userAction: "Correct the request input and retry after validation passes.";
+        readonly operatorAction: "Inspect validation details and request logs; do not retry unchanged input.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/preset-cloudflare/src/scheduled.ts";
+          readonly line: 130;
+          readonly column: 15;
+          readonly kind: "problem-factory";
+        },
+      ];
+    },
+    {
+      readonly code: "CLOUDFLARE_CRON_UNSUPPORTED";
+      readonly category: "BadRequest";
+      readonly status: 400;
+      readonly title: "Bad Request";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#cloudflare-cron-unsupported";
+      readonly recovery: {
+        readonly cause: "The caller sent malformed input or unsupported request options.";
+        readonly userAction: "Correct the request input and retry after validation passes.";
+        readonly operatorAction: "Inspect validation details and request logs; do not retry unchanged input.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/preset-cloudflare/src/cron.ts";
+          readonly line: 30;
+          readonly column: 9;
+          readonly kind: "problem-factory";
         },
       ];
     },
@@ -32962,7 +33270,7 @@ export type CrocoProblemRegistry = {
 
 export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 1166,
+  problemCount: 1177,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -33297,6 +33605,351 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
           line: 6,
           column: 1,
           kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "CLOUDFLARE_CRON_APPLICATION_INVALID",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#cloudflare-cron-application-invalid",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/preset-cloudflare/src/scheduled.ts",
+          line: 64,
+          column: 11,
+          kind: "problem-factory",
+        },
+      ],
+    },
+    {
+      code: "CLOUDFLARE_CRON_CONFIG_INVALID",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#cloudflare-cron-config-invalid",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/create-croco-app/templates/saas/apps/api-server/scripts/worker-crons.ts",
+          line: 25,
+          column: 13,
+          kind: "problem-factory",
+        },
+      ],
+    },
+    {
+      code: "CLOUDFLARE_CRON_ENV_MISMATCH",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#cloudflare-cron-env-mismatch",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/preset-cloudflare/src/scheduled.ts",
+          line: 116,
+          column: 15,
+          kind: "problem-factory",
+        },
+      ],
+    },
+    {
+      code: "CLOUDFLARE_CRON_EVENT_INVALID",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#cloudflare-cron-event-invalid",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/preset-cloudflare/src/scheduled.ts",
+          line: 122,
+          column: 15,
+          kind: "problem-factory",
+        },
+      ],
+    },
+    {
+      code: "CLOUDFLARE_CRON_EXECUTION_UNAVAILABLE",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#cloudflare-cron-execution-unavailable",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/preset-cloudflare/src/scheduled.ts",
+          line: 46,
+          column: 10,
+          kind: "problem-factory",
+        },
+      ],
+    },
+    {
+      code: "CLOUDFLARE_CRON_MANIFEST_DRIFT",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#cloudflare-cron-manifest-drift",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/preset-cloudflare/src/scheduled.ts",
+          line: 58,
+          column: 11,
+          kind: "problem-factory",
+        },
+      ],
+    },
+    {
+      code: "CLOUDFLARE_CRON_OUTPUT_DRIFT",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#cloudflare-cron-output-drift",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/create-croco-app/templates/saas/apps/api-server/scripts/worker-crons.ts",
+          line: 43,
+          column: 11,
+          kind: "problem-factory",
+        },
+      ],
+    },
+    {
+      code: "CLOUDFLARE_CRON_TARGET_INVALID",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#cloudflare-cron-target-invalid",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/preset-cloudflare/src/scheduled.ts",
+          line: 79,
+          column: 13,
+          kind: "problem-factory",
+        },
+      ],
+    },
+    {
+      code: "CLOUDFLARE_CRON_TIMEOUT_INVALID",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#cloudflare-cron-timeout-invalid",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/preset-cloudflare/src/scheduled.ts",
+          line: 95,
+          column: 13,
+          kind: "problem-factory",
+        },
+      ],
+    },
+    {
+      code: "CLOUDFLARE_CRON_UNREGISTERED",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#cloudflare-cron-unregistered",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/preset-cloudflare/src/scheduled.ts",
+          line: 130,
+          column: 15,
+          kind: "problem-factory",
+        },
+      ],
+    },
+    {
+      code: "CLOUDFLARE_CRON_UNSUPPORTED",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#cloudflare-cron-unsupported",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/preset-cloudflare/src/cron.ts",
+          line: 30,
+          column: 9,
+          kind: "problem-factory",
         },
       ],
     },
