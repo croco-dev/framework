@@ -6,7 +6,7 @@
       "classification": "pure-contract",
       "reason": "Keep nested outbox/inbox data independent across store and transaction boundaries, and reject values that cannot be snapshotted before writes.",
       "files": {
-        "packages/events-tx/src/libs/InMemoryTransactionalEventStore.ts": "28e063d716cfc0342bb597b1762cfc9ce4d361487a7206fbd22f8528cec6f624"
+        "packages/events-tx/src/libs/InMemoryTransactionalEventStore.ts": "6376076197e3b0891bec9445256c47b7899d5a85b9ff28a7dd7b22a571643840"
       },
       "catalogRuntimes": [],
       "profiles": {

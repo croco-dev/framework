@@ -837,7 +837,7 @@
     {
       "packageName": "@croco/events-tx",
       "file": "packages/events-tx/src/libs/InMemoryTransactionalEventStore.ts",
-      "line": 101,
+      "line": 144,
       "column": 3,
       "code": "TS2375",
       "message": "Type '{ consumerId: string; messageId: string; inboxKey: string; eventType: string; status: InboxMessageStatus; attempts: number; lockedUntil?: Date; processedAt?: Date; failedAt?: Date; lastError?: TransactionalEventError; ... 4 more ...; diagnostics: TransactionalEventDiagnostic[]; }' is not assignable to type 'TransactionalInboxRecord' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -845,7 +845,7 @@
     {
       "packageName": "@croco/events-tx",
       "file": "packages/events-tx/src/libs/InMemoryTransactionalEventStore.ts",
-      "line": 407,
+      "line": 464,
       "column": 11,
       "code": "TS2375",
       "message": "Type '{ id: string; eventId: string; eventType: string; aggregateId?: string; idempotencyKey: string; payload: Record<string, unknown>; metadata: Record<string, unknown>; traceContext?: EventTraceContext; ... 12 more ...; diagnostics: TransactionalEventDiagnostic[]; }' is not assignable to type 'TransactionalOutboxMessage' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -853,7 +853,7 @@
     {
       "packageName": "@croco/events-tx",
       "file": "packages/events-tx/src/libs/InMemoryTransactionalEventStore.ts",
-      "line": 437,
+      "line": 494,
       "column": 11,
       "code": "TS2375",
       "message": "Type '{ id: string; eventId: string; eventType: string; aggregateId?: string; idempotencyKey: string; payload: Record<string, unknown>; metadata: Record<string, unknown>; traceContext?: EventTraceContext; ... 12 more ...; diagnostics: TransactionalEventDiagnostic[]; }' is not assignable to type 'TransactionalOutboxMessage' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -861,7 +861,7 @@
     {
       "packageName": "@croco/events-tx",
       "file": "packages/events-tx/src/libs/InMemoryTransactionalEventStore.ts",
-      "line": 502,
+      "line": 559,
       "column": 11,
       "code": "TS2375",
       "message": "Type '{ id: string; eventId: string; eventType: string; aggregateId?: string; idempotencyKey: string; payload: Record<string, unknown>; metadata: Record<string, unknown>; traceContext?: EventTraceContext; ... 12 more ...; diagnostics: TransactionalEventDiagnostic[]; }' is not assignable to type 'TransactionalOutboxMessage' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -869,7 +869,7 @@
     {
       "packageName": "@croco/events-tx",
       "file": "packages/events-tx/src/libs/InMemoryTransactionalEventStore.ts",
-      "line": 629,
+      "line": 689,
       "column": 11,
       "code": "TS2375",
       "message": "Type '{ consumerId: string; messageId: string; inboxKey: string; eventType: string; attempts: number; createdAt: Date; lockedUntil?: Date; processedAt?: Date; metadata: Record<string, unknown>; ... 5 more ...; diagnostics: TransactionalEventDiagnostic[]; }' is not assignable to type 'TransactionalInboxRecord' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -877,7 +877,7 @@
     {
       "packageName": "@croco/events-tx",
       "file": "packages/events-tx/src/libs/InMemoryTransactionalEventStore.ts",
-      "line": 81,
+      "line": 124,
       "column": 3,
       "code": "TS2375",
       "message": "Type '{ id: string; eventId: string; eventType: string; aggregateId?: string; idempotencyKey: string; traceContext?: EventTraceContext; attempts: number; maxAttempts: number; status: OutboxMessageStatus; ... 11 more ...; diagnostics: TransactionalEventDiagnostic[]; }' is not assignable to type 'TransactionalOutboxMessage' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."

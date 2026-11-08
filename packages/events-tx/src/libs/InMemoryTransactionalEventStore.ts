@@ -313,15 +313,15 @@ export class InMemoryTransactionalEventStore implements TransactionalEventStore<
       id: input.id,
       eventId: input.eventId,
       eventType: input.eventType,
-      aggregateId: input.aggregateId,
+      ...(input.aggregateId !== undefined ? { aggregateId: input.aggregateId } : {}),
       idempotencyKey: input.idempotencyKey,
       payload: cloneRecord(input.payload),
       metadata: cloneRecord(input.metadata ?? {}),
-      traceContext: input.traceContext ? { ...input.traceContext } : undefined,
+      ...(input.traceContext ? { traceContext: { ...input.traceContext } } : {}),
       maxAttempts: input.maxAttempts,
       visibleAt: new Date(input.visibleAt.getTime()),
       occurredAt: new Date(input.occurredAt.getTime()),
-      diagnostics: input.diagnostics?.map(cloneDiagnostic),
+      ...(input.diagnostics ? { diagnostics: input.diagnostics.map(cloneDiagnostic) } : {}),
     };
     const directOwner = await this.acquireOutboxReservation(input.idempotencyKey, context?.client);
     try {
