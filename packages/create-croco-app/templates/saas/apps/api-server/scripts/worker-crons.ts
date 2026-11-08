@@ -6,6 +6,16 @@ import { ProblemFactory } from "@croco/problems-core";
 import { unstable_dev } from "wrangler";
 import { workerDiOptions } from "../worker.di.config";
 
+/** Keep the owned-config diagnostic at one canonical factory. */
+function invalidConfig(detail: string): never {
+  throw ProblemFactory.badRequest("CLOUDFLARE_CRON_CONFIG_INVALID", detail);
+}
+
+/** Keep all generated-output drift failures at one canonical diagnostic factory. */
+function outputDrift(detail = "Run pnpm worker:crons:write and review the output."): never {
+  throw ProblemFactory.badRequest("CLOUDFLARE_CRON_OUTPUT_DRIFT", detail);
+}
+
 /** Read decorators in workerd without initializing the application or invoking its providers. */
 async function collectManifest(config: ReturnType<typeof parse>): Promise<CloudflareCronManifest> {
   const entry = ".croco/worker-crons.inspect.ts";
@@ -56,10 +66,13 @@ async function collectManifest(config: ReturnType<typeof parse>): Promise<Cloudf
       problem?: { code: string; detail?: string };
     };
     if (!response.ok || !result.manifest) {
-      throw ProblemFactory.badRequest(
-        result.problem?.code ?? "CLOUDFLARE_CRON_CONFIG_INVALID",
-        result.problem?.detail ?? "Unable to collect Worker Cron metadata.",
-      );
+      if (result.problem) {
+        throw ProblemFactory.badRequest(
+          result.problem.code,
+          result.problem.detail ?? result.problem.code,
+        );
+      }
+      invalidConfig("Unable to collect Worker Cron metadata.");
     }
     return result.manifest;
   } finally {
@@ -75,10 +88,7 @@ function validateEnvironments(config: ReturnType<typeof parse>, manifest: Cloudf
       environment.triggers !== undefined &&
       JSON.stringify(environment.triggers?.crons) !== JSON.stringify(manifest.crons)
     ) {
-      throw ProblemFactory.badRequest(
-        "CLOUDFLARE_CRON_OUTPUT_DRIFT",
-        `Wrangler environment '${name}' overrides the compiled Cron schedules.`,
-      );
+      outputDrift(`Wrangler environment '${name}' overrides the compiled Cron schedules.`);
     }
   }
 }
@@ -102,10 +112,7 @@ async function main() {
   if (process.argv.includes("--write")) {
     const ownedBlock = /# croco-crons:start(\r?\n)[\s\S]*?# croco-crons:end/.exec(config);
     if (!ownedBlock) {
-      throw ProblemFactory.badRequest(
-        "CLOUDFLARE_CRON_CONFIG_INVALID",
-        "Missing Croco Cron ownership markers in wrangler.toml.",
-      );
+      invalidConfig("Missing Croco Cron ownership markers in wrangler.toml.");
     }
     writeFileSync(manifestFile, `${JSON.stringify(declaration, null, 2)}\n`);
     writeFileSync(
@@ -125,10 +132,7 @@ async function main() {
       JSON.stringify(declaration) ||
     JSON.stringify(triggers?.crons) !== JSON.stringify(manifest.crons)
   ) {
-    throw ProblemFactory.badRequest(
-      "CLOUDFLARE_CRON_OUTPUT_DRIFT",
-      "Run pnpm worker:crons:write and review the output.",
-    );
+    outputDrift();
   }
   writeFileSync(".croco/worker-crons.generated.ts", source);
 }

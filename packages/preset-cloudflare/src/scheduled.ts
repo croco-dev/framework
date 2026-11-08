@@ -1,7 +1,7 @@
 import { Context, MetadataStorage } from "@croco/framework-context";
 import type { GeneratedDiGraph } from "@croco/framework-context";
 import type { ApplicationRuntime } from "@croco/framework-module";
-import type { ExecutionManager } from "@croco/execution-core";
+import type { CreateExecutionParams, Execution, ExecutionManager } from "@croco/execution-core";
 import { ProblemFactory } from "@croco/problems-core";
 import { TASK_METADATA_KEY, TaskRegistry, TaskRunner } from "@croco/tasks-core";
 import type { TaskMetadata } from "@croco/tasks-core";
@@ -110,8 +110,40 @@ export function createCloudflareScheduledHandler(
       options: taskOptions,
     });
   }
-  const runner = options.executionManager
-    ? new TaskRunner(options.executionManager, registry, undefined, {
+  /** Check the record returned by atomic admission before TaskRunner may start any attempt. */
+  function assertExecutionOwnership(execution: Execution): void {
+    const binding = manifest.bindings.find(({ id }) => id === execution.type);
+    if (
+      execution.metadata?.host !== "cloudflare-workers" ||
+      execution.metadata.applicationId !== options.applicationId ||
+      !binding ||
+      execution.metadata.cronProviderTokenId !== binding.providerTokenId ||
+      execution.metadata.cronMethodName !== binding.methodName ||
+      !registry.get(execution.type)
+    ) {
+      throw ProblemFactory.badRequest(
+        "CLOUDFLARE_CRON_EXECUTION_MISMATCH",
+        "The execution does not belong to this application's Cron registry.",
+      );
+    }
+  }
+  // Preserve atomic identity and lifecycle capabilities while inspecting the actual admitted record.
+  const executionManager =
+    options.executionManager &&
+    new Proxy(options.executionManager, {
+      get(target, property) {
+        if (property === "create")
+          return async (params: CreateExecutionParams) => {
+            const execution = await target.create(params);
+            assertExecutionOwnership(execution);
+            return execution;
+          };
+        const value: unknown = Reflect.get(target, property, target);
+        return typeof value === "function" ? value.bind(target) : value;
+      },
+    });
+  const runner = executionManager
+    ? new TaskRunner(executionManager, registry, undefined, {
         serviceResolver: (target) => options.runtime.get(target),
       })
     : undefined;
@@ -181,20 +213,7 @@ export function createCloudflareScheduledHandler(
   const recover = options.runtime.bindHostCallback(async (executionId: string, reason?: string) => {
     if (!runner || !options.executionManager) throw executionUnavailable();
     const execution = await options.executionManager.get(executionId);
-    const binding = manifest.bindings.find(({ id }) => id === execution.type);
-    if (
-      execution.metadata?.host !== "cloudflare-workers" ||
-      execution.metadata.applicationId !== options.applicationId ||
-      !binding ||
-      execution.metadata.cronProviderTokenId !== binding.providerTokenId ||
-      execution.metadata.cronMethodName !== binding.methodName ||
-      !registry.get(execution.type)
-    ) {
-      throw ProblemFactory.badRequest(
-        "CLOUDFLARE_CRON_EXECUTION_MISMATCH",
-        "The execution does not belong to this application's Cron registry.",
-      );
-    }
+    assertExecutionOwnership(execution);
     return Context.run({ requestId: `cron:${options.applicationId}:recovery:${executionId}` }, () =>
       reason === undefined ? runner.retry(executionId) : runner.recoverTimeout(executionId, reason),
     );

@@ -118,6 +118,9 @@ A Cron method receives `{ cron, scheduledTime }` and the common `TaskExecutionCo
 The adapter binds the callback to its `ApplicationRuntime`, forwards completion to
 `waitUntil`, and uses TaskRunner for identity, attempt fencing, exceptions and timeouts.
 Repeated firings share identity by application id, binding id, cron and scheduled time.
+Native dispatch checks the execution returned by the common manager's atomic admission
+against the current provider and method before TaskRunner starts an attempt. This also
+rejects redelivery to a reassigned target while preserving the original firing identity.
 Independent applications need distinct stable ids or stores. Atomic durable identity and
 attempt fencing remain the selected execution store's responsibility; local fixtures do not
 prove distributed persistence or exactly-once effects.

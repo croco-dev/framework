@@ -356,7 +356,7 @@
       "sources": [
         {
           "file": "packages/preset-cloudflare/src/scheduled.ts",
-          "line": 64,
+          "line": 70,
           "column": 11,
           "kind": "problem-factory"
         }
@@ -386,8 +386,8 @@
       "sources": [
         {
           "file": "packages/create-croco-app/templates/saas/apps/api-server/scripts/worker-crons.ts",
-          "line": 25,
-          "column": 13,
+          "line": 11,
+          "column": 9,
           "kind": "problem-factory"
         }
       ]
@@ -416,7 +416,7 @@
       "sources": [
         {
           "file": "packages/preset-cloudflare/src/scheduled.ts",
-          "line": 116,
+          "line": 154,
           "column": 15,
           "kind": "problem-factory"
         }
@@ -446,8 +446,38 @@
       "sources": [
         {
           "file": "packages/preset-cloudflare/src/scheduled.ts",
-          "line": 122,
+          "line": 160,
           "column": 15,
+          "kind": "problem-factory"
+        }
+      ]
+    },
+    {
+      "code": "CLOUDFLARE_CRON_EXECUTION_MISMATCH",
+      "category": "BadRequest",
+      "status": 400,
+      "title": "Bad Request",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#cloudflare-cron-execution-mismatch",
+      "recovery": {
+        "cause": "The caller sent malformed input or unsupported request options.",
+        "userAction": "Correct the request input and retry after validation passes.",
+        "operatorAction": "Inspect validation details and request logs; do not retry unchanged input.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "public",
+        "telemetry": {
+          "eventName": "croco.problem.info",
+          "severity": "info",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/preset-cloudflare/src/scheduled.ts",
+          "line": 124,
+          "column": 13,
           "kind": "problem-factory"
         }
       ]
@@ -476,7 +506,7 @@
       "sources": [
         {
           "file": "packages/preset-cloudflare/src/scheduled.ts",
-          "line": 46,
+          "line": 52,
           "column": 10,
           "kind": "problem-factory"
         }
@@ -506,7 +536,7 @@
       "sources": [
         {
           "file": "packages/preset-cloudflare/src/scheduled.ts",
-          "line": 58,
+          "line": 64,
           "column": 11,
           "kind": "problem-factory"
         }
@@ -536,8 +566,8 @@
       "sources": [
         {
           "file": "packages/create-croco-app/templates/saas/apps/api-server/scripts/worker-crons.ts",
-          "line": 43,
-          "column": 11,
+          "line": 16,
+          "column": 9,
           "kind": "problem-factory"
         }
       ]
@@ -566,7 +596,7 @@
       "sources": [
         {
           "file": "packages/preset-cloudflare/src/scheduled.ts",
-          "line": 79,
+          "line": 85,
           "column": 13,
           "kind": "problem-factory"
         }
@@ -596,7 +626,7 @@
       "sources": [
         {
           "file": "packages/preset-cloudflare/src/scheduled.ts",
-          "line": 95,
+          "line": 101,
           "column": 13,
           "kind": "problem-factory"
         }
@@ -626,7 +656,7 @@
       "sources": [
         {
           "file": "packages/preset-cloudflare/src/scheduled.ts",
-          "line": 130,
+          "line": 168,
           "column": 15,
           "kind": "problem-factory"
         }

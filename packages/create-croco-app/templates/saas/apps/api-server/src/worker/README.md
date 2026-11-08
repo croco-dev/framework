@@ -37,5 +37,7 @@ Named Wrangler environments inherit the compiled schedules unless they declare t
 divergent environment overrides fail both write and check. LF and CRLF ownership blocks are supported.
 Recovery also requires the persisted provider and method identity to match the current binding;
 reassigning a Cron name or missing identity evidence is rejected before recovery changes state.
+Native redelivery also validates the target returned by common atomic execution admission;
+the original target can still resume retrying attempts under the shared task policy.
 The scaffold remains bootstrap-only for SaaS capabilities. Local scheduled execution does
 not certify a live Cloudflare deployment or a persistence provider.

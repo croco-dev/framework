@@ -335,7 +335,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/preset-cloudflare/src/scheduled.ts";
-          readonly line: 64;
+          readonly line: 70;
           readonly column: 11;
           readonly kind: "problem-factory";
         },
@@ -363,8 +363,8 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/create-croco-app/templates/saas/apps/api-server/scripts/worker-crons.ts";
-          readonly line: 25;
-          readonly column: 13;
+          readonly line: 11;
+          readonly column: 9;
           readonly kind: "problem-factory";
         },
       ];
@@ -391,7 +391,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/preset-cloudflare/src/scheduled.ts";
-          readonly line: 116;
+          readonly line: 154;
           readonly column: 15;
           readonly kind: "problem-factory";
         },
@@ -419,8 +419,36 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/preset-cloudflare/src/scheduled.ts";
-          readonly line: 122;
+          readonly line: 160;
           readonly column: 15;
+          readonly kind: "problem-factory";
+        },
+      ];
+    },
+    {
+      readonly code: "CLOUDFLARE_CRON_EXECUTION_MISMATCH";
+      readonly category: "BadRequest";
+      readonly status: 400;
+      readonly title: "Bad Request";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#cloudflare-cron-execution-mismatch";
+      readonly recovery: {
+        readonly cause: "The caller sent malformed input or unsupported request options.";
+        readonly userAction: "Correct the request input and retry after validation passes.";
+        readonly operatorAction: "Inspect validation details and request logs; do not retry unchanged input.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/preset-cloudflare/src/scheduled.ts";
+          readonly line: 124;
+          readonly column: 13;
           readonly kind: "problem-factory";
         },
       ];
@@ -447,7 +475,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/preset-cloudflare/src/scheduled.ts";
-          readonly line: 46;
+          readonly line: 52;
           readonly column: 10;
           readonly kind: "problem-factory";
         },
@@ -475,7 +503,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/preset-cloudflare/src/scheduled.ts";
-          readonly line: 58;
+          readonly line: 64;
           readonly column: 11;
           readonly kind: "problem-factory";
         },
@@ -503,8 +531,8 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/create-croco-app/templates/saas/apps/api-server/scripts/worker-crons.ts";
-          readonly line: 43;
-          readonly column: 11;
+          readonly line: 16;
+          readonly column: 9;
           readonly kind: "problem-factory";
         },
       ];
@@ -531,7 +559,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/preset-cloudflare/src/scheduled.ts";
-          readonly line: 79;
+          readonly line: 85;
           readonly column: 13;
           readonly kind: "problem-factory";
         },
@@ -559,7 +587,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/preset-cloudflare/src/scheduled.ts";
-          readonly line: 95;
+          readonly line: 101;
           readonly column: 13;
           readonly kind: "problem-factory";
         },
@@ -587,7 +615,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/preset-cloudflare/src/scheduled.ts";
-          readonly line: 130;
+          readonly line: 168;
           readonly column: 15;
           readonly kind: "problem-factory";
         },
@@ -33633,7 +33661,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/preset-cloudflare/src/scheduled.ts",
-          line: 64,
+          line: 70,
           column: 11,
           kind: "problem-factory",
         },
@@ -33664,8 +33692,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/create-croco-app/templates/saas/apps/api-server/scripts/worker-crons.ts",
-          line: 25,
-          column: 13,
+          line: 11,
+          column: 9,
           kind: "problem-factory",
         },
       ],
@@ -33696,7 +33724,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/preset-cloudflare/src/scheduled.ts",
-          line: 116,
+          line: 154,
           column: 15,
           kind: "problem-factory",
         },
@@ -33727,8 +33755,39 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/preset-cloudflare/src/scheduled.ts",
-          line: 122,
+          line: 160,
           column: 15,
+          kind: "problem-factory",
+        },
+      ],
+    },
+    {
+      code: "CLOUDFLARE_CRON_EXECUTION_MISMATCH",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#cloudflare-cron-execution-mismatch",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/preset-cloudflare/src/scheduled.ts",
+          line: 124,
+          column: 13,
           kind: "problem-factory",
         },
       ],
@@ -33759,7 +33818,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/preset-cloudflare/src/scheduled.ts",
-          line: 46,
+          line: 52,
           column: 10,
           kind: "problem-factory",
         },
@@ -33791,7 +33850,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/preset-cloudflare/src/scheduled.ts",
-          line: 58,
+          line: 64,
           column: 11,
           kind: "problem-factory",
         },
@@ -33822,8 +33881,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/create-croco-app/templates/saas/apps/api-server/scripts/worker-crons.ts",
-          line: 43,
-          column: 11,
+          line: 16,
+          column: 9,
           kind: "problem-factory",
         },
       ],
@@ -33854,7 +33913,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/preset-cloudflare/src/scheduled.ts",
-          line: 79,
+          line: 85,
           column: 13,
           kind: "problem-factory",
         },
@@ -33885,7 +33944,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/preset-cloudflare/src/scheduled.ts",
-          line: 95,
+          line: 101,
           column: 13,
           kind: "problem-factory",
         },
@@ -33916,7 +33975,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/preset-cloudflare/src/scheduled.ts",
-          line: 130,
+          line: 168,
           column: 15,
           kind: "problem-factory",
         },

@@ -61,6 +61,8 @@ original Cron registry and application scope are retained. Inspect external effe
 timeout recovery records the operator reason and rejects another application's execution.
 Persisted provider/method identity must match the current Cron binding before any recovery mutation;
 reassigned names and missing target evidence fail closed.
+Native dispatch validates the record returned by common atomic admission before starting an
+attempt, so a retrying firing cannot resume on a reassigned target through duplicate delivery.
 
 ## Workers rate limiting
 

@@ -28,6 +28,7 @@ This cookbook documents 1177 public Croco Problem codes. The deterministic JSON 
 | [`CLOUDFLARE_CRON_CONFIG_INVALID`](#cloudflare-cron-config-invalid)                                                                             | BadRequest                                                                               |                     400 | not-retryable | public        | active     |       1 |
 | [`CLOUDFLARE_CRON_ENV_MISMATCH`](#cloudflare-cron-env-mismatch)                                                                                 | InternalServerError                                                                      |                     500 | conditional   | operator-only | active     |       1 |
 | [`CLOUDFLARE_CRON_EVENT_INVALID`](#cloudflare-cron-event-invalid)                                                                               | BadRequest                                                                               |                     400 | not-retryable | public        | active     |       1 |
+| [`CLOUDFLARE_CRON_EXECUTION_MISMATCH`](#cloudflare-cron-execution-mismatch)                                                                     | BadRequest                                                                               |                     400 | not-retryable | public        | active     |       1 |
 | [`CLOUDFLARE_CRON_EXECUTION_UNAVAILABLE`](#cloudflare-cron-execution-unavailable)                                                               | InternalServerError                                                                      |                     500 | conditional   | operator-only | active     |       1 |
 | [`CLOUDFLARE_CRON_MANIFEST_DRIFT`](#cloudflare-cron-manifest-drift)                                                                             | InternalServerError                                                                      |                     500 | conditional   | operator-only | active     |       1 |
 | [`CLOUDFLARE_CRON_OUTPUT_DRIFT`](#cloudflare-cron-output-drift)                                                                                 | BadRequest                                                                               |                     400 | not-retryable | public        | active     |       1 |
@@ -1407,7 +1408,7 @@ Sources:
 
 Sources:
 
-- `packages/preset-cloudflare/src/scheduled.ts:64:11` (problem-factory)
+- `packages/preset-cloudflare/src/scheduled.ts:70:11` (problem-factory)
 
 <a id="cloudflare-cron-config-invalid"></a>
 
@@ -1425,7 +1426,7 @@ Sources:
 
 Sources:
 
-- `packages/create-croco-app/templates/saas/apps/api-server/scripts/worker-crons.ts:25:13` (problem-factory)
+- `packages/create-croco-app/templates/saas/apps/api-server/scripts/worker-crons.ts:11:9` (problem-factory)
 
 <a id="cloudflare-cron-env-mismatch"></a>
 
@@ -1443,7 +1444,7 @@ Sources:
 
 Sources:
 
-- `packages/preset-cloudflare/src/scheduled.ts:116:15` (problem-factory)
+- `packages/preset-cloudflare/src/scheduled.ts:154:15` (problem-factory)
 
 <a id="cloudflare-cron-event-invalid"></a>
 
@@ -1461,7 +1462,25 @@ Sources:
 
 Sources:
 
-- `packages/preset-cloudflare/src/scheduled.ts:122:15` (problem-factory)
+- `packages/preset-cloudflare/src/scheduled.ts:160:15` (problem-factory)
+
+<a id="cloudflare-cron-execution-mismatch"></a>
+
+## `CLOUDFLARE_CRON_EXECUTION_MISMATCH`
+
+- Category: `BadRequest`
+- HTTP status: `400` Bad Request
+- Retryability: `not-retryable`
+- Redaction policy: `public`
+- Lifecycle: `active`
+- Cause: The caller sent malformed input or unsupported request options.
+- User action: Correct the request input and retry after validation passes.
+- Operator action: Inspect validation details and request logs; do not retry unchanged input.
+- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/preset-cloudflare/src/scheduled.ts:124:13` (problem-factory)
 
 <a id="cloudflare-cron-execution-unavailable"></a>
 
@@ -1479,7 +1498,7 @@ Sources:
 
 Sources:
 
-- `packages/preset-cloudflare/src/scheduled.ts:46:10` (problem-factory)
+- `packages/preset-cloudflare/src/scheduled.ts:52:10` (problem-factory)
 
 <a id="cloudflare-cron-manifest-drift"></a>
 
@@ -1497,7 +1516,7 @@ Sources:
 
 Sources:
 
-- `packages/preset-cloudflare/src/scheduled.ts:58:11` (problem-factory)
+- `packages/preset-cloudflare/src/scheduled.ts:64:11` (problem-factory)
 
 <a id="cloudflare-cron-output-drift"></a>
 
@@ -1515,7 +1534,7 @@ Sources:
 
 Sources:
 
-- `packages/create-croco-app/templates/saas/apps/api-server/scripts/worker-crons.ts:43:11` (problem-factory)
+- `packages/create-croco-app/templates/saas/apps/api-server/scripts/worker-crons.ts:16:9` (problem-factory)
 
 <a id="cloudflare-cron-target-invalid"></a>
 
@@ -1533,7 +1552,7 @@ Sources:
 
 Sources:
 
-- `packages/preset-cloudflare/src/scheduled.ts:79:13` (problem-factory)
+- `packages/preset-cloudflare/src/scheduled.ts:85:13` (problem-factory)
 
 <a id="cloudflare-cron-timeout-invalid"></a>
 
@@ -1551,7 +1570,7 @@ Sources:
 
 Sources:
 
-- `packages/preset-cloudflare/src/scheduled.ts:95:13` (problem-factory)
+- `packages/preset-cloudflare/src/scheduled.ts:101:13` (problem-factory)
 
 <a id="cloudflare-cron-unregistered"></a>
 
@@ -1569,7 +1588,7 @@ Sources:
 
 Sources:
 
-- `packages/preset-cloudflare/src/scheduled.ts:130:15` (problem-factory)
+- `packages/preset-cloudflare/src/scheduled.ts:168:15` (problem-factory)
 
 <a id="cloudflare-cron-unsupported"></a>
 

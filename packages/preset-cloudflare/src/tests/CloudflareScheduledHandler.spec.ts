@@ -40,14 +40,20 @@ describe("Cloudflare scheduled handler", () => {
       store?: MemoryExecutionStore;
       applicationId?: string;
       providerTokenId?: string;
+      methodName?: "run" | "relocated";
       sibling?: () => Promise<unknown>;
     } = {},
   ) {
     class Reports {
       constructor(private readonly env: unknown) {}
-      @Cron("*/5 * * * *", { name: "reports" })
+      @Cron("*/5 * * * *", { name: "reports", enabled: fixtureOptions.methodName !== "relocated" })
       @Task({ timeout, maxAttempts })
       run(input: unknown, task: TaskExecutionContext) {
+        return method(this.env, input, task);
+      }
+      @Cron("*/5 * * * *", { name: "reports", enabled: fixtureOptions.methodName === "relocated" })
+      @Task({ timeout, maxAttempts })
+      relocated(input: unknown, task: TaskExecutionContext) {
         return method(this.env, input, task);
       }
       @Cron("*/5 * * * *", { name: "sibling", enabled: fixtureOptions.sibling !== undefined })
@@ -249,8 +255,14 @@ describe("Cloudflare scheduled handler", () => {
       await vi.advanceTimersByTimeAsync(0);
       expect(await app.store.list()).toEqual(
         expect.arrayContaining([
-          expect.objectContaining({ type: "reports", status: "failed" }),
-          expect.objectContaining({ type: "sibling", status: "running" }),
+          expect.objectContaining({
+            type: "reports",
+            status: "failed",
+          }),
+          expect.objectContaining({
+            type: "sibling",
+            status: "running",
+          }),
         ]),
       );
       expect(handlerSettled).toBe(false);
@@ -261,7 +273,12 @@ describe("Cloudflare scheduled handler", () => {
       await expect(hostCompletion).rejects.toBe(failure);
       expect(hostSettled).toBe(true);
       expect(await app.store.list()).toEqual(
-        expect.arrayContaining([expect.objectContaining({ type: "sibling", status: "completed" })]),
+        expect.arrayContaining([
+          expect.objectContaining({
+            type: "sibling",
+            status: "completed",
+          }),
+        ]),
       );
     } finally {
       release?.();
@@ -317,6 +334,59 @@ describe("Cloudflare scheduled handler", () => {
       });
     } finally {
       await Promise.all([original.runtime.dispose(), replacement.runtime.dispose()]);
+    }
+  });
+
+  it.each(["provider", "method"] as const)(
+    "rejects native redelivery to a reassigned %s while the original firing is retrying",
+    async (changed) => {
+      const original = await fixture(
+        async () => {
+          throw ProblemFactory.internalServerError("REPORT_DOWN", "Retryable report failure");
+        },
+        30_000,
+        2,
+      );
+      const calls = vi.fn(async () => "wrong replacement effect");
+      const replacement = await fixture(calls, 30_000, 2, {
+        store: original.store,
+        ...(changed === "provider"
+          ? { providerTokenId: "replacement-reports" }
+          : { methodName: "relocated" }),
+      });
+      try {
+        await expect(original.handler(event, original.options.env, context)).rejects.toThrow();
+        expect(await original.store.list()).toMatchObject([{ status: "retrying", attempts: 1 }]);
+        await expect(
+          replacement.handler(event, replacement.options.env, context),
+        ).rejects.toMatchObject({
+          code: "CLOUDFLARE_CRON_EXECUTION_MISMATCH",
+        });
+        expect(calls).not.toHaveBeenCalled();
+        expect(await original.store.list()).toMatchObject([{ status: "retrying", attempts: 1 }]);
+      } finally {
+        await Promise.all([original.runtime.dispose(), replacement.runtime.dispose()]);
+      }
+    },
+  );
+
+  it("resumes the original retrying target on native redelivery and then reuses its completed result", async () => {
+    const calls = vi.fn(async (_env: unknown, _input: unknown, task: TaskExecutionContext) => {
+      if (task.attempt === 1)
+        throw ProblemFactory.internalServerError("REPORT_DOWN", "Retryable report failure");
+      return "stored";
+    });
+    const app = await fixture(calls, 30_000, 2);
+    try {
+      await expect(app.handler(event, app.options.env, context)).rejects.toThrow();
+      await app.handler(event, app.options.env, context);
+      await app.handler(event, app.options.env, context);
+      expect(calls).toHaveBeenCalledTimes(2);
+      expect(await app.store.list()).toMatchObject([
+        { status: "completed", attempts: 2, result: "stored" },
+      ]);
+    } finally {
+      await app.runtime.dispose();
     }
   });
 
