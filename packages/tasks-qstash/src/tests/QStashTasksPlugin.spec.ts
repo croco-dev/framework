@@ -1,9 +1,47 @@
 import { createApplicationRuntime, defineCrocoApplication } from "@croco/framework-module";
 import { TASK_DISPATCHER_TOKEN } from "@croco/tasks-core";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { QSTASH_TASKS_MODULE_NAME, QStashTaskRunner, qstashTasks } from "../index";
 
 describe("qstashTasks", () => {
+  it("sends scoped deduplication headers through the application dispatcher and real SDK", async () => {
+    const published: { id: string | null; body: unknown }[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_input: unknown, init?: RequestInit) => {
+        published.push({
+          id: new Headers(init?.headers).get("Upstash-Deduplication-Id"),
+          body: JSON.parse(String(init?.body)),
+        });
+        return Response.json({ messageId: `msg-${published.length}` });
+      }),
+    );
+    const runtime = createApplicationRuntime(
+      defineCrocoApplication({
+        name: "qstash-publish-test",
+        imports: [
+          qstashTasks({ token: "fixture-token", destinationUrl: "https://example.test/tasks" }),
+        ],
+      }),
+    );
+    try {
+      await runtime.initialize();
+      const dispatcher = runtime.get(TASK_DISPATCHER_TOKEN);
+      await dispatcher.execute("sync-customer", { orderId: 1 }, { idempotencyKey: "order-1" });
+      await dispatcher.execute("send-email", { orderId: 1 }, { idempotencyKey: "order-1" });
+      await dispatcher.execute("sync-customer", { orderId: 1 }, { idempotencyKey: "order-1" });
+      await dispatcher.execute("sync-customer", { orderId: 1 });
+      expect(published[0]?.id).toMatch(/^croco-task-v1:[a-f0-9]{64}$/);
+      expect(published[1]?.id).not.toBe(published[0]?.id);
+      expect(published[2]?.id).toBe(published[0]?.id);
+      expect(published[3]?.id).toBeNull();
+      expect(published[0]?.body).toEqual({ taskId: "sync-customer", payload: { orderId: 1 } });
+    } finally {
+      await runtime.dispose();
+      vi.unstubAllGlobals();
+    }
+  });
+
   it("owns the external task dispatcher slot in the application graph", async () => {
     const plugin = qstashTasks({
       token: "qstash-secret-token",

@@ -278,27 +278,120 @@ describe("QStashTaskRunner", () => {
     });
   });
 
-  it("should pass idempotency keys as QStash deduplication ids", async () => {
+  it("scopes deduplication to the destination, task and caller key", async () => {
+    const enqueued: PublishJsonRecord[] = [];
+    const messages = new Map<string, string>();
+    mockPublishJSON.mockImplementation(async (request: PublishJsonRecord) => {
+      const previous = request.deduplicationId && messages.get(request.deduplicationId);
+      if (previous) return { messageId: previous };
+      const messageId = `msg-${enqueued.length}`;
+      enqueued.push(request);
+      if (request.deduplicationId) messages.set(request.deduplicationId, messageId);
+      return { messageId };
+    });
     const runner = new QStashTaskRunner({
       token: "test-token",
       destinationUrl: "https://example.com/api/tasks/webhook",
     });
-
-    await runner.execute(
-      "sync-customer",
-      { customerId: "customer-123" },
-      { idempotencyKey: "customer-sync-123" },
-    );
-
-    expect(mockPublishJSON).toHaveBeenCalledWith({
-      deduplicationId: "customer-sync-123",
-      url: "https://example.com/api/tasks/webhook",
-      body: {
-        taskId: "sync-customer",
-        payload: { customerId: "customer-123" },
-      },
-      delay: undefined,
-      headers: {},
+    const otherDestination = new QStashTaskRunner({
+      token: "test-token",
+      destinationUrl: "https://example.com/api/other-tasks/webhook",
     });
+    const restarted = new QStashTaskRunner({
+      token: "test-token",
+      destinationUrl: "https://example.com/api/tasks/webhook",
+    });
+    const options = { idempotencyKey: "order-1" };
+    const first = await runner.execute("sync-customer", { customerId: "customer-123" }, options);
+    const otherTask = await runner.execute("send-email", { to: "user@example.test" }, options);
+    const otherUrl = await otherDestination.execute("sync-customer", {}, options);
+    const otherKey = await runner.execute("sync-customer", {}, { idempotencyKey: "order-2" });
+    const retry = await restarted.execute("sync-customer", { customerId: "customer-123" }, options);
+
+    expect(
+      new Set([first.messageId, otherTask.messageId, otherUrl.messageId, otherKey.messageId]).size,
+    ).toBe(4);
+    expect(retry).toEqual(first);
+    expect(enqueued).toHaveLength(4);
+    expect(enqueued[0]?.deduplicationId).toBe(
+      "croco-task-v1:111a33d7183693695a7f86ea95044b60f96aa02f43418dc914ca4dcff5422c49",
+    );
+    expect(enqueued[0]?.body).toEqual({
+      taskId: "sync-customer",
+      payload: { customerId: "customer-123" },
+    });
+  });
+
+  it("keeps tuple boundaries distinct and encodes long Unicode keys in bounded ASCII ids", async () => {
+    const runner = new QStashTaskRunner({
+      token: "test-token",
+      destinationUrl: "https://example.test/tasks",
+    });
+    for (const [task, key] of [
+      ["a:b", "c"],
+      ["a", "b:c"],
+      ["a", "b:c "],
+      ["a", "주문🔑".repeat(10_000)],
+    ]) {
+      await runner.execute(task, {}, { idempotencyKey: key });
+    }
+    const ids = getPublishJsonRecords().map((record) => record.deduplicationId);
+    expect(new Set(ids).size).toBe(4);
+    for (const id of ids) expect(id).toMatch(/^croco-task-v1:[a-f0-9]{64}$/);
+  });
+
+  it("reuses the accepted message after its publish acknowledgement is lost", async () => {
+    const messages = new Map<string | undefined, string>();
+    mockPublishJSON.mockImplementation(async (request: PublishJsonRecord) => {
+      const previous = messages.get(request.deduplicationId);
+      if (previous) return { messageId: previous };
+      messages.set(request.deduplicationId, "msg-accepted");
+      throw createUpstreamError("acknowledgement lost", 503);
+    });
+    const runner = new QStashTaskRunner({
+      token: "test-token",
+      destinationUrl: "https://example.test/tasks",
+    });
+    const options = { idempotencyKey: "order-1" };
+    await expect(runner.execute("send-email", { orderId: 1 }, options)).rejects.toMatchObject({
+      code: "tasks-qstash/publish-failed",
+    });
+    await expect(runner.execute("send-email", { orderId: 1 }, options)).resolves.toEqual({
+      messageId: "msg-accepted",
+    });
+    expect(messages.size).toBe(1);
+    expect(getPublishJsonRecords()[0]?.deduplicationId).toMatch(/^croco-task-v1:[a-f0-9]{64}$/);
+    expect(getPublishJsonRecords()[1]?.deduplicationId).toBe(
+      getPublishJsonRecords()[0]?.deduplicationId,
+    );
+  });
+
+  it("keeps the same caller identity when payload, delay or forwarded headers change", async () => {
+    const runner = new QStashTaskRunner({
+      token: "test-token",
+      destinationUrl: "https://example.test/tasks",
+    });
+    await runner.execute("send-email", { amount: 17 }, { idempotencyKey: "order-1" });
+    await runner.execute(
+      "send-email",
+      { amount: 29 },
+      { idempotencyKey: "order-1", delay: 30, headers: { "X-Version": "2" } },
+    );
+    const [first, retry] = getPublishJsonRecords();
+    expect(first?.deduplicationId).toMatch(/^croco-task-v1:[a-f0-9]{64}$/);
+    expect(retry?.deduplicationId).toBe(first?.deduplicationId);
+    expect(retry?.body).toEqual({ taskId: "send-email", payload: { amount: 29 } });
+  });
+
+  it("publishes every unkeyed call without adding a deduplication id", async () => {
+    const runner = new QStashTaskRunner({
+      token: "test-token",
+      destinationUrl: "https://example.test/tasks",
+    });
+    await runner.execute("send-email", {});
+    await runner.execute("send-email", {});
+    expect(getPublishJsonRecords()).toHaveLength(2);
+    for (const record of getPublishJsonRecords())
+      expect(record).not.toHaveProperty("deduplicationId");
   });
 });
