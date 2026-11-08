@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "etl-core",
+      "classification": "pure-contract",
+      "reason": "Preserve the primary pipeline failure and confirmed publication result when failure bookkeeping or reader cleanup fails; emit redacted phase diagnostics without changing persistence formats or provider support.",
+      "files": {
+        "packages/etl-core/src/pipeline/definePipeline.ts": "9c457fba38469c4f22c31655e5aa5abdbf0ad8325b533013679897a4730051ef"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "This change preserves error and result ownership at the existing pipeline execution boundary. It adds no host capability, storage, deployment, or lifecycle requirement. The existing Node file reader and publication providers are reused.",
+          "providers": ["@croco/etl-core/pipeline"],
+          "constraints": [
+            "This review makes no new runtime support or deployed infrastructure certification claim. File capture and validation/preview error boundaries are unchanged."
+          ],
+          "references": [
+            "packages/etl-core/src/pipeline/definePipeline.ts",
+            "packages/etl-core/src/tests/Pipeline.spec.ts",
+            "packages/etl-core/README.md",
+            "packages/warehouse-postgres/src/pipeline/PostgresPipelinePublication.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "This change preserves error and result ownership at the existing pipeline execution boundary. It adds no host capability, storage, deployment, or lifecycle requirement. The existing Node file reader and publication providers are reused.",
+          "providers": ["@croco/etl-core/pipeline"],
+          "constraints": [
+            "This review makes no new runtime support or deployed infrastructure certification claim. File capture and validation/preview error boundaries are unchanged."
+          ],
+          "references": [
+            "packages/etl-core/src/pipeline/definePipeline.ts",
+            "packages/etl-core/src/tests/Pipeline.spec.ts",
+            "packages/etl-core/README.md",
+            "packages/warehouse-postgres/src/pipeline/PostgresPipelinePublication.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "This change preserves error and result ownership at the existing pipeline execution boundary. It adds no host capability, storage, deployment, or lifecycle requirement. The existing Node file reader and publication providers are reused.",
+          "providers": ["@croco/etl-core/pipeline"],
+          "constraints": [
+            "This review makes no new runtime support or deployed infrastructure certification claim. File capture and validation/preview error boundaries are unchanged."
+          ],
+          "references": [
+            "packages/etl-core/src/pipeline/definePipeline.ts",
+            "packages/etl-core/src/tests/Pipeline.spec.ts",
+            "packages/etl-core/README.md",
+            "packages/warehouse-postgres/src/pipeline/PostgresPipelinePublication.ts"
+          ]
+        }
+      }
+    }
+  ]
+}
