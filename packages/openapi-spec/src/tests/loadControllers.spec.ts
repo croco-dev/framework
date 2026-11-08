@@ -20,9 +20,9 @@ const SHARED_FIXTURE_ROOT = new URL(
 );
 
 describe("loadControllers", () => {
-  it(
-    "rejects selected ambient declaration errors before importing controllers",
-    async () => {
+  it.each(["root", "reference"] as const)(
+    "rejects selected ambient declaration errors before importing controllers (%s)",
+    async (declarationKind) => {
       fs.writeFileSync(
         path.join(tempRoot, "tsconfig.json"),
         JSON.stringify({
@@ -32,11 +32,22 @@ describe("loadControllers", () => {
             target: "ES2020",
             skipLibCheck: false,
           },
-          include: ["src/**/*.ts"],
+          files: ["src/UsersController.ts", "src/globals.d.ts"],
         }),
       );
-      const declarationPath = path.join(sourceDir, "globals.d.ts");
-      fs.writeFileSync(declarationPath, "type AppId = MissingAppId;");
+      const globalsPath = path.join(sourceDir, "globals.d.ts");
+      const declarationPath =
+        declarationKind === "root" ? globalsPath : path.join(sourceDir, "extra", "types.d.ts");
+      fs.mkdirSync(path.dirname(declarationPath), { recursive: true });
+      fs.writeFileSync(
+        globalsPath,
+        declarationKind === "root"
+          ? "type AppId = MissingAppId;"
+          : "/// <reference path='./extra/types.d.ts' />\ntype AppId = ExtraId;",
+      );
+      if (declarationKind === "reference") {
+        fs.writeFileSync(declarationPath, "type ExtraId = MissingAppId;");
+      }
       fs.writeFileSync(
         path.join(sourceDir, "UsersController.ts"),
         getMixedControllerSource().replace(

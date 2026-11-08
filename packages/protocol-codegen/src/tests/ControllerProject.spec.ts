@@ -20,6 +20,68 @@ afterEach(() => {
 });
 
 describe("createControllerProject", () => {
+  it.each([
+    { skipLibCheck: false, dependencyExtension: "d.ts" },
+    { skipLibCheck: true, dependencyExtension: "d.ts" },
+    { skipLibCheck: true, dependencyExtension: "ts" },
+  ])(
+    "preserves ambient dependency diagnostics ($dependencyExtension, skipLibCheck=$skipLibCheck)",
+    ({ skipLibCheck, dependencyExtension }) => {
+      const root = createTemporaryDirectory();
+      const configPath = path.join(root, "tsconfig.json");
+      writeJson(configPath, {
+        compilerOptions: {
+          module: "CommonJS",
+          target: "ES2020",
+          skipLibCheck,
+        },
+        files: ["Controller.ts", "globals.d.ts"],
+      });
+      writeFile(
+        path.join(root, "globals.d.ts"),
+        dependencyExtension === "d.ts"
+          ? "/// <reference path='./extra/types.d.ts' />\ntype AppId = ExtraId;"
+          : "import type { ExtraId } from './extra/types'; declare global { type AppId = ExtraId; }",
+      );
+      writeFile(
+        path.join(root, "extra", `types.${dependencyExtension}`),
+        `${dependencyExtension === "ts" ? "export " : ""}type ExtraId = MissingAppId;`,
+      );
+      writeFile(path.join(root, "Controller.ts"), "export class Controller { value!: AppId; }");
+      const expected =
+        skipLibCheck && dependencyExtension === "d.ts"
+          ? []
+          : [{ code: 2304, file: `types.${dependencyExtension}` }];
+      const parsed = typescript.getParsedCommandLineOfConfigFile(
+        configPath,
+        {},
+        {
+          ...typescript.sys,
+          onUnRecoverableConfigFileDiagnostic: () => {},
+        },
+      );
+      expect(parsed).toBeDefined();
+      const application = typescript.createProgram(parsed?.fileNames ?? [], parsed?.options ?? {});
+      expect(
+        typescript.getPreEmitDiagnostics(application).map((diagnostic) => ({
+          code: diagnostic.code,
+          file: diagnostic.file ? path.basename(diagnostic.file.fileName) : undefined,
+        })),
+      ).toEqual(expected);
+      const session = createControllerProject({ cwd: root, controllers: "Controller.ts" });
+      try {
+        expect(
+          session.getPreEmitDiagnostics().map((diagnostic) => ({
+            code: diagnostic.getCode(),
+            file: diagnostic.getSourceFile()?.getBaseName(),
+          })),
+        ).toEqual(expected);
+      } finally {
+        session.dispose();
+      }
+    },
+  );
+
   it.each([false, true])(
     "respects skipLibCheck=%s for selected ambient declarations",
     (skipLibCheck) => {

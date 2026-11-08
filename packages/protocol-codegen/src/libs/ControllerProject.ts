@@ -145,8 +145,11 @@ export function createControllerProject(
   project.addSourceFilesAtPaths(loadedConfig?.declarationPaths ?? []);
   resolveProjectSourceDependencies(project);
   const diagnosticOwners = new Map(sourceOwners);
-  for (const declarationPath of loadedConfig?.declarationPaths ?? []) {
-    diagnosticOwners.set(normalizePath(declarationPath), project);
+  for (const sourceFile of project.getSourceFiles()) {
+    const sourcePath = normalizePath(sourceFile.getFilePath());
+    if (!diagnosticOwners.has(sourcePath)) {
+      diagnosticOwners.set(sourcePath, project);
+    }
   }
   const analysisContexts = analysisProjects.map((analysisProject) => ({
     project: analysisProject,
@@ -397,14 +400,14 @@ function createEmitContext(
 
 function collectPreEmitDiagnostics(
   contexts: readonly ProjectContext[],
-  sourceOwners: ReadonlyMap<string, Project>,
+  diagnosticOwners: ReadonlyMap<string, Project>,
 ): readonly Diagnostic[] {
   const diagnostics = new Map<string, Diagnostic>();
   for (const context of contexts) {
     for (const diagnostic of context.project.getPreEmitDiagnostics()) {
       const compilerDiagnostic = diagnostic.compilerObject;
       const filePath = compilerDiagnostic.file?.fileName;
-      if (filePath && sourceOwners.get(normalizePath(filePath)) !== context.project) {
+      if (filePath && diagnosticOwners.get(normalizePath(filePath)) !== context.project) {
         continue;
       }
       const key = [
