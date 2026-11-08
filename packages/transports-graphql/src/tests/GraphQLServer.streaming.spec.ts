@@ -1,6 +1,8 @@
 import "reflect-metadata";
-import type { Server, ServerResponse } from "node:http";
+import type { IncomingHttpHeaders, Server, ServerResponse } from "node:http";
+import { request as httpRequest } from "node:http";
 import { createRequire } from "node:module";
+import { brotliCompressSync, brotliDecompressSync, gzipSync, gunzipSync } from "node:zlib";
 import {
   Container,
   Context,
@@ -75,6 +77,99 @@ function subscribe(url: string, signal: AbortSignal) {
     signal,
   });
 }
+
+function readWireResponse(url: string, method = "POST") {
+  return new Promise<{
+    status: number;
+    headers: IncomingHttpHeaders;
+    body: Buffer;
+  }>((resolve, reject) => {
+    const request = httpRequest(
+      url,
+      { method, headers: { "content-type": "application/json" } },
+      (response) => {
+        const chunks: Buffer[] = [];
+        response.on("data", (chunk: Buffer) => chunks.push(chunk));
+        response.on("error", reject);
+        response.on("end", () =>
+          resolve({
+            status: response.statusCode ?? 0,
+            headers: response.headers,
+            body: Buffer.concat(chunks),
+          }),
+        );
+      },
+    );
+    request.on("error", reject);
+    request.end(method === "POST" ? JSON.stringify({ query: "{ sample }" }) : undefined);
+  });
+}
+
+describe("GraphQL Node response bytes", () => {
+  beforeEach(() => Container.reset());
+  afterEach(() => Container.reset());
+
+  it.each([
+    { encoding: "gzip", compress: gzipSync, decompress: gunzipSync },
+    { encoding: "br", compress: brotliCompressSync, decompress: brotliDecompressSync },
+  ])(
+    "preserves $encoding bytes produced by a Yoga response plugin",
+    async ({ encoding, compress, decompress }) => {
+      let compressed: Buffer | undefined;
+      const server = new GraphQLServer({
+        schema: subscriptionSchema(async function* () {}),
+        plugins: [
+          {
+            async onResponse({ response, setResponse }) {
+              compressed = compress(Buffer.from(await response.arrayBuffer()));
+              const headers = new Headers(response.headers);
+              headers.set("content-encoding", encoding);
+              headers.set("content-length", String(compressed.length));
+              headers.append("set-cookie", "session=one; HttpOnly; Path=/");
+              headers.append("set-cookie", "csrf=two; SameSite=Strict; Path=/");
+              setResponse(
+                new Response(new Uint8Array(compressed), { status: response.status, headers }),
+              );
+            },
+          },
+        ],
+      });
+      await server.start(0);
+      try {
+        const response = await within(readWireResponse(endpoint(server)));
+        expect(response.status).toBe(200);
+        expect(response.headers["content-encoding"]).toBe(encoding);
+        expect(response.headers["set-cookie"]).toEqual([
+          "session=one; HttpOnly; Path=/",
+          "csrf=two; SameSite=Strict; Path=/",
+        ]);
+        expect(response.body).toEqual(compressed);
+        expect(JSON.parse(decompress(response.body).toString())).toEqual({
+          data: { sample: "query-result" },
+        });
+      } finally {
+        await server.stop();
+      }
+    },
+  );
+
+  it.each([
+    { method: "HEAD", status: 200 },
+    { method: "GET", status: 204 },
+  ])("preserves an empty $method response with status $status", async ({ method, status }) => {
+    const server = new GraphQLServer({ schema: subscriptionSchema(async function* () {}) });
+    await server.initialize();
+    Reflect.set(server, "yogaHandler", async () => new Response(null, { status }));
+    await server.start(0);
+    try {
+      const response = await within(readWireResponse(endpoint(server), method));
+      expect(response.status).toBe(status);
+      expect(response.body).toHaveLength(0);
+    } finally {
+      await server.stop();
+    }
+  });
+});
 
 async function readUntil(
   reader: ReadableStreamDefaultReader<Uint8Array>,

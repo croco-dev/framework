@@ -197,7 +197,7 @@ export class GraphQLServer {
             await this.streamNodeResponse(res, response, abortScope);
             return;
           }
-          const responseBody = await response.text();
+          const responseBody = new Uint8Array(await response.arrayBuffer());
           abortScope.signal.throwIfAborted();
           phase = "response-write";
           await this.writeNodeResponse(res, responseBody);
@@ -464,7 +464,7 @@ export class GraphQLServer {
     }
   }
 
-  private writeNodeResponse(res: ServerResponse, body: string): Promise<void> {
+  private writeNodeResponse(res: ServerResponse, body: string | Uint8Array): Promise<void> {
     return new Promise((resolve, reject) => {
       const cleanup = () => {
         res.off("finish", onFinish);
