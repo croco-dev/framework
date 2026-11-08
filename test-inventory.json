@@ -3084,6 +3084,12 @@
       "owner": "@croco/framework-context"
     },
     {
+      "path": "packages/framework-context/src/tests/GeneratedProviderRemoval.spec.ts",
+      "lane": "fast",
+      "qualifiers": ["coverage"],
+      "owner": "@croco/framework-context"
+    },
+    {
       "path": "packages/framework-context/src/tests/ILogger.spec.ts",
       "lane": "fast",
       "qualifiers": ["coverage"],

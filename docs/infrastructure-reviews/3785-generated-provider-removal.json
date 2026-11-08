@@ -1,0 +1,102 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "framework-context",
+      "classification": "pure-contract",
+      "reason": "Keep removed generated bindings out of subsequent graph rebuilds and release only unowned singleton values.",
+      "files": {
+        "packages/framework-context/src/libs/Container.ts": "2308bcb393bc1c32f5da909301756878f79047e6d2069a4dc442e5d7ea8a15ba"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "This change maintains application-local DI registrations and synchronous resource ownership, with no new Host capability, storage, transport, or deployment lifecycle dependency.",
+          "providers": ["@croco/framework-context/Container"],
+          "constraints": [
+            "Container state remains local to the selected application scope. Existing Host compatibility is unchanged; no deployment execution or infrastructure certification is claimed."
+          ],
+          "references": [
+            "packages/framework-context/src/libs/Container.ts",
+            "packages/framework-context/src/tests/GeneratedProviderRemoval.spec.ts",
+            "packages/framework-context/README.md"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "This change maintains application-local DI registrations and synchronous resource ownership, with no new Host capability, storage, transport, or deployment lifecycle dependency.",
+          "providers": ["@croco/framework-context/Container"],
+          "constraints": [
+            "Container state remains local to the selected application scope. Existing Host compatibility is unchanged; no deployment execution or infrastructure certification is claimed."
+          ],
+          "references": [
+            "packages/framework-context/src/libs/Container.ts",
+            "packages/framework-context/src/tests/GeneratedProviderRemoval.spec.ts",
+            "packages/framework-context/README.md"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "This change maintains application-local DI registrations and synchronous resource ownership, with no new Host capability, storage, transport, or deployment lifecycle dependency.",
+          "providers": ["@croco/framework-context/Container"],
+          "constraints": [
+            "Container state remains local to the selected application scope. Existing Host compatibility is unchanged; no deployment execution or infrastructure certification is claimed."
+          ],
+          "references": [
+            "packages/framework-context/src/libs/Container.ts",
+            "packages/framework-context/src/tests/GeneratedProviderRemoval.spec.ts",
+            "packages/framework-context/README.md"
+          ]
+        }
+      }
+    },
+    {
+      "package": "problems-core",
+      "classification": "pure-contract",
+      "reason": "Synchronize generated diagnostic source locations without changing diagnostic codes or runtime behavior.",
+      "files": {
+        "packages/problems-core/src/generated/problem-code-registry.ts": "675c09a63d64eaddb3802bf77161cb4d0c6fb99d9ff7d5534d999db2fc5d0326"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Generated diagnostic location metadata has no Host, storage, transport, or deployment lifecycle dependency.",
+          "providers": ["@croco/problems-core/ProblemCodeRegistry"],
+          "constraints": [
+            "Container state remains local to the selected application scope. Existing Host compatibility is unchanged; no deployment execution or infrastructure certification is claimed."
+          ],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "scripts/problem-registry.mts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Generated diagnostic location metadata has no Host, storage, transport, or deployment lifecycle dependency.",
+          "providers": ["@croco/problems-core/ProblemCodeRegistry"],
+          "constraints": [
+            "Container state remains local to the selected application scope. Existing Host compatibility is unchanged; no deployment execution or infrastructure certification is claimed."
+          ],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "scripts/problem-registry.mts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Generated diagnostic location metadata has no Host, storage, transport, or deployment lifecycle dependency.",
+          "providers": ["@croco/problems-core/ProblemCodeRegistry"],
+          "constraints": [
+            "Container state remains local to the selected application scope. Existing Host compatibility is unchanged; no deployment execution or infrastructure certification is claimed."
+          ],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "scripts/problem-registry.mts"
+          ]
+        }
+      }
+    }
+  ]
+}

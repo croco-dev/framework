@@ -36,6 +36,17 @@ Independent application runtimes can isolate registrations and singleton instanc
 that asynchronous scope, including work after `await`. Resetting one active scope does not reset the
 root container or another scope.
 
+`Container.remove(token)` also removes every generated binding for that token from the selected
+container's installed graphs. Unrelated graph installation or removal cannot restore it. Other tokens
+in those graphs remain installed. Reinstalling the original graph explicitly restores its bindings;
+a removed singleton's factory runs again on its next resolution. The original graph artifact is unchanged,
+and existing application scopes keep their own registrations.
+
+Removal synchronously cleans up generated singletons after their last binding is removed. A value still
+owned by another resolved generated binding, a registered value, or the container's transient lifetime
+is retained for that owner. Request and transient instances keep their existing cleanup boundaries.
+Like graph replacement, removal can destroy resources immediately; rollback does not undo that cleanup.
+
 Call `Container.reset()` only while the selected container is idle. Reset attempts synchronous cleanup
 of registered values, generated transients, and generated singletons in that order, once per object, then clears
 registrations even if cleanup fails. Failures throw `framework-context/container-reset-failed`;

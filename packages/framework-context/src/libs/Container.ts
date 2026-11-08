@@ -666,9 +666,28 @@ export class Container {
   }
 
   static remove<T>(token: TokenIdentifier<T>): void {
-    Container.removeRegisteredValue(token);
+    const hasGeneratedProvider = Container.getGeneratedProviders().has(token);
+    if (hasGeneratedProvider) {
+      const scope = Container.getScopeState();
+      const runtime = scope?.instance ?? RuntimeContainerBackend.of();
+      const identifier = Container.toServiceIdentifier(token);
+      const removed = runtime.services.filter((service) => service.id === identifier);
+      runtime.services.splice(
+        0,
+        runtime.services.length,
+        ...runtime.services.filter((service) => service.id !== identifier),
+      );
+      scope?.tokens.delete(token);
+      const retainedValues = new Set([
+        ...Container.getGeneratedSingletons().values(),
+        ...Container.getGeneratedTransients(),
+        ...runtime.services.map((service) => service.value),
+      ]);
+      for (const service of removed) runtime.destroyServiceInstance(service, retainedValues);
+    } else {
+      Container.removeRegisteredValue(token);
+    }
     Container.getLazyProviders().delete(token);
-    Container.getGeneratedProviders().delete(token);
     if (Container.isConstructorToken(token)) {
       const label = Container.getConstructorTokenLabel(token);
       const scope = Container.getScopeState();
@@ -688,6 +707,18 @@ export class Container {
     }
     Container.clearTokenIdentity(token);
     Container.setValidated(false);
+    if (hasGeneratedProvider) {
+      const graphs = Container.getInstalledGraphs();
+      for (const [graphId, graph] of graphs) {
+        if (!graph.providers.some((provider) => provider.token === token)) continue;
+        graphs.set(graphId, {
+          ...graph,
+          providers: graph.providers.filter((provider) => provider.token !== token),
+          roots: graph.roots.filter((root) => root !== token),
+        });
+      }
+      Container.rebuildGeneratedProviders();
+    }
   }
 
   /**
@@ -1494,11 +1525,14 @@ export class Container {
 
     const activeDefinitions = new Set(definitions);
     const singletons = Container.getGeneratedSingletons();
-    const retainedValues = new Set(
-      [...singletons]
+    const runtime = Container.getScopeState()?.instance ?? RuntimeContainerBackend.of();
+    const retainedValues = new Set([
+      ...[...singletons]
         .filter(([provider]) => activeDefinitions.has(provider))
         .map(([, value]) => value),
-    );
+      ...runtime.services.map((service) => service.value),
+      ...Container.getGeneratedTransients(),
+    ]);
     const disposedValues = new Set<unknown>();
     for (const [provider, instance] of singletons) {
       if (activeDefinitions.has(provider)) {
