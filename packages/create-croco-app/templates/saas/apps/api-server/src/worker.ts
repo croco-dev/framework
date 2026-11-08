@@ -1,5 +1,8 @@
 import type { CloudflareFetchEnv, CloudflareHostFetchHandler } from "@croco/preset-cloudflare";
-import type { CloudflareScheduledHandler } from "@croco/preset-cloudflare/scheduled";
+import type {
+  CloudflareScheduledController,
+  CloudflareScheduledContext,
+} from "@croco/preset-cloudflare/scheduled";
 import { createWorkerApplication, workerProblemResponse } from "./workerBootstrap";
 
 const applications = new WeakMap<
@@ -26,7 +29,11 @@ const fetch: CloudflareHostFetchHandler = async (request, env, context) => {
   }
 };
 
-const scheduled: CloudflareScheduledHandler = async (event, env, context) => {
+const scheduled = async (
+  event: CloudflareScheduledController,
+  env: CloudflareFetchEnv,
+  context: CloudflareScheduledContext,
+) => {
   const app = await getApplication(env);
   await app.scheduled(event, env, context);
 };

@@ -70,7 +70,9 @@ describe("Cloudflare scheduled handler", () => {
     );
     await runtime.initialize();
     const store = new MemoryExecutionStore();
-    const manager = new ExecutionManagerImpl(store, { clock: () => new Date() });
+    const manager = new ExecutionManagerImpl(store, {
+      clock: () => new Date(vi.getMockedSystemTime()?.getTime() ?? event.scheduledTime),
+    });
     const options = {
       runtime,
       graph,

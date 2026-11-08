@@ -82,7 +82,7 @@
         "packages/create-croco-app/src/generator.ts": "d26d6cef544efa94d01fa2122ac859b71e02779bab305638e90d5544e4b9837d",
         "packages/create-croco-app/src/helpers/croco-ranges.ts": "204fd6e18bab947e9040f6d7a6f1073155bcb01b6894987d5ddc13f6a6c1caf8",
         "packages/create-croco-app/templates/saas/apps/api-server/scripts/worker-crons.ts": "27d3efdca077ea22174bf87f5c603351245f9b02305c47cc8e51a3ff23677e8f",
-        "packages/create-croco-app/templates/saas/apps/api-server/src/worker.ts": "f9a7d8162f39e7d92432e15142cde879c018f07ac2400bda7659764843937325",
+        "packages/create-croco-app/templates/saas/apps/api-server/src/worker.ts": "850adee76d02c6c40069d0f06d848100d52636fb241b06057092ece591c32806",
         "packages/create-croco-app/templates/saas/apps/api-server/src/workerBootstrap.ts.hbs": "e3cecaf95426748f7147243311bd239b0a445728f015892d489388804ea5199a",
         "packages/create-croco-app/templates/saas/apps/api-server/src/workerScheduling.ts.hbs": "d82c2127e2c92822a58388d3cf3e7b6dd8f767e0b8622bf260f705f04cc8f4fb",
         "packages/create-croco-app/templates/saas/apps/api-server/worker.di.config.ts": "84a04126a765efa173c56a763bdac5dc32f82bec99781489003814cada5dcb6e",
