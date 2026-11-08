@@ -79,13 +79,16 @@ DLQ 설정은 명시적으로 opt-in합니다. 설정하지 않으면 기존처�
 핸들러를 DI에서 생성하지 못한 경우에는 `handler-resolution-failed` 원인과 재시도 횟수 0으로 항목을 저장합니다.
 이때 핸들러 정책은 호출하지 않으며, 버스의 보관 기간을 적용합니다. 의존성 등록 문제를 해결한 뒤 재생할 수 있습니다.
 
-발행 중 DLQ 저장까지 실패하면 `EventPublishFailedError.failures`의 `error`는 원래 실행 오류를 유지하며,
+발행 중 DLQ 저장까지 실패하면 `failures`의 `error`는 원래 실행 오류를 유지하며,
 `storageError`에 저장 오류를 별도로 반환합니다. 원래 오류의 identity·code·retryability는 유지됩니다.
 이때 반환하는 `item`에는 원래 이벤트 ID와 핸들러 ID, payload, 재시도 정보가 있으므로 호출자가 보관했다가
 저장소 복구 후 `deadLetterQueue.enqueue(item)`으로 저장하고 재생할 수 있습니다. `item`은 진단 로그에 출력하지
 마세요. 저장이 성공하면 `storageError`와 `item`은 반환하지 않습니다.
 `item`은 열거되지 않는 필드입니다. 실패 기록을 객체 펼침이나 JSON으로 직렬화하거나 일반 오류 출력으로
 기록해도 포함되지 않으므로, 복구할 때는 `failure.item`에 직접 접근해야 합니다.
+`EventPublishFailedError`와 `EventPublishDroppedProblem` 모두의 `failures`를 확인하세요. 앞선 핸들러의 DLQ
+저장이 실패한 뒤 다른 발행이 실행 슬롯을 차지하면, 남은 구독자는 생략되고 앞선 실패와 복구 항목은
+`EventPublishDroppedProblem.failures`로 반환됩니다.
 
 `InMemoryDeadLetterQueue`는 프로세스 로컬 FIFO 구현입니다. 같은 이벤트·핸들러 항목을 중복 저장하지 않고,
 `dequeue`한 항목을 원자적으로 제거하며, 실패한 재생은 누적 재시도 횟수와 함께 다시 저장됩니다. 영속성이나 다중

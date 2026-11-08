@@ -56,7 +56,7 @@
       "classification": "pure-contract",
       "reason": "Regenerate the source locations of the two existing event publish Problems after the public failure type grows. Diagnostic codes and recovery policies remain unchanged.",
       "files": {
-        "packages/problems-core/src/generated/problem-code-registry.ts": "d4ace50ba0333241e67c064b139b40be6eda89e8d48736046e9c15c5be3ce83e"
+        "packages/problems-core/src/generated/problem-code-registry.ts": "c19e035ca6fef0618df9c58eb1fbdef1fc8dbe06494e58f1b4d01b192446df03"
       },
       "catalogRuntimes": [],
       "profiles": {
