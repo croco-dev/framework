@@ -144,7 +144,7 @@
       "classification": "pure-contract",
       "reason": "Generated Problem registry types and runtime metadata include the scheduled Host and build-time Cron diagnostics; no Host, provider, storage or lifecycle behavior is added to the Kernel.",
       "files": {
-        "packages/problems-core/src/generated/problem-code-registry.ts": "9524ba406297b55735e2853ec91674c8d7b1ad1b30e9feecbdab12763943b48a"
+        "packages/problems-core/src/generated/problem-code-registry.ts": "82e8bf526e290825a6c3b78e48462fc53d417660e7c40297674e4723768e81cb"
       },
       "catalogRuntimes": [],
       "profiles": {
