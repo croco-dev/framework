@@ -1,3 +1,4 @@
+import { inspect } from "node:util";
 import {
   createEventBusShutdownHook,
   DomainEvent,
@@ -20,6 +21,7 @@ import {
   type TransactionContext,
 } from "@croco/framework-context";
 import * as telemetryApi from "@croco/telemetry-api";
+import { Problem, ProblemCategory } from "@croco/problems-core";
 import * as otelApi from "@opentelemetry/api";
 import { SpanStatusCode } from "@opentelemetry/api";
 import { assert, beforeEach, describe, expect, it, vi } from "vitest";
@@ -96,6 +98,226 @@ describe("InMemoryEventBus", () => {
     eventBus = createTestEventBus();
     testHandler = new TestHandler();
     Container.reset();
+  });
+
+  it.each([false, true])(
+    "preserves handler failure identity when enqueue rejects: %s",
+    async (storageFails) => {
+      class HandlerProblem extends Problem {
+        constructor() {
+          super("test/handler-rejected", ProblemCategory.BadRequest, "handler rejected", {
+            extensions: { retryable: false },
+          });
+        }
+      }
+      const handlerError = new HandlerProblem();
+      const storageError = new Error("DLQ unavailable");
+      const queue = new InMemoryDeadLetterQueue();
+      const enqueue = vi.spyOn(queue, "enqueue");
+      if (storageFails) enqueue.mockRejectedValueOnce(storageError);
+      const handle = vi.fn<() => void>(() => {
+        throw handlerError;
+      });
+      const bus = new InMemoryEventBus<TestEvent>({
+        deadLetterQueue: queue,
+        deadLetterPolicy: { maxRetries: 0 },
+      });
+      bus.subscribe({
+        eventName: TestEvent.eventName,
+        handlerClass: FailingHandler,
+        handler: { handle },
+        handlerId: "failed-handler.v1",
+      });
+      const event = new TestEvent("recover this payload");
+
+      const result: unknown = await bus.publish(event).catch((error: unknown) => error);
+
+      assert.instanceOf(result, EventPublishFailedError);
+      expect(result.failures).toHaveLength(1);
+      const failure = result.failures[0];
+      assert.isDefined(failure);
+      expect(failure.handlerName).toBe("FailingHandler");
+      expect(failure.error).toBe(handlerError);
+      expect(failure.error).toMatchObject({
+        code: "test/handler-rejected",
+        extensions: { retryable: false },
+      });
+      expect(result.cause).toBe(handlerError);
+      expect(enqueue).toHaveBeenCalledOnce();
+      if (storageFails) {
+        expect(failure.storageError).toBe(storageError);
+        assert.isDefined(failure.item);
+        expect(failure.item).toBe(enqueue.mock.calls[0]?.[0]);
+        expect(failure.item).toMatchObject({
+          event: { eventId: event.eventId, message: event.message },
+          handlerId: "failed-handler.v1",
+          reason: "handler-retries-exhausted",
+          retryCount: 0,
+        });
+        expect(inspect(result, { depth: null })).not.toContain(event.message);
+        expect(JSON.stringify(result.failures)).not.toContain(event.message);
+        await expect(queue.size()).resolves.toBe(0);
+
+        await queue.enqueue(failure.item);
+        handle.mockImplementation(() => undefined);
+        await expect(bus.replayDeadLetters()).resolves.toEqual({
+          attempted: 1,
+          succeeded: 1,
+          failed: 0,
+          failures: [],
+        });
+        expect(handle).toHaveBeenLastCalledWith(
+          expect.objectContaining({ eventId: event.eventId, message: event.message }),
+        );
+        await expect(queue.size()).resolves.toBe(0);
+      } else {
+        expect(failure.storageError).toBeUndefined();
+        expect(failure.item).toBeUndefined();
+        await expect(queue.size()).resolves.toBe(1);
+      }
+    },
+  );
+
+  it("returns recoverable storage failures when a competing publish drops remaining subscribers", async () => {
+    class RemainingHandler extends TestHandler {}
+    class HandlerProblem extends Problem {
+      constructor() {
+        super("test/handler-rejected", ProblemCategory.BadRequest, "handler rejected", {
+          extensions: { retryable: false },
+        });
+      }
+    }
+
+    const handlerError = new HandlerProblem();
+    const storageError = new Error("DLQ unavailable");
+    const enqueueStarted = createDeferred();
+    const rejectEnqueue = createDeferred();
+    const competingStarted = createDeferred();
+    const releaseCompeting = createDeferred();
+    const queue = new InMemoryDeadLetterQueue();
+    const enqueue = vi.spyOn(queue, "enqueue").mockImplementationOnce(async () => {
+      enqueueStarted.resolve();
+      await rejectEnqueue.promise;
+      throw storageError;
+    });
+    const handle = vi.fn(async (event: TestEvent) => {
+      if (event.message === "competing") {
+        competingStarted.resolve();
+        await releaseCompeting.promise;
+        return;
+      }
+      throw handlerError;
+    });
+    const remainingHandle = vi.fn();
+    const bus = new InMemoryEventBus<TestEvent>({
+      maxConcurrency: 1,
+      backpressureStrategy: "drop",
+      deadLetterQueue: queue,
+      deadLetterPolicy: { maxRetries: 0 },
+    });
+    bus.subscribe({
+      eventName: TestEvent.eventName,
+      handlerClass: FailingHandler,
+      handler: { handle },
+      handlerId: "failed-handler.v1",
+    });
+    bus.subscribe({
+      eventName: TestEvent.eventName,
+      handlerClass: RemainingHandler,
+      handler: { handle: remainingHandle },
+      handlerId: "remaining-handler.v1",
+    });
+    const event = new TestEvent("recover dropped publish payload");
+    const publish = bus.publish(event).catch((error: unknown) => error);
+    await enqueueStarted.promise;
+
+    // Claim the released slot before the original publish resumes its subscriber loop.
+    const competing = (async () => {
+      for (let turn = 0; bus.getRunningHandlerCount() > 0; turn++) {
+        assert.isBelow(turn, 100, "the failed enqueue must release its execution slot");
+        await Promise.resolve();
+      }
+      await bus.publish(new TestEvent("competing"));
+    })();
+    rejectEnqueue.resolve();
+
+    try {
+      await competingStarted.promise;
+      const result: unknown = await publish;
+      assert.instanceOf(result, EventPublishDroppedProblem);
+      expect(result).toMatchObject({ deliveredCount: 1, droppedCount: 1 });
+      expect(result.failures).toHaveLength(1);
+      const failure = result.failures[0];
+      assert.isDefined(failure);
+      expect(failure.error).toBe(handlerError);
+      expect(failure.error).toMatchObject({
+        code: "test/handler-rejected",
+        extensions: { retryable: false },
+      });
+      expect(failure.storageError).toBe(storageError);
+      assert.isDefined(failure.item);
+      expect(failure.item).toBe(enqueue.mock.calls[0]?.[0]);
+      expect(failure.item).toMatchObject({
+        event: { eventId: event.eventId, message: event.message },
+        handlerId: "failed-handler.v1",
+        retryCount: 0,
+      });
+      expect(inspect(result, { depth: null })).not.toContain(event.message);
+      expect(JSON.stringify(result.failures)).not.toContain(event.message);
+      expect(remainingHandle).not.toHaveBeenCalled();
+      await expect(queue.size()).resolves.toBe(0);
+      await queue.enqueue(failure.item);
+    } finally {
+      releaseCompeting.resolve();
+      await competing;
+    }
+
+    handle.mockResolvedValue(undefined);
+    await expect(bus.replayDeadLetters()).resolves.toMatchObject({
+      attempted: 1,
+      succeeded: 1,
+      failed: 0,
+    });
+    expect(handle).toHaveBeenLastCalledWith(
+      expect.objectContaining({ eventId: event.eventId, message: event.message }),
+    );
+    expect(remainingHandle).toHaveBeenCalledOnce();
+    expect(remainingHandle).toHaveBeenCalledWith(expect.objectContaining({ message: "competing" }));
+    await expect(queue.size()).resolves.toBe(0);
+  });
+
+  it("preserves resolution and storage failures with the unresolved dead-letter identity", async () => {
+    const resolutionError = new Error("handler unavailable");
+    const storageError = new Error("DLQ unavailable");
+    const queue = new InMemoryDeadLetterQueue();
+    vi.spyOn(queue, "enqueue").mockRejectedValueOnce(storageError);
+    const bus = new InMemoryEventBus<TestEvent>({
+      deadLetterQueue: queue,
+      handlerResolver: {
+        resolve() {
+          throw resolutionError;
+        },
+      },
+    });
+    bus.subscribe({
+      eventName: TestEvent.eventName,
+      handlerClass: FailingHandler,
+      handlerId: "unresolved.v1",
+    });
+    const event = new TestEvent("resolve after recovery");
+
+    const result: unknown = await bus.publish(event).catch((error: unknown) => error);
+
+    assert.instanceOf(result, EventPublishFailedError);
+    expect(result.failures[0]?.error).toBe(resolutionError);
+    expect(result.failures[0]?.storageError).toBe(storageError);
+    expect(result.failures[0]?.item).toMatchObject({
+      event: { eventId: event.eventId, message: event.message },
+      handlerId: "unresolved.v1",
+      reason: "handler-resolution-failed",
+      retryCount: 0,
+    });
+    await expect(queue.size()).resolves.toBe(0);
   });
 
   describe("subscribe", () => {

@@ -15,8 +15,26 @@ title: "EventPublishFailure"
 
 > **error**: `Error`
 
+Original execution failure; retained when dead-letter storage also fails.
+
 ---
 
 ### handlerName
 
 > **handlerName**: `string`
+
+---
+
+### item?
+
+> `optional` **item?**: [`DeadLetterItem`](/api/events-core/src/type-aliases/deadletteritem/)
+
+Non-enumerable failed enqueue item for explicit caller recovery. Contains event payload.
+
+---
+
+### storageError?
+
+> `optional` **storageError?**: `Error`
+
+Dead-letter enqueue failure, separate from the execution failure.

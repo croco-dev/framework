@@ -1,0 +1,96 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "events-inmemory",
+      "classification": "pure-contract",
+      "reason": "Preserve original execution failure identity when DLQ enqueue fails, with a separate storageError and non-enumerable recoverable item. The existing item is available by explicit access while ordinary error diagnostics omit its payload. These local failure results require no deployment-specific implementation.",
+      "files": {
+        "packages/events-inmemory/src/libs/InmemoryEventBus.ts": "4602ed4455ffa659c1ac5d5c1a84d17a2191048f5c02d87b1a0dd632c9213a5b"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "This change preserves in-process publish failure objects and exposes the existing failed enqueue item. It introduces no host API, storage protocol, credential, scheduler or lifecycle requirement.",
+          "providers": ["@croco/events-inmemory"],
+          "constraints": [
+            "The configured DeadLetterQueue retains its existing storage and recovery contract. No host-runtime or live-infrastructure certification is claimed."
+          ],
+          "references": [
+            "packages/events-inmemory/src/libs/InmemoryEventBus.ts",
+            "packages/events-core/src/libs/interfaces/DeadLetterQueue.ts",
+            "packages/events-inmemory/src/tests/InMemoryEventBus.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "This change preserves in-process publish failure objects and exposes the existing failed enqueue item. It introduces no host API, storage protocol, credential, scheduler or lifecycle requirement.",
+          "providers": ["@croco/events-inmemory"],
+          "constraints": [
+            "The configured DeadLetterQueue retains its existing storage and recovery contract. No host-runtime or live-infrastructure certification is claimed."
+          ],
+          "references": [
+            "packages/events-inmemory/src/libs/InmemoryEventBus.ts",
+            "packages/events-core/src/libs/interfaces/DeadLetterQueue.ts",
+            "packages/events-inmemory/src/tests/InMemoryEventBus.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "This change preserves in-process publish failure objects and exposes the existing failed enqueue item. It introduces no host API, storage protocol, credential, scheduler or lifecycle requirement.",
+          "providers": ["@croco/events-inmemory"],
+          "constraints": [
+            "The configured DeadLetterQueue retains its existing storage and recovery contract. No host-runtime or live-infrastructure certification is claimed."
+          ],
+          "references": [
+            "packages/events-inmemory/src/libs/InmemoryEventBus.ts",
+            "packages/events-core/src/libs/interfaces/DeadLetterQueue.ts",
+            "packages/events-inmemory/src/tests/InMemoryEventBus.spec.ts"
+          ]
+        }
+      }
+    },
+    {
+      "package": "problems-core",
+      "classification": "pure-contract",
+      "reason": "Regenerate the source locations of the two existing event publish Problems after the public failure type grows. Diagnostic codes and recovery policies remain unchanged.",
+      "files": {
+        "packages/problems-core/src/generated/problem-code-registry.ts": "c19e035ca6fef0618df9c58eb1fbdef1fc8dbe06494e58f1b4d01b192446df03"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Only generated diagnostic source locations change. No host capability, storage, lifecycle or recovery policy changes.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "docs/problem-code-registry.json"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Only generated diagnostic source locations change. No host capability, storage, lifecycle or recovery policy changes.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "docs/problem-code-registry.json"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Only generated diagnostic source locations change. No host capability, storage, lifecycle or recovery policy changes.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "docs/problem-code-registry.json"
+          ]
+        }
+      }
+    }
+  ]
+}
