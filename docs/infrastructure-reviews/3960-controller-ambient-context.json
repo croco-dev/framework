@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "protocol-codegen",
+      "classification": "pure-contract",
+      "reason": "Keep application ambient declarations in the shared build-time TypeScript context without widening controller imports or runtime emission. The Tooling catalog has no deployed runtime claims.",
+      "files": {
+        "packages/protocol-codegen/src/libs/ControllerProject.ts": "0bdc34aa92eb5e490fd310b577ffa1fd1b327340cf2398481b62983831eb85d6"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Ambient type context is loaded during Node-based contract generation before deployment to the Kubernetes Node Host. The change adds no deployed host, provider, storage or application lifecycle requirement.",
+          "providers": [],
+          "constraints": [
+            "The existing generator requires Node filesystem and compiler access in the build environment; this is not a deployed host support claim."
+          ],
+          "references": [
+            "packages/protocol-codegen/src/libs/ControllerProject.ts",
+            "packages/protocol-codegen/src/tests/ControllerProject.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Ambient type context is loaded during Node-based contract generation before deployment to the Lambda Host. The change adds no deployed host, provider, storage or application lifecycle requirement.",
+          "providers": [],
+          "constraints": [
+            "The existing generator requires Node filesystem and compiler access in the build environment; this is not a deployed host support claim."
+          ],
+          "references": [
+            "packages/protocol-codegen/src/libs/ControllerProject.ts",
+            "packages/protocol-codegen/src/tests/ControllerProject.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Ambient type context is loaded during Node-based contract generation before deployment to the Workers or Node Container Host. The change adds no deployed host, provider, storage or application lifecycle requirement.",
+          "providers": [],
+          "constraints": [
+            "The existing generator requires Node filesystem and compiler access in the build environment; this is not a deployed host support claim."
+          ],
+          "references": [
+            "packages/protocol-codegen/src/libs/ControllerProject.ts",
+            "packages/protocol-codegen/src/tests/ControllerProject.spec.ts"
+          ]
+        }
+      }
+    }
+  ]
+}

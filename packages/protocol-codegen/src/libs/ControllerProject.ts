@@ -42,6 +42,7 @@ type ControllerProjectConfigReason = "invalid" | "missing" | "unreadable";
 
 type LoadedTsconfig = {
   readonly referencePaths: readonly string[];
+  readonly declarationPaths: readonly string[];
 };
 
 type ProjectContext = {
@@ -140,6 +141,9 @@ export function createControllerProject(
   const referenceProjects = createReferenceProjects(loadedConfig?.referencePaths ?? []);
   const analysisProjects = [project, ...referenceProjects];
   const sourceOwners = getSourceOwners(project, controllerSourceFiles, referenceProjects);
+  // Declarations extend analysis, not the controller dependency closure emitted at runtime.
+  project.addSourceFilesAtPaths(loadedConfig?.declarationPaths ?? []);
+  project.resolveSourceFileDependencies();
   const analysisContexts = analysisProjects.map((analysisProject) => ({
     project: analysisProject,
     sourceFiles: analysisProject
@@ -256,7 +260,10 @@ function createProject(tsconfigPath: string | null): Project {
 }
 
 function addControllerSourceFiles(project: Project, patterns: readonly string[]): SourceFile[] {
-  const sourceFiles = patterns.flatMap((pattern) => project.addSourceFilesAtPaths(pattern));
+  const sourceFiles = patterns
+    .flatMap((pattern) => project.getFileSystem().globSync([pattern]))
+    .filter((filePath) => !/\.d\.[cm]?ts$/.test(filePath))
+    .map((filePath) => project.addSourceFileAtPath(filePath));
   return [
     ...new Map(sourceFiles.map((sourceFile) => [sourceFile.getFilePath(), sourceFile])).values(),
   ].sort((left, right) => compareStrings(left.getFilePath(), right.getFilePath()));
@@ -370,6 +377,9 @@ function createEmitContext(
     ),
     skipFileDependencyResolution: true,
   });
+  for (const sourceFile of analysisContext.project.getSourceFiles()) {
+    if (sourceFile.isDeclarationFile()) project.addSourceFileAtPath(sourceFile.getFilePath());
+  }
   const sourceFiles = analysisContext.sourceFiles.map((sourceFile) => {
     const emittedSource = project.addSourceFileAtPath(sourceFile.getFilePath());
     applyNodeModuleFormat(emittedSource, project.getCompilerOptions());
@@ -483,6 +493,7 @@ function validateRuntimeJsx(
 function loadTsconfigGraph(tsconfigPath: string, explicit: boolean): LoadedTsconfig {
   const visited = new Set<string>();
   const referencePaths: string[] = [];
+  let declarationPaths: string[] = [];
 
   const visit = (configPath: string, isExplicitRoot: boolean): void => {
     const normalizedPath = path.resolve(configPath);
@@ -490,6 +501,9 @@ function loadTsconfigGraph(tsconfigPath: string, explicit: boolean): LoadedTscon
     visited.add(normalizedPath);
 
     const parsed = validateTsconfig(normalizedPath, isExplicitRoot);
+    if (normalizedPath === path.resolve(tsconfigPath)) {
+      declarationPaths = parsed.fileNames.filter((fileName) => /\.d\.[cm]?ts$/.test(fileName));
+    }
     if (normalizedPath !== path.resolve(tsconfigPath)) referencePaths.push(normalizedPath);
     for (const reference of parsed.projectReferences ?? []) {
       visit(ts.resolveProjectReferencePath(reference), false);
@@ -498,7 +512,7 @@ function loadTsconfigGraph(tsconfigPath: string, explicit: boolean): LoadedTscon
 
   const rootPath = path.resolve(tsconfigPath);
   visit(rootPath, explicit);
-  return { referencePaths };
+  return { referencePaths, declarationPaths };
 }
 
 function validateTsconfig(tsconfigPath: string, explicit: boolean): ts.ParsedCommandLine {

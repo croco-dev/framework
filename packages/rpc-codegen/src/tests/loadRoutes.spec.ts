@@ -18,6 +18,47 @@ const SHARED_FIXTURE_ROOT = new URL(
 );
 
 describe("loadRoutes", () => {
+  it.each(["discovered", "explicit"] as const)(
+    "loads controllers using ambient globals and module augmentations (%s config)",
+    async (selection) => {
+      const tsconfigPath = path.join(tempRoot, "tsconfig.json");
+      fs.writeFileSync(
+        tsconfigPath,
+        JSON.stringify({
+          compilerOptions: { experimentalDecorators: true, module: "CommonJS", target: "ES2020" },
+          files: ["src/UsersController.ts", "src/globals.d.ts", "src/augment.d.ts"],
+        }),
+      );
+      fs.writeFileSync(path.join(sourceDir, "globals.d.ts"), "type AppId = string;");
+      fs.writeFileSync(
+        path.join(sourceDir, "model.ts"),
+        "export interface Model { name: string; }",
+      );
+      fs.writeFileSync(
+        path.join(sourceDir, "augment.d.ts"),
+        "import './model'; declare module './model' { interface Model { id: AppId; } }",
+      );
+      fs.writeFileSync(
+        path.join(sourceDir, "UsersController.ts"),
+        getMixedControllerSource().replace(
+          "readonly id = 'user-1';",
+          "readonly id: AppId = 'user-1'; readonly model: import('./model').Model = { name: 'app', id: 'app-1' };",
+        ),
+      );
+      const result = await loadRoutes(
+        path.join(sourceDir, "*Controller.ts"),
+        selection === "explicit" ? { tsconfigPath } : {},
+      );
+      expect(result).toHaveLength(1);
+      expect(result[0]).toMatchObject({
+        path: "/users",
+        methodName: "listUsers",
+        httpMethod: "GET",
+      });
+    },
+    LOAD_ROUTES_TIMEOUT_MS,
+  );
+
   beforeEach(() => {
     tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "rpc-load-routes-"));
     sourceDir = path.join(tempRoot, "src");
@@ -348,6 +389,14 @@ schema.parse({ id: 'user-1' });`,
   it(
     "fails before importing emitted controllers when controller TypeScript has errors",
     async () => {
+      fs.writeFileSync(
+        path.join(tempRoot, "tsconfig.json"),
+        JSON.stringify({
+          compilerOptions: { experimentalDecorators: true, module: "CommonJS", target: "ES2020" },
+          include: ["src/**/*.ts"],
+        }),
+      );
+      fs.writeFileSync(path.join(sourceDir, "globals.d.ts"), "type AppId = string;");
       const controllerPath = path.join(sourceDir, "BrokenController.ts");
       fs.writeFileSync(controllerPath, readSharedFixture("BrokenController.ts.fixture"));
 

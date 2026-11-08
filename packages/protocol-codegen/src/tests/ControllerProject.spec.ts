@@ -4,6 +4,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ts } from "ts-morph";
+import * as typescript from "typescript";
 import { ControllerProjectConfigProblem, createControllerProject } from "../libs/ControllerProject";
 
 const temporaryDirectories: string[] = [];
@@ -18,6 +19,86 @@ afterEach(() => {
 });
 
 describe("createControllerProject", () => {
+  it.each(["discovered", "explicit"] as const)(
+    "includes configured ambient declarations for %s configs without widening runtime sources",
+    async (configSelection) => {
+      const root = createTemporaryDirectory();
+      writeJson(path.join(root, "tsconfig.base.json"), {
+        compilerOptions: { module: "ESNext", moduleResolution: "Bundler", target: "ES2022" },
+        include: ["src/**/*.ts"],
+      });
+      writeJson(path.join(root, "tsconfig.json"), { extends: "./tsconfig.base.json" });
+      writeFile(path.join(root, "src", "ControllerTypes.d.ts"), "type AppId = string;");
+      writeFile(
+        path.join(root, "src", "augmentation.d.ts"),
+        "import './model'; declare module './model' { interface Model { id: AppId; } }",
+      );
+      writeFile(path.join(root, "src", "model.ts"), "export interface Model { name: string; }");
+      writeFile(
+        path.join(root, "src", "ControllerAmbient.d.ts"),
+        "import type { Extra } from './types-only'; declare global { type ExtraId = Extra['id']; }",
+      );
+      writeFile(
+        path.join(root, "src", "types-only.ts"),
+        "export interface Extra { id: string; } throw new Error('type-only source executed');",
+      );
+      writeFile(
+        path.join(root, "src", "Unmatched.ts"),
+        "throw new Error('unmatched entry executed'); export class Unmatched {}",
+      );
+      writeFile(
+        path.join(root, "src", "Controller.ts"),
+        "import type { Model } from './model'; export class Controller { static value: Model = { id: 'app-1', name: 'app' }; extra!: ExtraId; }",
+      );
+      writeFile(path.join(root, "excluded.d.ts"), "type AppId = number;");
+      const configPath = path.join(root, "tsconfig.json");
+      const parsed = typescript.getParsedCommandLineOfConfigFile(
+        configPath,
+        {},
+        {
+          ...typescript.sys,
+          onUnRecoverableConfigFileDiagnostic: () => {},
+        },
+      );
+      expect(parsed).toBeDefined();
+      const application = typescript.createProgram(parsed?.fileNames ?? [], parsed?.options ?? {});
+      expect(
+        typescript
+          .getPreEmitDiagnostics(application)
+          .map((diagnostic) =>
+            typescript.flattenDiagnosticMessageText(diagnostic.messageText, "\n"),
+          ),
+      ).toEqual([]);
+
+      const session = createControllerProject({
+        cwd: root,
+        controllers: "src/Controller*.ts",
+        ...(configSelection === "explicit" ? { tsconfigPath: configPath } : {}),
+      });
+      try {
+        expect(
+          session.getPreEmitDiagnostics().map((diagnostic) => diagnostic.getMessageText()),
+        ).toEqual([]);
+        expect(session.controllerSourceFiles.map((sourceFile) => sourceFile.getBaseName())).toEqual(
+          ["Controller.ts"],
+        );
+        session.emit();
+        const [exports] = await session.importControllerModules();
+        expect((exports.Controller as { value: unknown }).value).toEqual({
+          id: "app-1",
+          name: "app",
+        });
+        const output = fs.readdirSync(session.emitDir, { recursive: true });
+        expect(output).not.toContain("ControllerTypes.js");
+        expect(output).not.toContain("augmentation.js");
+        expect(output).not.toContain("types-only.js");
+        expect(output).not.toContain("Unmatched.js");
+      } finally {
+        session.dispose();
+      }
+    },
+  );
+
   it.each(["CommonJS", "ESNext", "NodeNext"] as const)(
     "imports a TSX controller with jsx preserve in %s without changing analysis options",
     async (module) => {
