@@ -8,6 +8,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { createPipelineOperations } from "../pipeline/definePipeline";
 import { defineProjection } from "../pipeline/projection";
 import { PipelineProblem } from "../pipeline/PipelineProblem";
+import * as fileSources from "../pipeline/fileSource";
 import { createExecutionFixture, pipelineClock } from "./PipelineFixtures";
 import type { CanonicalRow } from "@croco/warehouse-core";
 import type {
@@ -24,6 +25,7 @@ import type { SourceSchema } from "../source/types";
 
 const directories: string[] = [];
 afterEach(async () => {
+  vi.restoreAllMocks();
   await Promise.all(
     directories.splice(0).map((directory) => rm(directory, { recursive: true, force: true })),
   );
@@ -276,6 +278,218 @@ async function fixture(partitions = [[raw("a"), raw("b")]]) {
 }
 
 describe("pipeline operations", () => {
+  describe("secondary failures", () => {
+    const cases = (["processor", "writer", "publication"] as const).flatMap((primary) =>
+      (["execution-state", "failure-record", "reader-close"] as const).map((phase) => ({
+        primary,
+        phase,
+      })),
+    );
+
+    it.each(cases)("preserves $primary failure when $phase fails", async ({ primary, phase }) => {
+      const f = await fixture();
+      const original = new PipelineProblem("interrupted");
+      const secondary = new PipelineProblem("invalid-checkpoint");
+      const diagnostics = vi.spyOn(console, "error").mockImplementation(() => {});
+      let failed = false;
+      const fail = () => {
+        failed = true;
+        throw original;
+      };
+      const get = f.executions.get.bind(f.executions);
+      if (phase === "execution-state")
+        vi.spyOn(f.executions, "get").mockImplementation((id) => {
+          if (failed) return Promise.reject(secondary);
+          return get(id);
+        });
+      if (phase === "failure-record")
+        vi.spyOn(f.executions, "failAttempt").mockRejectedValue(secondary);
+      const open = fileSources.openFileSource;
+      let opened = 0;
+      const closed = vi.fn();
+      vi.spyOn(fileSources, "openFileSource").mockImplementation(async (source) => {
+        const reader = await open(source);
+        if (++opened > f.sources.length) {
+          const close = reader.close;
+          reader.close = async () => {
+            await close();
+            closed();
+            if (phase === "reader-close") throw secondary;
+          };
+        }
+        return reader;
+      });
+      const definition =
+        primary === "processor"
+          ? {
+              ...f.definition,
+              processor: { artifactHash: "f".repeat(64), dependencies: [], process: fail },
+            }
+          : f.definition;
+      if (primary === "writer") vi.mocked(f.writer.write).mockImplementation(fail);
+      if (primary === "publication")
+        vi.spyOn(f.runtime.publication, "publish").mockImplementation(fail);
+      await expect(createPipelineOperations(definition, f.runtime).run()).rejects.toBe(original);
+      expect(closed).toHaveBeenCalledTimes(f.sources.length);
+      expect(diagnostics).toHaveBeenCalledWith(
+        "[Pipeline] Secondary failure",
+        expect.objectContaining({
+          code: "etl-core/pipeline-secondary-failure",
+          executionId: "execution-1",
+          phase,
+          outcome: primary === "publication" ? "indeterminate" : "failed",
+        }),
+      );
+    });
+
+    it("retains each secondary failure alongside a frozen primary", async () => {
+      const f = await fixture([[raw("a")], [raw("b")]]);
+      const original = Object.freeze(new PipelineProblem("interrupted"));
+      const diagnostics = vi.spyOn(console, "error").mockImplementation(() => {});
+      const open = fileSources.openFileSource;
+      let opened = 0;
+      vi.spyOn(fileSources, "openFileSource").mockImplementation(async (source) => {
+        const reader = await open(source);
+        if (++opened > f.sources.length) {
+          const close = reader.close;
+          reader.close = async () => {
+            await close();
+            throw new Error("private cleanup data");
+          };
+        }
+        return reader;
+      });
+      vi.spyOn(f.runtime.publication, "publish").mockRejectedValue(original);
+      vi.spyOn(f.executions, "failAttempt").mockRejectedValue(new Error("private storage data"));
+      await expect(f.operations.run()).rejects.toBe(original);
+      expect(diagnostics.mock.calls).toEqual([
+        [
+          "[Pipeline] Secondary failure",
+          expect.objectContaining({ phase: "failure-record", outcome: "indeterminate" }),
+        ],
+        [
+          "[Pipeline] Secondary failure",
+          expect.objectContaining({
+            phase: "reader-close",
+            readerIndex: 0,
+            outcome: "indeterminate",
+          }),
+        ],
+        [
+          "[Pipeline] Secondary failure",
+          expect.objectContaining({
+            phase: "reader-close",
+            readerIndex: 1,
+            outcome: "indeterminate",
+          }),
+        ],
+      ]);
+      expect(JSON.stringify(diagnostics.mock.calls)).not.toContain("private");
+    });
+
+    it.each([undefined, Object.freeze(new PipelineProblem("interrupted"))])(
+      "preserves an unmodifiable publication failure when diagnostics also throw: %s",
+      async (original) => {
+        const f = await fixture();
+        const get = f.executions.get.bind(f.executions);
+        let failed = false;
+        vi.spyOn(console, "error").mockImplementation(() => {
+          throw new Error("sink unavailable");
+        });
+        vi.spyOn(f.executions, "get").mockImplementation((id) =>
+          failed ? Promise.reject(new PipelineProblem("invalid-checkpoint")) : get(id),
+        );
+        vi.spyOn(f.runtime.publication, "publish").mockImplementation(async () => {
+          failed = true;
+          throw original;
+        });
+        await expect(f.operations.run()).rejects.toBe(original);
+      },
+    );
+
+    it("retains partial coverage when reader cleanup fails", async () => {
+      const f = await fixture();
+      const diagnostics = vi.spyOn(console, "error").mockImplementation(() => {});
+      const open = fileSources.openFileSource;
+      let opened = 0;
+      vi.spyOn(fileSources, "openFileSource").mockImplementation(async (source) => {
+        const reader = await open(source);
+        if (++opened > f.sources.length) {
+          const close = reader.close;
+          reader.close = async () => {
+            await close();
+            throw new Error("secret");
+          };
+        }
+        return reader;
+      });
+      const result = await createPipelineOperations(
+        {
+          ...f.definition,
+          source: {
+            ...f.definition.source,
+            coverage: { ...f.definition.source.coverage, state: "partial" },
+          },
+        },
+        f.runtime,
+      ).run();
+      expect(result).toMatchObject({ state: "partial", outputCount: 2, snapshotId: null });
+      expect(f.catalog.publishCandidate).not.toHaveBeenCalled();
+      expect((await f.executions.get(result.executionId)).status).toBe("failed");
+      expect(diagnostics).toHaveBeenCalledWith(
+        "[Pipeline] Secondary failure",
+        expect.objectContaining({
+          phase: "reader-close",
+          outcome: "partial",
+          snapshotId: null,
+        }),
+      );
+    });
+
+    it("returns committed publication and awaits every reader cleanup without exposing error data", async () => {
+      const f = await fixture([[raw("a")], [raw("b")]]);
+      const diagnostics = vi.spyOn(console, "error").mockImplementation(() => {});
+      const open = fileSources.openFileSource;
+      let opened = 0;
+      const closed: number[] = [];
+      vi.spyOn(fileSources, "openFileSource").mockImplementation(async (source) => {
+        const reader = await open(source);
+        const index = opened++;
+        if (index >= f.sources.length) {
+          const close = reader.close;
+          reader.close = async () => {
+            await close();
+            closed.push(index);
+            throw new Error("secret row contents");
+          };
+        }
+        return reader;
+      });
+      const result = await f.operations.run();
+      expect(result).toMatchObject({
+        state: "published",
+        outputCount: 2,
+        snapshotId: "snapshot:etl:execution-1",
+      });
+      expect((await f.executions.get(result.executionId)).result).toEqual(result);
+      expect(closed.sort()).toEqual([2, 3]);
+      expect(diagnostics).toHaveBeenCalledTimes(2);
+      for (const call of diagnostics.mock.calls) {
+        expect(call).toEqual([
+          "[Pipeline] Secondary failure",
+          expect.objectContaining({
+            code: "etl-core/pipeline-secondary-failure",
+            executionId: result.executionId,
+            phase: "reader-close",
+            outcome: "published",
+            snapshotId: result.snapshotId,
+          }),
+        ]);
+        expect(JSON.stringify(call)).not.toContain("secret row contents");
+      }
+    });
+  });
+
   it("replays the same partition-local batches after a checkpoint failure with filters", async () => {
     const f = await fixture([
       [raw("a"), raw("skip"), raw("b")],

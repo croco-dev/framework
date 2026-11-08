@@ -391,6 +391,26 @@ export function createPipelineOperations(input: PipelineDefinition, runtime: Pip
     const readers = await open();
     let execution: Execution | undefined;
     let publicationStarted = false;
+    let result: PipelineResult | undefined;
+    const reportSecondaryFailure = (
+      phase: "execution-state" | "failure-record" | "reader-close",
+      readerIndex?: number,
+    ): void => {
+      try {
+        // Error messages, stacks and arbitrary properties can contain source rows or credentials.
+        console.error("[Pipeline] Secondary failure", {
+          code: "etl-core/pipeline-secondary-failure",
+          executionId,
+          phase,
+          outcome: result?.state ?? (publicationStarted ? "indeterminate" : "failed"),
+          snapshotId: result?.snapshotId ?? null,
+          ...(readerIndex === undefined ? {} : { readerIndex }),
+        });
+      } catch {
+        // A failing diagnostic sink must not replace the primary error or committed publication.
+        return;
+      }
+    };
     try {
       execution = await runtime.executions.start(executionId);
       const token = { executionId, attempt: execution.attempts };
@@ -637,7 +657,7 @@ export function createPipelineOperations(input: PipelineDefinition, runtime: Pip
         ["complete", "empty"].includes(coverage.state) &&
         !coverage.gaps.length &&
         !coverage.late;
-      const result: PipelineResult = {
+      const candidateResult: PipelineResult = {
         executionId,
         state: complete ? "published" : "partial",
         inputCount: cursor.counts.input,
@@ -653,6 +673,7 @@ export function createPipelineOperations(input: PipelineDefinition, runtime: Pip
           message: "Pipeline coverage is partial; candidate was not published.",
           retryable: false,
         });
+        result = candidateResult;
         return result;
       }
       const quality: WarehouseQuality = {
@@ -672,34 +693,45 @@ export function createPipelineOperations(input: PipelineDefinition, runtime: Pip
       });
       await assertActive();
       publicationStarted = true;
-      return await runtime.publication.publish({
+      result = await runtime.publication.publish({
         request: { ...request, audit: audit("publish") },
         token,
-        result,
+        result: candidateResult,
         signal: runtime.signal,
       });
+      return result;
     } catch (error) {
       if (execution) {
-        const state = await runtime.executions.get(executionId);
-        if (state.status === "running" && state.attempts === execution.attempts)
-          await runtime.executions.failAttempt(
-            { executionId, attempt: execution.attempts },
-            {
-              code: error instanceof Problem ? error.code : "etl-core/pipeline-failed",
-              message: "Pipeline attempt failed.",
-              retryable: false,
-              indeterminate:
-                publicationStarted ||
-                (error instanceof Problem && error.code === "WAREHOUSE_COMMIT_INDETERMINATE") ||
-                (error instanceof PipelineProblem && error.reason === "receipt-unresolved"),
-            },
-          );
+        let phase: "execution-state" | "failure-record" = "execution-state";
+        try {
+          const state = await runtime.executions.get(executionId);
+          if (state.status === "running" && state.attempts === execution.attempts) {
+            phase = "failure-record";
+            await runtime.executions.failAttempt(
+              { executionId, attempt: execution.attempts },
+              {
+                code: error instanceof Problem ? error.code : "etl-core/pipeline-failed",
+                message: "Pipeline attempt failed.",
+                retryable: false,
+                indeterminate:
+                  publicationStarted ||
+                  (error instanceof Problem && error.code === "WAREHOUSE_COMMIT_INDETERMINATE") ||
+                  (error instanceof PipelineProblem && error.reason === "receipt-unresolved"),
+              },
+            );
+          }
+        } catch {
+          reportSecondaryFailure(phase);
+        }
       }
       throw error;
     } finally {
-      await Promise.all(readers.map((reader) => reader.close()));
+      const cleanup = await Promise.allSettled(readers.map(async (reader) => reader.close()));
+      for (const [index, closed] of cleanup.entries())
+        if (closed.status === "rejected") reportSecondaryFailure("reader-close", index);
     }
   }
+
   async function run() {
     await validate();
     const access = runtime.resolveAccess();

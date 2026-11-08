@@ -214,6 +214,20 @@ chunk writes and checkpoints atomic.
   execution. An indeterminate receipt must reconcile to a durable receipt before publication can
   proceed. Unpublished failures leave the previously published head available.
 
+Failures while recording an execution failure or closing its readers do not replace the original thrown
+value. After publication returns successfully, reader cleanup failures also leave the committed
+`PipelineResult` intact. Partial coverage remains partial and unpublished. Every execution reader receives
+a close attempt, and all attempts are awaited before the operation settles.
+
+These secondary failures emit a structured `console.error` event with code
+`etl-core/pipeline-secondary-failure`, `executionId`, and `phase` (`execution-state`, `failure-record`,
+or `reader-close`). Cleanup events also identify the zero-based `readerIndex`. `outcome` is `failed`,
+`indeterminate` when publication started without a confirmed result, or the returned `published`/`partial`
+state; `snapshotId` identifies a confirmed publication or is null. Error messages, stacks, arbitrary
+error properties and source rows are excluded. Correlate the execution ID with provider diagnostics;
+inspect uncertain publication before retrying. Failure to write this diagnostic cannot replace the
+original error or committed result. Validation, preview and file capture retain their own error boundaries.
+
 ## Migration and boundaries
 
 Unversioned and version-2 run bindings/checkpoints cannot resume as version 3.
