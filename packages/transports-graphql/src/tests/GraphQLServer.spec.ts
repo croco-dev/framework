@@ -1604,16 +1604,20 @@ describe("GraphQLServer integration", () => {
     });
 
     await testServer.initialize();
-    const yogaResponse = new Response("unused", {
-      headers: {
-        "content-length": "999",
-        "set-cookie": "session=should-not-be-sent",
-        "x-yoga-response": "should-not-be-sent",
+    const yogaResponse = new Response(
+      new ReadableStream({
+        start(controller) {
+          controller.error(new Error("stream provider secret"));
+        },
+      }),
+      {
+        headers: {
+          "content-length": "999",
+          "set-cookie": "session=should-not-be-sent",
+          "x-yoga-response": "should-not-be-sent",
+        },
       },
-    });
-    Reflect.set(yogaResponse, "text", async () => {
-      throw new Error("stream provider secret");
-    });
+    );
     Reflect.set(testServer, "yogaHandler", async () => yogaResponse);
     await testServer.start(4007);
 

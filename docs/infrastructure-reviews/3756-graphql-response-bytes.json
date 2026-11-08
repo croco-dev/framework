@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "transports-graphql",
+      "classification": "runtime-adapter",
+      "reason": "The standalone Node listener forwards buffered response bytes without a UTF-8 decode/encode round trip. SSE streaming, request lifetime, headers and the Fetch handler retain their existing paths.",
+      "files": {
+        "packages/transports-graphql/src/libs/GraphQLServer.ts": "097b9a60ea55011c9837fb1b6eab2158787cbb348c0df7e9f2ea269bfebef360"
+      },
+      "catalogRuntimes": ["node", "lambda", "cloudflare-workers"],
+      "profiles": {
+        "kubernetes": {
+          "result": "supported",
+          "reason": "The existing Node listener preserves Yoga response-plugin gzip bytes over an actual local Node HTTP connection.",
+          "providers": ["@croco/transports-graphql/GraphQLServer"],
+          "constraints": [
+            "Local Node host execution only; no Kubernetes cluster deployment or provider certification is claimed.",
+            "Ordinary responses remain buffered; SSE retains its existing streaming and backpressure path."
+          ],
+          "references": [
+            "packages/transports-graphql/src/libs/GraphQLServer.ts",
+            "packages/transports-graphql/src/tests/GraphQLServer.streaming.spec.ts"
+          ],
+          "evidence": {
+            "kind": "host-runtime",
+            "runtime": "node",
+            "path": "packages/transports-graphql/src/tests/GraphQLServer.streaming.spec.ts",
+            "testName": "GraphQL Node response bytes preserves 'gzip' bytes produced by a Yoga response plugin",
+            "sha256": "a86bc762d159f67890553803bc45454007e19e68172965fbedd729ba21934ace"
+          }
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "This change affects GraphQLServer.start and its Node HTTP listener only. Lambda invocation adapters consume the existing Fetch response path, which is unchanged.",
+          "providers": ["@croco/transports-graphql/fetch"],
+          "constraints": ["No Lambda invocation or deployment claim is added."],
+          "references": [
+            "packages/transports-graphql/src/fetch.ts",
+            "packages/transports-graphql/src/libs/GraphQLFetchHandler.ts",
+            "packages/transports-graphql/src/libs/GraphQLServer.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Workers consume the separate Fetch entrypoint rather than starting a Node listener. No Worker response serialization or runtime capability changes.",
+          "providers": ["@croco/transports-graphql/fetch"],
+          "constraints": ["No Workers or Node Container deployment claim is added."],
+          "references": [
+            "packages/transports-graphql/src/fetch.ts",
+            "examples/workers-protocols/src/worker.ts",
+            "packages/transports-graphql/src/libs/GraphQLServer.ts"
+          ]
+        }
+      }
+    }
+  ]
+}
