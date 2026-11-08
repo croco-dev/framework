@@ -5,21 +5,13 @@ prev: false
 title: "NotificationTemplate"
 ---
 
-> **NotificationTemplate** = [`NotificationTemplateRef`](/api/notifications-core/src/type-aliases/notificationtemplateref/) & `object`
+> **NotificationTemplate** = [`NotificationTemplateRef`](/api/notifications-core/src/type-aliases/notificationtemplateref/) & `object` & \{ `channel`: [`PUSH`](/api/notifications-core/src/enumerations/notificationchannel/#push); `push?`: `Omit`\<[`PushContent`](/api/engagement-core/src/type-aliases/pushcontent/), `"title"` \| `"body"`\>; `subject`: `string`; \} \| \{ `channel`: `Exclude`\<[`NotificationChannel`](/api/notifications-core/src/enumerations/notificationchannel/), [`PUSH`](/api/notifications-core/src/enumerations/notificationchannel/#push)\>; `push?`: `never`; `subject?`: `string`; \}
 
 ## Type Declaration
-
-### channel
-
-> `readonly` **channel**: [`NotificationChannel`](/api/notifications-core/src/enumerations/notificationchannel/)
 
 ### content
 
 > `readonly` **content**: `string`
-
-### subject?
-
-> `readonly` `optional` **subject?**: `string`
 
 ### variableEscaping?
 
