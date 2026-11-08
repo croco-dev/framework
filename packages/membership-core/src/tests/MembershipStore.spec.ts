@@ -96,7 +96,7 @@ describe("InMemoryMembershipStore", () => {
         userId: "user-1",
       });
 
-      const intent = await store.getPendingEventIntent("remove-member-1");
+      const intent = await store.getPendingEventIntent("tenant-1", "remove-member-1");
       expect(intent?.events[0]?.occurredAt).toEqual(new Date("2026-02-01T00:00:00.000Z"));
     } finally {
       vi.useRealTimers();

@@ -71,12 +71,17 @@ export class DrizzleMembershipStore extends MembershipStore {
     super();
   }
 
-  async hasExecutedCommand(idempotencyKey: string): Promise<boolean> {
+  async hasExecutedCommand(tenantId: string, idempotencyKey: string): Promise<boolean> {
     const client = this.txManager.getClient() ?? this.db;
     const rows = await client
       .select({ key: membershipIdempotencyRecords.key })
       .from(membershipIdempotencyRecords)
-      .where(eq(membershipIdempotencyRecords.key, idempotencyKey))
+      .where(
+        and(
+          eq(membershipIdempotencyRecords.tenantId, tenantId),
+          eq(membershipIdempotencyRecords.key, idempotencyKey),
+        ),
+      )
       .limit(1);
     return rows.length > 0;
   }
@@ -93,13 +98,15 @@ export class DrizzleMembershipStore extends MembershipStore {
         await client.execute(
           sql`select pg_advisory_xact_lock(hashtextextended(${`membership:${command.tenantId}`}, 0))`,
         );
-        await client.execute(
-          sql`select pg_advisory_xact_lock(hashtextextended(${command.idempotencyKey}, 0))`,
-        );
         const existing = await client
           .select()
           .from(membershipIdempotencyRecords)
-          .where(eq(membershipIdempotencyRecords.key, command.idempotencyKey))
+          .where(
+            and(
+              eq(membershipIdempotencyRecords.tenantId, command.tenantId),
+              eq(membershipIdempotencyRecords.key, command.idempotencyKey),
+            ),
+          )
           .limit(1);
         if (existing[0]) {
           if (existing[0].fingerprint !== fingerprint) {
@@ -110,6 +117,7 @@ export class DrizzleMembershipStore extends MembershipStore {
 
         const result = await this.applyCommand(command);
         await client.insert(membershipIdempotencyRecords).values({
+          tenantId: command.tenantId,
           key: command.idempotencyKey,
           fingerprint,
           result,
@@ -118,6 +126,7 @@ export class DrizzleMembershipStore extends MembershipStore {
         if (intent) {
           await client.insert(membershipEventIntents).values({
             intentId: intent.intentId,
+            tenantId: intent.tenantId,
             idempotencyKey: intent.idempotencyKey,
             events: intent.events,
             createdAt: sql`clock_timestamp()`,
@@ -133,13 +142,17 @@ export class DrizzleMembershipStore extends MembershipStore {
     }
   }
 
-  async getPendingEventIntent(idempotencyKey: string): Promise<MembershipEventIntent | null> {
+  async getPendingEventIntent(
+    tenantId: string,
+    idempotencyKey: string,
+  ): Promise<MembershipEventIntent | null> {
     const client = this.txManager.getClient() ?? this.db;
     const rows = await client
       .select()
       .from(membershipEventIntents)
       .where(
         and(
+          eq(membershipEventIntents.tenantId, tenantId),
           eq(membershipEventIntents.idempotencyKey, idempotencyKey),
           isNull(membershipEventIntents.publishedAt),
         ),
@@ -586,6 +599,7 @@ export class DrizzleMembershipStore extends MembershipStore {
   private mapIntent(row: typeof membershipEventIntents.$inferSelect): MembershipEventIntent {
     return {
       intentId: row.intentId,
+      tenantId: row.tenantId,
       idempotencyKey: row.idempotencyKey,
       events: row.events.map((event) => ({
         ...event,
@@ -727,7 +741,12 @@ export class DrizzleMembershipStore extends MembershipStore {
     const records = await this.db
       .select()
       .from(membershipIdempotencyRecords)
-      .where(eq(membershipIdempotencyRecords.key, command.idempotencyKey))
+      .where(
+        and(
+          eq(membershipIdempotencyRecords.tenantId, command.tenantId),
+          eq(membershipIdempotencyRecords.key, command.idempotencyKey),
+        ),
+      )
       .limit(1);
     const record = records[0];
     if (record) {

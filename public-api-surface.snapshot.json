@@ -27650,6 +27650,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "scopeMembershipCommandsByTenant",
+              "exportKind": "named",
+              "source": "./migrations/scopeMembershipCommandsByTenant",
+              "declarationKind": "function"
+            },
+            {
               "name": "setMembershipTimestampDefaults",
               "exportKind": "named",
               "source": "./migrations/setMembershipTimestampDefaults",

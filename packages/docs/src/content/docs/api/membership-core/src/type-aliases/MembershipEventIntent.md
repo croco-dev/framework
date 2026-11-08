@@ -24,3 +24,9 @@ title: "MembershipEventIntent"
 ### intentId
 
 > `readonly` **intentId**: `string`
+
+---
+
+### tenantId
+
+> `readonly` **tenantId**: `string`

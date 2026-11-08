@@ -81,3 +81,31 @@ attempted first), then `created_at, intent_id`. Attempts use the PostgreSQL cloc
 or connection restarts. Run the relay outside request transactions so attempt evidence and publication
 markers commit independently. Publishers must deduplicate concurrent/repeated deliveries by `eventId`.
 A failed publisher or completion write keeps that tenant's successors blocked while other tenants proceed.
+
+## Tenant-scoped command migration
+
+Before starting this version, stop all membership writers and relays, take a consistent database backup,
+then run `scopeMembershipCommandsByTenant(client)` after `addMembershipEventIntents(client)` and
+`addMembershipEventRelayAttempts(client)`. Fresh installations use the same sequence. There is no startup DDL.
+
+The migration adds `tenant_id` to command records and event intents, deriving the tenant from recorded
+results and checking every event against it. Commands use `(tenant_id, key)` as their primary key;
+intents have a composite foreign key and a unique `(tenant_id, idempotency_key)` constraint. The entire
+backfill and constraint replacement is one atomic SQL statement and can be run repeatedly. Existing
+results, fingerprints, timestamps, publication markers, intent IDs and event IDs remain unchanged,
+including partially published intents whose publisher has already seen an event ID.
+
+Missing or inconsistent tenant evidence aborts the migration and rolls back its DDL and updates.
+Inspect and reconcile those records from authoritative evidence before trying again; do not infer a
+tenant or delete records to pass the migration. The migration takes exclusive locks on both command
+tables and scans existing records. Plan a maintenance window for large tables.
+
+Deploy all writers and relays together after the migration. Custom stores and callers must use
+`hasExecutedCommand(tenantId, idempotencyKey)` and `getPendingEventIntent(tenantId, idempotencyKey)`;
+returned intents include `tenantId`. The existing tenant transaction lock also serializes same-tenant
+command retries; different tenants no longer take a shared lock for the same raw key. New event IDs
+include the tenant. The relay reads existing stored IDs directly, preserving publisher deduplication.
+
+Old application versions cannot safely read this schema once tenants reuse a key. Rolling application
+code back alone is unsupported. Keep the new schema/code or restore a consistent pre-upgrade backup
+with writers and relays stopped, accounting separately for any events already delivered externally.

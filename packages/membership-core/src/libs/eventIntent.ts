@@ -27,12 +27,20 @@ export type MembershipEventIntentEvent =
 
 export type MembershipEventIntent = {
   readonly intentId: string;
+  readonly tenantId: string;
   readonly idempotencyKey: string;
   readonly events: readonly MembershipEventIntentEvent[];
 };
 
-function stableId(kind: "intent" | "event", idempotencyKey: string, index = 0): string {
-  return createHash("sha256").update(`membership:${kind}:${idempotencyKey}:${index}`).digest("hex");
+function stableId(
+  kind: "intent" | "event",
+  tenantId: string,
+  idempotencyKey: string,
+  index = 0,
+): string {
+  return createHash("sha256")
+    .update(JSON.stringify(["membership", kind, tenantId, idempotencyKey, index]))
+    .digest("hex");
 }
 
 export function createMembershipEventIntent(
@@ -54,7 +62,7 @@ export function createMembershipEventIntent(
   if (command.operation === "add" && result.operation === "add") {
     events = [
       {
-        eventId: stableId("event", command.idempotencyKey),
+        eventId: stableId("event", command.tenantId, command.idempotencyKey),
         eventName: "membership.created",
         occurredAt: eventOccurredAt,
         data: { tenantId: command.tenantId, userId: command.userId, role: result.membership.role },
@@ -63,7 +71,7 @@ export function createMembershipEventIntent(
   } else if (command.operation === "remove" && result.operation === "remove") {
     events = [
       {
-        eventId: stableId("event", command.idempotencyKey),
+        eventId: stableId("event", command.tenantId, command.idempotencyKey),
         eventName: "membership.removed",
         occurredAt: eventOccurredAt,
         data: { tenantId: command.tenantId, userId: command.userId, role: result.membership.role },
@@ -72,7 +80,7 @@ export function createMembershipEventIntent(
   } else if (command.operation === "update_role" && result.operation === "update_role") {
     events = [
       {
-        eventId: stableId("event", command.idempotencyKey),
+        eventId: stableId("event", command.tenantId, command.idempotencyKey),
         eventName: "membership.updated",
         occurredAt: eventOccurredAt,
         data: {
@@ -89,7 +97,7 @@ export function createMembershipEventIntent(
   ) {
     events = [
       {
-        eventId: stableId("event", command.idempotencyKey, 0),
+        eventId: stableId("event", command.tenantId, command.idempotencyKey, 0),
         eventName: "membership.updated",
         occurredAt: eventOccurredAt,
         data: {
@@ -100,7 +108,7 @@ export function createMembershipEventIntent(
         },
       },
       {
-        eventId: stableId("event", command.idempotencyKey, 1),
+        eventId: stableId("event", command.tenantId, command.idempotencyKey, 1),
         eventName: "membership.updated",
         occurredAt: eventOccurredAt,
         data: {
@@ -118,7 +126,8 @@ export function createMembershipEventIntent(
   }
 
   return {
-    intentId: stableId("intent", command.idempotencyKey),
+    intentId: stableId("intent", command.tenantId, command.idempotencyKey),
+    tenantId: command.tenantId,
     idempotencyKey: command.idempotencyKey,
     events,
   };
