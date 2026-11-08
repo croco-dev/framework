@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "metrics-core",
+      "classification": "pure-contract",
+      "reason": "Reject cluster assignments spanning multiple variants using the existing ExperimentInputProblem before any aggregate or quality result is produced. Valid cluster and unit randomization contracts remain unchanged.",
+      "files": {
+        "packages/metrics-core/src/libs/experiment/ExperimentReview.ts": "a8411c1971f5aa645655b883572d8d78b8052408ba25b5d508564fcdbc76aa1e"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Cluster-to-variant consistency is pure dataset validation before aggregation and SRM. It requires no host capability, storage adapter, transport or lifecycle change.",
+          "providers": [],
+          "constraints": [
+            "No infrastructure deployment, runtime support change or provider certification is claimed."
+          ],
+          "references": [
+            "packages/metrics-core/src/libs/experiment/ExperimentReview.ts",
+            "packages/metrics-core/src/tests/ExperimentReview.spec.ts",
+            "packages/metrics-core/README.md"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Cluster-to-variant consistency is pure dataset validation before aggregation and SRM. It requires no host capability, storage adapter, transport or lifecycle change.",
+          "providers": [],
+          "constraints": [
+            "No infrastructure deployment, runtime support change or provider certification is claimed."
+          ],
+          "references": [
+            "packages/metrics-core/src/libs/experiment/ExperimentReview.ts",
+            "packages/metrics-core/src/tests/ExperimentReview.spec.ts",
+            "packages/metrics-core/README.md"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Cluster-to-variant consistency is pure dataset validation before aggregation and SRM. It requires no host capability, storage adapter, transport or lifecycle change.",
+          "providers": [],
+          "constraints": [
+            "No infrastructure deployment, runtime support change or provider certification is claimed."
+          ],
+          "references": [
+            "packages/metrics-core/src/libs/experiment/ExperimentReview.ts",
+            "packages/metrics-core/src/tests/ExperimentReview.spec.ts",
+            "packages/metrics-core/README.md"
+          ]
+        }
+      }
+    }
+  ]
+}

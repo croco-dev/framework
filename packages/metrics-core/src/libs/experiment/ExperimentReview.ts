@@ -264,6 +264,7 @@ function checkDataset(input: ExperimentDatasetInput): void {
     failInput("Assignment count exceeds the bounded review limit");
   const variantIds = new Set(input.plan.variants.map((variant) => variant.id));
   const unitIds = new Set<string>();
+  const clusterVariants = new Map<string, string>();
   for (const assignment of input.assignments) {
     if (!assignment.unitId.trim()) failInput("Assignment unit ids must be nonempty");
     if (unitIds.has(assignment.unitId))
@@ -272,8 +273,15 @@ function checkDataset(input: ExperimentDatasetInput): void {
     if (!variantIds.has(assignment.variantId)) {
       failInput(`Assignment variant '${assignment.variantId}' is not in the analysis plan`);
     }
-    if (input.plan.randomizationUnit === "cluster" && !assignment.clusterId?.trim()) {
-      failInput("Cluster randomization requires a clusterId per assignment");
+    if (input.plan.randomizationUnit === "cluster") {
+      const clusterId = assignment.clusterId;
+      if (!clusterId?.trim())
+        failInput("Cluster randomization requires a clusterId per assignment");
+      const variantId = clusterVariants.get(clusterId);
+      if (variantId !== undefined && variantId !== assignment.variantId) {
+        failInput(`Cluster '${clusterId}' must belong to a single variant`);
+      }
+      clusterVariants.set(clusterId, assignment.variantId);
     }
     if (!isRecord(assignment.attributes)) failInput("Assignment attributes must be a record");
   }
