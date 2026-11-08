@@ -187,6 +187,56 @@ describe("InMemorySagaStore", () => {
     expect((queried?.payload as typeof payload).value.count).toBe(BigInt(7));
   });
 
+  it("preserves a caller-owned Date property named getTime without using it as a method", async () => {
+    const when = new Date("2026-10-20T01:02:03Z");
+    Object.defineProperty(when, "getTime", { enumerable: true, value: 17 });
+    const store = new InMemorySagaStore();
+    const created = await store.create({ sagaName: "checkout", payload: { when } });
+    const queried = await store.findById(created.id);
+    const saved = (queried?.payload as { when: Date }).when;
+    expect(Date.prototype.getTime.call(saved)).toBe(Date.UTC(2026, 9, 20, 1, 2, 3));
+    expect(Reflect.get(saved, "getTime")).toBe(17);
+    expect(saved).not.toBe(when);
+  });
+
+  it.each(["create", "update"] as const)(
+    "rejects unsupported caller-owned Date accessors before %s changes stored state",
+    async (boundary) => {
+      const store = new InMemorySagaStore();
+      const existing =
+        boundary === "update"
+          ? await store.create({ sagaName: "checkout", payload: { original: true } })
+          : undefined;
+      const when = new Date("2026-10-20T01:02:03Z");
+      let reads = 0;
+      Object.defineProperty(when, "getTime", {
+        enumerable: true,
+        get() {
+          reads += 1;
+          return reads <= 2 ? Date.prototype.getTime : 0;
+        },
+      });
+      const operation = existing
+        ? store.update(existing.id, { status: "completed", result: { when } })
+        : store.create({ sagaName: "checkout", payload: { when } });
+      await expect(operation).rejects.toMatchObject({
+        code: "workflow-core/saga-definition-invalid",
+      });
+      await expect(store.list()).resolves.toEqual(existing ? [existing] : []);
+      expect(reads).toBe(1);
+    },
+  );
+
+  it("rejects an invalid caller-owned Date even when getTime reports a valid timestamp", async () => {
+    const when = new Date(NaN);
+    Object.defineProperty(when, "getTime", { value: () => Date.UTC(2026, 9, 20) });
+    const store = new InMemorySagaStore();
+    await expect(store.create({ sagaName: "checkout", payload: { when } })).rejects.toMatchObject({
+      code: "workflow-core/saga-definition-invalid",
+    });
+    await expect(store.list()).resolves.toEqual([]);
+  });
+
   it.each([
     { nested: () => undefined },
     { nested: Symbol("unsupported") },

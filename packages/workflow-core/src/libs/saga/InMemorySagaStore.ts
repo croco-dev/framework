@@ -22,8 +22,12 @@ function snapshotExecution(execution: SagaExecution): SagaExecution {
     if (previous) return previous;
 
     let result: object;
-    if (value instanceof Date && Number.isFinite(value.getTime())) {
-      result = new Date(value.getTime());
+    if (value instanceof Date) {
+      const timestamp = Date.prototype.getTime.call(value);
+      if (!Number.isFinite(timestamp)) {
+        throw new SagaDefinitionProblem(execution.sagaName, "store data contains an invalid date");
+      }
+      result = new Date(timestamp);
     } else if (Array.isArray(value)) {
       result = Array<unknown>(value.length);
     } else {
