@@ -14372,7 +14372,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/events-inmemory/src/libs/InmemoryEventBus.ts";
-          readonly line: 106;
+          readonly line: 111;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -14400,7 +14400,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/events-inmemory/src/libs/InmemoryEventBus.ts";
-          readonly line: 89;
+          readonly line: 94;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -48959,7 +48959,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/events-inmemory/src/libs/InmemoryEventBus.ts",
-          line: 106,
+          line: 111,
           column: 1,
           kind: "problem-class",
         },
@@ -48991,7 +48991,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/events-inmemory/src/libs/InmemoryEventBus.ts",
-          line: 89,
+          line: 94,
           column: 1,
           kind: "problem-class",
         },

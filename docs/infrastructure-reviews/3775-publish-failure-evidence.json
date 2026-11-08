@@ -50,6 +50,47 @@
           ]
         }
       }
+    },
+    {
+      "package": "problems-core",
+      "classification": "pure-contract",
+      "reason": "Regenerate the source locations of the two existing event publish Problems after the public failure type grows. Diagnostic codes and recovery policies remain unchanged.",
+      "files": {
+        "packages/problems-core/src/generated/problem-code-registry.ts": "d4ace50ba0333241e67c064b139b40be6eda89e8d48736046e9c15c5be3ce83e"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Only generated diagnostic source locations change. No host capability, storage, lifecycle or recovery policy changes.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "docs/problem-code-registry.json"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Only generated diagnostic source locations change. No host capability, storage, lifecycle or recovery policy changes.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "docs/problem-code-registry.json"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Only generated diagnostic source locations change. No host capability, storage, lifecycle or recovery policy changes.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "docs/problem-code-registry.json"
+          ]
+        }
+      }
     }
   ]
 }

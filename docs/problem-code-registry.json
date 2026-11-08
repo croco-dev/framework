@@ -15367,7 +15367,7 @@
       "sources": [
         {
           "file": "packages/events-inmemory/src/libs/InmemoryEventBus.ts",
-          "line": 106,
+          "line": 111,
           "column": 1,
           "kind": "problem-class"
         }
@@ -15397,7 +15397,7 @@
       "sources": [
         {
           "file": "packages/events-inmemory/src/libs/InmemoryEventBus.ts",
-          "line": 89,
+          "line": 94,
           "column": 1,
           "kind": "problem-class"
         }
