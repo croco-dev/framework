@@ -2793,7 +2793,7 @@ describe("E2E: generate()", () => {
       lifecycle: "fetch",
       hostPackage: "@croco/preset-cloudflare",
       entry: "./src/worker.ts",
-      build: "pnpm di:generate && tsup src/worker.ts --format esm --platform browser --clean --dts",
+      build: "pnpm di:generate && tsup --config tsup.worker.config.ts",
       buildFormat: "esm",
       source: "worker.ts",
       canonicalHost: "createWorkerApplication",
