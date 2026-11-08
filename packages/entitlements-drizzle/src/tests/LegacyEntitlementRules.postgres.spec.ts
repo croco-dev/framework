@@ -1,4 +1,6 @@
 import "reflect-metadata";
+import { planVersionRef } from "@croco/billing-core";
+import type { EntitlementRule } from "@croco/entitlements-core";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { PgDialect } from "drizzle-orm/pg-core";
 import { Pool } from "pg";
@@ -12,6 +14,7 @@ import {
   addPlanVersionEntitlementsPostgres,
   type EntitlementMigrationClient,
 } from "../migrations/addPlanVersionEntitlements";
+import { widenEntitlementNumericColumnsPostgres } from "../migrations/widenEntitlementNumericColumns";
 
 const connectionString = process.env.ENTITLEMENTS_POSTGRES_URL ?? "";
 
@@ -53,6 +56,180 @@ describe.skipIf(connectionString.length === 0)("legacy entitlement PostgreSQL in
 
   afterAll(async () => {
     await pool.end();
+  });
+
+  it("preserves valid numeric rules through the exported schema and both registry paths", async () => {
+    // Exercise the supplied column definitions rather than the old integer fixture.
+    await pool.query(`
+      ALTER TABLE plan_entitlements
+        ALTER COLUMN value TYPE ${planEntitlements.value.getSQLType()},
+        ALTER COLUMN quota TYPE ${planEntitlements.quota.getSQLType()}
+    `);
+    await addPlanVersionEntitlementsPostgres(migrationClient);
+    const ref = planVersionRef("pro@numeric");
+    const db = drizzle(pool, { schema: { planEntitlements, planEntitlementSets } });
+    await db.insert(planEntitlementSets).values({ planId: "pro", planVersionRef: ref });
+
+    const rules: EntitlementRule[] = [
+      { featureKey: "disk", type: "static", value: 1.5, overagePolicy: "BLOCK" },
+      { featureKey: "fractional", type: "metered", quota: 2.75, overagePolicy: "WARN" },
+      { featureKey: "requests", type: "metered", quota: 3_000_000_000, overagePolicy: "BLOCK" },
+      { featureKey: "zero", type: "static", value: 0, overagePolicy: "BLOCK" },
+      { featureKey: "int32", type: "static", value: 2_147_483_647, overagePolicy: "BLOCK" },
+      { featureKey: "enabled", type: "boolean", overagePolicy: "BLOCK" },
+    ];
+    for (const version of [null, ref]) {
+      await db.insert(planEntitlements).values(
+        rules.map((rule) => ({
+          id: `${version ?? "legacy"}:${rule.featureKey}`,
+          planId: "pro",
+          planVersionRef: version,
+          featureKey: rule.featureKey,
+          type: rule.type,
+          value: rule.value,
+          quota: rule.quota,
+          overagePolicy: rule.overagePolicy === "WARN" ? ("warn" as const) : ("block" as const),
+        })),
+      );
+    }
+    expect(await registry.getEntitlements("pro")).toEqual(expect.arrayContaining(rules));
+    expect(await registry.getEntitlementsByPlanVersion(ref, "pro")).toEqual(
+      expect.arrayContaining(rules),
+    );
+    await db.insert(planEntitlements).values({
+      id: "legacy:unbounded",
+      planId: "pro",
+      featureKey: "unbounded",
+      type: "metered",
+      quota: null,
+    });
+    await expect(registry.findRule("pro", "unbounded")).resolves.toMatchObject({
+      quota: undefined,
+    });
+  });
+
+  it("widens populated integer columns atomically without changing identities or constraints", async () => {
+    await addPlanVersionEntitlementsPostgres(migrationClient);
+    await pool.query(`
+      INSERT INTO plan_entitlement_sets (plan_version_ref, plan_id) VALUES ('pro@old', 'pro');
+      INSERT INTO plan_entitlements
+        (id, plan_id, plan_version_ref, feature_key, type, value, quota, meter_id, meter_billing, overage_policy)
+      VALUES ('legacy', 'pro', NULL, 'disk', 'static', 2147483647, NULL, NULL, NULL, 'block'),
+             ('versioned', 'pro', 'pro@old', 'requests', 'metered', NULL, 42, 'requests', 'required', 'allow');
+    `);
+    const rowsBefore = await pool.query("SELECT * FROM plan_entitlements ORDER BY id");
+    const constraintsBefore = await pool.query(`
+      SELECT conname, pg_get_constraintdef(oid) AS definition
+      FROM pg_constraint WHERE conrelid = 'plan_entitlements'::regclass ORDER BY conname
+    `);
+    const indexesBefore = await pool.query(`
+      SELECT indexname, indexdef FROM pg_indexes WHERE tablename = 'plan_entitlements' ORDER BY indexname
+    `);
+
+    await widenEntitlementNumericColumnsPostgres(migrationClient);
+    await widenEntitlementNumericColumnsPostgres(migrationClient);
+
+    expect((await pool.query("SELECT * FROM plan_entitlements ORDER BY id")).rows).toEqual(
+      rowsBefore.rows,
+    );
+    expect(
+      (
+        await pool.query(`
+      SELECT conname, pg_get_constraintdef(oid) AS definition
+      FROM pg_constraint WHERE conrelid = 'plan_entitlements'::regclass ORDER BY conname
+    `)
+      ).rows,
+    ).toEqual(constraintsBefore.rows);
+    expect(
+      (
+        await pool.query(`
+      SELECT indexname, indexdef FROM pg_indexes WHERE tablename = 'plan_entitlements' ORDER BY indexname
+    `)
+      ).rows,
+    ).toEqual(indexesBefore.rows);
+
+    await pool.query(`UPDATE plan_entitlements SET value = 1.5 WHERE id = 'legacy'`);
+    await pool.query(`UPDATE plan_entitlements SET quota = 3000000000 WHERE id = 'versioned'`);
+    await expect(registry.findRule("pro", "disk")).resolves.toMatchObject({ value: 1.5 });
+    await expect(
+      registry.findRuleByPlanVersion(planVersionRef("pro@old"), "requests", "pro"),
+    ).resolves.toMatchObject({
+      quota: 3_000_000_000,
+      meterId: "requests",
+      meterBilling: "required",
+      overagePolicy: "ALLOW_WITH_OVERAGE",
+    });
+    await expect(
+      pool.query(`
+      INSERT INTO plan_entitlements (id, plan_id, feature_key, type)
+      VALUES ('duplicate-legacy', 'pro', 'disk', 'boolean')
+    `),
+    ).rejects.toMatchObject({
+      code: "23505",
+      constraint: "plan_entitlements_legacy_plan_feature_unique",
+    });
+    await expect(
+      pool.query(`
+      INSERT INTO plan_entitlements (id, plan_id, plan_version_ref, feature_key, type)
+      VALUES ('duplicate-version', 'pro', 'pro@old', 'requests', 'boolean')
+    `),
+    ).rejects.toMatchObject({
+      code: "23505",
+      constraint: "plan_entitlements_version_feature_unique",
+    });
+    await expect(
+      pool.query(`
+      INSERT INTO plan_entitlements (id, plan_id, plan_version_ref, feature_key, type)
+      VALUES ('wrong-plan', 'other', 'pro@old', 'disk', 'boolean')
+    `),
+    ).rejects.toMatchObject({ code: "23503", constraint: "plan_entitlements_version_plan_fk" });
+  });
+
+  it("leaves the first column unchanged if widening the second column fails", async () => {
+    await pool.query("ALTER TABLE plan_entitlements DROP COLUMN quota");
+    await expect(widenEntitlementNumericColumnsPostgres(migrationClient)).rejects.toMatchObject({
+      cause: { code: "42703" },
+    });
+    const columns = await pool.query(`
+      SELECT data_type FROM information_schema.columns
+      WHERE table_schema = 'public' AND table_name = 'plan_entitlements' AND column_name = 'value'
+    `);
+    expect(columns.rows).toEqual([{ data_type: "integer" }]);
+  });
+
+  it.each([
+    ["static", "NaN"],
+    ["static", "Infinity"],
+    ["static", "-Infinity"],
+    ["static", "-0.25"],
+    ["metered", "NaN"],
+    ["metered", "Infinity"],
+    ["metered", "-Infinity"],
+    ["metered", "-0.25"],
+  ])("rejects invalid %s number %s on both persisted read paths", async (type, value) => {
+    await addPlanVersionEntitlementsPostgres(migrationClient);
+    await widenEntitlementNumericColumnsPostgres(migrationClient);
+    await pool.query(
+      `INSERT INTO plan_entitlement_sets (plan_version_ref, plan_id) VALUES ('pro@invalid', 'pro')`,
+    );
+    const column = type === "static" ? "value" : "quota";
+    for (const ref of [null, "pro@invalid"]) {
+      await pool.query(
+        `
+        INSERT INTO plan_entitlements (id, plan_id, plan_version_ref, feature_key, type, ${column})
+        VALUES ($1, 'pro', $2, 'invalid', $3, $4)
+      `,
+        [ref ?? "legacy", ref, type, value],
+      );
+    }
+    await expect(registry.getEntitlements("pro")).rejects.toMatchObject({
+      code: "entitlements-core/definition-invalid",
+    });
+    await expect(
+      registry.getEntitlementsByPlanVersion(planVersionRef("pro@invalid"), "pro"),
+    ).rejects.toMatchObject({
+      code: "entitlements-core/definition-invalid",
+    });
   });
 
   it("reports existing duplicate plan and feature identifiers before creating the index", async () => {

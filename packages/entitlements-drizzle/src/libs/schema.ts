@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 import {
   foreignKey,
-  integer,
+  doublePrecision,
   pgTable,
   text,
   timestamp,
@@ -35,10 +35,10 @@ export const planEntitlements = pgTable(
     planVersionRef: text("plan_version_ref"),
     featureKey: text("feature_key").notNull(),
     type: text("type", { enum: ["boolean", "metered", "static"] }).notNull(),
-    value: integer("value"),
+    value: doublePrecision("value"),
     meterId: text("meter_id"),
     meterBilling: text("meter_billing", { enum: ["local", "required"] }),
-    quota: integer("quota"),
+    quota: doublePrecision("quota"),
     overagePolicy: text("overage_policy", { enum: ["block", "warn", "allow"] }).default("block"),
     createdAt: timestamp("created_at").defaultNow(),
   },
