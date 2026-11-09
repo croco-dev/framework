@@ -352,8 +352,10 @@ are restored with the body. Invalid JSON, malformed entries, and unknown format 
 Redis command failures still reject the operation.
 
 Keys use `<prefix>response-v1:<key>` (default prefix `isr:`). Unversioned text entries are ignored because
-their original bytes cannot be recovered reliably. Old and new deployments use separate cache namespaces;
-neither reads, overwrites, deletes, nor invalidates the other's entries. A rollout starts with a cold cache.
+their original bytes cannot be recovered reliably. Old and new deployments read and write separate keys;
+single-key deletion and new-adapter pattern invalidation use the versioned namespace. A legacy broad pattern
+such as `invalidatePattern("*")` also matches and evicts versioned keys beneath the same prefix. A rollout
+starts with a cold cache, and legacy invalidation can cause additional cache misses.
 Old entries expire under their existing TTL; entries written without a TTL remain until explicitly removed.
 Rolling back uses the old namespace again and can reuse its remaining entries, so coordinate invalidation
 across deployments or use a fresh caller-supplied prefix when old entries must not reappear. No data migration
