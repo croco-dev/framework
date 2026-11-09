@@ -1791,6 +1791,88 @@ void createInvalidationRouteId;
     GENERATED_CLIENT_TYPECHECK_TIMEOUT_MS,
   );
 
+  it.each(["inline", "frontend-problems"] as const)(
+    "preserves own query key properties with the %s runtime",
+    (problemRuntime) => {
+      const routes: RouteIR[] = [
+        {
+          controllerName: "UserController",
+          methodName: "list",
+          httpMethod: "GET",
+          path: "/users",
+          params: [{ kind: "query", name: "filter", schema: null }],
+          routeContract: null,
+          inputSchema: null,
+          inputSchemas: {
+            ...EMPTY_INPUT_SCHEMAS,
+            query: z.object({ filter: z.unknown() }) as unknown as RouteIR["inputSchemas"]["query"],
+          },
+          outputSchema: null,
+          domain: null,
+        },
+      ];
+      generateClientFiles(routes, tempDir, { problemRuntime, reactQuery: true });
+      expect(
+        checkGeneratedClientFiles(routes, tempDir, { problemRuntime, reactQuery: true }),
+      ).toEqual([]);
+      const rpcModule = loadGeneratedRpcModule();
+      const serialize = rpcModule.serializeRpcQueryKeyInput as (value: unknown) => unknown;
+      const userSource = fs.readFileSync(path.join(tempDir, "user.ts"), "utf8");
+      const output = ts.transpileModule(userSource, {
+        compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
+      }).outputText;
+      const context = {
+        exports: {} as Record<string, unknown>,
+        require: (specifier: string) => {
+          expect(["./rpc", "@tanstack/react-query"]).toContain(specifier);
+          return specifier === "./rpc" ? rpcModule : {};
+        },
+      };
+      vm.runInNewContext(output, context);
+      const keys = context.exports.userKeys as {
+        list: (input: unknown) => readonly unknown[];
+      };
+      const queries = context.exports.userQueries as {
+        list: (input: unknown) => { queryKey: readonly unknown[] };
+      };
+
+      for (const value of ["red", null, false, 7, { shade: "red" }, ["red", "blue"]]) {
+        const input = JSON.parse(
+          `{"z":1,"__proto__":${JSON.stringify(value)},"constructor":{"prototype":"own"},"prototype":true}`,
+        ) as Record<string, unknown>;
+        const before = JSON.stringify(input);
+        const result = serialize(input) as Record<string, unknown>;
+        expect(Object.keys(result)).toEqual(["__proto__", "constructor", "prototype", "z"]);
+        expect(Object.getOwnPropertyDescriptor(result, "__proto__")).toMatchObject({
+          value,
+          enumerable: true,
+          writable: true,
+          configurable: true,
+        });
+        expect(Object.getPrototypeOf(result)).toBe(Object.getPrototypeOf(serialize({})));
+        expect(JSON.parse(JSON.stringify(result))).toEqual(input);
+        expect(JSON.stringify(input)).toBe(before);
+
+        const nested = { query: { filter: [input, { absent: undefined, keep: false }] } };
+        const key = keys.list(nested);
+        expect(JSON.parse(JSON.stringify(key))).toEqual([
+          "user",
+          "list",
+          { query: { filter: [input, { keep: false }] } },
+        ]);
+        expect(queries.list(nested).queryKey).toEqual(key);
+      }
+
+      const red = { query: { filter: JSON.parse('{"__proto__":"red"}') } };
+      const blue = { query: { filter: JSON.parse('{"__proto__":"blue"}') } };
+      expect(JSON.stringify(keys.list(red))).not.toBe(JSON.stringify(keys.list(blue)));
+      expect(serialize({ b: undefined, a: ["red", undefined, "blue"] })).toEqual({
+        a: ["red", "blue"],
+      });
+      expect(serialize({ b: 2, a: 1 })).toEqual(serialize({ a: 1, b: 2 }));
+    },
+  );
+
   it("should serialize query key inputs deterministically and reject unsupported values", () => {
     const routes: RouteIR[] = [
       {
@@ -4255,9 +4337,9 @@ function loadGeneratedRpcModule(fetchImpl?: GeneratedClientFetch): Record<string
     exports: {} as Record<string, unknown>,
     ...(fetchImpl ? { fetch: fetchImpl } : {}),
     require(specifier: string): Record<string, unknown> {
-      expect(specifier).toBe("@croco/problems-core");
+      expect(["@croco/problems-core", "@croco/frontend-problems"]).toContain(specifier);
 
-      return { Problem, ProblemCategory };
+      return specifier === "@croco/problems-core" ? { Problem, ProblemCategory } : {};
     },
   };
 

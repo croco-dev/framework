@@ -1,0 +1,95 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "rpc-codegen",
+      "classification": "pure-contract",
+      "reason": "Preserve own JSON properties in query key normalization without invoking prototype setters; keep existing ordering, undefined handling and input immutability.",
+      "files": {
+        "packages/rpc-codegen/src/libs/generate.ts": "0a2e7c98c3350894c6eaf84781beb6de82dbd13dfa03023dd6ec44b939b19ce5"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Query key normalization is a synchronous JavaScript data transformation with no host capability, storage, provider or lifecycle dependency. This change makes no deployed host support claim.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/rpc-codegen/src/libs/generate.ts",
+            "packages/rpc-codegen/src/tests/codegen.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Query key normalization is a synchronous JavaScript data transformation with no host capability, storage, provider or lifecycle dependency. This change makes no deployed host support claim.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/rpc-codegen/src/libs/generate.ts",
+            "packages/rpc-codegen/src/tests/codegen.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Query key normalization is a synchronous JavaScript data transformation with no host capability, storage, provider or lifecycle dependency. This change makes no deployed host support claim.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/rpc-codegen/src/libs/generate.ts",
+            "packages/rpc-codegen/src/tests/codegen.spec.ts"
+          ]
+        }
+      }
+    },
+    {
+      "package": "create-croco-app",
+      "classification": "pure-contract",
+      "reason": "Preserve own JSON properties in query key normalization without invoking prototype setters; keep existing ordering, undefined handling and input immutability.",
+      "files": {
+        "packages/create-croco-app/templates/admin-console/libs/shared/provider-rpc/src/rpc.ts.hbs": "4bfcd9c38e19c2402213f2325379847e62aa0da3dc3100a5df2d14cff9953d0c",
+        "packages/create-croco-app/templates/saas-node-postgres-contracts/libs/shared/provider-rpc/src/rpc.ts.hbs": "7a2ecdcd05171b8619c81bffa831bf6697593a9bcac2c8b56711d28edd85e1b9",
+        "packages/create-croco-app/templates/spa-be-split/libs/shared/provider-rpc/src/rpc.ts.hbs": "4bfcd9c38e19c2402213f2325379847e62aa0da3dc3100a5df2d14cff9953d0c"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Query key normalization is a synchronous JavaScript data transformation with no host capability, storage, provider or lifecycle dependency. This change makes no deployed host support claim.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/create-croco-app/templates/admin-console/libs/shared/provider-rpc/src/rpc.ts.hbs",
+            "packages/create-croco-app/templates/saas-node-postgres-contracts/libs/shared/provider-rpc/src/rpc.ts.hbs",
+            "packages/create-croco-app/templates/spa-be-split/libs/shared/provider-rpc/src/rpc.ts.hbs",
+            "packages/create-croco-app/src/tests/QueryKeyTemplates.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Query key normalization is a synchronous JavaScript data transformation with no host capability, storage, provider or lifecycle dependency. This change makes no deployed host support claim.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/create-croco-app/templates/admin-console/libs/shared/provider-rpc/src/rpc.ts.hbs",
+            "packages/create-croco-app/templates/saas-node-postgres-contracts/libs/shared/provider-rpc/src/rpc.ts.hbs",
+            "packages/create-croco-app/templates/spa-be-split/libs/shared/provider-rpc/src/rpc.ts.hbs",
+            "packages/create-croco-app/src/tests/QueryKeyTemplates.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Query key normalization is a synchronous JavaScript data transformation with no host capability, storage, provider or lifecycle dependency. This change makes no deployed host support claim.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/create-croco-app/templates/admin-console/libs/shared/provider-rpc/src/rpc.ts.hbs",
+            "packages/create-croco-app/templates/saas-node-postgres-contracts/libs/shared/provider-rpc/src/rpc.ts.hbs",
+            "packages/create-croco-app/templates/spa-be-split/libs/shared/provider-rpc/src/rpc.ts.hbs",
+            "packages/create-croco-app/src/tests/QueryKeyTemplates.spec.ts"
+          ]
+        }
+      }
+    }
+  ]
+}
