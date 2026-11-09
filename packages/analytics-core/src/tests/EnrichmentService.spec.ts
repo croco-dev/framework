@@ -671,9 +671,113 @@ describe("EnrichmentService", () => {
     expect(page.items[0].candidates).toHaveLength(2);
     expect(new Set(page.items[0].candidates.map((candidate) => candidate.cacheKey)).size).toBe(2);
     expect(page.items[0].review?.labelId).toBe("help");
+    await expect(
+      f.service.exportLabels(scope, "run", "intent", "v2", await f.command("export")),
+    ).rejects.toMatchObject({ code: "analytics-core/enrichment-review-required" });
     expect(
-      await f.service.exportLabels(scope, "run", "intent", "v2", await f.command("export")),
+      await f.service.exportLabels(scope, "run", "intent", "v1", await f.command("export-v1")),
     ).toEqual([{ itemId: "a", inputRevision: "r1", labelId: "help", reviewRevision: 3 }]);
+  });
+  it.each(["manual", "candidate"] as const)(
+    "requires matching definition versions for fresh exports after a %s review",
+    async (method) => {
+      const next: ClassificationDefinition = {
+        ...definition,
+        version: "v2",
+        labels: [
+          { id: "buy", label: "Completed purchase" },
+          { id: "help", label: "Qualified sales lead" },
+        ],
+      };
+      const f = await fixture({ definitions: [definition, next] });
+      if (method === "candidate") await f.classify();
+      const reviewed = await f.service.review(
+        scope,
+        "run",
+        "a",
+        "intent",
+        "v1",
+        "help",
+        "Confirmed a support request under v1",
+        await f.command("review-v1"),
+      );
+      expect(reviewed.items[0].review).toMatchObject({ definitionVersion: "v1" });
+      if (method === "manual") expect(reviewed.items[0].review?.candidateRef).toBeNull();
+      else
+        expect(reviewed.items[0].review?.candidateRef).toBe(
+          reviewed.items[0].candidates[0].receiptId,
+        );
+      const firstCommand = await f.command("export-v1");
+      const firstExport = await f.service.exportLabels(scope, "run", "intent", "v1", firstCommand);
+      expect(firstExport).toEqual([
+        { itemId: "a", inputRevision: "r1", labelId: "help", reviewRevision: reviewed.revision },
+      ]);
+      const rejectedCommand = await f.command("export-v2");
+      const before = await f.store.load(scope, "run");
+      await expect(
+        f.service.exportLabels(scope, "run", "intent", "v2", rejectedCommand),
+      ).rejects.toMatchObject({ code: "analytics-core/enrichment-review-required" });
+      expect(await f.store.load(scope, "run")).toEqual(before);
+
+      if (method === "candidate") await f.classify("a", "v2");
+      const rereviewed = await f.service.review(
+        scope,
+        "run",
+        "a",
+        "intent",
+        "v2",
+        "help",
+        "Confirmed a qualified sales lead under v2",
+        await f.command("review-v2"),
+      );
+      const restarted = new EnrichmentService(f.policy);
+      expect(
+        await restarted.exportLabels(scope, "run", "intent", "v2", {
+          ...rejectedCommand,
+          expectedRevision: rereviewed.revision,
+        }),
+      ).toEqual([
+        { itemId: "a", inputRevision: "r1", labelId: "help", reviewRevision: rereviewed.revision },
+      ]);
+      const after = await f.store.load(scope, "run");
+      // A receipt replays its original approved revision, even after the current review changes.
+      expect(await restarted.exportLabels(scope, "run", "intent", "v1", firstCommand)).toEqual(
+        firstExport,
+      );
+      expect(await f.store.load(scope, "run")).toEqual(after);
+      await expect(
+        restarted.exportLabels(scope, "run", "intent", "v2", firstCommand),
+      ).rejects.toMatchObject({ code: "analytics-core/enrichment-idempotency-conflict" });
+      await expect(
+        restarted.exportLabels(scope, "run", "intent", "v1", await f.command("new-export-v1")),
+      ).rejects.toMatchObject({ code: "analytics-core/enrichment-review-required" });
+      expect(await f.store.load(scope, "run")).toEqual(after);
+    },
+  );
+  it("rejects a mixed-version batch without committing a partial export", async () => {
+    const f = await fixture({
+      definitions: [definition, { ...definition, version: "v2" }],
+      inputs: [input("a"), input("b")],
+    });
+    for (const [itemId, version] of [
+      ["a", "v2"],
+      ["b", "v1"],
+    ] as const)
+      await f.service.review(
+        scope,
+        "run",
+        itemId,
+        "intent",
+        version,
+        "help",
+        `Confirmed ${itemId} under ${version}`,
+        await f.command(`review-${itemId}`),
+      );
+    const before = await f.store.load(scope, "run");
+    await expect(
+      f.service.exportLabels(scope, "run", "intent", "v2", await f.command("mixed-export")),
+    ).rejects.toMatchObject({ code: "analytics-core/enrichment-review-required" });
+    expect(await f.store.load(scope, "run")).toEqual(before);
   });
   it.each([
     {

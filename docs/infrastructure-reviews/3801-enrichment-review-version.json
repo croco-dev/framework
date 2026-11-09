@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "analytics-core",
+      "classification": "pure-contract",
+      "reason": "Fresh enrichment exports require reviews for the exact definition ID and version; completed command receipts retain their original replay behavior.",
+      "files": {
+        "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts": "dc096c03bf8bc3a0bcd2b14fc48a737fba4c7d321ac88fe6e83dfd73e838a1a8"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The export guard compares the stored human-review definition version inside the existing domain mutation. It requires no host capability, new storage, transport or lifecycle behavior.",
+          "providers": [],
+          "constraints": [
+            "Existing store CAS, authorization, source availability and retention contracts remain required. No deployment support or provider certification is added."
+          ],
+          "references": [
+            "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts",
+            "packages/analytics-core/src/tests/EnrichmentService.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The export guard compares the stored human-review definition version inside the existing domain mutation. It requires no host capability, new storage, transport or lifecycle behavior.",
+          "providers": [],
+          "constraints": [
+            "Existing store CAS, authorization, source availability and retention contracts remain required. No deployment support or provider certification is added."
+          ],
+          "references": [
+            "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts",
+            "packages/analytics-core/src/tests/EnrichmentService.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The export guard compares the stored human-review definition version inside the existing domain mutation. It requires no host capability, new storage, transport or lifecycle behavior.",
+          "providers": [],
+          "constraints": [
+            "Existing store CAS, authorization, source availability and retention contracts remain required. No deployment support or provider certification is added."
+          ],
+          "references": [
+            "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts",
+            "packages/analytics-core/src/tests/EnrichmentService.spec.ts"
+          ]
+        }
+      }
+    }
+  ]
+}
