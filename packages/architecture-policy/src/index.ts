@@ -1304,7 +1304,8 @@ function matchesSourceMatcher(matcher: ArchitecturePolicyMatcher, context: Impor
   return (
     matchesOptionalPatterns(context.sourceGroup, matcher.groups) &&
     matchesOptionalPatterns(context.sourcePackageName, matcher.packages) &&
-    matchesOptionalPatterns(context.sourcePath, matcher.paths)
+    matchesOptionalPatterns(context.sourcePath, matcher.paths) &&
+    matchesOptionalPatterns(context.specifier, matcher.specifiers)
   );
 }
 

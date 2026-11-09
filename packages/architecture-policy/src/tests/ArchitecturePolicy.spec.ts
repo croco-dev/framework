@@ -1018,6 +1018,69 @@ describe("architecture policy engine", () => {
     expect(report.status).toBe("pass");
   });
 
+  it.each(["source", "package-manifest"] as const)(
+    "applies source specifier conditions to %s imports",
+    (sourceKind) => {
+      const repo = createTempRepo();
+      writePackage(repo, "packages/app", "@test/app", {
+        dependencies: {
+          "@test/allowed": "*",
+          "@test/blocked-one": "*",
+          "@test/blocked-two": "*",
+        },
+      });
+      for (const name of ["allowed", "blocked-one", "blocked-two"]) {
+        writePackage(repo, `packages/${name}`, `@test/${name}`);
+      }
+      writeFile(
+        repo,
+        "packages/app/src/index.ts",
+        "import '@test/allowed';\nimport '@test/blocked-one';\nimport '@test/blocked-two';\n",
+      );
+
+      const report = checkArchitecturePolicy({
+        rootDir: repo,
+        manifest: parseArchitecturePolicyManifest(
+          JSON.stringify({
+            schemaVersion: ARCHITECTURE_POLICY_SCHEMA_VERSION,
+            packageGroups: {
+              app: { packages: ["@test/app"] },
+              provider: { packages: ["@test/allowed", "@test/blocked-*"] },
+            },
+            rules: {
+              forbiddenImports: [
+                {
+                  id: "selected-provider-imports",
+                  from: {
+                    groups: ["app"],
+                    packages: ["@test/app"],
+                    paths: ["packages/app/**"],
+                    specifiers: ["@test/blocked-*"],
+                  },
+                  to: { groups: ["provider"] },
+                  appliesTo: [sourceKind],
+                },
+              ],
+            },
+          }),
+        ),
+      });
+
+      expect(report.status).toBe("fail");
+      expect(report.diagnostics).toEqual(
+        ["@test/blocked-one", "@test/blocked-two"].map((importSpecifier) =>
+          expect.objectContaining({
+            code: "architecture-policy/forbidden-import",
+            ruleId: "selected-provider-imports",
+            sourceKind,
+            sourcePackage: "@test/app",
+            importSpecifier,
+          }),
+        ),
+      );
+    },
+  );
+
   it("requires every target matcher field to match", () => {
     const repo = createTempRepo();
     writePackage(repo, "packages/repository-core", "@croco/repository-core");
