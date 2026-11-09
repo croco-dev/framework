@@ -1,6 +1,7 @@
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import ts from "typescript";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import * as crocoRanges from "../helpers/croco-ranges.js";
 import { generate } from "../generator.js";
@@ -103,6 +104,37 @@ async function generatePreset(
 }
 
 describe("fresh scaffold contract artifacts", () => {
+  it.each(["production-app", "admin-console", "saas"] as const)(
+    "%s ships RPC module specifiers that resolve in native Node ESM",
+    async (preset) => {
+      const targetDir = await generatePreset(preset);
+      const sourceDir = join(targetDir, "libs/shared/provider-rpc/src");
+      const relativeImports = readdirSync(sourceDir)
+        .filter((file) => file.endsWith(".ts"))
+        .flatMap((file) => {
+          const sourcePath = join(sourceDir, file);
+          return ts
+            .preProcessFile(readFileSync(sourcePath, "utf8"))
+            .importedFiles.filter(({ fileName }) => fileName.startsWith("."))
+            .map(({ fileName }) => ({ sourcePath, fileName }));
+        });
+      expect(relativeImports.length).toBeGreaterThan(0);
+      const unresolved = relativeImports.filter(
+        ({ sourcePath, fileName }) =>
+          !ts.resolveModuleName(
+            fileName,
+            sourcePath,
+            { module: ts.ModuleKind.NodeNext, moduleResolution: ts.ModuleResolutionKind.NodeNext },
+            ts.sys,
+            undefined,
+            undefined,
+            ts.ModuleKind.ESNext,
+          ).resolvedModule,
+      );
+      expect(unresolved).toEqual([]);
+    },
+  );
+
   it("keeps project map ordering canonical after scope and project name substitution", async () => {
     for (const preset of ["production-app", "admin-console", "saas"] as const) {
       expectProjectMapDependencies(await generatePreset(preset, undefined, "@smoke", "1-app"));

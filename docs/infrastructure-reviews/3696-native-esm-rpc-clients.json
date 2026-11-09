@@ -41,6 +41,79 @@
           ]
         }
       }
+    },
+    {
+      "package": "create-croco-app",
+      "classification": "pure-contract",
+      "reason": "Fresh scaffold RPC clients use the same emitted JavaScript module extensions as rpc-codegen so existing generated-output drift checks and native ESM relative resolution agree.",
+      "files": {
+        "packages/create-croco-app/templates/admin-console/libs/shared/provider-rpc/src/admin.ts.hbs": "cd7ce5efe95ba222fdc949c71e296454dd0b460848c30ef3b0f821b7e2438f33",
+        "packages/create-croco-app/templates/admin-console/libs/shared/provider-rpc/src/index.ts.hbs": "3917ee69bb05099b605421832675a9b7334bd0f910496a5d13ded6d85ebe3790",
+        "packages/create-croco-app/templates/admin-console/libs/shared/provider-rpc/src/user.ts.hbs": "08fdfcd38c5c46432dde985aa548dc732e37e8692c3914b149a952d25c8ee366",
+        "packages/create-croco-app/templates/saas-node-postgres-contracts/libs/shared/provider-rpc/src/index.ts.hbs": "895dc908f7eed8fe06e31b807c0d1dd51b1d69e19b4fefa3020caa8857da8dde",
+        "packages/create-croco-app/templates/saas-node-postgres-contracts/libs/shared/provider-rpc/src/jobs.ts.hbs": "eb911102e079f9258691542e22b926c7987d1b11048a2b2e1498b99779e50f25",
+        "packages/create-croco-app/templates/saas-node-postgres-contracts/libs/shared/provider-rpc/src/operations.ts.hbs": "48608e6100e67b5f04a00e048d59bdebb5fde54164c1e0d038ad14eb25bfc563",
+        "packages/create-croco-app/templates/saas-node-postgres-contracts/libs/shared/provider-rpc/src/saas.ts.hbs": "5afea533c13cffc66879fc079e40c95abb7be9b77e3dce875f351c408e20049b",
+        "packages/create-croco-app/templates/spa-be-split/libs/shared/provider-rpc/src/index.ts.hbs": "540650fa026b7d4a36e243e53f70e053970d61b0c33432a2b1893e33258e8e15",
+        "packages/create-croco-app/templates/spa-be-split/libs/shared/provider-rpc/src/user.ts.hbs": "08fdfcd38c5c46432dde985aa548dc732e37e8692c3914b149a952d25c8ee366"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Generated client module specifiers and legacy output ownership are build-time source contracts without host capabilities, storage or lifecycle requirements. NodeNext consumer execution does not certify a deployed host or add a catalog runtime claim.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/create-croco-app/templates/admin-console/libs/shared/provider-rpc/src/admin.ts.hbs",
+            "packages/create-croco-app/templates/admin-console/libs/shared/provider-rpc/src/index.ts.hbs",
+            "packages/create-croco-app/templates/admin-console/libs/shared/provider-rpc/src/user.ts.hbs",
+            "packages/create-croco-app/templates/saas-node-postgres-contracts/libs/shared/provider-rpc/src/index.ts.hbs",
+            "packages/create-croco-app/templates/saas-node-postgres-contracts/libs/shared/provider-rpc/src/jobs.ts.hbs",
+            "packages/create-croco-app/templates/saas-node-postgres-contracts/libs/shared/provider-rpc/src/operations.ts.hbs",
+            "packages/create-croco-app/templates/saas-node-postgres-contracts/libs/shared/provider-rpc/src/saas.ts.hbs",
+            "packages/create-croco-app/templates/spa-be-split/libs/shared/provider-rpc/src/index.ts.hbs",
+            "packages/create-croco-app/templates/spa-be-split/libs/shared/provider-rpc/src/user.ts.hbs",
+            "packages/create-croco-app/src/tests/FreshScaffoldArtifacts.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Generated client module specifiers and legacy output ownership are build-time source contracts without host capabilities, storage or lifecycle requirements. NodeNext consumer execution does not certify a deployed host or add a catalog runtime claim.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/create-croco-app/templates/admin-console/libs/shared/provider-rpc/src/admin.ts.hbs",
+            "packages/create-croco-app/templates/admin-console/libs/shared/provider-rpc/src/index.ts.hbs",
+            "packages/create-croco-app/templates/admin-console/libs/shared/provider-rpc/src/user.ts.hbs",
+            "packages/create-croco-app/templates/saas-node-postgres-contracts/libs/shared/provider-rpc/src/index.ts.hbs",
+            "packages/create-croco-app/templates/saas-node-postgres-contracts/libs/shared/provider-rpc/src/jobs.ts.hbs",
+            "packages/create-croco-app/templates/saas-node-postgres-contracts/libs/shared/provider-rpc/src/operations.ts.hbs",
+            "packages/create-croco-app/templates/saas-node-postgres-contracts/libs/shared/provider-rpc/src/saas.ts.hbs",
+            "packages/create-croco-app/templates/spa-be-split/libs/shared/provider-rpc/src/index.ts.hbs",
+            "packages/create-croco-app/templates/spa-be-split/libs/shared/provider-rpc/src/user.ts.hbs",
+            "packages/create-croco-app/src/tests/FreshScaffoldArtifacts.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Generated client module specifiers and legacy output ownership are build-time source contracts without host capabilities, storage or lifecycle requirements. NodeNext consumer execution does not certify a deployed host or add a catalog runtime claim.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/create-croco-app/templates/admin-console/libs/shared/provider-rpc/src/admin.ts.hbs",
+            "packages/create-croco-app/templates/admin-console/libs/shared/provider-rpc/src/index.ts.hbs",
+            "packages/create-croco-app/templates/admin-console/libs/shared/provider-rpc/src/user.ts.hbs",
+            "packages/create-croco-app/templates/saas-node-postgres-contracts/libs/shared/provider-rpc/src/index.ts.hbs",
+            "packages/create-croco-app/templates/saas-node-postgres-contracts/libs/shared/provider-rpc/src/jobs.ts.hbs",
+            "packages/create-croco-app/templates/saas-node-postgres-contracts/libs/shared/provider-rpc/src/operations.ts.hbs",
+            "packages/create-croco-app/templates/saas-node-postgres-contracts/libs/shared/provider-rpc/src/saas.ts.hbs",
+            "packages/create-croco-app/templates/spa-be-split/libs/shared/provider-rpc/src/index.ts.hbs",
+            "packages/create-croco-app/templates/spa-be-split/libs/shared/provider-rpc/src/user.ts.hbs",
+            "packages/create-croco-app/src/tests/FreshScaffoldArtifacts.spec.ts"
+          ]
+        }
+      }
     }
   ]
 }

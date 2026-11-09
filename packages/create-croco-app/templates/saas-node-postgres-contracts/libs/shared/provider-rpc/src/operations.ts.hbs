@@ -1,5 +1,5 @@
-import { createRpcClientRequest, handleRpcRequestError, handleRpcRequestResultError, handleJsonResponse, handleJsonResult } from './rpc';
-import type { RpcClientConfig, RpcClientRequestOptions, RpcClientResult, RpcDeclaredProblem, RpcProblemDetailsFor } from './rpc';
+import { createRpcClientRequest, handleRpcRequestError, handleRpcRequestResultError, handleJsonResponse, handleJsonResult } from './rpc.js';
+import type { RpcClientConfig, RpcClientRequestOptions, RpcClientResult, RpcDeclaredProblem, RpcProblemDetailsFor } from './rpc.js';
 export type HealthOutput = { results: ({ details?: Record<string, unknown> | undefined; name: string; status: 'down' | 'up'; })[]; status: 'down' | 'up'; };
 export type DiagnosticsOutput = { components: ({ component: string; details?: Record<string, unknown> | undefined; lastChecked: string; message?: string | undefined; status: 'degraded' | 'healthy' | 'unhealthy'; })[]; recentErrors: ({ cause?: string | undefined; code: string; component: string; message: string; timestamp: string; })[]; summary: 'all_healthy' | 'degraded' | 'issues_detected'; timestamp: string; };
 export type HealthProblem = never;
