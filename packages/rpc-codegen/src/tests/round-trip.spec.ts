@@ -2519,13 +2519,16 @@ async function importGeneratedClient(fileName: string, source: string) {
     reportDiagnostics: true,
   });
   const rpcFileName = `rpc-${fileName.replace(/\.ts$/, "")}.mjs`;
-  const output = ts.transpileModule(source.replace("from './rpc';", `from './${rpcFileName}';`), {
-    compilerOptions: {
-      module: ts.ModuleKind.ES2022,
-      target: ts.ScriptTarget.ES2022,
+  const output = ts.transpileModule(
+    source.replace("from './rpc.js';", `from './${rpcFileName}';`),
+    {
+      compilerOptions: {
+        module: ts.ModuleKind.ES2022,
+        target: ts.ScriptTarget.ES2022,
+      },
+      reportDiagnostics: true,
     },
-    reportDiagnostics: true,
-  });
+  );
 
   expect(rpcOutput.diagnostics).toEqual([]);
   expect(output.diagnostics).toEqual([]);

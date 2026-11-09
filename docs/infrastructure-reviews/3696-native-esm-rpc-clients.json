@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "rpc-codegen",
+      "classification": "pure-contract",
+      "reason": "Generated relative imports and exports use emitted JavaScript extensions for native ESM consumers while preserving ownership recovery for existing extensionless outputs.",
+      "files": {
+        "packages/rpc-codegen/src/libs/generate.ts": "cef226347770f2bcc53f539e83ad22089e441f0a520dd75976ac77c23300741a"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Generated client module specifiers and legacy output ownership are build-time source contracts without host capabilities, storage or lifecycle requirements. NodeNext consumer execution does not certify a deployed host or add a catalog runtime claim.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/rpc-codegen/src/libs/generate.ts",
+            "packages/rpc-codegen/src/tests/codegen.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Generated client module specifiers and legacy output ownership are build-time source contracts without host capabilities, storage or lifecycle requirements. NodeNext consumer execution does not certify a deployed host or add a catalog runtime claim.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/rpc-codegen/src/libs/generate.ts",
+            "packages/rpc-codegen/src/tests/codegen.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Generated client module specifiers and legacy output ownership are build-time source contracts without host capabilities, storage or lifecycle requirements. NodeNext consumer execution does not certify a deployed host or add a catalog runtime claim.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/rpc-codegen/src/libs/generate.ts",
+            "packages/rpc-codegen/src/tests/codegen.spec.ts"
+          ]
+        }
+      }
+    }
+  ]
+}
