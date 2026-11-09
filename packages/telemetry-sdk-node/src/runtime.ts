@@ -31,6 +31,7 @@ import {
   MAX_TELEMETRY_SHUTDOWN_TIMEOUT_MS,
 } from "./libs/problems/TelemetryProblems";
 import { resolveDeploymentEnvironment } from "./libs/resources/DeploymentEnvironment";
+import { startSdkWithGlobalRollback } from "./libs/runtime/startSdkWithGlobalRollback";
 import type {
   TelemetryBatchConfigurationConstraint,
   TelemetryBatchConfigurationField,
@@ -41,6 +42,7 @@ class TelemetryRuntime {
   private sdk: NodeSDK | null = null;
   private processor: BatchSpanProcessor | null = null;
   private initializationCleanup: Array<() => void | Promise<void>> = [];
+  private readonly rolledBackInstrumentations = new WeakSet<Instrumentation>();
   private initialized = false;
   private initPromise: Promise<void> | null = null;
   private shutdownPromise: Promise<ShutdownResult> | null = null;
@@ -167,9 +169,16 @@ class TelemetryRuntime {
         );
 
         this.activeInstrumentations = resolvedInstrumentation.instrumentations;
-        this.initializationCleanup = this.activeInstrumentations.map(
-          (instrumentation) => () => instrumentation.disable(),
-        );
+        this.initializationCleanup = this.activeInstrumentations.map((instrumentation) => () => {
+          instrumentation.disable();
+          this.rolledBackInstrumentations.add(instrumentation);
+        });
+        for (const instrumentation of this.activeInstrumentations) {
+          if (this.rolledBackInstrumentations.has(instrumentation)) {
+            instrumentation.enable();
+            this.rolledBackInstrumentations.delete(instrumentation);
+          }
+        }
 
         const resource = defaultResource().merge(
           resourceFromAttributes({
@@ -203,6 +212,9 @@ class TelemetryRuntime {
           this.initializationCleanup.push(retainShutdownResult(this.processor));
         }
 
+        const tracerProviderBefore = getTracerProviderIdentity();
+        const meterProviderBefore = metrics.getMeterProvider();
+        const loggerProviderBefore = logs.getLoggerProvider();
         const sdk = new NodeSDK({
           resource,
           ...(this.processor !== null && { spanProcessor: this.processor }),
@@ -213,15 +225,12 @@ class TelemetryRuntime {
           metricReaders: [],
         });
         this.sdk = sdk;
-        this.initializationCleanup.push(() => sdk.shutdown());
-
-        const tracerProviderBefore = getTracerProviderIdentity();
-        const meterProviderBefore = metrics.getMeterProvider();
-        const loggerProviderBefore = logs.getLoggerProvider();
 
         try {
-          sdk.start();
+          startSdkWithGlobalRollback(() => sdk.start(), this.initializationCleanup);
         } finally {
+          // Stop SDK-owned providers before releasing the context they use while flushing.
+          this.initializationCleanup.push(() => sdk.shutdown());
           // start() can install globals before throwing. Capture only this attempt's replacements.
           const tracerProvider = getTracerProviderIdentity();
           const meterProvider = metrics.getMeterProvider();

@@ -207,10 +207,12 @@ Trace export를 켠 상태에서 OTLP endpoint가 없으면 초기화가 fail-cl
 `trace.exporterUrl`을 설정한 뒤 다시 초기화하세요.
 
 Exporter나 SDK 시작 실패는 `TelemetryRuntimeProblem`으로 정규화됩니다. 실패한 시도가 생성한 SDK,
-processor/exporter와 instrumentation을 역순으로 정리하며, SDK가 이미 종료한 processor/exporter를 다시 종료하지 않습니다.
+processor/exporter, instrumentation과 SDK가 설치한 context manager·propagator를 역순으로 정리하며,
+SDK가 이미 종료한 processor/exporter를 다시 종료하지 않습니다. 기존 외부 전역 등록은 유지합니다.
 이 런타임은 traces만 소유하므로 SDK의 환경 변수로 logs/metrics exporter를 암묵적으로 생성하지 않습니다.
 
-정리가 끝난 뒤 원인을 수정하고 `init()`을 다시 호출할 수 있습니다. 정리 중에는 동일 설정의 초기화 요청도 같은
+정리가 끝난 뒤 원인을 수정하고 `init()`을 다시 호출할 수 있습니다. 같은 custom instrumentation 인스턴스를 재사용하면
+이전 rollback이 비활성화한 계측을 다시 활성화합니다. 정리 중에는 동일 설정의 초기화 요청도 같은
 실패 결과를 기다립니다. 초기화와 동시에 `shutdown()`을 호출하면 shutdown도 원래 초기화 오류로 실패합니다.
 Rollback은 30초로 제한됩니다. 정리 실패나 시간 초과 시 초기화 Problem의 `cause`는 `AggregateError`이며,
 `cause.cause`에 원래 startup 오류, `cause.errors`에 startup 오류와 확인된 정리 오류를 보존합니다.

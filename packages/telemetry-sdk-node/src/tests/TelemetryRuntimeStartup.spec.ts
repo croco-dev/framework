@@ -1,8 +1,17 @@
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
-import { context, metrics, propagation, trace } from "@opentelemetry/api";
+import {
+  context,
+  createContextKey,
+  metrics,
+  propagation,
+  ROOT_CONTEXT,
+  trace,
+} from "@opentelemetry/api";
 import { logs } from "@opentelemetry/api-logs";
+import { InstrumentationBase } from "@opentelemetry/instrumentation";
 import type { Instrumentation } from "@opentelemetry/instrumentation";
+import type { ContextManager } from "@opentelemetry/api";
 import type { NodeSDK } from "@opentelemetry/sdk-node";
 import type { getNodeAutoInstrumentations } from "@opentelemetry/auto-instrumentations-node";
 import type { BatchSpanProcessor } from "@opentelemetry/sdk-trace-base";
@@ -30,6 +39,7 @@ describe("TelemetryRuntime startup rollback", () => {
     exporterShutdown.mockReset().mockResolvedValue(undefined);
     sdkShutdown.mockReset();
     exported.mockReset();
+    vi.stubEnv("OTEL_SDK_DISABLED", undefined);
     vi.stubEnv("OTEL_LOGS_EXPORTER", "none");
     vi.stubEnv("OTEL_METRICS_EXPORTER", "none");
     vi.doMock("@opentelemetry/exporter-trace-otlp-http", () => ({
@@ -425,4 +435,103 @@ describe("TelemetryRuntime startup rollback", () => {
       for (const instance of created) instance.disable();
     }
   });
+
+  it("reactivates the same custom instrumentation instance when retrying failed startup", async () => {
+    class CustomInstrumentation extends InstrumentationBase {
+      protected init() {
+        return [];
+      }
+    }
+    const custom = new CustomInstrumentation("retry-custom", "1.0.0", {});
+    const options = config([custom]);
+    failurePhase = "early-start";
+    await expect(runtime.init(options)).rejects.toMatchObject({ cause: startupFailure });
+    expect(custom.isEnabled()).toBe(false);
+    failurePhase = undefined;
+    await runtime.init(options);
+    expect(custom.isEnabled()).toBe(true);
+    await runtime.shutdown();
+    expect(custom.isEnabled()).toBe(false);
+  });
+
+  it("releases SDK context and propagation globals and registers fresh configuration on retry", async () => {
+    vi.stubEnv("OTEL_PROPAGATORS", "tracecontext,baggage");
+    const key = createContextKey("rollback-context");
+    const scoped = ROOT_CONTEXT.setValue(key, "owned");
+    const registerContext = vi.spyOn(context, "setGlobalContextManager");
+    const registerPropagation = vi.spyOn(propagation, "setGlobalPropagator");
+    failurePhase = "late-start";
+    try {
+      await expect(runtime.init(config())).rejects.toMatchObject({ cause: startupFailure });
+      expect(context.with(scoped, () => context.active().getValue(key))).toBeUndefined();
+      expect(propagation.fields()).toEqual([]);
+      expect(context.setGlobalContextManager).toBe(registerContext);
+      expect(propagation.setGlobalPropagator).toBe(registerPropagation);
+      failurePhase = undefined;
+      vi.stubEnv("OTEL_PROPAGATORS", "b3");
+      await runtime.init(config());
+      expect(context.with(scoped, () => context.active().getValue(key))).toBe("owned");
+      expect(propagation.fields()).toEqual(["b3"]);
+      expect(registerContext.mock.results.map((result) => result.value)).toEqual([true, true]);
+      expect(registerPropagation.mock.results.map((result) => result.value)).toEqual([true, true]);
+    } finally {
+      registerContext.mockRestore();
+      registerPropagation.mockRestore();
+    }
+  });
+
+  it.each(["before-start", "during-rollback"])(
+    "preserves external context and propagation owners installed %s",
+    async (mode) => {
+      const externalContext = ROOT_CONTEXT.setValue(createContextKey("external"), "external-value");
+      const disable = vi.fn();
+      const manager = {
+        active: () => externalContext,
+        with: (_scope: unknown, callback: () => unknown) => callback(),
+        bind: (_scope: unknown, target: unknown) => target,
+        enable() {
+          return this;
+        },
+        disable() {
+          disable();
+          return this;
+        },
+      } as ContextManager;
+      const externalPropagator = {
+        inject: vi.fn(),
+        extract: () => externalContext,
+        fields: () => ["external-field"],
+      };
+      const install = () => {
+        context.setGlobalContextManager(manager);
+        propagation.setGlobalPropagator(externalPropagator);
+      };
+      const disableLogs = logs.disable;
+      const handoff =
+        mode === "during-rollback"
+          ? vi.spyOn(logs, "disable").mockImplementation(() => {
+              disableLogs.call(logs);
+              context.disable();
+              propagation.disable();
+              install();
+            })
+          : undefined;
+      if (mode === "before-start") install();
+      failurePhase = "late-start";
+      try {
+        await expect(runtime.init(config())).rejects.toMatchObject({ cause: startupFailure });
+      } finally {
+        handoff?.mockRestore();
+      }
+      expect(context.active()).toBe(externalContext);
+      expect(disable).not.toHaveBeenCalled();
+      expect(propagation.fields()).toEqual(["external-field"]);
+      failurePhase = undefined;
+      await runtime.init(config());
+      await runtime.shutdown();
+      expect(context.active()).toBe(externalContext);
+      expect(disable).not.toHaveBeenCalled();
+      expect(propagation.fields()).toEqual(["external-field"]);
+    },
+  );
 });
