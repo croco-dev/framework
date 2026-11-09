@@ -6,7 +6,7 @@
       "classification": "pure-contract",
       "reason": "Reject malformed JSON values before delivery verification, target resolution or execution creation, preserving scheduler payloads and existing diagnostic codes.",
       "files": {
-        "packages/triggers-qstash/src/libs/QStashTriggerHandler.ts": "f0c5afa0b880505e69131a5f6b8cab02579c08e7eb43d7d527259ba999d7eeea"
+        "packages/triggers-qstash/src/libs/QStashTriggerHandler.ts": "39489eed1664d8979f40a9834b5abfd47932443dddcf9c43146f50f351f1c00a"
       },
       "catalogRuntimes": ["node", "lambda"],
       "profiles": {

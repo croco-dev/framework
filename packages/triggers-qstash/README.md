@@ -114,8 +114,8 @@ and an `AbortSignal`. Existing zero-argument targets remain valid because JavaSc
   atomic attempt fencing when the execution manager supports it.
 - Invalid JSON or malformed payloads return `400` with `code: "triggers-qstash/invalid-payload"`.
   Payloads must be non-null objects with non-blank string `scheduleId`, `methodName`,
-  `cronExpression` and `timestamp` fields. Optional `className` and `triggerName` must also be
-  non-blank strings when present. Optional `options` must be an object with string `name`,
+  `cronExpression` and `timestamp` fields. Optional `className` and `triggerName` must be
+  strings when present. Optional `options` must be an object with string `name`,
   `description` and `timezone` fields and a boolean `enabled` when supplied. Invalid shapes are
   rejected before delivery identity verification, service resolution or execution creation;
   accepted payloads retain their original values.

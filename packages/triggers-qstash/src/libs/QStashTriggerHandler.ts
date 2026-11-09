@@ -445,10 +445,7 @@ export class QStashTriggerHandler {
     }
     for (const field of ["className", "triggerName"]) {
       const fieldValue = payload[field];
-      if (
-        fieldValue !== undefined &&
-        (typeof fieldValue !== "string" || fieldValue.trim().length === 0)
-      ) {
+      if (fieldValue !== undefined && typeof fieldValue !== "string") {
         return false;
       }
     }

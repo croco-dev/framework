@@ -233,19 +233,11 @@ describe("QStashTriggerHandler", () => {
     const invalidFields = [undefined, null, 123, true, {}, [], "", " \t\n"];
     const invalidPayloads = [
       ...[null, [], 123, true, "text"].map((value) => ["root", value] as const),
-      ...[
-        "scheduleId",
-        "methodName",
-        "cronExpression",
-        "timestamp",
-        "className",
-        "triggerName",
-      ].flatMap((field) =>
-        invalidFields
-          .filter(
-            (value) => value !== undefined || (field !== "className" && field !== "triggerName"),
-          )
-          .map((value) => [field, { ...payload, [field]: value }] as const),
+      ...["scheduleId", "methodName", "cronExpression", "timestamp"].flatMap((field) =>
+        invalidFields.map((value) => [field, { ...payload, [field]: value }] as const),
+      ),
+      ...["className", "triggerName"].flatMap((field) =>
+        [null, 123, true, {}, []].map((value) => [field, { ...payload, [field]: value }] as const),
       ),
       ...[null, [], "options", 123, false].map(
         (options) => ["options", { ...payload, options }] as const,
@@ -315,54 +307,61 @@ describe("QStashTriggerHandler", () => {
       expect(create).not.toHaveBeenCalled();
     });
 
-    it("dispatches the scheduler payload unchanged through the Lambda response boundary", async () => {
-      const execute = vi.fn().mockResolvedValue("handled");
-      class PayloadJob {
-        execute = execute;
-      }
-      triggerRegistry.register({
-        type: "cron",
-        expression: payload.cronExpression,
-        methodName: "execute",
-        target: PayloadJob.prototype,
-        options: { name: "payload-job", description: "", enabled: true, timezone: "Asia/Seoul" },
-      });
-      const create = vi.fn().mockResolvedValue({});
-      const scheduler = new QStashScheduler({
-        client: { schedules: { list: vi.fn().mockResolvedValue([]), create } } as unknown as Client,
-        webhookUrl: "https://example.com/webhooks/qstash",
-      });
-      expect((await scheduler.sync()).created).toBe(1);
-      const body: string = create.mock.calls[0]?.[0].body;
-      const deliveryIdentityVerifier = vi.fn().mockResolvedValue(true);
-      const { manager } = createIdempotentExecutionManager();
-      const handler = QStashTriggerHandlerBase.createLambdaHandler({
-        receiver: { verify: vi.fn().mockResolvedValue(true) } as unknown as Receiver,
-        deliveryIdentityVerifier,
-        serviceResolver: () => new PayloadJob(),
-        executionManager: manager,
-        executionTimeout: 60_000,
-      });
-      const headers = {
-        "Upstash-Signature": "valid-signature",
-        "Upstash-Message-Id": "msg-payload",
-      };
+    it.each(["payload-job", " ", ""])(
+      "dispatches scheduler name %j unchanged through the Lambda response boundary",
+      async (name) => {
+        const execute = vi.fn().mockResolvedValue("handled");
+        class PayloadJob {
+          execute = execute;
+        }
+        triggerRegistry.register({
+          type: "cron",
+          expression: payload.cronExpression,
+          methodName: "execute",
+          target: PayloadJob.prototype,
+          options: { name, description: "", enabled: true, timezone: "Asia/Seoul" },
+        });
+        const create = vi.fn().mockResolvedValue({});
+        const scheduler = new QStashScheduler({
+          client: {
+            schedules: { list: vi.fn().mockResolvedValue([]), create },
+          } as unknown as Client,
+          webhookUrl: "https://example.com/webhooks/qstash",
+        });
+        expect((await scheduler.sync()).created).toBe(1);
+        const body: string = create.mock.calls[0]?.[0].body;
+        const deliveryIdentityVerifier = vi.fn().mockResolvedValue(true);
+        const { manager } = createIdempotentExecutionManager();
+        const handler = QStashTriggerHandlerBase.createLambdaHandler({
+          receiver: { verify: vi.fn().mockResolvedValue(true) } as unknown as Receiver,
+          deliveryIdentityVerifier,
+          serviceResolver: () => new PayloadJob(),
+          executionManager: manager,
+          executionTimeout: 60_000,
+        });
+        const headers = {
+          "Upstash-Signature": "valid-signature",
+          "Upstash-Message-Id": "msg-payload",
+        };
 
-      const response = await handler({ body, headers });
-      expect(response.statusCode).toBe(200);
-      expect(JSON.parse(response.body)).toMatchObject({ result: "handled" });
-      expect(execute).toHaveBeenCalledWith(
-        JSON.parse(body),
-        expect.objectContaining({ executionId: "exec-1" }),
-      );
-      expect(deliveryIdentityVerifier).toHaveBeenCalledOnce();
+        const response = await handler({ body, headers });
+        expect(response.statusCode).toBe(200);
+        expect(JSON.parse(response.body)).toMatchObject({ result: "handled" });
+        expect(execute).toHaveBeenCalledWith(
+          JSON.parse(body),
+          expect.objectContaining({ executionId: "exec-1" }),
+        );
+        expect(deliveryIdentityVerifier).toHaveBeenCalledOnce();
 
-      const malformed = await handler({ body: "null", headers });
-      expect(malformed.statusCode).toBe(400);
-      expect(JSON.parse(malformed.body)).toMatchObject({ code: "triggers-qstash/invalid-payload" });
-      expect(execute).toHaveBeenCalledOnce();
-      expect(deliveryIdentityVerifier).toHaveBeenCalledOnce();
-    });
+        const malformed = await handler({ body: "null", headers });
+        expect(malformed.statusCode).toBe(400);
+        expect(JSON.parse(malformed.body)).toMatchObject({
+          code: "triggers-qstash/invalid-payload",
+        });
+        expect(execute).toHaveBeenCalledOnce();
+        expect(deliveryIdentityVerifier).toHaveBeenCalledOnce();
+      },
+    );
   });
 
   it("records processing time for each firing while preserving the schedule sync payload", async () => {
