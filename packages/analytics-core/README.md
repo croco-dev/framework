@@ -351,6 +351,11 @@ The server-only `@croco/analytics-core/enrichment` entry exports `defineClassifi
 `EnrichmentService` (`enqueueBatch`, `classify`, `review`, `exportLabels`, `retry`, `settle`, `purge`).
 An exact normalized dictionary precedes the optional injected `ClassifyText` function; otherwise
 classification is explicitly unknown. All candidates require human review before export.
+Fresh exports require every item's current review to match both the requested definition ID
+and version. Re-review items under the requested version before exporting them; retaining the
+same label ID across versions does not carry approval forward. A rejected export saves no receipt
+or revision change. Retrying a completed export command returns its original reviewed rows,
+subject to current authorization, source availability and result retention.
 
 Supply an `EnrichmentStore`, current principal/authorization revision, action authorization,
 source availability, mandatory PII block/mask policy and an idempotent usage/event receipt sink.

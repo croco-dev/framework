@@ -1054,6 +1054,7 @@ export class EnrichmentService {
         const review = item.review ?? fail("review-required");
         if (
           review.definitionId !== definitionId ||
+          review.definitionVersion !== version ||
           !definition.labels.some((label) => label.id === review.labelId)
         )
           fail("review-required");
