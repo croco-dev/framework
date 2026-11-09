@@ -1,0 +1,102 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "triggers-qstash",
+      "classification": "pure-contract",
+      "reason": "Reject malformed JSON values before delivery verification, target resolution or execution creation, preserving scheduler payloads and existing diagnostic codes.",
+      "files": {
+        "packages/triggers-qstash/src/libs/QStashTriggerHandler.ts": "f0c5afa0b880505e69131a5f6b8cab02579c08e7eb43d7d527259ba999d7eeea"
+      },
+      "catalogRuntimes": ["node", "lambda"],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "JSON shape validation uses only JavaScript type checks before existing dispatch. It adds no Node capability, storage or lifecycle requirement.",
+          "providers": ["@croco/triggers-qstash/QStashTriggerHandler"],
+          "constraints": [
+            "Existing Node/Lambda package runtime claims remain unchanged; Workers support is not claimed.",
+            "Synthetic signature and provider fixtures do not certify live QStash or deployed infrastructure."
+          ],
+          "references": [
+            "packages/triggers-qstash/src/libs/QStashTriggerHandler.ts",
+            "packages/triggers-qstash/src/libs/QStashScheduler.ts",
+            "packages/triggers-qstash/src/tests/QStashTriggerHandler.spec.ts",
+            "packages/triggers-qstash/README.md"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "JSON shape validation uses only JavaScript type checks before existing dispatch. It adds no Lambda capability, storage or lifecycle requirement.",
+          "providers": ["@croco/triggers-qstash/QStashTriggerHandler"],
+          "constraints": [
+            "Existing Node/Lambda package runtime claims remain unchanged; Workers support is not claimed.",
+            "Synthetic signature and provider fixtures do not certify live QStash or deployed infrastructure."
+          ],
+          "references": [
+            "packages/triggers-qstash/src/libs/QStashTriggerHandler.ts",
+            "packages/triggers-qstash/src/libs/QStashScheduler.ts",
+            "packages/triggers-qstash/src/tests/QStashTriggerHandler.spec.ts",
+            "packages/triggers-qstash/README.md"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "JSON shape validation uses only JavaScript type checks before existing dispatch. It adds no Workers capability, storage or lifecycle requirement.",
+          "providers": ["@croco/triggers-qstash/QStashTriggerHandler"],
+          "constraints": [
+            "Existing Node/Lambda package runtime claims remain unchanged; Workers support is not claimed.",
+            "Synthetic signature and provider fixtures do not certify live QStash or deployed infrastructure."
+          ],
+          "references": [
+            "packages/triggers-qstash/src/libs/QStashTriggerHandler.ts",
+            "packages/triggers-qstash/src/libs/QStashScheduler.ts",
+            "packages/triggers-qstash/src/tests/QStashTriggerHandler.spec.ts",
+            "packages/triggers-qstash/README.md"
+          ]
+        }
+      }
+    },
+    {
+      "package": "problems-core",
+      "classification": "pure-contract",
+      "reason": "Regenerate the existing trigger diagnostic source location after the payload validation change; no diagnostic or recovery behavior changes.",
+      "files": {
+        "packages/problems-core/src/generated/problem-code-registry.ts": "4c9580b81c9d0b87ce1b64e075b07c1c2b9e3907a9d0e8b479067c44f5a5dcc3"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Generated diagnostic source metadata has no host capability, storage or lifecycle dependency.",
+          "providers": [],
+          "constraints": ["No runtime support or provider certification claim."],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "scripts/problem-registry.mts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Generated diagnostic source metadata has no host capability, storage or lifecycle dependency.",
+          "providers": [],
+          "constraints": ["No runtime support or provider certification claim."],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "scripts/problem-registry.mts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Generated diagnostic source metadata has no host capability, storage or lifecycle dependency.",
+          "providers": [],
+          "constraints": ["No runtime support or provider certification claim."],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "scripts/problem-registry.mts"
+          ]
+        }
+      }
+    }
+  ]
+}
