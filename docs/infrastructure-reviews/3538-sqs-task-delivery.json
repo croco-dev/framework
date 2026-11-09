@@ -6,6 +6,7 @@
       "classification": "durable-provider",
       "reason": "SQS TaskDispatcher publication and trusted Lambda batch consumption reuse the existing TaskRunner and execution ledger. Node has publication only; queue admission and task completion remain distinct.",
       "files": {
+        "docs/package-catalog.json": "a5be0d486d6f7c0f0c025d8471802eccce99c479df7f8eafbd79157df2e4574c",
         "packages/tasks-sqs/package.json": "ddb8740b6df3139cde70bd184e03e95ade1c0309c019a4695eee5963341654dd",
         "packages/tasks-sqs/src/index.ts": "67f09885140356408da542bbd5854f37b53f11096fe979fcd6364f483513b0cb",
         "packages/tasks-sqs/src/libs/SqsTaskDispatcher.ts": "b747ef89d5444df9aaa344f5a64aede34c9f68afc4f47f64b709ba666bcfe7dc",
