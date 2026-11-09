@@ -1247,6 +1247,12 @@ describe("generated provider removal", () => {
     const EXTRA = new Token<object>("reentrant-rollback-extra");
     const baseline = {};
     let extraDisposed = 0;
+    let replacementDisposed = 0;
+    const replacement = {
+      destroy: () => {
+        replacementDisposed += 1;
+      },
+    };
     const extra = {
       destroy: () => {
         extraDisposed += 1;
@@ -1260,7 +1266,7 @@ describe("generated provider removal", () => {
           Container.set(SERVICE, {
             destroy: () =>
               scope.run(() => {
-                Container.set(SERVICE, {});
+                Container.set(SERVICE, replacement);
                 Container.set(EXTRA, extra);
               }),
           });
@@ -1270,6 +1276,7 @@ describe("generated provider removal", () => {
       expect(scope.run(() => Container.get(SERVICE))).toBe(baseline);
       expect(scope.run(() => Container.has(EXTRA))).toBe(false);
       expect(extraDisposed).toBe(1);
+      expect(replacementDisposed).toBe(1);
     } finally {
       scope.dispose();
     }
@@ -1345,6 +1352,201 @@ describe("generated provider removal", () => {
       expect(disposed).toBe(1);
     },
   );
+
+  it("retains a NaN baseline while rollback drains changed values", async () => {
+    const SERVICE = new Token<number>("non-finite-baseline");
+    const scope = Container.createScope();
+    const failure = new Error("primitive rollback");
+    scope.run(() => Container.set(SERVICE, Number.NaN));
+    try {
+      await expect(
+        scope.runWithRollback(async () => {
+          throw failure;
+        }),
+      ).rejects.toBe(failure);
+      expect(scope.run(() => Container.get(SERVICE))).toBeNaN();
+    } finally {
+      scope.dispose();
+    }
+  });
+
+  it("runs rollback destructors in their application scope without replacing root bindings", async () => {
+    const SERVICE = new Token<object>("owned-rollback-destructor");
+    let rootDisposed = 0;
+    const root = {
+      destroy: () => {
+        rootDisposed += 1;
+      },
+    };
+    Container.set(SERVICE, root);
+    const scope = Container.createScope();
+    const baseline = {};
+    const failure = new Error("owned cleanup");
+    scope.run(() => Container.set(SERVICE, baseline));
+    try {
+      await expect(
+        scope.runWithRollback(async () => {
+          Container.set(SERVICE, { destroy: () => Container.set(SERVICE, {}) });
+          throw failure;
+        }),
+      ).rejects.toBe(failure);
+      expect(scope.run(() => Container.get(SERVICE))).toBe(baseline);
+      expect(Container.get(SERVICE)).toBe(root);
+      expect(rootDisposed).toBe(0);
+    } finally {
+      scope.dispose();
+    }
+  });
+
+  it("releases a rollback value when its peer owner ends in a later destructor", async () => {
+    const SERVICE = new Token<object>("rollback-later-peer");
+    const END = new Token<object>("rollback-end-peer");
+    let disposed = 0;
+    const shared = {
+      destroy: () => {
+        disposed += 1;
+      },
+    };
+    const first = Container.createScope();
+    const peer = Container.createScope();
+    peer.run(() => Container.set(SERVICE, shared));
+    const failure = new Error("rollback later owner");
+    try {
+      await expect(
+        first.runWithRollback(async () => {
+          Container.set(SERVICE, shared);
+          Container.set(END, { destroy: () => peer.run(() => Container.remove(SERVICE)) });
+          throw failure;
+        }),
+      ).rejects.toBe(failure);
+      expect(disposed).toBe(1);
+    } finally {
+      first.dispose();
+      peer.dispose();
+    }
+    expect(disposed).toBe(1);
+  });
+
+  it("cleans runtime resources created by generated singleton rollback destructors", async () => {
+    const SERVICE = new Token<object>("generated-rollback-destructor");
+    const EXTRA = new Token<object>("late-runtime-rollback-resource");
+    let disposed = 0;
+    const extra = {
+      destroy: () => {
+        disposed += 1;
+      },
+    };
+    const scope = Container.createScope();
+    const failure = new Error("generated rollback");
+    try {
+      await expect(
+        scope.runWithRollback(async () => {
+          Container.installGeneratedGraph(
+            graph("generated-reentry", [
+              singleton(SERVICE, "app:generated-reentry", () => ({
+                destroy: () => Container.set(EXTRA, extra),
+              })),
+            ]),
+          );
+          Container.get(SERVICE);
+          throw failure;
+        }),
+      ).rejects.toBe(failure);
+      expect(disposed).toBe(1);
+      expect(scope.run(() => Container.has(EXTRA))).toBe(false);
+      expect(Container.has(EXTRA)).toBe(false);
+    } finally {
+      scope.dispose();
+    }
+    expect(disposed).toBe(1);
+  });
+
+  it.each(["commit", "rollback"] as const)(
+    "retains a graph replacement baseline until %s",
+    async (outcome) => {
+      const SERVICE = new Token<object>("graph-rollback-baseline");
+      const disposed: string[] = [];
+      const baseline = { destroy: () => disposed.push("baseline") };
+      const replacement = { destroy: () => disposed.push("replacement") };
+      const scope = Container.createScope();
+      const original = graph("replace-baseline", [
+        singleton(SERVICE, "app:baseline", () => baseline),
+      ]);
+      scope.run(() => {
+        Container.installGeneratedGraph(original);
+        Container.get(SERVICE);
+      });
+      const failure = new Error("graph rollback");
+      try {
+        const attempt = scope.runWithRollback(async () => {
+          Container.installGeneratedGraph(
+            graph("replace-baseline", [singleton(SERVICE, "app:baseline", () => replacement)]),
+          );
+          expect(disposed).toEqual([]);
+          expect(Container.get(SERVICE)).toBe(replacement);
+          if (outcome === "rollback") throw failure;
+        });
+        if (outcome === "rollback") {
+          await expect(attempt).rejects.toBe(failure);
+          expect(scope.run(() => Container.get(SERVICE))).toBe(baseline);
+          expect(disposed).toEqual(["replacement"]);
+        } else {
+          await attempt;
+          expect(scope.run(() => Container.get(SERVICE))).toBe(replacement);
+          expect(disposed).toEqual(["baseline"]);
+        }
+      } finally {
+        scope.dispose();
+      }
+      expect(disposed.sort()).toEqual(["baseline", "replacement"]);
+    },
+  );
+
+  describe.each(["root", "application"] as const)("reflection request in %s", (target) => {
+    it.each(["request first", "singleton first"] as const)(
+      "preserves shared ownership after %s",
+      (order) => {
+        const SERVICE = new Token<object>("reflection-request-singleton");
+        let disposed = 0;
+        const shared = {
+          destroy: () => {
+            disposed += 1;
+          },
+        };
+        class ReflectedRequest {
+          constructor() {
+            return shared;
+          }
+        }
+        const scope = target === "application" ? Container.createScope() : undefined;
+        const run = () => {
+          Container.register(ReflectedRequest, "request");
+          Container.installGeneratedGraph(
+            graph("reflection-request", [singleton(SERVICE, "app:reflected", () => shared)]),
+          );
+          Context.run({ requestId: "reflection-owner" }, () => {
+            expect(Container.get(ReflectedRequest)).toBe(shared);
+            expect(Container.get(SERVICE)).toBe(shared);
+            if (order === "singleton first") Container.remove(SERVICE);
+            expect(disposed).toBe(0);
+            expect(Container.get(ReflectedRequest)).toBe(shared);
+          });
+          if (order === "request first") {
+            expect(disposed).toBe(0);
+            Container.remove(SERVICE);
+          }
+          expect(disposed).toBe(1);
+        };
+        try {
+          if (scope) scope.run(run);
+          else run();
+        } finally {
+          scope?.dispose();
+        }
+        expect(disposed).toBe(1);
+      },
+    );
+  });
 
   it("keeps the original rollback cause when deferred cleanup throws an unprintable value", async () => {
     const scope = Container.createScope();

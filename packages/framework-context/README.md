@@ -47,13 +47,16 @@ owned by another resolved generated binding, a registered value, or the containe
 is retained for that owner, including bindings in another live application scope or the root container.
 Scope disposal and rollback also preserve those peer owners. Active requests retain shared values until
 the last request releases them;
-request cleanup also preserves values that still have a generated or registered owner. Transient values
+request cleanup also preserves values that still have a generated or registered owner. Reflection request
+providers use the same request ownership tracking as generated providers. Transient values
 created outside a request remain owned by the container lifetime. Ownership is checked again before each
 destructor, so an earlier destructor can retain a later value by registering it under another token.
 Replacing a registered value with `Container.set()` also releases its previous value after the last owner
 is gone. Within `runWithRollback`, replacement cleanup waits for commit; rollback preserves the original
-binding and cleans intermediate replacements once. Rollback retains baseline ownership through cleanup
-callbacks and restores its binding snapshot after those callbacks finish. Explicit removal can destroy resources immediately;
+binding and cleans intermediate replacements once. Graph replacements use the same transaction boundary.
+Rollback retains baseline ownership through cleanup
+callbacks, drains resources created by destructor reentry, and restores its binding snapshot after those
+callbacks finish. Explicit removal can destroy resources immediately;
 rollback does not undo that cleanup.
 Requests may end before or after rollback: an early request release preserves a replaced baseline until
 the transaction settles, and rollback preserves values still owned by an active request. Nested synchronous
@@ -67,9 +70,10 @@ failure. Release any external resources left open and repair destructors; retryi
 does not retry failed cleanup. A commit-time replacement cleanup failure leaves the committed bindings in place.
 Graph replacement uses the same validation-before-commit and cleanup-after-commit boundary.
 
-These replacement guarantees apply to `Container.set()`. Low-level `RuntimeContainer` and `ContainerInstance`
-writes retain their existing caller-owned replacement lifecycle; module runtimes coordinate those records
-and rollback snapshots separately.
+These automatic ownership guarantees apply to the `Container`/`ContainerScope` APIs. Low-level
+`RuntimeContainer` and `ContainerInstance` lifecycle operations remain caller-owned: their direct writes,
+removal and reset require the caller to coordinate shared resources. Module runtimes coordinate their
+records and rollback snapshots separately.
 
 Call `Container.reset()` only while the selected container is idle. Reset attempts synchronous cleanup
 of registered values, generated transients, and generated singletons in that order, once per object, then clears

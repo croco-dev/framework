@@ -1181,6 +1181,56 @@ describe("ApplicationRuntime", () => {
     await expect(runtime.dispose()).rejects.toBeInstanceOf(ModuleLifecycleProblem);
   });
 
+  it("disposes initialized modules and its scope after committed provider cleanup fails", async () => {
+    const SERVICE = new Token<object>("committed-startup-cleanup");
+    const failure = new Error("baseline cleanup failed");
+    let setup = 0;
+    let shutdown = 0;
+    let replacementDisposed = 0;
+    const replacement = {
+      destroy: () => {
+        replacementDisposed += 1;
+      },
+    };
+    const runtime = createApplicationRuntime({
+      modules: [
+        {
+          name: "committed-cleanup",
+          setup: () => {
+            setup += 1;
+            FrameworkContainer.set(SERVICE, replacement);
+          },
+          shutdown: () => {
+            shutdown += 1;
+          },
+        },
+      ],
+    });
+    runtime.run(() =>
+      FrameworkContainer.set(SERVICE, {
+        destroy: () => {
+          throw failure;
+        },
+      }),
+    );
+    try {
+      await expect(runtime.initialize()).rejects.toMatchObject({
+        code: "framework-context/container-provider-cleanup-failed",
+        extensions: { cleanupFailureCount: 1, retryable: false },
+      });
+      expect(setup).toBe(1);
+      expect(shutdown).toBe(1);
+      expect(replacementDisposed).toBe(1);
+      expect(() => runtime.run(() => undefined)).toThrow("has already been disposed");
+      await expect(runtime.initialize()).rejects.toThrow("has already been disposed");
+      expect(setup).toBe(1);
+    } finally {
+      await runtime.dispose();
+    }
+    expect(shutdown).toBe(1);
+    expect(replacementDisposed).toBe(1);
+  });
+
   it("becomes terminal when startup compensation fails", async () => {
     const runtime = createApplicationRuntime({
       modules: [

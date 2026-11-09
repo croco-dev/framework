@@ -6,7 +6,7 @@
       "classification": "pure-contract",
       "reason": "Keep generated removal and graph replacement stable through validation and cleanup failures. Preserve shared registered, transient and active request owners, recheck ownership between destructors, and release each orphan once. Preserve runtime replacement rollback baselines and report non-retryable cleanup failures.",
       "files": {
-        "packages/framework-context/src/libs/Container.ts": "2407fbf3473f0b3fa413701fbe0c594dcc566a39f024764637380ca061fe981d",
+        "packages/framework-context/src/libs/Container.ts": "1b524e844d12d9d1698d7f43f7f4996f522743f15cd364a13f703f968aa2fac0",
         "packages/framework-context/src/libs/Context.ts": "9edbd2bc183448cec2878455e742b11b63fb9888ad26e9e74b97022589a5d516"
       },
       "catalogRuntimes": [],
@@ -57,7 +57,7 @@
       "classification": "pure-contract",
       "reason": "Publish the provider cleanup failure contract and non-retryable operator recovery metadata with synchronized diagnostic source locations.",
       "files": {
-        "packages/problems-core/src/generated/problem-code-registry.ts": "4c731ffd01c844eadd5712bf44fc9ac4c689e4013876631c84c524761997debf"
+        "packages/problems-core/src/generated/problem-code-registry.ts": "05b185811e02471d21e673b353d373e0f7ff0cd65985c6d0d9558277cca0c431"
       },
       "catalogRuntimes": [],
       "profiles": {
@@ -95,6 +95,56 @@
           "references": [
             "packages/problems-core/src/generated/problem-code-registry.ts",
             "scripts/problem-registry.mts"
+          ]
+        }
+      }
+    },
+    {
+      "package": "framework-module",
+      "classification": "pure-contract",
+      "reason": "Application startup reuses existing module and container-scope disposal when committed provider retirement fails, preserving terminal lifecycle state without a new Host, storage, transport or deployment dependency.",
+      "files": {
+        "packages/framework-module/src/ApplicationRuntime.ts": "df08037cc94c074af83cf7b7bb407ede1c7b392de0c639ae4746aa777eff4e08"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "This change recognizes provider cleanup failure metadata and reuses existing application disposal. It adds no Host, storage, transport or deployment dependency.",
+          "providers": ["@croco/framework-module/ApplicationRuntime"],
+          "constraints": [
+            "Startup cleanup failure is terminal for this application runtime; existing Host support is unchanged. No live infrastructure certification is claimed."
+          ],
+          "references": [
+            "packages/framework-module/src/ApplicationRuntime.ts",
+            "packages/framework-module/src/tests/ApplicationRuntime.spec.ts",
+            "packages/framework-module/README.md"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "This change recognizes provider cleanup failure metadata and reuses existing application disposal. It adds no Host, storage, transport or deployment dependency.",
+          "providers": ["@croco/framework-module/ApplicationRuntime"],
+          "constraints": [
+            "Startup cleanup failure is terminal for this application runtime; existing Host support is unchanged. No live infrastructure certification is claimed."
+          ],
+          "references": [
+            "packages/framework-module/src/ApplicationRuntime.ts",
+            "packages/framework-module/src/tests/ApplicationRuntime.spec.ts",
+            "packages/framework-module/README.md"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "This change recognizes provider cleanup failure metadata and reuses existing application disposal. It adds no Host, storage, transport or deployment dependency.",
+          "providers": ["@croco/framework-module/ApplicationRuntime"],
+          "constraints": [
+            "Startup cleanup failure is terminal for this application runtime; existing Host support is unchanged. No live infrastructure certification is claimed."
+          ],
+          "references": [
+            "packages/framework-module/src/ApplicationRuntime.ts",
+            "packages/framework-module/src/tests/ApplicationRuntime.spec.ts",
+            "packages/framework-module/README.md"
           ]
         }
       }
