@@ -445,15 +445,21 @@ export function checkSampleRatioMismatch(
   actualCounts: Readonly<Record<string, number>>,
 ): ExperimentSrm {
   checkPlan(plan);
-  const total = Object.values(actualCounts).reduce((sum, count) => sum + count, 0);
-  if (!Number.isSafeInteger(total) || total <= 0)
-    failInput("Actual assignment counts must total a positive integer");
   const variantIds = plan.variants.map((variant) => variant.id);
+  if (
+    Object.keys(actualCounts).length !== variantIds.length ||
+    variantIds.some((id) => !Object.hasOwn(actualCounts, id))
+  ) {
+    failInput("Actual counts must contain exactly the planned variant keys");
+  }
   if (
     variantIds.some((id) => !Number.isSafeInteger(actualCounts[id]) || (actualCounts[id] ?? 0) < 0)
   ) {
     failInput("Actual counts must be non-negative integers for every planned variant");
   }
+  const total = variantIds.reduce((sum, id) => sum + (actualCounts[id] ?? 0), 0);
+  if (!Number.isSafeInteger(total) || total <= 0)
+    failInput("Actual assignment counts must total a positive integer");
   const { planned, expected } = plannedCounts(plan, total);
   if (Object.values(expected).some((count) => count < SRM_MIN_EXPECTED)) {
     return {

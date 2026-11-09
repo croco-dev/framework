@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "metrics-core",
+      "classification": "pure-contract",
+      "reason": "Require exactly the planned variant counts before SRM aggregation and sum only validated planned counts. Valid allocations retain their existing statistics and input failures use ExperimentInputProblem.",
+      "files": {
+        "packages/metrics-core/src/libs/experiment/ExperimentReview.ts": "5909fc2ef8c88e2bb6c42e869fd6f43a608d231b7528f267a40be16f3e0eb7dc"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "SRM count validation and aggregation are pure in-memory statistics. This change requires no host capability, storage, transport or lifecycle behavior.",
+          "providers": [],
+          "constraints": [
+            "No infrastructure deployment, runtime support change or provider certification is claimed."
+          ],
+          "references": [
+            "packages/metrics-core/src/libs/experiment/ExperimentReview.ts",
+            "packages/metrics-core/src/tests/ExperimentReview.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "SRM count validation and aggregation are pure in-memory statistics. This change requires no host capability, storage, transport or lifecycle behavior.",
+          "providers": [],
+          "constraints": [
+            "No infrastructure deployment, runtime support change or provider certification is claimed."
+          ],
+          "references": [
+            "packages/metrics-core/src/libs/experiment/ExperimentReview.ts",
+            "packages/metrics-core/src/tests/ExperimentReview.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "SRM count validation and aggregation are pure in-memory statistics. This change requires no host capability, storage, transport or lifecycle behavior.",
+          "providers": [],
+          "constraints": [
+            "No infrastructure deployment, runtime support change or provider certification is claimed."
+          ],
+          "references": [
+            "packages/metrics-core/src/libs/experiment/ExperimentReview.ts",
+            "packages/metrics-core/src/tests/ExperimentReview.spec.ts"
+          ]
+        }
+      }
+    }
+  ]
+}
