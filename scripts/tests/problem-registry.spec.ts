@@ -1730,6 +1730,24 @@ export const failure = ProblemFactory.badRequest("${code}", "Invalid fetch confi
     });
   });
 
+  it("publishes non-retryable operator recovery after provider cleanup has been attempted", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/framework-context/src/cleanup.ts",
+      [
+        'import { ProblemFactory } from "@croco/problems-core";',
+        'export const failure = ProblemFactory.internalServerError("framework-context/container-provider-cleanup-failed");',
+      ].join("\n"),
+    );
+    const registry = createProblemCodeRegistry(discoverProblemCodes(repo));
+    expect(registry.problems[0]?.recovery).toMatchObject({
+      retryability: "not-retryable",
+      redactionPolicy: "operator-only",
+      telemetry: { severity: "error" },
+    });
+  });
+
   it("publishes non-retryable recovery for canceled Meilisearch tasks", () => {
     const repo = createTempRepo();
     writeFile(

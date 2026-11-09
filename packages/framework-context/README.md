@@ -36,6 +36,45 @@ Independent application runtimes can isolate registrations and singleton instanc
 that asynchronous scope, including work after `await`. Resetting one active scope does not reset the
 root container or another scope.
 
+`Container.remove(token)` also removes every generated binding for that token from the selected
+container's installed graphs. Unrelated graph installation or removal cannot restore it. Other tokens
+in those graphs remain installed. Reinstalling the original graph explicitly restores its bindings;
+a removed singleton's factory runs again on its next resolution. The original graph artifact is unchanged,
+and existing application scopes keep their own registrations.
+
+Removal synchronously cleans up generated singletons after their last binding is removed. A value still
+owned by another resolved generated binding, a registered value, or the container's transient lifetime
+is retained for that owner, including bindings in another live application scope or the root container.
+Scope disposal and rollback also preserve those peer owners. Active requests retain shared values until
+the last request releases them;
+request cleanup also preserves values that still have a generated or registered owner. Reflection request
+providers use the same request ownership tracking as generated providers. Transient values
+created outside a request remain owned by the container lifetime. Ownership is checked again before each
+destructor, so an earlier destructor can retain a later value by registering it under another token.
+Replacing a registered value with `Container.set()` also releases its previous value after the last owner
+is gone. Within `runWithRollback`, replacement cleanup waits for commit; rollback preserves the original
+binding and cleans intermediate replacements once. Graph replacements use the same transaction boundary.
+Rollback retains baseline ownership through cleanup
+callbacks, drains resources created by destructor reentry, and restores its binding snapshot after those
+callbacks finish. Explicit removal can destroy resources immediately;
+rollback does not undo that cleanup.
+Requests may end before or after rollback: an early request release preserves a replaced baseline until
+the transaction settles, and rollback preserves values still owned by an active request. Nested synchronous
+cleanup shares attempt tracking so a destructor that ends a request does not release its value twice.
+
+Graph validation completes before removal changes registrations. A validation failure leaves existing
+bindings and instances intact. After removal or replacement commits, cleanup attempts every unowned value
+once, including when another destructor throws. Failures use `framework-context/container-provider-cleanup-failed`
+with `retryable: false`, `cleanupFailureCount`, and a native `AggregateError` cause retaining every original
+failure. Release any external resources left open and repair destructors; retrying the registration operation
+does not retry failed cleanup. A commit-time replacement cleanup failure leaves the committed bindings in place.
+Graph replacement uses the same validation-before-commit and cleanup-after-commit boundary.
+
+These automatic ownership guarantees apply to the `Container`/`ContainerScope` APIs. Low-level
+`RuntimeContainer` and `ContainerInstance` lifecycle operations remain caller-owned: their direct writes,
+removal and reset require the caller to coordinate shared resources. Module runtimes coordinate their
+records and rollback snapshots separately.
+
 Call `Container.reset()` only while the selected container is idle. Reset attempts synchronous cleanup
 of registered values, generated transients, and generated singletons in that order, once per object, then clears
 registrations even if cleanup fails. Failures throw `framework-context/container-reset-failed`;

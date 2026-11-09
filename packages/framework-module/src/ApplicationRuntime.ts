@@ -543,11 +543,18 @@ export class ApplicationRuntime implements AsyncDisposable {
     }
 
     const extensions = error.extensions;
-    if (!extensions || typeof extensions !== "object" || !("cleanupFailures" in extensions)) {
-      return false;
-    }
-
-    return Array.isArray(extensions.cleanupFailures) && extensions.cleanupFailures.length > 0;
+    if (!extensions || typeof extensions !== "object") return false;
+    if (
+      "cleanupFailureCount" in extensions &&
+      typeof extensions.cleanupFailureCount === "number" &&
+      extensions.cleanupFailureCount > 0
+    )
+      return true;
+    return (
+      "cleanupFailures" in extensions &&
+      Array.isArray(extensions.cleanupFailures) &&
+      extensions.cleanupFailures.length > 0
+    );
   }
 
   private attachDisposalFailure(error: unknown, disposalError: unknown): ModuleLifecycleProblem {

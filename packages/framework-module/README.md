@@ -139,7 +139,10 @@ invoked immediately.
 
 Initialization is transactional. A failed attempt compensates entered modules, restores the exact
 pre-attempt DI baseline, invalidates captured module contexts, and permits an explicit retry. If
-compensation itself fails, the runtime is disposed because a clean retry can no longer be proven.
+compensation or retired-provider cleanup fails, the runtime is disposed because a clean retry can no
+longer be proven. Cleanup of replaced providers runs at commit. If it fails after modules initialize,
+the existing disposal path shuts down those modules and releases the container scope; create a new
+runtime instead of retrying the partially initialized one.
 `dispose()` always shuts modules down before disposing the DI scope. The static `Container` and
 `CrocoModule` APIs remain compatibility/default-runtime surfaces; new application composition should
 use `ApplicationRuntime` and explicit `run()` re-entry instead of relying on ambient global state.

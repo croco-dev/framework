@@ -1,6 +1,6 @@
 {
   "version": "croco.problem-code-registry.v1",
-  "problemCount": 1178,
+  "problemCount": 1179,
   "problems": [
     {
       "code": "ACCESS_DENIED",
@@ -17384,6 +17384,36 @@
       ]
     },
     {
+      "code": "framework-context/container-provider-cleanup-failed",
+      "category": "InternalServerError",
+      "status": 500,
+      "title": "Internal Server Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#framework-context-container-provider-cleanup-failed",
+      "recovery": {
+        "cause": "One or more provider destructors failed after provider registrations changed. Every unowned value selected for cleanup was attempted once.",
+        "userAction": "Do not retry the operation to recover failed cleanup. Ask the operator to release any resources left open.",
+        "operatorAction": "Inspect current registrations, cleanupFailureCount and every original failure in the native AggregateError cause. Release remaining resources and repair destructors before further registration changes.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "operator-only",
+        "telemetry": {
+          "eventName": "croco.problem.error",
+          "severity": "error",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/framework-context/src/libs/Container.ts",
+          "line": 1609,
+          "column": 13,
+          "kind": "problem-factory"
+        }
+      ]
+    },
+    {
       "code": "framework-context/container-reset-failed",
       "category": "InternalServerError",
       "status": 500,
@@ -17407,7 +17437,7 @@
       "sources": [
         {
           "file": "packages/framework-context/src/libs/Container.ts",
-          "line": 766,
+          "line": 825,
           "column": 13,
           "kind": "problem-factory"
         }
@@ -17437,7 +17467,7 @@
       "sources": [
         {
           "file": "packages/framework-context/src/libs/Container.ts",
-          "line": 290,
+          "line": 296,
           "column": 13,
           "kind": "problem-factory"
         }
@@ -17467,7 +17497,7 @@
       "sources": [
         {
           "file": "packages/framework-context/src/libs/Container.ts",
-          "line": 164,
+          "line": 178,
           "column": 10,
           "kind": "problem-factory"
         }
@@ -17497,7 +17527,7 @@
       "sources": [
         {
           "file": "packages/framework-context/src/libs/Container.ts",
-          "line": 440,
+          "line": 468,
           "column": 17,
           "kind": "problem-factory"
         }
@@ -17527,7 +17557,7 @@
       "sources": [
         {
           "file": "packages/framework-context/src/libs/Container.ts",
-          "line": 461,
+          "line": 497,
           "column": 13,
           "kind": "problem-factory"
         }
@@ -17557,7 +17587,7 @@
       "sources": [
         {
           "file": "packages/framework-context/src/libs/Container.ts",
-          "line": 233,
+          "line": 248,
           "column": 13,
           "kind": "problem-factory"
         }
@@ -17677,7 +17707,7 @@
       "sources": [
         {
           "file": "packages/framework-context/src/libs/Container.ts",
-          "line": 865,
+          "line": 924,
           "column": 13,
           "kind": "problem-factory"
         }
@@ -17707,7 +17737,7 @@
       "sources": [
         {
           "file": "packages/framework-context/src/libs/Container.ts",
-          "line": 859,
+          "line": 918,
           "column": 13,
           "kind": "problem-factory"
         }
@@ -17737,7 +17767,7 @@
       "sources": [
         {
           "file": "packages/framework-context/src/libs/Container.ts",
-          "line": 1483,
+          "line": 1541,
           "column": 15,
           "kind": "problem-factory"
         }
@@ -17767,7 +17797,7 @@
       "sources": [
         {
           "file": "packages/framework-context/src/libs/Container.ts",
-          "line": 1551,
+          "line": 1675,
           "column": 13,
           "kind": "problem-factory"
         }
@@ -17947,7 +17977,7 @@
       "sources": [
         {
           "file": "packages/framework-context/src/libs/Context.ts",
-          "line": 147,
+          "line": 162,
           "column": 28,
           "kind": "problem-factory"
         }
@@ -17977,7 +18007,7 @@
       "sources": [
         {
           "file": "packages/framework-context/src/libs/Context.ts",
-          "line": 46,
+          "line": 61,
           "column": 11,
           "kind": "problem-factory"
         }
@@ -18007,7 +18037,7 @@
       "sources": [
         {
           "file": "packages/framework-context/src/libs/Context.ts",
-          "line": 33,
+          "line": 42,
           "column": 11,
           "kind": "problem-factory"
         }
@@ -18037,7 +18067,7 @@
       "sources": [
         {
           "file": "packages/framework-context/src/libs/Container.ts",
-          "line": 2673,
+          "line": 2765,
           "column": 12,
           "kind": "problem-factory"
         }
