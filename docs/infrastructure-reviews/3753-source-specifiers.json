@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "architecture-policy",
+      "classification": "pure-contract",
+      "reason": "Honor the existing from.specifiers condition for source imports and package manifest dependencies, preserving conjunction with all other matcher fields.",
+      "files": {
+        "packages/architecture-policy/src/index.ts": "2a0f5af1915b6625bfd5ea1127488a2407a3031ee3e8c5b9794338bce6749d26"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Specifier matching is build-time architecture Tooling logic. Honoring the existing selector adds no deployment Host capability, provider, storage or lifecycle dependency.",
+          "providers": [],
+          "constraints": [
+            "The package has no catalog runtime claim; this review adds no deployment support or provider certification."
+          ],
+          "references": [
+            "packages/architecture-policy/src/index.ts",
+            "packages/architecture-policy/README.md",
+            "docs/package-catalog.json"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Specifier matching is build-time architecture Tooling logic. Honoring the existing selector adds no deployment Host capability, provider, storage or lifecycle dependency.",
+          "providers": [],
+          "constraints": [
+            "The package has no catalog runtime claim; this review adds no deployment support or provider certification."
+          ],
+          "references": [
+            "packages/architecture-policy/src/index.ts",
+            "packages/architecture-policy/README.md",
+            "docs/package-catalog.json"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Specifier matching is build-time architecture Tooling logic. Honoring the existing selector adds no deployment Host capability, provider, storage or lifecycle dependency.",
+          "providers": [],
+          "constraints": [
+            "The package has no catalog runtime claim; this review adds no deployment support or provider certification."
+          ],
+          "references": [
+            "packages/architecture-policy/src/index.ts",
+            "packages/architecture-policy/README.md",
+            "docs/package-catalog.json"
+          ]
+        }
+      }
+    }
+  ]
+}

@@ -36,3 +36,8 @@ selectors must be arrays of non-empty strings, and `appliesTo`, when present, mu
 Each `publicEntrypoints.ignoreImports` entry needs at least one non-empty `paths`, `packages`, or
 `specifiers` selector; all supplied selectors must match for an import to be exempted. `packages`
 selects the imported package. Empty rule collections and empty allow-lists remain valid.
+
+For `forbiddenImports`, all supplied fields in both `from` and `to` must match. `from.groups`,
+`from.packages`, and `from.paths` select the importing group, package, and file path;
+`from.specifiers` filters the import's module specifier using the same glob patterns as
+`to.specifiers`. This condition also applies to dependency names in package manifests.
