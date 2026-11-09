@@ -120,7 +120,7 @@
       "classification": "pure-contract",
       "reason": "Generated Problem evidence retains the same codes and recovery semantics while source references follow the RPC generator line positions.",
       "files": {
-        "packages/problems-core/src/generated/problem-code-registry.ts": "be1933cbef5640ade8d16797eb1c657bf272e65fbf18e62bc37890009566ced7"
+        "packages/problems-core/src/generated/problem-code-registry.ts": "6b9af21b7c49fb6c30b74ccf7fa153cb39fcd8edb78e6a0ed9a396825487631d"
       },
       "catalogRuntimes": [],
       "profiles": {
