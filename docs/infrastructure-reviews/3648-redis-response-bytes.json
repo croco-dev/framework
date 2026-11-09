@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "meta-vite",
+      "classification": "durable-provider",
+      "reason": "Preserve bytes and null bodies in a validated, versioned Redis response format isolated from legacy readers and writers.",
+      "files": {
+        "packages/meta-vite/src/libs/isr/adapters/redisAdapter.ts": "99b985e655e3804b1737af790c96a5f8ae9ef38553f24dee3bb2f790464f5a9f"
+      },
+      "catalogRuntimes": ["node", "lambda", "cloudflare-workers", "browser"],
+      "profiles": {
+        "kubernetes": {
+          "result": "conditional",
+          "reason": "The byte-preserving Redis codec reuses the existing Node Redis ISR adapter; no host or connection lifecycle changes.",
+          "providers": ["RedisCacheStoreAdapter", "ioredis"],
+          "constraints": [
+            "Requires a reachable Redis service and the optional ioredis peer.",
+            "Uses a cold versioned cache namespace; legacy entries retain their TTL and require coordinated invalidation during mixed-version deployment.",
+            "Tests use native Node Request/Response and a synthetic Redis transport; no live Redis or Kubernetes deployment is certified."
+          ],
+          "references": [
+            "packages/meta-vite/src/libs/isr/adapters/redisAdapter.ts",
+            "packages/meta-vite/src/libs/isr/runtimeSupport.ts",
+            "packages/meta-vite/src/tests/isr-runtime-support.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "conditional",
+          "reason": "The existing Lambda ISR path uses the same Redis adapter and byte codec; invocation and connection ownership remain with the caller.",
+          "providers": ["RedisCacheStoreAdapter", "createLambdaComposedHandler", "ioredis"],
+          "constraints": [
+            "Requires Redis connectivity and caller-managed ioredis connection lifetime in Lambda.",
+            "Old and new deployments have separate namespaces and invalidation; rollback can reuse old entries.",
+            "Local Lambda handler tests do not certify a deployed AWS environment."
+          ],
+          "references": [
+            "packages/meta-vite/src/libs/isr/adapters/redisAdapter.ts",
+            "packages/meta-vite/src/libs/isr/runtimeSupport.ts",
+            "packages/meta-vite/src/tests/isr-runtime-support.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "unsupported",
+          "host": "workers",
+          "reason": "This change is specific to the Node/ioredis Redis adapter and does not provide a Worker-safe durable cache provider.",
+          "providers": ["RedisCacheStoreAdapter"],
+          "constraints": [
+            "Workers must supply a separate Worker-safe IsrCacheStore as required by the existing runtime support contract."
+          ],
+          "references": [
+            "packages/meta-vite/src/libs/isr/adapters/redisAdapter.ts",
+            "packages/meta-vite/src/libs/isr/runtimeSupport.ts",
+            "packages/meta-vite/src/tests/isr-runtime-support.spec.ts"
+          ]
+        }
+      }
+    }
+  ]
+}
