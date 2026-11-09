@@ -1766,7 +1766,7 @@ function serializeRpcQueryKeyValue(value: unknown, path: string): RpcQueryKeyVal
       const result = serializeRpcQueryKeyValue(item, \`\${path}.\${key}\`);
 
       if (result !== undefined) {
-        serialized[key] = result;
+        Object.defineProperty(serialized, key, { value: result, enumerable: true, writable: true, configurable: true });
       }
     }
 
@@ -2779,7 +2779,7 @@ function serializeRpcQueryKeyValue(value: unknown, path: string): RpcQueryKeyVal
       const result = serializeRpcQueryKeyValue(item, \`\${path}.\${key}\`);
 
       if (result !== undefined) {
-        serialized[key] = result;
+        Object.defineProperty(serialized, key, { value: result, enumerable: true, writable: true, configurable: true });
       }
     }
 
