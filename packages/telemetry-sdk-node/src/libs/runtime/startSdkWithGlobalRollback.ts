@@ -1,4 +1,4 @@
-import { context, propagation } from "@opentelemetry/api";
+import { context, diag, propagation, trace } from "@opentelemetry/api";
 
 type Cleanup = () => void | Promise<void>;
 
@@ -11,8 +11,31 @@ export function startSdkWithGlobalRollback(start: () => void, rollback: Cleanup[
   const restoreProbes: Array<() => void> = [];
   const setContextManager = context.setGlobalContextManager;
   const setPropagator = propagation.setGlobalPropagator;
+  const setTracerProvider = trace.setGlobalTracerProvider;
 
   try {
+    restoreSetters.push(
+      replaceMethod(trace, "setGlobalTracerProvider", (provider) => {
+        // The API installs its proxy before logging, then assigns the SDK delegate.
+        // Let that assignment finish so ownership remains observable if the logger throws.
+        const debug = diag.debug;
+        let diagnosticFailure: { error: unknown } | undefined;
+        const restore = replaceMethod(diag, "debug", (...args: Parameters<typeof debug>) => {
+          try {
+            debug.call(diag, ...args);
+          } catch (error) {
+            diagnosticFailure = { error };
+          }
+        });
+        try {
+          const registered = setTracerProvider.call(trace, provider);
+          if (diagnosticFailure) throw diagnosticFailure.error;
+          return registered;
+        } finally {
+          restore();
+        }
+      }),
+    );
     restoreSetters.push(
       replaceMethod(context, "setGlobalContextManager", (manager) => {
         let observed = false;

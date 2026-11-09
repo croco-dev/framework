@@ -104,7 +104,7 @@ export class TelemetryDiagnosticsProvider implements DiagnosticsProvider {
       };
     }
 
-    if (!config) {
+    if (!initialized) {
       const failure = getTelemetryInitializationFailure(runtime);
       if (failure) {
         return {
@@ -123,7 +123,9 @@ export class TelemetryDiagnosticsProvider implements DiagnosticsProvider {
           lastChecked: new Date().toISOString(),
         };
       }
+    }
 
+    if (!config) {
       return {
         status: this.requirement === "required" ? "unhealthy" : "degraded",
         component: "telemetry",

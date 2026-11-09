@@ -8,7 +8,8 @@
       "files": {
         "packages/telemetry-sdk-node/src/runtime.ts": "744aa2e2adaa515b0744875b3a435aa4cb6f5eb79bf410f12f7a931df8030b50",
         "packages/telemetry-sdk-node/src/libs/instrumentation/AutoInstrumentation.ts": "2ea2edb47aeef31110fe1aff1fb996c49fd554a05b4d390049ba6b36cd3a9390",
-        "packages/telemetry-sdk-node/src/libs/runtime/startSdkWithGlobalRollback.ts": "1ce83365fd434ab884ad4fad43a21cf53c5b44d2a9f13756dca2384c7b46aa42"
+        "packages/telemetry-sdk-node/src/libs/runtime/startSdkWithGlobalRollback.ts": "9692ae5f1b59385a3f488bab51975d4a0b3b441e907306270c0c490e0c7ae1a7",
+        "packages/telemetry-sdk-node/src/libs/diagnostics/TelemetryDiagnosticsProvider.ts": "f07580396fcff3ae52e2061538cecf6b2211e50cfe30ce37f97d9630f820ad50"
       },
       "catalogRuntimes": ["node", "lambda"],
       "profiles": {

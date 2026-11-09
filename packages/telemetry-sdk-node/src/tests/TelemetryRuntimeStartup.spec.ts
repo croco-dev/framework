@@ -539,7 +539,7 @@ describe("TelemetryRuntime startup rollback", () => {
     },
   );
 
-  it.each(["context", "propagation"] as const)(
+  it.each(["context", "propagation", "trace"] as const)(
     "releases a %s registration when its diagnostic logger throws after installation",
     async (signal) => {
       const diagnosticFailure = new Error("registration diagnostic failed");
@@ -559,7 +559,11 @@ describe("TelemetryRuntime startup rollback", () => {
         },
         DiagLogLevel.ALL,
       );
+      const debug = diag.debug;
+      const registerTrace = trace.setGlobalTracerProvider;
       await expect(runtime.init(config())).rejects.toMatchObject({ cause: diagnosticFailure });
+      expect(diag.debug).toBe(debug);
+      expect(trace.setGlobalTracerProvider).toBe(registerTrace);
       diag.disable();
       const key = createContextKey("logger-failure");
       const scoped = ROOT_CONTEXT.setValue(key, "restored");
@@ -567,6 +571,11 @@ describe("TelemetryRuntime startup rollback", () => {
       expect(propagation.fields()).toEqual([]);
       await runtime.init(config());
       expect(context.with(scoped, () => context.active().getValue(key))).toBe("restored");
+      trace.getTracer("diagnostic-retry").startSpan("after-registration-failure").end();
+      await runtime.forceFlush();
+      expect(exported.mock.calls.flatMap((call) => call[0])).toEqual([
+        expect.objectContaining({ name: "after-registration-failure" }),
+      ]);
       await runtime.shutdown();
     },
   );
@@ -659,4 +668,31 @@ describe("TelemetryRuntime startup rollback", () => {
       expect.objectContaining({ name: "custom-after-retry" }),
     ]);
   });
+
+  it.each(["optional", "required"] as const)(
+    "reports startup_failed diagnostics for %s telemetry when rollback preserves the configuration",
+    async (requirement) => {
+      const { TelemetryDiagnosticsProvider } =
+        await import("../libs/diagnostics/TelemetryDiagnosticsProvider");
+      failurePhase = "late-start";
+      exporterShutdown.mockRejectedValue(new Error("exporter cleanup failed"));
+      await expect(runtime.init(config())).rejects.toMatchObject({
+        code: "TELEMETRY_RUNTIME_ERROR",
+      });
+      expect(runtime.getConfig()).not.toBeNull();
+      terminalFailure = await runtime.shutdown().catch((error: unknown) => error);
+      const health = await new TelemetryDiagnosticsProvider({ requirement }).getHealth();
+      expect(health).toMatchObject({
+        status: requirement === "required" ? "unhealthy" : "degraded",
+        details: {
+          configured: true,
+          initialized: false,
+          mode: "startup_failed",
+          failureCode: "TELEMETRY_RUNTIME_ERROR",
+          serviceName: "partial-start",
+        },
+      });
+      expect(JSON.stringify(health)).not.toContain("collector.invalid");
+    },
+  );
 });
