@@ -39,11 +39,14 @@ vi.mock("@opentelemetry/sdk-node", () => ({
   },
 }));
 vi.mock("@opentelemetry/exporter-trace-otlp-http", () => ({
-  OTLPTraceExporter: class MockTraceExporter {},
+  OTLPTraceExporter: class MockTraceExporter {
+    async shutdown(): Promise<void> {}
+  },
 }));
 vi.mock("@opentelemetry/sdk-trace-base", () => ({
   BatchSpanProcessor: class MockBatchSpanProcessor {
     async forceFlush(): Promise<void> {}
+    async shutdown(): Promise<void> {}
   },
 }));
 
@@ -259,6 +262,12 @@ describe("TelemetryRuntime auto-instrumentation", () => {
       },
     });
 
+    expect(mocks.getNodeAutoInstrumentations).toHaveBeenCalledWith(
+      expect.objectContaining({
+        "@opentelemetry/instrumentation-http": { enabled: false },
+        "@opentelemetry/instrumentation-express": { enabled: true },
+      }),
+    );
     expect(mocks.nodeSdkConstructor).toHaveBeenCalledWith(
       expect.objectContaining({
         instrumentations: [

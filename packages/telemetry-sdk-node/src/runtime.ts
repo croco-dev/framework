@@ -40,6 +40,7 @@ class TelemetryRuntime {
   private static instance: TelemetryRuntime | null = null;
   private sdk: NodeSDK | null = null;
   private processor: BatchSpanProcessor | null = null;
+  private initializationCleanup: Array<() => void | Promise<void>> = [];
   private initialized = false;
   private initPromise: Promise<void> | null = null;
   private shutdownPromise: Promise<ShutdownResult> | null = null;
@@ -165,6 +166,11 @@ class TelemetryRuntime {
           traceConfig.instrumentations ?? [],
         );
 
+        this.activeInstrumentations = resolvedInstrumentation.instrumentations;
+        this.initializationCleanup = this.activeInstrumentations.map(
+          (instrumentation) => () => instrumentation.disable(),
+        );
+
         const resource = defaultResource().merge(
           resourceFromAttributes({
             [SEMRESATTRS_SERVICE_NAME]: config.serviceName,
@@ -188,36 +194,74 @@ class TelemetryRuntime {
             }),
           });
 
+          this.initializationCleanup.push(retainShutdownResult(exporter));
           this.processor = new BatchSpanProcessor(exporter, {
             scheduledDelayMillis: traceConfig.batchTimeout ?? 5000,
             maxQueueSize: traceConfig.batchCount ?? 2048,
             maxExportBatchSize: traceConfig.batchSize ?? 512,
           });
+          this.initializationCleanup.push(retainShutdownResult(this.processor));
         }
 
-        this.sdk = new NodeSDK({
+        const sdk = new NodeSDK({
           resource,
           ...(this.processor !== null && { spanProcessor: this.processor }),
           ...(sampler !== undefined && { sampler }),
           instrumentations: resolvedInstrumentation.instrumentations,
+          // This runtime owns traces only, including when SDK construction fails.
+          logRecordProcessors: [],
+          metricReaders: [],
         });
+        this.sdk = sdk;
+        this.initializationCleanup.push(() => sdk.shutdown());
 
         const tracerProviderBefore = getTracerProviderIdentity();
         const meterProviderBefore = metrics.getMeterProvider();
         const loggerProviderBefore = logs.getLoggerProvider();
 
-        this.sdk.start();
-        this.ownsTracerProvider = getTracerProviderIdentity() !== tracerProviderBefore;
+        try {
+          sdk.start();
+        } finally {
+          // start() can install globals before throwing. Capture only this attempt's replacements.
+          const tracerProvider = getTracerProviderIdentity();
+          const meterProvider = metrics.getMeterProvider();
+          const loggerProvider = logs.getLoggerProvider();
+          this.ownsTracerProvider = tracerProvider !== tracerProviderBefore;
+          this.ownsMeterProvider = meterProvider !== meterProviderBefore;
+          this.ownsLoggerProvider = loggerProvider !== loggerProviderBefore;
+          this.initializationCleanup.push(
+            () => {
+              if (this.ownsTracerProvider && getTracerProviderIdentity() === tracerProvider)
+                trace.disable();
+            },
+            () => {
+              if (this.ownsMeterProvider && metrics.getMeterProvider() === meterProvider)
+                metrics.disable();
+            },
+            () => {
+              if (this.ownsLoggerProvider && logs.getLoggerProvider() === loggerProvider)
+                logs.disable();
+            },
+          );
+        }
         if (!this.ownsTracerProvider) {
           this.lifecycleSkipReason = "external-tracer-provider";
         }
-        this.ownsMeterProvider = metrics.getMeterProvider() !== meterProviderBefore;
-        this.ownsLoggerProvider = logs.getLoggerProvider() !== loggerProviderBefore;
-        this.activeInstrumentations = resolvedInstrumentation.instrumentations;
         this.enabledAutoInstrumentationModules = resolvedInstrumentation.enabledModules;
         this.initialized = true;
+        this.initializationCleanup = [];
       } catch (error) {
         this.initialized = false;
+        const cleanupFailures = await this.rollbackInitialization();
+        if (cleanupFailures.length > 0) {
+          const cause = new AggregateError(
+            [error, ...cleanupFailures],
+            "Telemetry startup and rollback failed",
+            { cause: error },
+          );
+          this.shutdownFailure = this.createRuntimeProblem("shutdown", cause);
+          throw this.createRuntimeProblem("init", cause);
+        }
         this.sdk = null;
         this.processor = null;
         this.activeInstrumentations = [];
@@ -238,7 +282,11 @@ class TelemetryRuntime {
     try {
       await this.initPromise;
     } catch (error) {
-      this.clearInitializationContract();
+      if (!this.shutdownFailure) {
+        this.clearInitializationContract();
+      } else {
+        this.initPromise = null;
+      }
       recordTelemetryInitializationFailure(this, requestedConfig, error);
       throw error;
     } finally {
@@ -246,6 +294,43 @@ class TelemetryRuntime {
         this.initPromise = null;
       }
     }
+  }
+
+  private async rollbackInitialization(): Promise<unknown[]> {
+    const failures: unknown[] = [];
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+    const rollback = async () => {
+      for (const cleanup of [...this.initializationCleanup].reverse()) {
+        try {
+          await cleanup();
+        } catch (error) {
+          if (!failures.includes(error)) failures.push(error);
+        }
+      }
+    };
+    try {
+      await Promise.race([
+        rollback(),
+        new Promise<never>((_, reject) => {
+          timeoutId = setTimeout(
+            () =>
+              reject(
+                new TelemetryRuntimeProblem(
+                  "shutdown",
+                  "startup rollback timed out after 30000ms; restart the process before reinitializing.",
+                ),
+              ),
+            30000,
+          );
+        }),
+      ]);
+      if (failures.length === 0) this.initializationCleanup = [];
+    } catch (error) {
+      failures.push(error);
+    } finally {
+      if (timeoutId !== undefined) clearTimeout(timeoutId);
+    }
+    return failures;
   }
 
   async forceFlush(timeoutMillis?: number): Promise<ForceFlushResult> {
@@ -561,6 +646,14 @@ class TelemetryRuntime {
     this.fingerprintIdentities.set(value, identity);
     return identity;
   }
+}
+
+// The SDK may take ownership only partway through start(). Every owner joins the same teardown.
+function retainShutdownResult(resource: { shutdown(): Promise<void> }): () => Promise<void> {
+  const shutdown = resource.shutdown.bind(resource);
+  let result: Promise<void> | undefined;
+  resource.shutdown = () => (result ??= Promise.resolve().then(shutdown));
+  return resource.shutdown;
 }
 
 function getTracerProviderIdentity(): TracerProvider {

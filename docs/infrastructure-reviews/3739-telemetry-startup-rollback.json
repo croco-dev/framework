@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "telemetry-sdk-node",
+      "classification": "runtime-adapter",
+      "reason": "Failed trace SDK startup now unwinds owned resources before retry; failed or timed-out rollback retains a terminal shutdown failure. Trace-only SDK configuration prevents implicit log/metric exporters from escaping startup ownership. Automatic instrumentation replaced by a custom instance is disabled before construction so every activated instance remains owned by the attempt.",
+      "files": {
+        "packages/telemetry-sdk-node/src/runtime.ts": "a603d40e2f0b6d75de9662ee8aa434777fdfb963854770e435143fba3f435c53",
+        "packages/telemetry-sdk-node/src/libs/instrumentation/AutoInstrumentation.ts": "2ea2edb47aeef31110fe1aff1fb996c49fd554a05b4d390049ba6b36cd3a9390"
+      },
+      "catalogRuntimes": ["node", "lambda"],
+      "profiles": {
+        "kubernetes": {
+          "result": "conditional",
+          "providers": ["@croco/telemetry-sdk-node/nodeTelemetry"],
+          "reason": "Uses the existing Node SDK lifecycle and process-local rollback; no Kubernetes-specific provider is introduced.",
+          "constraints": [
+            "Node Host only. Local real SDK/provider/processor tests inject startup failures and an exporter; no Kubernetes deployment certification is claimed. Failed rollback requires a process restart."
+          ],
+          "references": [
+            "packages/telemetry-sdk-node/src/runtime.ts",
+            "packages/telemetry-sdk-node/src/tests/TelemetryRuntimeStartup.spec.ts",
+            "packages/telemetry-sdk-node/src/libs/NodeTelemetryPlugin.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "conditional",
+          "providers": [
+            "@croco/telemetry-sdk-node/nodeTelemetry",
+            "@croco/telemetry-sdk-node/lambdaPreset"
+          ],
+          "reason": "Reuses the same Node startup rollback before invocation work; no execution wrapper or Layer owns initialization.",
+          "constraints": [
+            "Existing Lambda Host lifecycle owns initialization and per-invocation flush. No live AWS startup/teardown certification is claimed. Failed rollback requires replacing the process."
+          ],
+          "references": [
+            "packages/telemetry-sdk-node/src/runtime.ts",
+            "packages/telemetry-sdk-node/src/libs/presets/lambda.ts",
+            "examples/first-party-plugin-composition/src/tasksTelemetry.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "unsupported",
+          "host": "workers",
+          "providers": [],
+          "reason": "The Node SDK and automatic instrumentation require Node APIs; the package does not claim Workers isolate compatibility.",
+          "constraints": ["No Workers provider or Node Container profile is introduced."],
+          "references": [
+            "packages/telemetry-sdk-node/src/libs/NodeTelemetryPlugin.ts",
+            "docs/package-catalog.json"
+          ]
+        }
+      }
+    }
+  ]
+}
