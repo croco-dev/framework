@@ -1026,6 +1026,10 @@ function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+function generatedModuleSpecifier(moduleName: string): string {
+  return `./${moduleName}.js`;
+}
+
 function generateClientIndex(
   domainRoutes: readonly DomainRoutes[],
   options: GenerateClientOptions = {},
@@ -1042,20 +1046,21 @@ function generateClientIndex(
         : []),
     ];
 
-    return `export { ${exports.join(", ")} } from './${domainRoute.domain}';`;
+    return `export { ${exports.join(", ")} } from '${generatedModuleSpecifier(domainRoute.domain)}';`;
   });
   const clientTypeExports = domainRoutes.map(
     (domainRoute) =>
-      `export type { ${toPascalCase(domainRoute.domain)}Client } from './${domainRoute.domain}';`,
+      `export type { ${toPascalCase(domainRoute.domain)}Client } from '${generatedModuleSpecifier(domainRoute.domain)}';`,
   );
   const namespaceExports = domainRoutes.map(
-    (domainRoute) => `export * as ${domainRoute.domain}Rpc from './${domainRoute.domain}';`,
+    (domainRoute) =>
+      `export * as ${domainRoute.domain}Rpc from '${generatedModuleSpecifier(domainRoute.domain)}';`,
   );
   const manifestSourceExport = options.manifestBundlePath
-    ? "export { crocoManifestBundleSource, type CrocoManifestBundleSource } from './manifest-source';"
+    ? `export { crocoManifestBundleSource, type CrocoManifestBundleSource } from '${generatedModuleSpecifier("manifest-source")}';`
     : null;
 
-  return `export * from './rpc';
+  return `export * from '${generatedModuleSpecifier("rpc")}';
 ${[
   ...clientExports,
   ...clientTypeExports,
@@ -1144,8 +1149,9 @@ function getResponseHelperImports({
   valueHelpers,
   typeHelpers,
 }: ReturnType<typeof getResponseHelpers>): string {
-  return `import { ${valueHelpers.join(", ")} } from './rpc';
-import type { ${typeHelpers.join(", ")} } from './rpc';\n`;
+  const specifier = generatedModuleSpecifier("rpc");
+  return `import { ${valueHelpers.join(", ")} } from '${specifier}';
+import type { ${typeHelpers.join(", ")} } from '${specifier}';\n`;
 }
 
 function generateRpcSupport(options: GenerateClientOptions = {}): string {
@@ -4723,7 +4729,7 @@ function hasLegacyRpcProblemRuntime(content: string): boolean {
 function parseLegacyGeneratedIndex(content: string): readonly string[] | null {
   const lines = content.split("\n").filter((line) => line.length > 0);
 
-  if (lines[0] !== "export * from './rpc';") {
+  if (lines[0] !== "export * from './rpc';" && lines[0] !== "export * from './rpc.js';") {
     return null;
   }
 
@@ -4731,7 +4737,7 @@ function parseLegacyGeneratedIndex(content: string): readonly string[] | null {
 
   for (const line of lines.slice(1)) {
     const match =
-      /^export (?:type )?(?:\{[^}]+\}|\* as [A-Za-z_$][\w$]*) from '\.\/([A-Za-z0-9_$-]+)';$/.exec(
+      /^export (?:type )?(?:\{[^}]+\}|\* as [A-Za-z_$][\w$]*) from '\.\/([A-Za-z0-9_$-]+)(?:\.js)?';$/.exec(
         line,
       );
 
@@ -4754,7 +4760,7 @@ function isLegacyGeneratedModule(fileName: string, content: string): boolean {
   }
 
   return (
-    content.includes("from './rpc';") &&
+    /from '\.\/rpc(?:\.js)?';/.test(content) &&
     /export const [A-Za-z_$][\w$]*ContractRoutes = \[/.test(content) &&
     (/export const [A-Za-z_$][\w$]*Client = \{/.test(content) ||
       (/export function create[A-Za-z_$][\w$]*Client\(config: RpcClientConfig = \{\}\)/.test(

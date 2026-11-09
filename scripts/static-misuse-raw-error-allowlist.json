@@ -141,7 +141,7 @@
     {
       "package": "@croco/rpc-codegen",
       "file": "packages/rpc-codegen/src/libs/generate.ts",
-      "line": 1730,
+      "line": 1736,
       "excerpt": "throw new Error(\\`Unhandled RPC Problem variant\\${suffix}\\`);",
       "reason": "Reviewed 2026-10-30 (#4004): The generated assertExhaustiveProblem helper accepts never and throws for an unhandled runtime variant. The template intentionally matches the standalone helpers; introducing a domain Problem would change generated consumer behavior and its declared union.",
       "owner": "framework-error-handling",

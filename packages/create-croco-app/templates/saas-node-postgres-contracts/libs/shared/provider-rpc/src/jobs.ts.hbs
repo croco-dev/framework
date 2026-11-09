@@ -1,5 +1,5 @@
-import { createRpcClientRequest, handleRpcRequestError, handleRpcRequestResultError, handleJsonResponse, handleJsonResult, toRpcFormProblem, encodeRpcPathSegment, serializeRpcQueryKeyInput } from './rpc';
-import type { RpcClientConfig, RpcClientRequestOptions, RpcClientResult, RpcDeclaredProblem, RpcDomainProblem, RpcFormFieldProblem, RpcFormGlobalProblem, RpcFormModel, RpcProblemDetailsFor, RpcValidationProblem } from './rpc';
+import { createRpcClientRequest, handleRpcRequestError, handleRpcRequestResultError, handleJsonResponse, handleJsonResult, toRpcFormProblem, encodeRpcPathSegment, serializeRpcQueryKeyInput } from './rpc.js';
+import type { RpcClientConfig, RpcClientRequestOptions, RpcClientResult, RpcDeclaredProblem, RpcDomainProblem, RpcFormFieldProblem, RpcFormGlobalProblem, RpcFormModel, RpcProblemDetailsFor, RpcValidationProblem } from './rpc.js';
 export type ListInput = { query: { limit?: string | undefined; offset?: string | undefined; replayOf?: string | undefined; status?: '' | 'cancelled' | 'completed' | 'failed' | 'pending' | 'retrying' | 'running' | 'timed_out' | undefined; type?: string | undefined; }; };
 export type ShowInput = { path: { id: string; }; };
 export type LogsInput = { path: { id: string; }; };

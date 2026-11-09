@@ -531,7 +531,7 @@ async function importGeneratedUsersClient(
     },
     reportDiagnostics: true,
   });
-  const output = ts.transpileModule(source.replace("from './rpc';", "from './rpc.mjs';"), {
+  const output = ts.transpileModule(source.replace("from './rpc.js';", "from './rpc.mjs';"), {
     compilerOptions: {
       module: ts.ModuleKind.ES2022,
       target: ts.ScriptTarget.ES2022,

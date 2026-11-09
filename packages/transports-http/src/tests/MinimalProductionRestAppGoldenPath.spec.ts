@@ -539,7 +539,7 @@ describe("minimal production REST app golden path", () => {
       reportDiagnostics: true,
     });
     const domainOutput = ts.transpileModule(
-      domainSource.replace("from './rpc';", "from './rpc.mjs';"),
+      domainSource.replace("from './rpc.js';", "from './rpc.mjs';"),
       {
         compilerOptions: {
           module: ts.ModuleKind.ES2022,

@@ -1,4 +1,5 @@
 import * as fs from "node:fs";
+import { execFileSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import * as path from "node:path";
 import * as vm from "node:vm";
@@ -276,6 +277,70 @@ describe("generateClientFiles", () => {
     fs.rmSync(tempDir, { recursive: true, force: true });
   });
 
+  it(
+    "typechecks and executes the generated barrel in native NodeNext ESM",
+    () => {
+      expect(ts.version).toBe("6.0.3");
+      const options = { manifestBundlePath: "contracts" };
+      generateClientFiles([createBasicRoute()], tempDir, options);
+      fs.writeFileSync(path.join(tempDir, "package.json"), '{"type":"module"}');
+      fs.symlinkSync(
+        path.resolve(__dirname, "../../node_modules"),
+        path.join(tempDir, "node_modules"),
+        "dir",
+      );
+      fs.writeFileSync(
+        path.join(tempDir, "consumer.ts"),
+        `import { createUserClient, userRpc, crocoManifestBundleSource } from './index.js';
+import type { UserClient, RpcClientConfig } from './index.js';
+const requests: string[] = [];
+const config: RpcClientConfig = {
+  baseUrl: 'https://example.test',
+  fetch: async (url) => {
+    requests.push(url);
+    return new Response(JSON.stringify({ users: ['Ada'] }));
+  },
+};
+const client: UserClient = createUserClient(config);
+console.log(JSON.stringify({
+  result: await client.list(),
+  requests,
+  namespaceFactory: typeof userRpc.createUserClient,
+  manifestDirectory: crocoManifestBundleSource.directory,
+}));
+`,
+      );
+      const program = ts.createProgram([path.join(tempDir, "consumer.ts")], {
+        module: ts.ModuleKind.NodeNext,
+        moduleResolution: ts.ModuleResolutionKind.NodeNext,
+        target: ts.ScriptTarget.ES2022,
+        strict: true,
+        skipLibCheck: true,
+        types: [],
+        outDir: path.join(tempDir, "dist"),
+        noEmitOnError: true,
+      });
+      expect(
+        ts
+          .getPreEmitDiagnostics(program)
+          .map((diagnostic) => ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n")),
+      ).toEqual([]);
+      expect(program.emit().emitSkipped).toBe(false);
+      const output = execFileSync(process.execPath, [path.join(tempDir, "dist/consumer.js")], {
+        encoding: "utf8",
+        timeout: 10_000,
+      });
+      expect(JSON.parse(output)).toEqual({
+        result: { users: ["Ada"] },
+        requests: ["https://example.test/users"],
+        namespaceFactory: "function",
+        manifestDirectory: "contracts",
+      });
+      expect(checkGeneratedClientFiles([createBasicRoute()], tempDir, options)).toEqual([]);
+    },
+    GENERATED_CLIENT_TYPECHECK_TIMEOUT_MS,
+  );
+
   it("checks unchanged outputs without changing their bytes, mtimes, or directory contents", () => {
     const routes = [createBasicRoute()];
     const files = generateClientFiles(routes, tempDir);
@@ -357,25 +422,37 @@ describe("generateClientFiles", () => {
     expect(checkGeneratedClientFiles([renamedRoute], tempDir)).toEqual([]);
   });
 
-  it("bootstraps legacy generated ownership when the sidecar is missing", () => {
-    const routes = [
-      createBasicRoute(),
-      {
-        ...createBasicRoute(),
-        controllerName: "AdminController",
-        methodName: "listAdmins",
-        path: "/admins",
-      },
-    ];
+  it.each(["extensionless", "js"])(
+    "bootstraps legacy %s generated ownership when the sidecar is missing",
+    (style) => {
+      const routes = [
+        createBasicRoute(),
+        {
+          ...createBasicRoute(),
+          controllerName: "AdminController",
+          methodName: "listAdmins",
+          path: "/admins",
+        },
+      ];
 
-    generateClientFiles(routes, tempDir);
-    fs.rmSync(path.join(tempDir, ".croco-rpc-codegen.json"));
+      const files = generateClientFiles(routes, tempDir, { manifestBundlePath: "contracts" });
+      if (style === "extensionless") {
+        for (const file of files) {
+          fs.writeFileSync(
+            file,
+            fs.readFileSync(file, "utf8").replace(/(from '\.\/[^']+)\.js'/g, "$1'"),
+          );
+        }
+      }
+      fs.rmSync(path.join(tempDir, ".croco-rpc-codegen.json"));
 
-    generateClientFiles([createBasicRoute()], tempDir);
+      generateClientFiles([createBasicRoute()], tempDir);
 
-    expect(fs.existsSync(path.join(tempDir, "admin.ts"))).toBe(false);
-    expect(checkGeneratedClientFiles([createBasicRoute()], tempDir)).toEqual([]);
-  });
+      expect(fs.existsSync(path.join(tempDir, "admin.ts"))).toBe(false);
+      expect(fs.existsSync(path.join(tempDir, "manifest-source.ts"))).toBe(false);
+      expect(checkGeneratedClientFiles([createBasicRoute()], tempDir)).toEqual([]);
+    },
+  );
 
   it("does not claim an unmarked empty module as generated ownership", () => {
     const indexPath = path.join(tempDir, "index.ts");
@@ -705,7 +782,7 @@ describe("generateClientFiles", () => {
       "{ routeId: 'UserController.list', operationId: 'UserController_list', methodName: 'list', method: 'GET', path: '/users' }",
     );
     expect(content).toContain(
-      "import { createRpcClientRequest, handleRpcRequestError, handleRpcRequestResultError, readOptionalJsonResponse, readOptionalJsonResult } from './rpc';\nimport type { RpcClientConfig, RpcClientRequestOptions, RpcClientResult, RpcDeclaredProblem, RpcProblemDetailsFor } from './rpc';",
+      "import { createRpcClientRequest, handleRpcRequestError, handleRpcRequestResultError, readOptionalJsonResponse, readOptionalJsonResult } from './rpc.js';\nimport type { RpcClientConfig, RpcClientRequestOptions, RpcClientResult, RpcDeclaredProblem, RpcProblemDetailsFor } from './rpc.js';",
     );
     expect(rpcContent).toContain("export class RpcClientProblemError extends Error");
     expect(rpcContent).toContain("export class RpcClientResponseError extends Error");
@@ -1056,7 +1133,7 @@ describe("generateClientFiles", () => {
     expect(rpcContent).not.toContain("export class RpcClientProblemError extends Error");
     expect(rpcContent).not.toContain("function isRpcProblemDetails");
     expect(content).toContain(
-      "import { createRpcClientRequest, handleRpcRequestError, handleRpcRequestResultError, handleJsonResponse, handleJsonResult, toRpcFormProblem, serializeRpcQueryKeyInput } from './rpc';\nimport type { RpcClientConfig, RpcClientRequestOptions, RpcClientResult, RpcDeclaredProblem, RpcDomainProblem, RpcFormFieldProblem, RpcFormGlobalProblem, RpcFormModel, RpcProblemDetailsFor, RpcValidationProblem } from './rpc';",
+      "import { createRpcClientRequest, handleRpcRequestError, handleRpcRequestResultError, handleJsonResponse, handleJsonResult, toRpcFormProblem, serializeRpcQueryKeyInput } from './rpc.js';\nimport type { RpcClientConfig, RpcClientRequestOptions, RpcClientResult, RpcDeclaredProblem, RpcDomainProblem, RpcFormFieldProblem, RpcFormGlobalProblem, RpcFormModel, RpcProblemDetailsFor, RpcValidationProblem } from './rpc.js';",
     );
     expect(content).toContain("export type CreateUserResult = RpcClientResult");
     assertGeneratedPackageTypechecks(["index.ts", "rpc.ts", "user.ts"]);
@@ -1375,7 +1452,7 @@ describe("generateClientFiles", () => {
     expect(fs.existsSync(path.join(tempDir, "user.ts"))).toBe(true);
     expect(fs.existsSync(path.join(tempDir, "order.ts"))).toBe(true);
     expect(fs.readFileSync(path.join(tempDir, "index.ts"), "utf-8")).toBe(
-      "export * from './rpc';\nexport { createOrderClient, orderClient, orderContractRoutes, orderKeys } from './order';\nexport { createUserClient, userClient, userContractRoutes, userKeys } from './user';\nexport type { OrderClient } from './order';\nexport type { UserClient } from './user';\nexport * as orderRpc from './order';\nexport * as userRpc from './user';\n",
+      "export * from './rpc.js';\nexport { createOrderClient, orderClient, orderContractRoutes, orderKeys } from './order.js';\nexport { createUserClient, userClient, userContractRoutes, userKeys } from './user.js';\nexport type { OrderClient } from './order.js';\nexport type { UserClient } from './user.js';\nexport * as orderRpc from './order.js';\nexport * as userRpc from './user.js';\n",
     );
   });
 
@@ -1423,7 +1500,7 @@ describe("generateClientFiles", () => {
 export type CrocoManifestBundleSource = typeof crocoManifestBundleSource;
 `);
     expect(indexSource).toContain(
-      "export { crocoManifestBundleSource, type CrocoManifestBundleSource } from './manifest-source';",
+      "export { crocoManifestBundleSource, type CrocoManifestBundleSource } from './manifest-source.js';",
     );
     assertGeneratedPackageTypechecks(["index.ts", "rpc.ts", "manifest-source.ts", "user.ts"]);
   });
@@ -1728,9 +1805,9 @@ void user; void order; void result;
         "create: { route: userContractRoutes[1], invalidates: [userKeys.all()] },",
       );
       expect(indexContent).toContain(
-        "export { createUserClient, userClient, userContractRoutes, userKeys, userInvalidationManifest } from './user';",
+        "export { createUserClient, userClient, userContractRoutes, userKeys, userInvalidationManifest } from './user.js';",
       );
-      expect(indexContent).toContain("export type { UserClient } from './user';");
+      expect(indexContent).toContain("export type { UserClient } from './user.js';");
       assertGeneratedClientTypechecks(`${content}
 const listKey = userKeys.list({ query: { page: '1' } });
 const createInvalidationKey = userInvalidationManifest.create.invalidates[0];
@@ -1767,7 +1844,7 @@ void createInvalidationRouteId;
       }).outputText;
       const context = {
         exports: {} as Record<string, unknown>,
-        require: (specifier: string) => (specifier === "./rpc" ? loadGeneratedRpcModule() : {}),
+        require: (specifier: string) => (specifier === "./rpc.js" ? loadGeneratedRpcModule() : {}),
       };
       vm.runInNewContext(output, context);
       const keys = context.exports.userKeys as Record<string, () => readonly string[]>;
@@ -1824,8 +1901,8 @@ void createInvalidationRouteId;
       const context = {
         exports: {} as Record<string, unknown>,
         require: (specifier: string) => {
-          expect(["./rpc", "@tanstack/react-query"]).toContain(specifier);
-          return specifier === "./rpc" ? rpcModule : {};
+          expect(["./rpc.js", "@tanstack/react-query"]).toContain(specifier);
+          return specifier === "./rpc.js" ? rpcModule : {};
         },
       };
       vm.runInNewContext(output, context);
@@ -2365,7 +2442,7 @@ void result;
       const files = generateClientFiles(routes, tempDir);
 
       const content = fs.readFileSync(files[0], "utf-8");
-      const source = `import { assertExhaustiveProblem } from './rpc';
+      const source = `import { assertExhaustiveProblem } from './rpc.js';
 ${content}
 async function exerciseGeneratedProblemResult() {
   const result = await userClient.getResult({ path: { id: 'missing' } });
@@ -2423,7 +2500,7 @@ void handleMissingProblemBranch;
 `;
 
       expect(content).toContain(
-        "import { createRpcClientRequest, handleRpcRequestError, handleRpcRequestResultError, handleJsonResponse, handleJsonResult, encodeRpcPathSegment, serializeRpcQueryKeyInput } from './rpc';\nimport type { RpcClientConfig, RpcClientRequestOptions, RpcClientResult, RpcDeclaredProblem, RpcProblemDetailsFor } from './rpc';",
+        "import { createRpcClientRequest, handleRpcRequestError, handleRpcRequestResultError, handleJsonResponse, handleJsonResult, encodeRpcPathSegment, serializeRpcQueryKeyInput } from './rpc.js';\nimport type { RpcClientConfig, RpcClientRequestOptions, RpcClientResult, RpcDeclaredProblem, RpcProblemDetailsFor } from './rpc.js';",
       );
       expect(content).toContain(
         "export type GetProblem = RpcDeclaredProblem<'USER_NOT_FOUND', 'NotFound', 404> | RpcDeclaredProblem<'USER_FORBIDDEN', 'Forbidden', 403>;",
@@ -2765,7 +2842,7 @@ void handleMissingProblemBranch;
       sources.set(
         consumer,
         `
-      import type { ListOutput } from './user';
+      import type { ListOutput } from './user.js';
       const value: ListOutput = { id: 'stats', counters: { widgets: 7 } };
       const id: string = value.id;
       const count: number = value.counters.widgets;
@@ -3670,7 +3747,7 @@ void createResultHook;
         "export type ListInput = { query: { active?: boolean | undefined; deletedAt: string | null; page: number; search?: string | undefined; tags: string[]; }; };",
       );
       expect(content).toContain(
-        "import { createRpcClientRequest, handleRpcRequestError, handleRpcRequestResultError, readOptionalJsonResponse, readOptionalJsonResult, serializeRpcQueryKeyInput } from './rpc';\nimport type { RpcClientConfig, RpcClientRequestOptions, RpcClientResult, RpcDeclaredProblem, RpcProblemDetailsFor } from './rpc';",
+        "import { createRpcClientRequest, handleRpcRequestError, handleRpcRequestResultError, readOptionalJsonResponse, readOptionalJsonResult, serializeRpcQueryKeyInput } from './rpc.js';\nimport type { RpcClientConfig, RpcClientRequestOptions, RpcClientResult, RpcDeclaredProblem, RpcProblemDetailsFor } from './rpc.js';",
       );
       assertGeneratedClientTypechecks(`${content}
 const result: Promise<unknown | undefined> = userClient.list({
@@ -3799,7 +3876,7 @@ void result;
 
       const content = fs.readFileSync(files[0], "utf-8");
       expect(content).toContain(
-        "import { createRpcClientRequest, handleRpcRequestError, handleRpcRequestResultError, handleJsonResponse, handleJsonResult, toRpcFormProblem, serializeRpcQueryKeyInput } from './rpc';\nimport type { RpcClientConfig, RpcClientRequestOptions, RpcClientResult, RpcDeclaredProblem, RpcDomainProblem, RpcFormFieldProblem, RpcFormGlobalProblem, RpcFormModel, RpcProblemDetailsFor, RpcValidationProblem } from './rpc';",
+        "import { createRpcClientRequest, handleRpcRequestError, handleRpcRequestResultError, handleJsonResponse, handleJsonResult, toRpcFormProblem, serializeRpcQueryKeyInput } from './rpc.js';\nimport type { RpcClientConfig, RpcClientRequestOptions, RpcClientResult, RpcDeclaredProblem, RpcDomainProblem, RpcFormFieldProblem, RpcFormGlobalProblem, RpcFormModel, RpcProblemDetailsFor, RpcValidationProblem } from './rpc.js';",
       );
       expect(content).toContain(
         "export type CreateFormFieldName = 'name' | 'email' | 'role' | 'receiveUpdates' | 'retryCount';",
@@ -4364,7 +4441,7 @@ function loadGeneratedUserClientSupport(
     fetch: fetchImpl,
     URLSearchParams,
     require(specifier: string): Record<string, unknown> {
-      expect(specifier).toBe("./rpc");
+      expect(specifier).toBe("./rpc.js");
 
       return rpcModule;
     },
