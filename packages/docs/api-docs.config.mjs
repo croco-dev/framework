@@ -745,6 +745,12 @@ export const apiDocPackages = [
     moduleName: "storage-s3/src",
   },
   {
+    packageName: "@croco/tasks-sqs",
+    directory: "tasks-sqs",
+    entryPoint: "src/index.ts",
+    moduleName: "tasks-sqs/src",
+  },
+  {
     packageName: "@croco/telemetry-api",
     directory: "telemetry-api",
     entryPoint: "src/index.ts",

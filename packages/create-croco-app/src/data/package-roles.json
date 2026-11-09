@@ -122,6 +122,7 @@
   "@croco/storage-s3": "plugins",
   "@croco/tasks-core": "contracts",
   "@croco/tasks-qstash": "plugins",
+  "@croco/tasks-sqs": "plugins",
   "@croco/telemetry-api": "contracts",
   "@croco/telemetry-sdk-node": "plugins",
   "@croco/tenant-core": "contracts",

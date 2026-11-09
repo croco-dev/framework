@@ -5844,10 +5844,28 @@
       "owner": "@croco/tasks-qstash"
     },
     {
+      "path": "packages/tasks-qstash/src/tests/TaskDispatcherConformance.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/tasks-qstash"
+    },
+    {
       "path": "packages/tasks-qstash/src/tests/UpstreamProblemCauses.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/tasks-qstash"
+    },
+    {
+      "path": "packages/tasks-sqs/src/tests/SqsTasks.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/tasks-sqs"
+    },
+    {
+      "path": "packages/tasks-sqs/src/tests/TaskDispatcherConformance.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/tasks-sqs"
     },
     {
       "path": "packages/telemetry-api/src/tests/BehavioralEvidence.spec.ts",
@@ -6091,6 +6109,12 @@
     },
     {
       "path": "packages/testing/src/tests/ScenarioRuntime.spec.ts",
+      "lane": "fast",
+      "qualifiers": ["coverage"],
+      "owner": "@croco/testing"
+    },
+    {
+      "path": "packages/testing/src/tests/TaskDispatcherConformance.spec.ts",
       "lane": "fast",
       "qualifiers": ["coverage"],
       "owner": "@croco/testing"

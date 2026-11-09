@@ -60,6 +60,11 @@
               "examples/first-party-plugin-composition/src/tasksTelemetry.ts",
               "examples/first-party-plugin-composition/src/productionGoldenPath.ts"
             ]
+          },
+          {
+            "id": "sqs",
+            "packages": ["tasks-sqs"],
+            "examples": ["packages/tasks-sqs/README.md"]
           }
         ]
       },
@@ -1300,6 +1305,12 @@
       "subtype": "provider",
       "runtimes": ["node", "lambda"],
       "domain": "Storage"
+    },
+    "tasks-sqs": {
+      "role": "Plugins",
+      "subtype": "provider",
+      "runtimes": ["node", "lambda"],
+      "domain": "Tasks"
     }
   },
   "groups": {
@@ -1418,7 +1429,8 @@
         "referral-drizzle",
         "billing-drizzle",
         "research-drizzle",
-        "storage-s3"
+        "storage-s3",
+        "tasks-sqs"
       ]
     },
     "Integration": {
@@ -1644,7 +1656,8 @@
         "research-core",
         "research-drizzle",
         "seo-core",
-        "storage-s3"
+        "storage-s3",
+        "tasks-sqs"
       ]
     },
     "deprecated": {
@@ -2423,6 +2436,22 @@
           "SDK credential chain",
           "Node/Lambda local host smoke"
         ]
+      },
+      "tasks-sqs": {
+        "domain": "Tasks",
+        "adapter": "AWS SQS publisher and Lambda consumer",
+        "runtimes": ["node", "lambda"],
+        "requiredEnv": ["queueUrl, region, tenantId supplied by app", "AWS SDK credential chain"],
+        "features": [
+          "versioned task envelopes",
+          "tenant-bound queue authority",
+          "Lambda partial batch failures",
+          "FIFO ordering and scoped deduplication",
+          "existing TaskRunner execution ledger",
+          "Node publisher only; no Node poller",
+          "no-credential conformance and redacted diagnostics",
+          "local SDK/Lambda fixtures; live AWS unverified"
+        ]
       }
     }
   },
@@ -2735,6 +2764,45 @@
           }
         },
         "knownGaps": []
+      },
+      {
+        "package": "@croco/tasks-sqs",
+        "contract": "@croco/tasks-core/TaskDispatcher",
+        "adapterCategory": "provider",
+        "runtimes": ["node", "lambda"],
+        "packageVersion": "0.0.0",
+        "state": "uncertified",
+        "evidence": {
+          "conformance": {
+            "status": "present",
+            "command": "pnpm --filter @croco/tasks-sqs test",
+            "artifact": "packages/tasks-sqs/src/tests/TaskDispatcherConformance.spec.ts",
+            "description": "Shared TaskDispatcher publication plus actual ExecutionManager/TaskRunner Lambda fixture coverage."
+          },
+          "noCredentialSmoke": {
+            "status": "present",
+            "command": "pnpm --filter @croco/tasks-sqs test",
+            "artifact": "packages/tasks-sqs/src/tests/TaskDispatcherConformance.spec.ts",
+            "description": "Shared no-credential conformance rejects missing region before SDK publication."
+          },
+          "liveSmoke": {
+            "status": "missing",
+            "reason": "Live AWS IAM, visibility and DLQ redrive are unverified; local synthetic SDK/Lambda fixtures only."
+          },
+          "diagnostics": {
+            "status": "present",
+            "command": "pnpm --filter @croco/tasks-sqs test",
+            "artifact": "packages/tasks-sqs/src/tests/TaskDispatcherConformance.spec.ts",
+            "description": "Missing server configuration produces stable value-free Problems."
+          },
+          "redactionTests": {
+            "status": "present",
+            "command": "pnpm --filter @croco/tasks-sqs test",
+            "artifact": "packages/tasks-sqs/src/tests/SqsTasks.spec.ts",
+            "description": "Raw SDK errors, credentials and payloads are excluded from publication failure diagnostics."
+          }
+        },
+        "knownGaps": ["liveSmoke"]
       }
     ]
   }

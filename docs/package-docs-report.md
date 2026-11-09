@@ -6,13 +6,13 @@
 
 | Metric                         | Count |
 | ------------------------------ | ----: |
-| Public packages                |   141 |
+| Public packages                |   142 |
 | Private packages skipped       |     2 |
 | Missing package README         |     0 |
 | Missing generated API docs     |     0 |
 | Missing package test directory |     0 |
-| Extension matrix packages      |    62 |
-| Certification records          |     8 |
+| Extension matrix packages      |    63 |
+| Certification records          |     9 |
 | Croco 1.0 spine packages       |    18 |
 
 New public packages must not add missing README, API docs, or test coverage unless the gap is explicitly listed in `docs/package-docs-baseline.json`. Production-ready packages must have generated API docs unless they have a short-lived justification in `temporaryProductionApiDocExceptions`.
@@ -81,6 +81,7 @@ Certification records are validated from `docs/package-catalog.json` `certificat
 | `@croco/telemetry-api`      | certified   | `@croco/telemetry-api/Trace`                 | node<br>lambda<br>cloudflare-workers<br>browser | `0.1.0` | conformance: present (pnpm --filter @croco/telemetry-api test; packages/telemetry-api/src/tests/Trace.spec.ts)<br>noCredentialSmoke: present (pnpm --filter @croco/telemetry-api test; packages/telemetry-api/src/tests/frontendBridge.spec.ts)<br>liveSmoke: present (packages/telemetry-api/README.md; No external live provider credential is required; no-credential local smoke covers the certified trace and browser bridge paths.)<br>diagnostics: present (pnpm --filter @croco/telemetry-api test; packages/telemetry-api/src/tests/Trace.spec.ts)<br>redactionTests: present (pnpm --filter @croco/telemetry-api test; packages/telemetry-api/src/tests/frontendBridge.spec.ts)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     | -                                                                                                                                                         |
 | `@croco/telemetry-sdk-node` | certified   | `@croco/telemetry-sdk-node/TelemetryRuntime` | node<br>lambda                                  | `0.0.4` | conformance: present (pnpm --filter @croco/telemetry-sdk-node test; packages/telemetry-sdk-node/src/tests/TelemetryRuntime.spec.ts)<br>noCredentialSmoke: present (pnpm --filter @croco/telemetry-sdk-node test; packages/telemetry-sdk-node/src/tests/ProviderNoCredentialConformance.spec.ts)<br>liveSmoke: present (packages/telemetry-sdk-node/README.md; Live OTLP export is env-gated by exporter credentials/endpoints; no-credential Lambda preset and forceFlush behavior stay covered in default tests.)<br>diagnostics: present (pnpm --filter @croco/telemetry-sdk-node test; packages/telemetry-sdk-node/src/tests/TelemetryRuntime.spec.ts)<br>redactionTests: present (pnpm --filter @croco/telemetry-sdk-node test; packages/telemetry-sdk-node/src/tests/TelemetryProblems.spec.ts)                                                                                                                                                                                                                                                                                                                                                                                           | -                                                                                                                                                         |
 | `@croco/transports-http`    | certified   | `@croco/transports-http/HttpTransport`       | node<br>lambda                                  | `0.0.4` | conformance: present (pnpm --filter @croco/transports-http test; packages/transports-http/src/tests/HttpTransportIntegration.spec.ts)<br>noCredentialSmoke: present (pnpm --filter @croco/transports-http test; packages/transports-http/src/tests/HealthCheck.spec.ts)<br>liveSmoke: present (packages/transports-http/README.md; Operational live and diagnostics smoke is token/env-gated; local no-credential health endpoints stay covered by default tests.)<br>diagnostics: present (pnpm --filter @croco/transports-http test; packages/transports-http/src/tests/OperationalEndpoints.spec.ts)<br>redactionTests: present (pnpm --filter @croco/transports-http test; packages/transports-http/src/tests/OperationalEndpoints.spec.ts)                                                                                                                                                                                                                                                                                                                                                                                                                                                | -                                                                                                                                                         |
+| `@croco/tasks-sqs`          | uncertified | `@croco/tasks-core/TaskDispatcher`           | node<br>lambda                                  | `0.0.0` | conformance: present (pnpm --filter @croco/tasks-sqs test; packages/tasks-sqs/src/tests/TaskDispatcherConformance.spec.ts; Shared TaskDispatcher publication plus actual ExecutionManager/TaskRunner Lambda fixture coverage.)<br>noCredentialSmoke: present (pnpm --filter @croco/tasks-sqs test; packages/tasks-sqs/src/tests/TaskDispatcherConformance.spec.ts; Shared no-credential conformance rejects missing region before SDK publication.)<br>liveSmoke: missing (Live AWS IAM, visibility and DLQ redrive are unverified; local synthetic SDK/Lambda fixtures only.)<br>diagnostics: present (pnpm --filter @croco/tasks-sqs test; packages/tasks-sqs/src/tests/TaskDispatcherConformance.spec.ts; Missing server configuration produces stable value-free Problems.)<br>redactionTests: present (pnpm --filter @croco/tasks-sqs test; packages/tasks-sqs/src/tests/SqsTasks.spec.ts; Raw SDK errors, credentials and payloads are excluded from publication failure diagnostics.)                                                                                                                                                                                                   | liveSmoke                                                                                                                                                 |
 
 ## Missing Package README
 
@@ -230,6 +231,7 @@ None.
 | `@croco/storage-s3`                    | Plugins        | provider      | Storage                 | node, lambda                              |
 | `@croco/tasks-core`                    | Contracts      | domain        | Tasks                   | unclaimed                                 |
 | `@croco/tasks-qstash`                  | Plugins        | provider      | Tasks                   | node, lambda                              |
+| `@croco/tasks-sqs`                     | Plugins        | provider      | Tasks                   | node, lambda                              |
 | `@croco/telemetry-api`                 | Contracts      | observability | Telemetry               | node, lambda, cloudflare-workers, browser |
 | `@croco/telemetry-sdk-node`            | Plugins        | integration   | Telemetry               | node, lambda                              |
 | `@croco/tenant-core`                   | Contracts      | domain        | Tenant                  | unclaimed                                 |
@@ -255,7 +257,7 @@ None.
 | ------------ | -------: |
 | Core         |       23 |
 | Domain       |       39 |
-| Provider     |       41 |
+| Provider     |       42 |
 | Integration  |        6 |
 | Protocol     |        8 |
 | Transport    |        2 |
@@ -268,7 +270,7 @@ None.
 | ------------------- | -------: |
 | 🟢 production-ready |       23 |
 | 🟡 beta             |       78 |
-| 🔴 alpha/WIP        |       40 |
+| 🔴 alpha/WIP        |       41 |
 | ⚠️ deprecated       |        0 |
 
 ## Extension Matrix
@@ -277,7 +279,7 @@ Extension matrix metadata is maintained in `docs/package-catalog.json` and rende
 
 | Group        | Packages | Without package tests |
 | ------------ | -------: | --------------------: |
-| Provider     |       41 |                     0 |
+| Provider     |       42 |                     0 |
 | Integration  |        6 |                     0 |
 | Transport    |        2 |                     0 |
 | Host         |        4 |                     0 |

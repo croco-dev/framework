@@ -78,6 +78,20 @@ Upstash service, deployed Workers, DO provider certification, or full Workers Sa
 DO remains unsupported by this package and requires its own implementation and conformance. Keep alpha
 maturity and unverified live/readiness evidence explicit; numeric policy validation remains in #1687.
 
+## AWS SQS tasks
+
+Use `sqsTasks({ queueUrl, region, tenantId })` from `@croco/tasks-sqs` as an explicit
+application import for the `TaskDispatcher` slot. The alpha Node/Lambda publisher uses
+the SDK credential chain. `createSqsTaskHandler` binds a trusted Lambda SQS mapping to
+the app's runtime, task registry and durable execution manager. Select the queue ARN
+and tenant on the server; event fields are routing checks and never replace IAM.
+Enable `ReportBatchItemFailures`, configure visibility and DLQ redrive, and await the
+app-owned telemetry flush before invocation return. TaskRunner owns execution retry
+and indeterminate recovery; SQS receive attempts and FIFO deduplication are separate.
+Node polling and Workers are unsupported. Local SDK/Lambda fixtures do not certify
+live AWS IAM, visibility, DLQ or generated SaaS integration. See the
+[SQS README](https://github.com/croco-dev/framework/blob/trunk/packages/tasks-sqs/README.md).
+
 ## AWS S3 storage
 
 Use `s3Storage({ bucket, region, keyPrefix })` from `@croco/storage-s3` as an explicit

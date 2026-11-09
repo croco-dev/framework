@@ -1,0 +1,178 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "tasks-sqs",
+      "classification": "durable-provider",
+      "reason": "SQS TaskDispatcher publication and trusted Lambda batch consumption reuse the existing TaskRunner and execution ledger. Node has publication only; queue admission and task completion remain distinct.",
+      "files": {
+        "packages/tasks-sqs/package.json": "ddb8740b6df3139cde70bd184e03e95ade1c0309c019a4695eee5963341654dd",
+        "packages/tasks-sqs/src/index.ts": "67f09885140356408da542bbd5854f37b53f11096fe979fcd6364f483513b0cb",
+        "packages/tasks-sqs/src/libs/SqsTaskDispatcher.ts": "b747ef89d5444df9aaa344f5a64aede34c9f68afc4f47f64b709ba666bcfe7dc",
+        "packages/tasks-sqs/src/libs/SqsTasksPlugin.ts": "702f550974618e9133a3aa3feac2de348954d8ff72c5fa43936bba2f03f10429",
+        "packages/tasks-sqs/src/libs/createSqsTaskHandler.ts": "c7f35883600c553f38f746e0a91aa89657efe485b06f9586a72eb1112f3c8f83",
+        "packages/tasks-sqs/src/libs/envelope.ts": "11967fdc7a42bd2464c2814b014db0e32bd9a9f69ef69fcd0f87aed1393bfd3d",
+        "packages/tasks-sqs/src/libs/problems/SqsTaskProblems.ts": "d153fc6020caa4781cbf6a2f91766cccea81d72ed71508e8d2bb262ad91c5965"
+      },
+      "catalogRuntimes": ["node", "lambda"],
+      "profiles": {
+        "kubernetes": {
+          "result": "conditional",
+          "reason": "The Node publisher uses the existing AWS SDK credential chain. This adapter provides no Node queue poller.",
+          "providers": [
+            "@croco/tasks-sqs",
+            "@croco/tasks-core/TaskRunner",
+            "@croco/execution-core/ExecutionManager"
+          ],
+          "constraints": [
+            "Require queue-scoped IAM and network access; drain outstanding publishes before app disposal.",
+            "No live Kubernetes, IAM or queue certification; only local SDK serialization fixtures."
+          ],
+          "references": [
+            "packages/tasks-sqs/README.md",
+            "packages/tasks-sqs/src/tests/SqsTasks.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "conditional",
+          "reason": "A trusted Lambda SQS event source mapping invokes the application-bound consumer and existing TaskRunner.",
+          "providers": [
+            "@croco/tasks-sqs",
+            "@croco/tasks-core/TaskRunner",
+            "@croco/execution-core/ExecutionManager"
+          ],
+          "constraints": [
+            "Require ReportBatchItemFailures, visibility timeout, native DLQ/redrive and a durable tenant-authorized atomic execution store.",
+            "Complete task settlement and app-owned telemetry flush before return; Lambda termination does not cancel external effects.",
+            "Local SDK and Lambda-event fixtures only; live AWS delivery, IAM and DLQ remain unverified."
+          ],
+          "references": [
+            "packages/tasks-sqs/README.md",
+            "packages/tasks-sqs/src/tests/SqsTasks.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "unsupported",
+          "reason": "The Node AWS SDK and Node AsyncLocalStorage path have no Workers entrypoint or verified binding.",
+          "providers": [
+            "@croco/tasks-sqs",
+            "@croco/tasks-core/TaskRunner",
+            "@croco/execution-core/ExecutionManager"
+          ],
+          "constraints": ["No Worker isolate or Node Container consumption is provided."],
+          "references": [
+            "packages/tasks-sqs/README.md",
+            "packages/tasks-sqs/src/tests/SqsTasks.spec.ts"
+          ],
+          "host": "workers"
+        }
+      }
+    },
+    {
+      "package": "testing",
+      "classification": "pure-contract",
+      "reason": "Provider-neutral test conformance checks accepted task identity and invalid-task rejection. Test-runner utilities add no application host capability, storage or lifecycle.",
+      "files": {
+        "packages/testing/src/index.ts": "1c9832497ebe345197ad7e3c162e9dd864954f44b1228a928c8738ad2a521b18",
+        "packages/testing/src/libs/taskDispatcherConformance.ts": "97eaa36af5ec34c4894db50cb0e811690aaea405aa921628aa36e18d033d839c"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Provider-neutral test conformance checks accepted task identity and invalid-task rejection. Test-runner utilities add no application host capability, storage or lifecycle.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/testing/src/index.ts",
+            "packages/testing/src/libs/taskDispatcherConformance.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Provider-neutral test conformance checks accepted task identity and invalid-task rejection. Test-runner utilities add no application host capability, storage or lifecycle.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/testing/src/index.ts",
+            "packages/testing/src/libs/taskDispatcherConformance.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Provider-neutral test conformance checks accepted task identity and invalid-task rejection. Test-runner utilities add no application host capability, storage or lifecycle.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/testing/src/index.ts",
+            "packages/testing/src/libs/taskDispatcherConformance.ts"
+          ]
+        }
+      }
+    },
+    {
+      "package": "create-croco-app",
+      "classification": "pure-contract",
+      "reason": "Generated package-role catalog classifies the new SQS adapter as a Plugin; it adds no generated provider wiring, deployment profile or host behavior.",
+      "files": {
+        "packages/create-croco-app/src/data/package-roles.json": "abf58207ee419b99245109f8b5f10684e62191d55651163b6c686115f54b0fcb"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Generated package-role catalog classifies the new SQS adapter as a Plugin; it adds no generated provider wiring, deployment profile or host behavior.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/create-croco-app/src/data/package-roles.json"]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Generated package-role catalog classifies the new SQS adapter as a Plugin; it adds no generated provider wiring, deployment profile or host behavior.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/create-croco-app/src/data/package-roles.json"]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Generated package-role catalog classifies the new SQS adapter as a Plugin; it adds no generated provider wiring, deployment profile or host behavior.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/create-croco-app/src/data/package-roles.json"]
+        }
+      }
+    },
+    {
+      "package": "problems-core",
+      "classification": "pure-contract",
+      "reason": "Generated Problem registry exposes the four SQS diagnostic codes, recovery metadata and source locations. It adds no host capability, provider, storage or lifecycle.",
+      "files": {
+        "packages/problems-core/src/generated/problem-code-registry.ts": "7fd1fc30fae6d87956f5a1b680bda92bb73464915972b861f79adc92841ac203"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Generated Problem registry exposes the four SQS diagnostic codes, recovery metadata and source locations. It adds no host capability, provider, storage or lifecycle.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/problems-core/src/generated/problem-code-registry.ts"]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Generated Problem registry exposes the four SQS diagnostic codes, recovery metadata and source locations. It adds no host capability, provider, storage or lifecycle.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/problems-core/src/generated/problem-code-registry.ts"]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Generated Problem registry exposes the four SQS diagnostic codes, recovery metadata and source locations. It adds no host capability, provider, storage or lifecycle.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/problems-core/src/generated/problem-code-registry.ts"]
+        }
+      }
+    }
+  ]
+}

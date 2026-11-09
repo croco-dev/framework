@@ -146,6 +146,7 @@
         "@croco/storage-r2",
         "@croco/storage-s3",
         "@croco/tasks-qstash",
+        "@croco/tasks-sqs",
         "@croco/telemetry-sdk-node",
         "@croco/transports-cloudflare-workers",
         "@croco/transports-graphql",
