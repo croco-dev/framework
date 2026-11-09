@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "metrics-core",
+      "classification": "pure-contract",
+      "reason": "Require the complete own-key set to match the planned variants before SRM aggregation, including non-enumerable and symbol keys. Sum validated planned counts and preserve their values in the result regardless of enumerability. Valid allocation statistics and the existing ExperimentInputProblem remain unchanged.",
+      "files": {
+        "packages/metrics-core/src/libs/experiment/ExperimentReview.ts": "858029fa8f02b5a0267e98477d7b3809d635d1f339d34162bb1f37c8c2b503b8"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "SRM count validation and aggregation are pure in-memory statistics. This change requires no host capability, storage, transport or lifecycle behavior.",
+          "providers": [],
+          "constraints": [
+            "No infrastructure deployment, runtime support change or provider certification is claimed."
+          ],
+          "references": [
+            "packages/metrics-core/src/libs/experiment/ExperimentReview.ts",
+            "packages/metrics-core/src/tests/ExperimentReview.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "SRM count validation and aggregation are pure in-memory statistics. This change requires no host capability, storage, transport or lifecycle behavior.",
+          "providers": [],
+          "constraints": [
+            "No infrastructure deployment, runtime support change or provider certification is claimed."
+          ],
+          "references": [
+            "packages/metrics-core/src/libs/experiment/ExperimentReview.ts",
+            "packages/metrics-core/src/tests/ExperimentReview.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "SRM count validation and aggregation are pure in-memory statistics. This change requires no host capability, storage, transport or lifecycle behavior.",
+          "providers": [],
+          "constraints": [
+            "No infrastructure deployment, runtime support change or provider certification is claimed."
+          ],
+          "references": [
+            "packages/metrics-core/src/libs/experiment/ExperimentReview.ts",
+            "packages/metrics-core/src/tests/ExperimentReview.spec.ts"
+          ]
+        }
+      }
+    }
+  ]
+}

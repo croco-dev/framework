@@ -109,6 +109,82 @@ describe("ExperimentReview", () => {
     expect(chiSquarePValue(0, 1)).toBe(1);
   });
 
+  it.each([1000, 0, -1, 0.5, Number.NaN, Number.POSITIVE_INFINITY])(
+    "rejects an unplanned assignment count of %s",
+    (unplanned) => {
+      expect(() =>
+        checkSampleRatioMismatch(makeDataset().plan, { control: 100, treatment: 100, unplanned }),
+      ).toThrow(ExperimentInputProblem);
+    },
+  );
+
+  it("requires an own count for every planned variant", () => {
+    const plan = makeDataset().plan;
+    expect(() => checkSampleRatioMismatch(plan, { control: 100 })).toThrow(ExperimentInputProblem);
+    const inheritedCounts: Record<string, number> = { control: 100 };
+    Object.setPrototypeOf(inheritedCounts, { treatment: 100 });
+    expect(() => checkSampleRatioMismatch(plan, inheritedCounts)).toThrow(ExperimentInputProblem);
+    expect(() => checkSampleRatioMismatch(plan, { control: 100, replacement: 100 })).toThrow(
+      ExperimentInputProblem,
+    );
+  });
+
+  it.each(["unplanned", Symbol("unplanned")])(
+    "rejects an extra non-enumerable own key %s",
+    (key) => {
+      const counts = { control: 100, treatment: 100 };
+      Object.defineProperty(counts, key, { value: 1000 });
+      expect(() => checkSampleRatioMismatch(makeDataset().plan, counts)).toThrow(
+        ExperimentInputProblem,
+      );
+    },
+  );
+
+  it("rejects an unplanned key that replaces a non-enumerable planned key in enumeration", () => {
+    const counts = { control: 100, unplanned: 1000 };
+    Object.defineProperty(counts, "treatment", { value: 100 });
+    expect(() => checkSampleRatioMismatch(makeDataset().plan, counts)).toThrow(
+      ExperimentInputProblem,
+    );
+  });
+
+  it("preserves non-enumerable planned own counts in the SRM result", () => {
+    const counts = { control: 100 };
+    Object.defineProperty(counts, "treatment", { value: 100 });
+    expect(checkSampleRatioMismatch(makeDataset().plan, counts)).toMatchObject({
+      status: "pass_signal",
+      detail: {
+        actualCounts: { control: 100, treatment: 100 },
+        expectedCounts: { control: 100, treatment: 100 },
+        chiSquare: 0,
+        pValue: 1,
+      },
+    });
+  });
+
+  it("preserves balanced allocations for equal and unequal planned shares", () => {
+    const plan = makeDataset().plan;
+    const balanced = checkSampleRatioMismatch(plan, { control: 100, treatment: 100 });
+    expect(balanced).toMatchObject({
+      status: "pass_signal",
+      detail: { expectedCounts: { control: 100, treatment: 100 }, chiSquare: 0, pValue: 1 },
+    });
+    const unequal = checkSampleRatioMismatch(
+      {
+        ...plan,
+        variants: [
+          { id: "control", plannedShare: 0.9 },
+          { id: "treatment", plannedShare: 0.1 },
+        ],
+      },
+      { treatment: 20, control: 180 },
+    );
+    expect(unequal).toMatchObject({
+      status: "pass_signal",
+      detail: { expectedCounts: { control: 180, treatment: 20 }, chiSquare: 0, pValue: 1 },
+    });
+  });
+
   it("rejects binary outcomes outside {0, 1, null}", () => {
     const dataset = makeDataset();
     expect(() =>
