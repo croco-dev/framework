@@ -123,6 +123,12 @@ readonly [`TestEvidenceDiagnostic`](/api/testing/src/type-aliases/testevidencedi
 
 ---
 
+### runId?
+
+> `readonly` `optional` **runId?**: `string`
+
+---
+
 ### write?
 
 > `readonly` `optional` **write?**: (`record`) => `Promise`\<`void`\> \| `void`

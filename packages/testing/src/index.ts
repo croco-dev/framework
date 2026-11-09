@@ -98,6 +98,7 @@ export {
 export {
   createTestEvidenceFileWriter,
   type TestEvidenceFileWriterOptions,
+  type TestEvidenceFileWriter,
 } from "./libs/test-evidence-files";
 export {
   assertContractObservation,

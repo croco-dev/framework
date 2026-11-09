@@ -90,6 +90,7 @@ describe("Turbo task contract", () => {
 
   it("forwards the explicit executable-evidence destination to test reporters", () => {
     expect(turbo.globalPassThroughEnv).toContain("CROCO_TEST_EVIDENCE_DIR");
+    expect(turbo.globalPassThroughEnv).toContain("CROCO_TEST_EVIDENCE_RUN_ID");
   });
 
   it("runs lint without package-topology dependencies and hashes shared lint sources", () => {

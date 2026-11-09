@@ -13,7 +13,7 @@ import {
   type TestEvidenceReplay,
   type TestEvidenceResourceStatus,
 } from "./test-evidence.mjs";
-import { createTestEvidenceFileWriter } from "./test-evidence-files";
+import { createTestEvidenceFileWriter, type TestEvidenceFileWriter } from "./test-evidence-files";
 
 export type TestEvidenceReporterContext =
   | {
@@ -52,6 +52,7 @@ export type TestEvidenceReporterOptions = {
   readonly intent?: (context: TestEvidenceReporterContext) => TestEvidenceIntent;
   readonly observed?: (context: TestEvidenceReporterContext) => TestEvidenceObservation;
   readonly outputDirectory?: string;
+  readonly runId?: string;
   readonly replay?: (context: TestEvidenceReporterContext) => TestEvidenceReplay;
   readonly resources?: (context: TestEvidenceReporterContext) => TestEvidenceResourceStatus;
   readonly write?: (record: TestEvidenceRecord) => Promise<void> | void;
@@ -123,13 +124,43 @@ export type PlaywrightTestResult = {
   readonly status: "failed" | "interrupted" | "passed" | "skipped" | "timedOut";
 };
 
+function restartEvidenceFileWriter(options: TestEvidenceReporterOptions): TestEvidenceFileWriter {
+  if (options.runId !== undefined || process.env["CROCO_TEST_EVIDENCE_RUN_ID"] !== undefined) {
+    throw new TestEvidenceContractError("Start each test run with a new evidence runId.");
+  }
+  return createTestEvidenceFileWriter(options);
+}
+
 export class CrocoVitestEvidenceReporter {
-  private readonly write: (record: TestEvidenceRecord) => Promise<void> | void;
+  private write: (record: TestEvidenceRecord) => Promise<void> | void;
+  private fileWriter: TestEvidenceFileWriter | undefined;
+  private started = false;
+
+  get runId(): string | undefined {
+    return this.fileWriter?.runId;
+  }
+
+  get outputDirectory(): string | undefined {
+    return this.fileWriter?.outputDirectory;
+  }
 
   constructor(
     private readonly options: TestEvidenceReporterOptions = DEFAULT_VITEST_REPORTER_OPTIONS,
   ) {
-    this.write = options.write ?? createTestEvidenceFileWriter(options);
+    if (options.write) {
+      this.write = options.write;
+    } else {
+      this.fileWriter = createTestEvidenceFileWriter(options);
+      this.write = this.fileWriter;
+    }
+  }
+
+  onTestRunStart(): void {
+    if (this.started && this.fileWriter) {
+      this.fileWriter = restartEvidenceFileWriter(this.options);
+      this.write = this.fileWriter;
+    }
+    this.started = true;
   }
 
   async onTestCaseResult(task: VitestTask): Promise<void> {
@@ -407,10 +438,34 @@ export class CrocoPlaywrightEvidenceReporter {
     }
   >();
 
-  private readonly writeRecord: (record: TestEvidenceRecord) => Promise<void> | void;
+  private writeRecord: (record: TestEvidenceRecord) => Promise<void> | void;
+  private fileWriter: TestEvidenceFileWriter | undefined;
+  private started = false;
+
+  get runId(): string | undefined {
+    return this.fileWriter?.runId;
+  }
+
+  get outputDirectory(): string | undefined {
+    return this.fileWriter?.outputDirectory;
+  }
 
   constructor(private readonly options: TestEvidenceReporterOptions) {
-    this.writeRecord = options.write ?? createTestEvidenceFileWriter(options);
+    if (options.write) {
+      this.writeRecord = options.write;
+    } else {
+      this.fileWriter = createTestEvidenceFileWriter(options);
+      this.writeRecord = this.fileWriter;
+    }
+  }
+
+  onBegin(): void {
+    if (this.started && this.fileWriter) {
+      this.fileWriter = restartEvidenceFileWriter(this.options);
+      this.writeRecord = this.fileWriter;
+    }
+    this.tests.clear();
+    this.started = true;
   }
 
   onTestEnd(test: PlaywrightTestCase, result: PlaywrightTestResult): void {

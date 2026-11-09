@@ -7,7 +7,7 @@
     "**/.env.*local",
     "tooling/compareStrings.*"
   ],
-  "globalPassThroughEnv": ["CROCO_TEST_EVIDENCE_DIR"],
+  "globalPassThroughEnv": ["CROCO_TEST_EVIDENCE_DIR", "CROCO_TEST_EVIDENCE_RUN_ID"],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],

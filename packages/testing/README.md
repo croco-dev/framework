@@ -259,9 +259,26 @@ replay metadata. Vitest evidence takes `packageName` from reporter options or th
 it never reuses a package name read from the process working directory for every project. Import the directly
 loadable defaults from `@croco/testing/vitest-reporter` and
 `@croco/testing/playwright-reporter`. A custom `write(record)` callback may select another artifact layout;
-without one, reporters write deterministic JSON fragments to `ci-reports/test-evidence/records` (or the
-configured `outputDirectory`). `pnpm test-evidence:bundle --input <report.json>` consumes already-executed
-unified records or Croco verification reports, writes
+without one, reporters write deterministic JSON fragments under
+`<outputDirectory>/runs/<runId>`. The root defaults to `ci-reports/test-evidence/records`;
+`outputDirectory` overrides `CROCO_TEST_EVIDENCE_DIR`, which overrides that default. Each reporter instance
+gets an automatic UUID, and Vitest watch runs and repeated Playwright runs rotate automatic IDs at their
+native start hooks. Historical fragments are retained and never overwritten or deleted by another run.
+
+Set `runId` (or `CROCO_TEST_EVIDENCE_RUN_ID`) to the same fresh, path-safe identifier for all reporters,
+workspaces and shards contributing to one logical run. The option overrides the environment variable.
+Use a new identifier for each subsequent execution; a reporter refuses a second start with a fixed ID.
+Within one run, identical fragments are idempotent and conflicting records still fail explicitly.
+`createTestEvidenceFileWriter()` follows the same rules and exposes `runId` and the resolved
+`outputDirectory` on its returned function. Reporters expose these properties too; they are undefined
+when a custom `write(record)` callback owns the output lifecycle.
+
+`pnpm test-evidence:bundle --input <root>/runs/<runId>` reads only that run's JSON fragments. The input must
+be the selected run directory: an empty directory or a parent containing other run directories fails
+explicitly. Do not recursively glob the historical root into a current bundle. With automatic IDs, use the
+reporter's `outputDirectory`; shell-driven workspace/shard runs can supply a fresh
+`CROCO_TEST_EVIDENCE_RUN_ID` and use the matching directory. Existing `--input <report.json>` inputs still
+consume already-executed unified records or Croco verification reports. The command writes
 `ci-reports/test-evidence/bundle.json` and `summary.md`, and fails with explicit missing-artifact evidence.
 Verification profiles can pass that exact-head bundle back through `--test-evidence <bundle.json>`; only passed
 `croco-verification` records are reused only when the bundle is passed and complete, the record is passed, its
