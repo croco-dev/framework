@@ -114,6 +114,50 @@
           ]
         }
       }
+    },
+    {
+      "package": "problems-core",
+      "classification": "pure-contract",
+      "reason": "Generated Problem evidence retains the same codes and recovery semantics while source references follow the RPC generator line positions.",
+      "files": {
+        "packages/problems-core/src/generated/problem-code-registry.ts": "be1933cbef5640ade8d16797eb1c657bf272e65fbf18e62bc37890009566ced7"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Only generated source-location metadata changes. No host capability, provider, storage, lifecycle or runtime support claim changes.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "docs/problem-code-registry.json",
+            "packages/rpc-codegen/src/libs/generate.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Only generated source-location metadata changes. No host capability, provider, storage, lifecycle or runtime support claim changes.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "docs/problem-code-registry.json",
+            "packages/rpc-codegen/src/libs/generate.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Only generated source-location metadata changes. No host capability, provider, storage, lifecycle or runtime support claim changes.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "docs/problem-code-registry.json",
+            "packages/rpc-codegen/src/libs/generate.ts"
+          ]
+        }
+      }
     }
   ]
 }
