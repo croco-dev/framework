@@ -346,6 +346,21 @@ request rules, `2xx`-only response caching, and `getOrSet()` singleflight behavi
 - `evaluateIsrRuntimeSupport()` returns deterministic diagnostics before a deployment claims durable ISR;
 - pattern invalidation is available only through durable adapters that explicitly expose it, such as the Redis adapter.
 
+The Redis adapter stores response bytes as base64 in a versioned JSON entry and preserves `null` bodies
+separately from empty bodies, including `204`, `205`, and `304` responses. Status, status text, and headers
+are restored with the body. Invalid JSON, malformed entries, and unknown format versions are cache misses;
+Redis command failures still reject the operation.
+
+Keys use `<prefix>response-v1:<key>` (default prefix `isr:`). Unversioned text entries are ignored because
+their original bytes cannot be recovered reliably. Old and new deployments read and write separate keys;
+single-key deletion and new-adapter pattern invalidation use the versioned namespace. A legacy broad pattern
+such as `invalidatePattern("*")` also matches and evicts versioned keys beneath the same prefix. A rollout
+starts with a cold cache, and legacy invalidation can cause additional cache misses.
+Old entries expire under their existing TTL; entries written without a TTL remain until explicitly removed.
+Rolling back uses the old namespace again and can reuse its remaining entries, so coordinate invalidation
+across deployments or use a fresh caller-supplied prefix when old entries must not reappear. No data migration
+or automatic legacy cleanup runs.
+
 ### Durable ISR Readiness
 
 Use runtime support profiles before enabling production durable ISR:
