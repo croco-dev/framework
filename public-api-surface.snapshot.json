@@ -44569,6 +44569,11 @@
               "source": "./libs/test-evidence.mjs"
             },
             {
+              "name": "TestEvidenceFileWriter",
+              "exportKind": "named",
+              "source": "./libs/test-evidence-files"
+            },
+            {
               "name": "TestEvidenceFileWriterOptions",
               "exportKind": "named",
               "source": "./libs/test-evidence-files"

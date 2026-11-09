@@ -980,6 +980,7 @@ for (const [title, label] of ${JSON.stringify([
         const reporter = new CrocoVitestEvidenceReporter({
           fidelity: isolatedFidelity,
           outputDirectory,
+          runId: "workspace-run",
         });
         await reporter.onTestCaseResult({
           id: "shared-task-id",
@@ -992,9 +993,10 @@ for (const [title, label] of ${JSON.stringify([
         });
       }
 
-      const records = readdirSync(outputDirectory).map(
+      const runDirectory = resolve(outputDirectory, "runs", "workspace-run");
+      const records = readdirSync(runDirectory).map(
         (file) =>
-          JSON.parse(readFileSync(resolve(outputDirectory, file), "utf8")) as TestEvidenceRecord,
+          JSON.parse(readFileSync(resolve(runDirectory, file), "utf8")) as TestEvidenceRecord,
       );
       const bundle = createTestEvidenceBundle(records);
       expect(bundle.records.map(({ id }) => id)).toEqual([
@@ -1119,16 +1121,223 @@ for (const [title, label] of ${JSON.stringify([
         diagnostic: () => ({ duration: 1, flaky: false, retryCount: 0 }),
         result: () => ({ state: "passed" }),
       });
-      const files = readdirSync(outputDirectory);
+      const runDirectory = reporter.outputDirectory ?? "missing";
+      expect(runDirectory).toBe(resolve(outputDirectory, "runs", reporter.runId ?? "missing"));
+      const files = readdirSync(runDirectory);
       expect(files).toEqual([
         expect.stringMatching(/^vitest-vitest-file-writer-[a-f0-9]{12}\.json$/),
       ]);
       expect(
-        JSON.parse(readFileSync(resolve(outputDirectory, files[0] ?? "missing"), "utf8")),
+        JSON.parse(readFileSync(resolve(runDirectory, files[0] ?? "missing"), "utf8")),
       ).toMatchObject({ id: "vitest/file-writer", runner: "vitest" });
     } finally {
       rmSync(outputDirectory, { force: true, recursive: true });
     }
+  });
+
+  it("records two native Vitest invocations with the default reporter without stale evidence", () => {
+    const workspace = mkdtempSync(resolve(tmpdir(), "croco-native-evidence-runs-"));
+    try {
+      const vitestDirectory = dirname(
+        createRequire(import.meta.url).resolve("vitest/package.json"),
+      );
+      mkdirSync(resolve(workspace, "node_modules"));
+      symlinkSync(vitestDirectory, resolve(workspace, "node_modules/vitest"), "dir");
+      writeFileSync(
+        resolve(workspace, "Run.spec.mjs"),
+        "import {test, expect} from 'vitest'; test('same test', () => expect(process.env.CROCO_FIXTURE_PASS).toBe('yes'));",
+      );
+      writeFileSync(
+        resolve(workspace, "vitest.config.mjs"),
+        `export default {test:{include:['Run.spec.mjs'],maxWorkers:1,reporters:['default',[${JSON.stringify(resolve(import.meta.dirname, "../vitest-reporter.ts"))},{fidelity:${JSON.stringify(isolatedFidelity)}}]]}};`,
+      );
+      const outputDirectory = resolve(workspace, "ci-reports/test-evidence/records");
+      for (const [value, expectedExit] of [
+        ["no", 1],
+        ["yes", 0],
+      ] as const) {
+        const result = spawnSync(
+          process.execPath,
+          [resolve(vitestDirectory, "vitest.mjs"), "run"],
+          {
+            cwd: workspace,
+            encoding: "utf8",
+            timeout: 10000,
+            env: {
+              ...process.env,
+              CROCO_TEST_EVIDENCE_DIR: undefined,
+              CROCO_TEST_EVIDENCE_RUN_ID: undefined,
+              CROCO_FIXTURE_PASS: value,
+            },
+          },
+        );
+        expect(result.status, result.stdout + result.stderr).toBe(expectedExit);
+      }
+      const bundles = readdirSync(resolve(outputDirectory, "runs")).map((runId) => {
+        const directory = resolve(outputDirectory, "runs", runId);
+        const records = readdirSync(directory).map(
+          (file) =>
+            JSON.parse(readFileSync(resolve(directory, file), "utf8")) as TestEvidenceRecord,
+        );
+        return createTestEvidenceBundle(records);
+      });
+      expect(bundles.map(({ status }) => status).sort()).toEqual(["failed", "passed"]);
+      expect(bundles.every(({ records }) => records.length === 1)).toBe(true);
+    } finally {
+      rmSync(workspace, { force: true, recursive: true });
+    }
+  }, 15000);
+
+  it("isolates consecutive reporter instances when timing and outcomes change", async () => {
+    const outputDirectory = mkdtempSync(resolve(tmpdir(), "croco-evidence-rerun-"));
+    try {
+      vi.stubEnv("CROCO_TEST_EVIDENCE_RUN_ID", undefined);
+      for (const [duration, state] of [
+        [5, "failed"],
+        [6, "passed"],
+      ] as const) {
+        const reporter = new CrocoVitestEvidenceReporter({
+          fidelity: isolatedFidelity,
+          outputDirectory,
+        });
+        await reporter.onTestCaseResult({
+          id: "same-test",
+          name: "reruns",
+          fullName: "reruns",
+          diagnostic: () => ({ duration, flaky: false, retryCount: 0 }),
+          result: () => ({ state }),
+        });
+      }
+      const files = readdirSync(outputDirectory, { recursive: true }).filter((file) =>
+        String(file).endsWith(".json"),
+      );
+      expect(files).toHaveLength(2);
+    } finally {
+      vi.unstubAllEnvs();
+      rmSync(outputDirectory, { force: true, recursive: true });
+    }
+  });
+
+  it("rotates automatic evidence namespaces across Vitest watch runs", async () => {
+    const outputDirectory = mkdtempSync(resolve(tmpdir(), "croco-evidence-watch-"));
+    try {
+      vi.stubEnv("CROCO_TEST_EVIDENCE_RUN_ID", undefined);
+      const reporter = new CrocoVitestEvidenceReporter({
+        fidelity: isolatedFidelity,
+        outputDirectory,
+      });
+      const task = (duration: number) => ({
+        id: "watch-test",
+        name: "watches",
+        fullName: "watches",
+        diagnostic: () => ({ duration, flaky: false, retryCount: 0 }),
+        result: () => ({ state: "passed" as const }),
+      });
+      reporter.onTestRunStart();
+      await reporter.onTestCaseResult(task(3));
+      const firstDirectory = reporter.outputDirectory;
+      reporter.onTestRunStart();
+      await reporter.onTestCaseResult(task(7));
+      expect(reporter.outputDirectory).not.toBe(firstDirectory);
+      expect(readdirSync(firstDirectory ?? "missing")).toHaveLength(1);
+      expect(readdirSync(reporter.outputDirectory ?? "missing")).toHaveLength(1);
+    } finally {
+      vi.unstubAllEnvs();
+      rmSync(outputDirectory, { force: true, recursive: true });
+    }
+  });
+
+  it("keeps shared-run fragments append-only across writers and shards", () => {
+    const outputDirectory = mkdtempSync(resolve(tmpdir(), "croco-evidence-shards-"));
+    try {
+      const first = createTestEvidenceFileWriter({ outputDirectory, runId: "shared-run" });
+      const second = createTestEvidenceFileWriter({ outputDirectory, runId: "shared-run" });
+      first(record({ id: "shard-a" }));
+      second(record({ id: "shard-b" }));
+      second(record({ id: "shard-a" }));
+      expect(readdirSync(first.outputDirectory)).toHaveLength(2);
+      expect(() =>
+        second(record({ id: "shard-a", attempts: [{ attempt: 1, outcome: "failed" }] })),
+      ).toThrow("Evidence fragment collision");
+      expect(readdirSync(first.outputDirectory)).toHaveLength(2);
+    } finally {
+      rmSync(outputDirectory, { force: true, recursive: true });
+    }
+  });
+
+  it("selects default and environment roots without reusing another run", () => {
+    const outputDirectory = mkdtempSync(resolve(tmpdir(), "croco-evidence-env-"));
+    try {
+      vi.stubEnv("CROCO_TEST_EVIDENCE_DIR", outputDirectory);
+      vi.stubEnv("CROCO_TEST_EVIDENCE_RUN_ID", "environment-run");
+      expect(createTestEvidenceFileWriter().outputDirectory).toBe(
+        resolve(outputDirectory, "runs", "environment-run"),
+      );
+      const explicit = createTestEvidenceFileWriter({
+        outputDirectory: resolve(outputDirectory, "explicit"),
+        runId: "explicit-run",
+      });
+      expect(explicit.outputDirectory).toBe(
+        resolve(outputDirectory, "explicit", "runs", "explicit-run"),
+      );
+      vi.stubEnv("CROCO_TEST_EVIDENCE_RUN_ID", undefined);
+      const first = createTestEvidenceFileWriter();
+      const second = createTestEvidenceFileWriter();
+      expect(first.outputDirectory).not.toBe(second.outputDirectory);
+      vi.stubEnv("CROCO_TEST_EVIDENCE_DIR", undefined);
+      expect(createTestEvidenceFileWriter({ runId: "default-run" }).outputDirectory).toBe(
+        resolve("ci-reports/test-evidence/records/runs/default-run"),
+      );
+    } finally {
+      vi.unstubAllEnvs();
+      rmSync(outputDirectory, { force: true, recursive: true });
+    }
+  });
+
+  it.each(["", "../previous", "/absolute", ".", "..", "nested/run", "back\\slash"])(
+    "rejects unsafe evidence run IDs: %j",
+    (runId) => {
+      expect(() => createTestEvidenceFileWriter({ runId })).toThrow(TestEvidenceContractError);
+    },
+  );
+
+  it("starts independent Playwright runs without retaining previous attempts", async () => {
+    const outputDirectory = mkdtempSync(resolve(tmpdir(), "croco-evidence-pw-rerun-"));
+    try {
+      vi.stubEnv("CROCO_TEST_EVIDENCE_RUN_ID", undefined);
+      const reporter = new CrocoPlaywrightEvidenceReporter({
+        fidelity: isolatedFidelity,
+        outputDirectory,
+      });
+      reporter.onBegin();
+      reporter.onTestEnd({ id: "deleted", title: "removed" }, { duration: 4, status: "failed" });
+      await reporter.onEnd();
+      const previous = reporter.outputDirectory;
+      reporter.onBegin();
+      reporter.onTestEnd({ id: "current", title: "new" }, { duration: 6, status: "passed" });
+      await reporter.onEnd();
+      const current = reporter.outputDirectory ?? "missing";
+      expect(current).not.toBe(previous);
+      const records = readdirSync(current).map(
+        (file) => JSON.parse(readFileSync(resolve(current, file), "utf8")) as TestEvidenceRecord,
+      );
+      expect(createTestEvidenceBundle(records)).toMatchObject({
+        status: "passed",
+        records: [{ id: "current", outcome: "passed" }],
+      });
+    } finally {
+      vi.unstubAllEnvs();
+      rmSync(outputDirectory, { force: true, recursive: true });
+    }
+  });
+
+  it("requires a new explicit identity when a reporter starts another run", () => {
+    const reporter = new CrocoVitestEvidenceReporter({
+      fidelity: isolatedFidelity,
+      runId: "one-run",
+    });
+    reporter.onTestRunStart();
+    expect(() => reporter.onTestRunStart()).toThrow("new evidence runId");
   });
 
   it("does not overwrite a colliding evidence fragment", () => {

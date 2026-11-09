@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 
@@ -7,17 +7,29 @@ import type { TestEvidenceRecord } from "./test-evidence.mjs";
 
 export type TestEvidenceFileWriterOptions = {
   readonly outputDirectory?: string;
+  readonly runId?: string;
+};
+
+export type TestEvidenceFileWriter = ((record: TestEvidenceRecord) => void) & {
+  readonly runId: string;
+  readonly outputDirectory: string;
 };
 
 export function createTestEvidenceFileWriter(
   options: TestEvidenceFileWriterOptions = {},
-): (record: TestEvidenceRecord) => void {
+): TestEvidenceFileWriter {
+  const runId = options.runId ?? process.env["CROCO_TEST_EVIDENCE_RUN_ID"] ?? randomUUID();
+  if (!/^[a-zA-Z0-9][a-zA-Z0-9._-]*$/.test(runId)) {
+    throw new TestEvidenceContractError("Evidence runId must be a non-empty path-safe identifier.");
+  }
   const outputDirectory = resolve(
     options.outputDirectory ??
       process.env["CROCO_TEST_EVIDENCE_DIR"] ??
       "ci-reports/test-evidence/records",
+    "runs",
+    runId,
   );
-  return (record) => {
+  const write = (record: TestEvidenceRecord): void => {
     mkdirSync(outputDirectory, { recursive: true });
     const identity = `${record.runner}\u0000${record.id}\u0000${record.replay.command}`;
     const slug =
@@ -38,6 +50,7 @@ export function createTestEvidenceFileWriter(
       }
     }
   };
+  return Object.assign(write, { runId, outputDirectory });
 }
 
 function isAlreadyExistsError(error: unknown): error is NodeJS.ErrnoException {

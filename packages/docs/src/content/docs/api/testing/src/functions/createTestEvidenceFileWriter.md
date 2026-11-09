@@ -5,7 +5,7 @@ prev: false
 title: "createTestEvidenceFileWriter"
 ---
 
-> **createTestEvidenceFileWriter**(`options?`): (`record`) => `void`
+> **createTestEvidenceFileWriter**(`options?`): [`TestEvidenceFileWriter`](/api/testing/src/type-aliases/testevidencefilewriter/)
 
 ## Parameters
 
@@ -15,4 +15,4 @@ title: "createTestEvidenceFileWriter"
 
 ## Returns
 
-(`record`) => `void`
+[`TestEvidenceFileWriter`](/api/testing/src/type-aliases/testevidencefilewriter/)

@@ -10,6 +10,7 @@ import {
   parseArguments,
   writeTestEvidenceBundle,
 } from "../test-evidence-bundle.mts";
+import { createTestEvidenceFileWriter } from "../../packages/testing/src/libs/test-evidence-files";
 import { runReleaseSpineEvidence } from "../release-spine-evidence.mts";
 import { getVerificationCommand } from "../verification-manifest.mts";
 import { VerificationProblem } from "../verification-problem.mts";
@@ -514,5 +515,62 @@ describe("test evidence CI bundle", () => {
     expect(bundle.records[0]?.diagnostics[0]?.recoveryAction).toContain("Cause:");
     expect(existsSync(join(rootDirectory, "ci-reports/test-evidence/bundle.json"))).toBe(true);
     expect(existsSync(join(rootDirectory, "ci-reports/test-evidence/summary.md"))).toBe(true);
+  });
+});
+
+describe("run-owned reporter fragments", () => {
+  it("bundles only the selected run, leaving historical failures, skips and removed tests behind", () => {
+    const rootDirectory = temporaryDirectory();
+    const outputDirectory = join(rootDirectory, "records");
+    const evidence = (id: string, outcome: "passed" | "failed" | "skipped") =>
+      createTestEvidenceRecord({
+        id,
+        runner: "vitest",
+        fidelity: {
+          boot: "isolated",
+          dependency: "fake",
+          isolation: "fake",
+          runtime: "node",
+          validation: "isolated",
+        },
+        intent: { contractIds: [], description: id },
+        observed: { contractIds: [] },
+        replay: { command: "pnpm test" },
+        resources: { leaks: [], status: "not-checked" },
+        attempts: [{ attempt: 1, outcome }],
+      });
+    const old = createTestEvidenceFileWriter({ outputDirectory, runId: "old-run" });
+    old(evidence("same", "failed"));
+    old(evidence("removed", "skipped"));
+    const current = createTestEvidenceFileWriter({ outputDirectory, runId: "current-run" });
+    const shard = createTestEvidenceFileWriter({ outputDirectory, runId: "current-run" });
+    current(evidence("same", "passed"));
+    shard(evidence("second-shard", "passed"));
+    const bundle = writeTestEvidenceBundle({
+      inputPaths: [current.outputDirectory],
+      outputDirectory: "bundle",
+      rootDirectory,
+    });
+    expect(bundle.status).toBe("passed");
+    expect(bundle.records.map(({ id }) => id)).toEqual(["same", "second-shard"]);
+    const ambiguous = writeTestEvidenceBundle({
+      inputPaths: [outputDirectory],
+      outputDirectory: "ambiguous",
+      rootDirectory,
+    });
+    expect(ambiguous.status).toBe("failed");
+    expect(ambiguous.records[0]?.diagnostics[0]?.recoveryAction).toContain(
+      "Select a single run directory",
+    );
+  });
+
+  it("does not treat an empty or malformed run as complete evidence", () => {
+    const rootDirectory = temporaryDirectory();
+    const empty = join(rootDirectory, "empty");
+    mkdirSync(empty);
+    const options = { inputPaths: [empty], outputDirectory: "bundle", rootDirectory };
+    expect(writeTestEvidenceBundle(options).status).toBe("failed");
+    writeFileSync(join(empty, "fragment.json"), "{invalid");
+    expect(writeTestEvidenceBundle(options).status).toBe("failed");
   });
 });

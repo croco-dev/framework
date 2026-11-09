@@ -21,7 +21,41 @@ title: "CrocoPlaywrightEvidenceReporter"
 
 `CrocoPlaywrightEvidenceReporter`
 
+## Accessors
+
+### outputDirectory
+
+#### Get Signature
+
+> **get** **outputDirectory**(): `string` \| `undefined`
+
+##### Returns
+
+`string` \| `undefined`
+
+---
+
+### runId
+
+#### Get Signature
+
+> **get** **runId**(): `string` \| `undefined`
+
+##### Returns
+
+`string` \| `undefined`
+
 ## Methods
+
+### onBegin()
+
+> **onBegin**(): `void`
+
+#### Returns
+
+`void`
+
+---
 
 ### onEnd()
 

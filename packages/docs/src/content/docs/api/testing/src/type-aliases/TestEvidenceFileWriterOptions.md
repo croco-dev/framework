@@ -12,3 +12,9 @@ title: "TestEvidenceFileWriterOptions"
 ### outputDirectory?
 
 > `readonly` `optional` **outputDirectory?**: `string`
+
+---
+
+### runId?
+
+> `readonly` `optional` **runId?**: `string`

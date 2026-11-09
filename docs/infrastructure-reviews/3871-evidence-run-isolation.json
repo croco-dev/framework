@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "testing",
+      "classification": "pure-contract",
+      "reason": "Node test-run evidence is separated by explicit run namespaces; reporters rotate automatic run identities and preserve append-only collision detection within a shared run. This changes test artifact collection, not application runtime support.",
+      "files": {
+        "packages/testing/src/index.ts": "82b2382f1b3d5890ca60c08736f235965d8d8fff5737eb44eadbea4085998905",
+        "packages/testing/src/libs/test-evidence-files.ts": "838a912409d4dab834f8911f14091248fbd168569f514015df1e2187de8a9076",
+        "packages/testing/src/libs/test-evidence-reporters.ts": "e999fc69c973b99a93e92761d67db7e02f315420a1059342fb4f0918fd22e854"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Evidence is produced by the Node test runner on its local filesystem, outside the application Host. Run identity and fragment collection do not depend on the deployment target and add no Provider, Host or runtime capability.",
+          "providers": [],
+          "constraints": [
+            "The reporter requires a Node test-runner process and a writable local artifact directory. This is not a Workers-isolate adapter or live infrastructure certification."
+          ],
+          "references": [
+            "packages/testing/src/libs/test-evidence-files.ts",
+            "packages/testing/src/libs/test-evidence-reporters.ts",
+            "packages/testing/src/tests/TestEvidence.spec.ts",
+            "scripts/test-evidence-bundle.mts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Evidence is produced by the Node test runner on its local filesystem, outside the application Host. Run identity and fragment collection do not depend on the deployment target and add no Provider, Host or runtime capability.",
+          "providers": [],
+          "constraints": [
+            "The reporter requires a Node test-runner process and a writable local artifact directory. This is not a Workers-isolate adapter or live infrastructure certification."
+          ],
+          "references": [
+            "packages/testing/src/libs/test-evidence-files.ts",
+            "packages/testing/src/libs/test-evidence-reporters.ts",
+            "packages/testing/src/tests/TestEvidence.spec.ts",
+            "scripts/test-evidence-bundle.mts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Evidence is produced by the Node test runner on its local filesystem, outside the application Host. Run identity and fragment collection do not depend on the deployment target and add no Provider, Host or runtime capability.",
+          "providers": [],
+          "constraints": [
+            "The reporter requires a Node test-runner process and a writable local artifact directory. This is not a Workers-isolate adapter or live infrastructure certification."
+          ],
+          "references": [
+            "packages/testing/src/libs/test-evidence-files.ts",
+            "packages/testing/src/libs/test-evidence-reporters.ts",
+            "packages/testing/src/tests/TestEvidence.spec.ts",
+            "scripts/test-evidence-bundle.mts"
+          ]
+        }
+      }
+    }
+  ]
+}

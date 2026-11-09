@@ -1,6 +1,8 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import { dirname, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+
+import { compareStrings } from "../tooling/compareStrings.mjs";
 
 import {
   assertTestEvidenceBundle,
@@ -294,6 +296,33 @@ export function writeTestEvidenceBundle(options: {
     }
     const relativePath = relative(options.rootDirectory, absolutePath).replace(/\\/g, "/");
     try {
+      if (statSync(absolutePath).isDirectory()) {
+        const entries = readdirSync(absolutePath, { withFileTypes: true });
+        if (entries.some((entry) => entry.isDirectory())) {
+          throw new VerificationProblem(
+            "AMBIGUOUS_TEST_EVIDENCE_RUN",
+            "input",
+            "Select a single run directory, not an evidence root containing other runs.",
+          );
+        }
+        const files = entries.filter((entry) => entry.isFile() && entry.name.endsWith(".json"));
+        if (files.length === 0) {
+          throw new VerificationProblem(
+            "EMPTY_TEST_EVIDENCE_RUN",
+            "input",
+            "The selected run has no evidence fragments.",
+          );
+        }
+        return files
+          .sort((left, right) => compareStrings(left.name, right.name))
+          .flatMap((entry) => {
+            const filePath = resolve(absolutePath, entry.name);
+            return normalizeTestEvidenceInput(
+              JSON.parse(readFileSync(filePath, "utf8")),
+              relative(options.rootDirectory, filePath),
+            );
+          });
+      }
       return normalizeTestEvidenceInput(
         JSON.parse(readFileSync(absolutePath, "utf8")),
         relativePath,
