@@ -9,11 +9,22 @@ import { TelemetryRuntime } from "../runtime";
 type NamedInstrumentation = Instrumentation & { instrumentationName: string };
 
 function instrumentation(name: string): NamedInstrumentation {
-  return { instrumentationName: name, disable: vi.fn() } as unknown as NamedInstrumentation;
+  return {
+    instrumentationName: name,
+    instrumentationVersion: "1.0.0",
+    enable: vi.fn(),
+    disable: vi.fn(),
+    setTracerProvider: vi.fn(() => runtimeMocks.boundInstrumentations.push(name)),
+    setMeterProvider: vi.fn(),
+    setLoggerProvider: vi.fn(),
+    getConfig: () => ({ enabled: true }),
+    setConfig: vi.fn(),
+  } as NamedInstrumentation;
 }
 
 const runtimeMocks = vi.hoisted(() => ({
   nodeSdkConstructor: vi.fn(),
+  boundInstrumentations: [] as string[],
   getNodeAutoInstrumentations: vi.fn((configs: Record<string, { enabled?: boolean }>) =>
     Object.entries(configs)
       .filter(([, config]) => config.enabled !== false)
@@ -53,6 +64,7 @@ vi.mock("@opentelemetry/sdk-trace-base", () => ({
 function installRuntimeMocks() {
   runtimeMocks.getNodeAutoInstrumentations.mockClear();
   runtimeMocks.nodeSdkConstructor.mockClear();
+  runtimeMocks.boundInstrumentations.length = 0;
   return runtimeMocks;
 }
 
@@ -69,7 +81,7 @@ describe("TelemetryRuntime auto-instrumentation", () => {
     vi.unstubAllEnvs();
   });
 
-  it("passes Node defaults to NodeSDK in deterministic module order", async () => {
+  it("binds Node defaults in deterministic module order before starting NodeSDK", async () => {
     const mocks = installRuntimeMocks();
 
     await runtime.init({
@@ -87,12 +99,9 @@ describe("TelemetryRuntime auto-instrumentation", () => {
       "@opentelemetry/instrumentation-dns",
       "@opentelemetry/instrumentation-net",
     ]);
+    expect(mocks.boundInstrumentations).toEqual(runtime.getEnabledAutoInstrumentationModules());
     expect(mocks.nodeSdkConstructor).toHaveBeenCalledWith(
-      expect.objectContaining({
-        instrumentations: runtime
-          .getEnabledAutoInstrumentationModules()
-          .map((name) => expect.objectContaining({ instrumentationName: name })),
-      }),
+      expect.objectContaining({ instrumentations: [] }),
     );
   });
 
@@ -268,16 +277,16 @@ describe("TelemetryRuntime auto-instrumentation", () => {
         "@opentelemetry/instrumentation-express": { enabled: true },
       }),
     );
+    expect(mocks.boundInstrumentations).toEqual([
+      "@opentelemetry/instrumentation-http",
+      "orders-custom",
+      "@opentelemetry/instrumentation-express",
+    ]);
+    expect(customHttp.setTracerProvider).toHaveBeenCalledTimes(1);
+    expect(custom.setTracerProvider).toHaveBeenCalledTimes(1);
+    expect(duplicateHttp.setTracerProvider).not.toHaveBeenCalled();
     expect(mocks.nodeSdkConstructor).toHaveBeenCalledWith(
-      expect.objectContaining({
-        instrumentations: [
-          customHttp,
-          custom,
-          expect.objectContaining({
-            instrumentationName: "@opentelemetry/instrumentation-express",
-          }),
-        ],
-      }),
+      expect.objectContaining({ instrumentations: [] }),
     );
   });
 

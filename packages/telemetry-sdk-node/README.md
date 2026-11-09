@@ -208,7 +208,8 @@ Trace export를 켠 상태에서 OTLP endpoint가 없으면 초기화가 fail-cl
 
 Exporter나 SDK 시작 실패는 `TelemetryRuntimeProblem`으로 정규화됩니다. 실패한 시도가 생성한 SDK,
 processor/exporter, instrumentation과 SDK가 설치한 context manager·propagator를 역순으로 정리하며,
-SDK가 이미 종료한 processor/exporter를 다시 종료하지 않습니다. 기존 외부 전역 등록은 유지합니다.
+SDK가 이미 종료한 processor/exporter를 다시 종료하지 않습니다. 기존의 독립된 외부 전역 등록은 유지합니다. 계측 콜백의 provider 바인딩은 SDK 시작 관찰 전에 실행하여,
+그 콜백이 시작한 외부 SDK를 현재 시도의 자원으로 취급하지 않습니다.
 이 런타임은 traces만 소유하므로 SDK의 환경 변수로 logs/metrics exporter를 암묵적으로 생성하지 않습니다.
 
 정리가 끝난 뒤 원인을 수정하고 `init()`을 다시 호출할 수 있습니다. 같은 custom instrumentation 인스턴스를 재사용하면
@@ -217,7 +218,7 @@ SDK가 이미 종료한 processor/exporter를 다시 종료하지 않습니다. 
 Rollback은 30초로 제한됩니다. 정리 실패나 시간 초과 시 초기화 Problem의 `cause`는 `AggregateError`이며,
 `cause.cause`에 원래 startup 오류, `cause.errors`에 startup 오류와 확인된 정리 오류를 보존합니다.
 이 경우 자원 참조와 실패를 유지하고 재초기화를 거부합니다. `shutdown()`, `forceFlush()`, `reset()`도 보존한 종료 실패로
-거절하므로 원인을 해결한 뒤 프로세스를 다시 시작해야 합니다. 시간 초과 이후에도 이미 시작한 정리는 계속될 수 있습니다.
+거절하므로 원인을 해결한 뒤 프로세스를 다시 시작해야 합니다. 시간 초과 이후에도 이미 시작한 정리는 계속될 수 있으며, 뒤늦게 확인된 정리 오류도 보존한 `cause.errors`에 반영됩니다.
 
 Lambda에서는 handler 작업이 끝난 뒤 `forceFlush()` 결과를 확인하세요. Trace export 실패를 요청 성공처럼 숨기면 안
 되는 경로에서는 `failed` 결과의 `error`를 throw 하고, `unsupported`는 초기화 누락으로 처리합니다. Telemetry를

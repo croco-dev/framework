@@ -148,11 +148,13 @@ class TelemetryRuntime {
         { NodeSDK },
         traceBaseModule,
         { OTLPTraceExporter },
+        { registerInstrumentations },
       ] = await Promise.all([
         import("@opentelemetry/resources"),
         import("@opentelemetry/sdk-node"),
         import("@opentelemetry/sdk-trace-base"),
         import("@opentelemetry/exporter-trace-otlp-http"),
+        import("@opentelemetry/instrumentation"),
       ]);
 
       const BatchSpanProcessor = traceBaseModule.BatchSpanProcessor;
@@ -173,9 +175,11 @@ class TelemetryRuntime {
           instrumentation.disable();
           this.rolledBackInstrumentations.add(instrumentation);
         });
+        // Bind callbacks before observing SDK-owned globals. A callback may start an independent SDK.
+        registerInstrumentations({ instrumentations: this.activeInstrumentations });
         for (const instrumentation of this.activeInstrumentations) {
           if (this.rolledBackInstrumentations.has(instrumentation)) {
-            instrumentation.enable();
+            if (instrumentation.getConfig().enabled) instrumentation.enable();
             this.rolledBackInstrumentations.delete(instrumentation);
           }
         }
@@ -219,7 +223,7 @@ class TelemetryRuntime {
           resource,
           ...(this.processor !== null && { spanProcessor: this.processor }),
           ...(sampler !== undefined && { sampler }),
-          instrumentations: resolvedInstrumentation.instrumentations,
+          instrumentations: [],
           // This runtime owns traces only, including when SDK construction fails.
           logRecordProcessors: [],
           metricReaders: [],
@@ -263,11 +267,14 @@ class TelemetryRuntime {
         this.initialized = false;
         const cleanupFailures = await this.rollbackInitialization();
         if (cleanupFailures.length > 0) {
+          cleanupFailures.unshift(error);
           const cause = new AggregateError(
-            [error, ...cleanupFailures],
+            cleanupFailures,
             "Telemetry startup and rollback failed",
             { cause: error },
           );
+          // Timed-out teardown may still reject later; both retained Problems expose those failures.
+          cause.errors = cleanupFailures;
           this.shutdownFailure = this.createRuntimeProblem("shutdown", cause);
           throw this.createRuntimeProblem("init", cause);
         }
@@ -305,6 +312,7 @@ class TelemetryRuntime {
     }
   }
 
+  /** Unwinds one attempt in dependency order; its failure list remains live after a timeout. */
   private async rollbackInitialization(): Promise<unknown[]> {
     const failures: unknown[] = [];
     let timeoutId: ReturnType<typeof setTimeout> | undefined;
@@ -658,6 +666,7 @@ class TelemetryRuntime {
 }
 
 // The SDK may take ownership only partway through start(). Every owner joins the same teardown.
+/** Shares a dependency teardown result between SDK ownership and fallback cleanup. */
 function retainShutdownResult(resource: { shutdown(): Promise<void> }): () => Promise<void> {
   const shutdown = resource.shutdown.bind(resource);
   let result: Promise<void> | undefined;

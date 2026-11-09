@@ -2,8 +2,10 @@ import { context, propagation } from "@opentelemetry/api";
 
 type Cleanup = () => void | Promise<void>;
 
-// NodeSDK.start() selects and synchronously registers its own context manager and environment propagator.
-// Observe the public setters only during that call, without copying SDK defaults or reading private API globals.
+/**
+ * Releases synchronous SDK registrations after failed startup without copying SDK defaults.
+ * Instrumentation callbacks run before this boundary so their independent registrations are not owned here.
+ */
 export function startSdkWithGlobalRollback(start: () => void, rollback: Cleanup[]): void {
   const restoreSetters: Array<() => void> = [];
   const restoreProbes: Array<() => void> = [];
@@ -37,6 +39,8 @@ export function startSdkWithGlobalRollback(start: () => void, rollback: Cleanup[
           }
         };
         rollback.push(cleanup);
+        // A diagnostic logger can throw after the API has installed the registration.
+        registered = true;
         registered = setContextManager.call(context, manager);
         // SDK defaults are enabled before registration, including when an external owner rejects them.
         if (!registered) cleanup();
@@ -64,6 +68,7 @@ export function startSdkWithGlobalRollback(start: () => void, rollback: Cleanup[
             restore();
           }
         });
+        registered = true;
         registered = setPropagator.call(propagation, propagator);
         if (!registered) restore();
         return registered;
@@ -77,6 +82,7 @@ export function startSdkWithGlobalRollback(start: () => void, rollback: Cleanup[
   }
 }
 
+/** Restores the exact own-property descriptor, including the absence of an override. */
 function replaceMethod<T extends object, K extends keyof T>(
   target: T,
   key: K,

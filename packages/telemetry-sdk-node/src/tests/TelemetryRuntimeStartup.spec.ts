@@ -3,6 +3,8 @@ import type { AddressInfo } from "node:net";
 import {
   context,
   createContextKey,
+  diag,
+  DiagLogLevel,
   metrics,
   propagation,
   ROOT_CONTEXT,
@@ -87,7 +89,9 @@ describe("TelemetryRuntime startup rollback", () => {
     vi.doUnmock("@opentelemetry/sdk-node");
     vi.doUnmock("@opentelemetry/exporter-trace-otlp-http");
     vi.unstubAllEnvs();
+    diag.disable();
     trace.disable();
+    metrics.disable();
     logs.disable();
     context.disable();
     propagation.disable();
@@ -534,4 +538,125 @@ describe("TelemetryRuntime startup rollback", () => {
       expect(propagation.fields()).toEqual(["external-field"]);
     },
   );
+
+  it.each(["context", "propagation"] as const)(
+    "releases a %s registration when its diagnostic logger throws after installation",
+    async (signal) => {
+      const diagnosticFailure = new Error("registration diagnostic failed");
+      let shouldThrow = true;
+      diag.setLogger(
+        {
+          debug(message) {
+            if (shouldThrow && String(message).includes(`Registered a global for ${signal} `)) {
+              shouldThrow = false;
+              throw diagnosticFailure;
+            }
+          },
+          error() {},
+          warn() {},
+          info() {},
+          verbose() {},
+        },
+        DiagLogLevel.ALL,
+      );
+      await expect(runtime.init(config())).rejects.toMatchObject({ cause: diagnosticFailure });
+      diag.disable();
+      const key = createContextKey("logger-failure");
+      const scoped = ROOT_CONTEXT.setValue(key, "restored");
+      expect(context.with(scoped, () => context.active().getValue(key))).toBeUndefined();
+      expect(propagation.fields()).toEqual([]);
+      await runtime.init(config());
+      expect(context.with(scoped, () => context.active().getValue(key))).toBe("restored");
+      await runtime.shutdown();
+    },
+  );
+
+  it("preserves globals installed by a custom instrumentation's independent SDK", async () => {
+    const { NodeSDK: SharedSDK } = await vi.importActual<{ NodeSDK: typeof NodeSDK }>(
+      "@opentelemetry/sdk-node",
+    );
+    const shared = new SharedSDK({
+      spanProcessors: [],
+      logRecordProcessors: [],
+      metricReaders: [],
+    });
+    const externalTracer = { startSpan: vi.fn() };
+    const tracerProvider = { getTracer: () => externalTracer };
+    const meterProvider = { getMeter: vi.fn() };
+    const custom = instrumentation("shared-sdk", vi.fn());
+    custom.setTracerProvider = () => {
+      shared.start();
+      trace.setGlobalTracerProvider(tracerProvider as never);
+      metrics.setGlobalMeterProvider(meterProvider as never);
+    };
+    failurePhase = "late-start";
+    try {
+      await expect(runtime.init(config([custom]))).rejects.toMatchObject({ cause: startupFailure });
+      const key = createContextKey("independent-owner");
+      const scoped = ROOT_CONTEXT.setValue(key, "preserved");
+      expect(context.with(scoped, () => context.active().getValue(key))).toBe("preserved");
+      expect(propagation.fields()).toContain("traceparent");
+      expect(trace.getTracer("independent")).toBe(externalTracer);
+      expect(metrics.getMeterProvider()).toBe(meterProvider);
+    } finally {
+      await shared.shutdown();
+    }
+  });
+
+  it("keeps late cleanup failures observable after the rollback timeout", async () => {
+    vi.useFakeTimers();
+    failurePhase = "early-start";
+    const lateFailure = new Error("late exporter failure");
+    let rejectCleanup: (error: Error) => void = () => {};
+    let entered: () => void = () => {};
+    const held = new Promise<void>((_resolve, reject) => {
+      rejectCleanup = reject;
+    });
+    const cleanupEntered = new Promise<void>((resolve) => {
+      entered = resolve;
+    });
+    exporterShutdown.mockImplementation(() => {
+      entered();
+      return held;
+    });
+    const initialization = runtime.init(config()).catch((error: unknown) => error);
+    await cleanupEntered;
+    await vi.advanceTimersByTimeAsync(30000);
+    const initError = await initialization;
+    terminalFailure = await runtime.shutdown().catch((error: unknown) => error);
+    rejectCleanup(lateFailure);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(initError).toMatchObject({
+      cause: {
+        cause: startupFailure,
+        errors: expect.arrayContaining([startupFailure, lateFailure]),
+      },
+    });
+    expect(terminalFailure).toMatchObject({
+      cause: { errors: expect.arrayContaining([startupFailure, lateFailure]) },
+    });
+  });
+
+  it("exports spans from the same custom instrumentation after late-start rollback", async () => {
+    class CustomInstrumentation extends InstrumentationBase {
+      protected init() {
+        return [];
+      }
+      emit() {
+        this.tracer.startSpan("custom-after-retry").end();
+      }
+    }
+    const custom = new CustomInstrumentation("late-retry-custom", "1.0.0", {});
+    const options = config([custom]);
+    failurePhase = "late-start";
+    await expect(runtime.init(options)).rejects.toMatchObject({ cause: startupFailure });
+    expect(custom.isEnabled()).toBe(false);
+    failurePhase = undefined;
+    await runtime.init(options);
+    custom.emit();
+    await runtime.forceFlush();
+    expect(exported.mock.calls.flatMap((call) => call[0])).toEqual([
+      expect.objectContaining({ name: "custom-after-retry" }),
+    ]);
+  });
 });
