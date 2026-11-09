@@ -1,0 +1,99 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "protocols-trpc",
+      "classification": "protocol-render",
+      "reason": "Assemble controller domains and procedures using own-key dictionaries and reject native reserved names with source diagnostics before creating the router.",
+      "files": {
+        "packages/protocols-trpc/src/libs/createTrpcRouter.ts": "36ee3199dd0ba437c2a26be58571426ca5b2ff3c336da545cd7c22e6c028a3b0"
+      },
+      "catalogRuntimes": ["node", "cloudflare-workers"],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Router dictionary construction and static name validation require no host capability, storage or request lifecycle change.",
+          "providers": ["@croco/protocols-trpc/createTrpcRouter"],
+          "constraints": [
+            "Existing runtime claims are unchanged. Local HTTP tests do not certify deployed Kubernetes, AWS Lambda or Cloudflare infrastructure."
+          ],
+          "references": [
+            "packages/protocols-trpc/src/libs/createTrpcRouter.ts",
+            "packages/protocols-trpc/src/tests/round-trip.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Router dictionary construction and static name validation require no host capability, storage or request lifecycle change.",
+          "providers": ["@croco/protocols-trpc/createTrpcRouter"],
+          "constraints": [
+            "Existing runtime claims are unchanged. Local HTTP tests do not certify deployed Kubernetes, AWS Lambda or Cloudflare infrastructure."
+          ],
+          "references": [
+            "packages/protocols-trpc/src/libs/createTrpcRouter.ts",
+            "packages/protocols-trpc/src/tests/round-trip.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Router dictionary construction and static name validation require no host capability, storage or request lifecycle change.",
+          "providers": ["@croco/protocols-trpc/createTrpcRouter"],
+          "constraints": [
+            "Existing runtime claims are unchanged. Local HTTP tests do not certify deployed Kubernetes, AWS Lambda or Cloudflare infrastructure."
+          ],
+          "references": [
+            "packages/protocols-trpc/src/libs/createTrpcRouter.ts",
+            "packages/protocols-trpc/src/tests/round-trip.spec.ts"
+          ]
+        }
+      }
+    },
+    {
+      "package": "problems-core",
+      "classification": "pure-contract",
+      "reason": "Register the source-located reserved tRPC route-name diagnostic and its configuration recovery guidance in the generated Problem registry.",
+      "files": {
+        "packages/problems-core/src/generated/problem-code-registry.ts": "8d0948064474a93a6dc60e7049a9315d9042b7fc5543eaadc9e449b7d966e9d5"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Generated diagnostic metadata is infrastructure-independent and requires no host, storage or lifecycle capability.",
+          "providers": [],
+          "constraints": [
+            "Existing runtime claims are unchanged. Local HTTP tests do not certify deployed Kubernetes, AWS Lambda or Cloudflare infrastructure."
+          ],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "packages/protocols-trpc/src/tests/round-trip.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Generated diagnostic metadata is infrastructure-independent and requires no host, storage or lifecycle capability.",
+          "providers": [],
+          "constraints": [
+            "Existing runtime claims are unchanged. Local HTTP tests do not certify deployed Kubernetes, AWS Lambda or Cloudflare infrastructure."
+          ],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "packages/protocols-trpc/src/tests/round-trip.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Generated diagnostic metadata is infrastructure-independent and requires no host, storage or lifecycle capability.",
+          "providers": [],
+          "constraints": [
+            "Existing runtime claims are unchanged. Local HTTP tests do not certify deployed Kubernetes, AWS Lambda or Cloudflare infrastructure."
+          ],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "packages/protocols-trpc/src/tests/round-trip.spec.ts"
+          ]
+        }
+      }
+    }
+  ]
+}

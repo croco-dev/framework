@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export type CrocoProblemRegistry = {
   readonly version: "croco.problem-code-registry.v1";
-  readonly problemCount: 1179;
+  readonly problemCount: 1180;
   readonly problems: readonly [
     {
       readonly code: "ACCESS_DENIED";
@@ -26096,7 +26096,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/protocols-trpc/src/libs/createTrpcRouter.ts";
-          readonly line: 224;
+          readonly line: 237;
           readonly column: 13;
           readonly kind: "problem-factory";
         },
@@ -26183,6 +26183,34 @@ export type CrocoProblemRegistry = {
           readonly line: 84;
           readonly column: 1;
           readonly kind: "problem-class";
+        },
+      ];
+    },
+    {
+      readonly code: "protocols-trpc/reserved-procedure-name";
+      readonly category: "InternalServerError";
+      readonly status: 500;
+      readonly title: "Internal Server Error";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#protocols-trpc-reserved-procedure-name";
+      readonly recovery: {
+        readonly cause: "A controller route uses a native tRPC reserved word as its domain or procedure name.";
+        readonly userAction: "Use an application build whose tRPC domains and procedures avoid then, call and apply.";
+        readonly operatorAction: "Inspect the domain, procedureName and route source location, then rename the reserved domain or controller method before constructing the router.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "operator-only";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.error";
+          readonly severity: "error";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/protocols-trpc/src/libs/createTrpcRouter.ts";
+          readonly line: 146;
+          readonly column: 15;
+          readonly kind: "problem-factory";
         },
       ];
     },
@@ -33326,7 +33354,7 @@ export type CrocoProblemRegistry = {
 
 export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 1179,
+  problemCount: 1180,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -62463,7 +62491,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/protocols-trpc/src/libs/createTrpcRouter.ts",
-          line: 224,
+          line: 237,
           column: 13,
           kind: "problem-factory",
         },
@@ -62564,6 +62592,39 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
           line: 84,
           column: 1,
           kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "protocols-trpc/reserved-procedure-name",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#protocols-trpc-reserved-procedure-name",
+      recovery: {
+        cause:
+          "A controller route uses a native tRPC reserved word as its domain or procedure name.",
+        userAction:
+          "Use an application build whose tRPC domains and procedures avoid then, call and apply.",
+        operatorAction:
+          "Inspect the domain, procedureName and route source location, then rename the reserved domain or controller method before constructing the router.",
+        retryability: "not-retryable",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/protocols-trpc/src/libs/createTrpcRouter.ts",
+          line: 146,
+          column: 15,
+          kind: "problem-factory",
         },
       ],
     },

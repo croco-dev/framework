@@ -36,6 +36,14 @@ const router = createTrpcRouter(routes, {
 });
 ```
 
+## Route names
+
+Domains such as `constructor`, `toString` and `__proto__` are preserved as callable namespaces.
+Router construction does not modify inherited Object members. Native tRPC reserves `then`, `call`
+and `apply` as domain or procedure names. These fail during construction with
+`protocols-trpc/reserved-procedure-name`, including the route and decorator source location when available.
+Rename the domain or controller method before constructing the router again.
+
 ## Route inputs
 
 Body-only controller methods keep their existing tRPC input shape. When a controller declares

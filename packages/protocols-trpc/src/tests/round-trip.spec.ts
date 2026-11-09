@@ -1,7 +1,13 @@
 import "reflect-metadata";
 import type { AddressInfo } from "node:net";
+import { Problem } from "@croco/problems-core";
 import { Body, Controller, Ctx, Get, HttpMethod, Param, Post, Raw } from "@croco/protocols-rest";
-import { createTRPCClient, httpBatchLink, type TRPCClientError } from "@trpc/client";
+import {
+  createTRPCClient,
+  createTRPCUntypedClient,
+  httpBatchLink,
+  type TRPCClientError,
+} from "@trpc/client";
 import type { AnyRouter } from "@trpc/server";
 import { createHTTPServer } from "@trpc/server/adapters/standalone";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -212,6 +218,127 @@ describe("tRPC round trip", () => {
       },
     });
   });
+});
+
+describe("tRPC route names", () => {
+  it.each(["__proto__", "toString"])(
+    "should serve the own procedure name %s over HTTP",
+    async (method) => {
+      @Controller("/names")
+      class NamedController {
+        @Get()
+        [method](): string {
+          return `result from ${method}`;
+        }
+      }
+      const router = createTrpcRouter([NamedController]);
+      expect(Object.keys(router._def.procedures)).toEqual([`named.${method}`]);
+      const server = createHTTPServer({ router });
+      await new Promise<void>((resolve) => server.listen(0, resolve));
+      try {
+        const client = createTRPCUntypedClient({
+          links: [httpBatchLink({ url: `http://127.0.0.1:${getPort(server)}` })],
+        });
+        await expect(client.query(`named.${method}`)).resolves.toBe(`result from ${method}`);
+      } finally {
+        await new Promise<void>((resolve, reject) =>
+          server.close((error) => (error ? reject(error) : resolve())),
+        );
+      }
+    },
+  );
+
+  it.each(Object.getOwnPropertyNames(Object.prototype))(
+    "should serve the inherited domain name %s without mutating built-in objects",
+    async (domain) => {
+      @Controller("/names")
+      class NamedController {
+        @Get()
+        hello(): string {
+          return `hello from ${domain}`;
+        }
+      }
+      Object.defineProperty(NamedController, "name", { value: `${domain}Controller` });
+      const builtins = [
+        Object.prototype,
+        Object,
+        ...Object.values(Object.getOwnPropertyDescriptors(Object.prototype))
+          .map((descriptor) => descriptor.value)
+          .filter((value): value is Function => typeof value === "function"),
+      ];
+      const descriptors = builtins.map((value) => Object.getOwnPropertyDescriptors(value));
+      let server: ReturnType<typeof createHTTPServer> | undefined;
+
+      try {
+        const router = createTrpcRouter([NamedController]);
+        expect(builtins.map((value) => Object.getOwnPropertyDescriptors(value))).toEqual(
+          descriptors,
+        );
+        expect(Object.keys(router._def.procedures)).toEqual([`${domain}.hello`]);
+        server = createHTTPServer({ router });
+        await new Promise<void>((resolve) => server?.listen(0, resolve));
+        const client = createTRPCUntypedClient({
+          links: [httpBatchLink({ url: `http://127.0.0.1:${getPort(server)}` })],
+        });
+
+        await expect(client.query(`${domain}.hello`)).resolves.toBe(`hello from ${domain}`);
+      } finally {
+        if (server) {
+          await new Promise<void>((resolve, reject) =>
+            server?.close((error) => (error ? reject(error) : resolve())),
+          );
+        }
+        for (const [index, builtin] of builtins.entries()) {
+          if (!Object.hasOwn(descriptors[index], "hello")) Reflect.deleteProperty(builtin, "hello");
+        }
+      }
+    },
+  );
+
+  it.each(
+    ["then", "call", "apply"].flatMap((name) => [
+      { name, position: "domain" },
+      { name, position: "procedure" },
+    ]),
+  )(
+    "should reject reserved $position name $name with a source diagnostic",
+    ({ name, position }) => {
+      const method = position === "procedure" ? name : "hello";
+      @Controller("/reserved")
+      class ReservedController {
+        @Get()
+        [method](): string {
+          return "unreachable";
+        }
+      }
+      if (position === "domain")
+        Object.defineProperty(ReservedController, "name", { value: `${name}Controller` });
+      let thrown: unknown;
+      try {
+        createTrpcRouter([ReservedController]);
+      } catch (error) {
+        thrown = error;
+      }
+
+      expect(thrown).toBeInstanceOf(Problem);
+      expect((thrown as Problem).toJSON()).toMatchObject({
+        code: "protocols-trpc/reserved-procedure-name",
+        domain: position === "domain" ? name : "reserved",
+        procedureName: method,
+        route: {
+          controllerName: ReservedController.name,
+          methodName: method,
+          httpMethod: "GET",
+          path: "/reserved",
+          sourceLocation: {
+            path: expect.stringContaining("round-trip.spec.ts"),
+            line: expect.any(Number),
+            column: expect.any(Number),
+          },
+        },
+      });
+    },
+  );
 });
 
 function createExistingUserController(): Function {

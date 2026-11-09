@@ -129,7 +129,7 @@ export function createTrpcRouter(
   controllers: readonly Function[] = Container.getGeneratedProviderTokens("rest-controller"),
   options: TrpcRouterOptions = {},
 ): AnyRouter {
-  const domains: Record<string, TRPCCreateRouterOptions> = {};
+  const domains = new Map<string, TRPCCreateRouterOptions>();
   const procedureSources = new Map<string, Map<string, TrpcRouteDiagnostic>>();
 
   for (const controller of controllers) {
@@ -138,6 +138,18 @@ export function createTrpcRouter(
     for (const route of extractRouteIR(controllerCtor)) {
       const domain = getDomainName(route);
       const routeDiagnostic = toRouteDiagnostic(route);
+      if (
+        [domain, route.methodName].some(
+          (name) => name === "then" || name === "call" || name === "apply",
+        )
+      ) {
+        throw ProblemFactory.internalServerError(
+          "protocols-trpc/reserved-procedure-name",
+          `Reserved tRPC route name in ${domain}.${route.methodName}. Route: ${formatRouteDiagnostic(routeDiagnostic)}. ` +
+            "Recovery: rename the tRPC domain or controller method to avoid then, call and apply.",
+          { extensions: { domain, procedureName: route.methodName, route: routeDiagnostic } },
+        );
+      }
       const domainSources = procedureSources.get(domain) ?? new Map();
       const existingRoute = domainSources.get(route.methodName);
 
@@ -152,14 +164,15 @@ export function createTrpcRouter(
 
       domainSources.set(route.methodName, routeDiagnostic);
       procedureSources.set(domain, domainSources);
-      domains[domain] ??= {};
-      domains[domain][route.methodName] = createProcedure(controllerCtor, route, options);
+      const procedures: TRPCCreateRouterOptions = domains.get(domain) ?? Object.create(null);
+      procedures[route.methodName] = createProcedure(controllerCtor, route, options);
+      domains.set(domain, procedures);
     }
   }
 
-  const routerRecord: TRPCCreateRouterOptions = {};
+  const routerRecord: TRPCCreateRouterOptions = Object.create(null);
 
-  for (const [domain, procedures] of Object.entries(domains)) {
+  for (const [domain, procedures] of domains) {
     routerRecord[domain] = t.router(procedures);
   }
 
