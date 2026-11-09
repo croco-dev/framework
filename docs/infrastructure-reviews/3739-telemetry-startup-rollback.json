@@ -6,7 +6,7 @@
       "classification": "runtime-adapter",
       "reason": "Failed trace SDK startup now unwinds owned SDK, processor/exporter, instrumentation, context and propagation registrations before retry; failed or timed-out rollback retains a terminal shutdown failure. Reused custom instrumentation is reactivated after successful rollback. Trace-only configuration prevents implicit log/metric exporters, and replaced automatic instrumentation is disabled before construction so every activated instance remains owned.",
       "files": {
-        "packages/telemetry-sdk-node/src/runtime.ts": "744aa2e2adaa515b0744875b3a435aa4cb6f5eb79bf410f12f7a931df8030b50",
+        "packages/telemetry-sdk-node/src/runtime.ts": "4e7262a3dea0577ba4b0a022ab1f893296b50df7c61f1e49ac134c65e8c1947d",
         "packages/telemetry-sdk-node/src/libs/instrumentation/AutoInstrumentation.ts": "2ea2edb47aeef31110fe1aff1fb996c49fd554a05b4d390049ba6b36cd3a9390",
         "packages/telemetry-sdk-node/src/libs/runtime/startSdkWithGlobalRollback.ts": "9692ae5f1b59385a3f488bab51975d4a0b3b441e907306270c0c490e0c7ae1a7",
         "packages/telemetry-sdk-node/src/libs/diagnostics/TelemetryDiagnosticsProvider.ts": "f07580396fcff3ae52e2061538cecf6b2211e50cfe30ce37f97d9630f820ad50"

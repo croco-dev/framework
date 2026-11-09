@@ -693,6 +693,16 @@ describe("TelemetryRuntime startup rollback", () => {
         },
       });
       expect(JSON.stringify(health)).not.toContain("collector.invalid");
+      for (const retry of [
+        config(),
+        { ...config(), trace: { ...config().trace, batchCount: -1 } },
+      ]) {
+        await expect(runtime.init(retry)).rejects.toMatchObject({
+          runtimeState: "shutdown-failed",
+        });
+        const afterRetry = await new TelemetryDiagnosticsProvider({ requirement }).getHealth();
+        expect(afterRetry.details).toEqual(health.details);
+      }
     },
   );
 });

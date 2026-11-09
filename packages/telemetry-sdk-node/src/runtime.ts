@@ -93,6 +93,10 @@ class TelemetryRuntime {
   }
 
   async init(config: TelemetryConfig): Promise<void> {
+    if (this.shutdownPromise || this.shutdownFailure) {
+      throw new TelemetryInitializationConflictProblem(this.getInitializationState());
+    }
+
     const requestedConfig = snapshotTelemetryConfig(config);
     clearTelemetryInitializationFailure(this);
     let requestedFingerprint: string;
@@ -108,10 +112,6 @@ class TelemetryRuntime {
     } catch (error) {
       recordTelemetryInitializationFailure(this, requestedConfig, error);
       throw error;
-    }
-
-    if (this.shutdownPromise || this.shutdownFailure) {
-      throw new TelemetryInitializationConflictProblem(this.getInitializationState());
     }
 
     if (this.configFingerprint !== null) {
