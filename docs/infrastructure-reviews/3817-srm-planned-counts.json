@@ -4,9 +4,9 @@
     {
       "package": "metrics-core",
       "classification": "pure-contract",
-      "reason": "Require exactly the planned variant counts before SRM aggregation and sum only validated planned counts. Valid allocations retain their existing statistics and input failures use ExperimentInputProblem.",
+      "reason": "Require the complete own-key set to match the planned variants before SRM aggregation, including non-enumerable and symbol keys. Sum validated planned counts and preserve their values in the result regardless of enumerability. Valid allocation statistics and the existing ExperimentInputProblem remain unchanged.",
       "files": {
-        "packages/metrics-core/src/libs/experiment/ExperimentReview.ts": "5909fc2ef8c88e2bb6c42e869fd6f43a608d231b7528f267a40be16f3e0eb7dc"
+        "packages/metrics-core/src/libs/experiment/ExperimentReview.ts": "858029fa8f02b5a0267e98477d7b3809d635d1f339d34162bb1f37c8c2b503b8"
       },
       "catalogRuntimes": [],
       "profiles": {

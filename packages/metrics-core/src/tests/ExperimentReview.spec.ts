@@ -129,6 +129,39 @@ describe("ExperimentReview", () => {
     );
   });
 
+  it.each(["unplanned", Symbol("unplanned")])(
+    "rejects an extra non-enumerable own key %s",
+    (key) => {
+      const counts = { control: 100, treatment: 100 };
+      Object.defineProperty(counts, key, { value: 1000 });
+      expect(() => checkSampleRatioMismatch(makeDataset().plan, counts)).toThrow(
+        ExperimentInputProblem,
+      );
+    },
+  );
+
+  it("rejects an unplanned key that replaces a non-enumerable planned key in enumeration", () => {
+    const counts = { control: 100, unplanned: 1000 };
+    Object.defineProperty(counts, "treatment", { value: 100 });
+    expect(() => checkSampleRatioMismatch(makeDataset().plan, counts)).toThrow(
+      ExperimentInputProblem,
+    );
+  });
+
+  it("preserves non-enumerable planned own counts in the SRM result", () => {
+    const counts = { control: 100 };
+    Object.defineProperty(counts, "treatment", { value: 100 });
+    expect(checkSampleRatioMismatch(makeDataset().plan, counts)).toMatchObject({
+      status: "pass_signal",
+      detail: {
+        actualCounts: { control: 100, treatment: 100 },
+        expectedCounts: { control: 100, treatment: 100 },
+        chiSquare: 0,
+        pValue: 1,
+      },
+    });
+  });
+
   it("preserves balanced allocations for equal and unequal planned shares", () => {
     const plan = makeDataset().plan;
     const balanced = checkSampleRatioMismatch(plan, { control: 100, treatment: 100 });

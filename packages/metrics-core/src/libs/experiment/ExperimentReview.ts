@@ -447,7 +447,7 @@ export function checkSampleRatioMismatch(
   checkPlan(plan);
   const variantIds = plan.variants.map((variant) => variant.id);
   if (
-    Object.keys(actualCounts).length !== variantIds.length ||
+    Reflect.ownKeys(actualCounts).length !== variantIds.length ||
     variantIds.some((id) => !Object.hasOwn(actualCounts, id))
   ) {
     failInput("Actual counts must contain exactly the planned variant keys");
@@ -483,7 +483,7 @@ export function checkSampleRatioMismatch(
       degreesOfFreedom,
       pValue,
       plannedCounts: planned,
-      actualCounts: { ...actualCounts },
+      actualCounts: Object.fromEntries(variantIds.map((id) => [id, actualCounts[id] ?? 0])),
       warningThreshold: plan.srmWarningThreshold,
       expectedCounts: expected,
     },
