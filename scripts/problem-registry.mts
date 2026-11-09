@@ -4923,6 +4923,16 @@ const recoveryMetadataByCode = {
     redactionPolicy: "operator-only",
     severity: "error",
   }),
+  "protocols-trpc/reserved-procedure-name": recovery({
+    cause: "A controller route uses a native tRPC reserved word as its domain or procedure name.",
+    userAction:
+      "Use an application build whose tRPC domains and procedures avoid then, call and apply.",
+    operatorAction:
+      "Inspect the domain, procedureName and route source location, then rename the reserved domain or controller method before constructing the router.",
+    retryability: "not-retryable",
+    redactionPolicy: "operator-only",
+    severity: "error",
+  }),
   "metrics-core/subscription-pricing-unavailable": recovery({
     cause:
       "A subscription's immutable pricing reference is missing, unavailable, or belongs to another plan family.",
