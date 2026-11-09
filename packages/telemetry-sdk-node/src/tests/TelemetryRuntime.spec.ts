@@ -69,7 +69,9 @@ describe("TelemetryRuntime", () => {
       },
     }));
     vi.doMock("@opentelemetry/exporter-trace-otlp-http", () => ({
-      OTLPTraceExporter: class MockTraceExporter {},
+      OTLPTraceExporter: class MockTraceExporter {
+        async shutdown(): Promise<void> {}
+      },
     }));
     vi.doMock("@opentelemetry/sdk-trace-base", () => ({
       BatchSpanProcessor: class MockBatchSpanProcessor {
@@ -381,7 +383,9 @@ describe("TelemetryRuntime", () => {
       },
     }));
     vi.doMock("@opentelemetry/exporter-trace-otlp-http", () => ({
-      OTLPTraceExporter: class MockTraceExporter {},
+      OTLPTraceExporter: class MockTraceExporter {
+        async shutdown(): Promise<void> {}
+      },
     }));
     vi.doMock("@opentelemetry/sdk-trace-base", () => ({
       BatchSpanProcessor: class MockBatchSpanProcessor {

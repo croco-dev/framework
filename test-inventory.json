@@ -5940,6 +5940,12 @@
       "owner": "@croco/telemetry-sdk-node"
     },
     {
+      "path": "packages/telemetry-sdk-node/src/tests/TelemetryRuntimeStartup.spec.ts",
+      "lane": "fast",
+      "qualifiers": ["coverage"],
+      "owner": "@croco/telemetry-sdk-node"
+    },
+    {
       "path": "packages/tenant-core/src/tests/ActiveTenantGuard.spec.ts",
       "lane": "fast",
       "qualifiers": [],

@@ -338,21 +338,21 @@ export async function resolveAutoInstrumentation(
     };
   }
 
+  const custom = mergeCustomInstrumentations(
+    traceInstrumentations,
+    normalized.customInstrumentations ?? [],
+  );
+  const customNames = new Set(custom.map(getInstrumentationName));
   const upstreamConfig = Object.fromEntries(
     UPSTREAM_INSTRUMENTATION_NAMES.map((name) => [
       name,
-      selectedNames.includes(name)
+      selectedNames.includes(name) && !customNames.has(name)
         ? { ...optionsByName.get(name), enabled: true }
         : { enabled: false },
     ]),
   ) as InstrumentationConfigMap;
   const { getNodeAutoInstrumentations } = await import("@opentelemetry/auto-instrumentations-node");
   const automatic = getNodeAutoInstrumentations(upstreamConfig);
-  const custom = mergeCustomInstrumentations(
-    traceInstrumentations,
-    normalized.customInstrumentations ?? [],
-  );
-  const customNames = new Set(custom.map(getInstrumentationName));
   const automaticByName = new Map(
     automatic.map((instrumentation) => [getInstrumentationName(instrumentation), instrumentation]),
   );
