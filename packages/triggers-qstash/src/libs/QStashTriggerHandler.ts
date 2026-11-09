@@ -303,9 +303,9 @@ export class QStashTriggerHandler {
     }
 
     // Parse payload
-    let payload: QStashWebhookPayload;
+    let payload: unknown;
     try {
-      payload = JSON.parse(body) as QStashWebhookPayload;
+      payload = JSON.parse(body);
     } catch {
       return {
         success: false,
@@ -319,13 +319,12 @@ export class QStashTriggerHandler {
     }
 
     // Validate payload
-    const validationError = this.validatePayload(payload);
-    if (validationError) {
+    if (!this.isValidPayload(payload)) {
       return {
         success: false,
         statusCode: 400,
         body: createErrorResponse(
-          validationError,
+          "Invalid webhook payload",
           INVALID_PAYLOAD_ERROR_CODE,
           ProblemCategory.BadRequest,
         ),
@@ -433,17 +432,40 @@ export class QStashTriggerHandler {
   /**
    * Validate the webhook payload.
    */
-  private validatePayload(payload: QStashWebhookPayload): string | undefined {
-    if (!payload.scheduleId) {
-      return "Missing scheduleId";
+  private isValidPayload(value: unknown): value is QStashWebhookPayload {
+    if (typeof value !== "object" || value === null || Array.isArray(value)) {
+      return false;
     }
-    if (!payload.methodName) {
-      return "Missing methodName";
+    const payload = value as Record<string, unknown>;
+    for (const field of ["scheduleId", "methodName", "cronExpression", "timestamp"]) {
+      const fieldValue = payload[field];
+      if (typeof fieldValue !== "string" || fieldValue.trim().length === 0) {
+        return false;
+      }
     }
-    if (!payload.cronExpression) {
-      return "Missing cronExpression";
+    for (const field of ["className", "triggerName"]) {
+      const fieldValue = payload[field];
+      if (fieldValue !== undefined && typeof fieldValue !== "string") {
+        return false;
+      }
     }
-    return undefined;
+    if (payload.options === undefined) {
+      return true;
+    }
+    if (
+      typeof payload.options !== "object" ||
+      payload.options === null ||
+      Array.isArray(payload.options)
+    ) {
+      return false;
+    }
+    const options = payload.options as Record<string, unknown>;
+    for (const field of ["name", "description", "timezone"]) {
+      if (options[field] !== undefined && typeof options[field] !== "string") {
+        return false;
+      }
+    }
+    return options.enabled === undefined || typeof options.enabled === "boolean";
   }
 
   /**

@@ -14,6 +14,7 @@ import { triggerRegistry } from "@croco/triggers-core";
 import { QstashError } from "@upstash/qstash";
 import type { Client, Receiver } from "@upstash/qstash";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { QStashScheduler } from "../libs/QStashScheduler";
 import {
   createQStashApiDeliveryIdentityVerifier,
   QStashTriggerHandler as QStashTriggerHandlerBase,
@@ -218,6 +219,149 @@ describe("QStashTriggerHandler", () => {
     Container.reset();
     MetadataStorage.clear();
     vi.restoreAllMocks();
+  });
+
+  describe("payload validation", () => {
+    const payload = {
+      scheduleId: "croco-trigger:PayloadJob:payload-job:execute",
+      className: "PayloadJob",
+      triggerName: "payload-job",
+      methodName: "execute",
+      cronExpression: "*/5 * * * *",
+      timestamp: "2026-08-13T00:00:00.000Z",
+    };
+    const invalidFields = [undefined, null, 123, true, {}, [], "", " \t\n"];
+    const invalidPayloads = [
+      ...[null, [], 123, true, "text"].map((value) => ["root", value] as const),
+      ...["scheduleId", "methodName", "cronExpression", "timestamp"].flatMap((field) =>
+        invalidFields.map((value) => [field, { ...payload, [field]: value }] as const),
+      ),
+      ...["className", "triggerName"].flatMap((field) =>
+        [null, 123, true, {}, []].map((value) => [field, { ...payload, [field]: value }] as const),
+      ),
+      ...[null, [], "options", 123, false].map(
+        (options) => ["options", { ...payload, options }] as const,
+      ),
+      ...["name", "description", "timezone"].flatMap((field) =>
+        [null, 123, true, {}, []].map(
+          (value) => ["options." + field, { ...payload, options: { [field]: value } }] as const,
+        ),
+      ),
+      ...[null, "false", 0, {}, []].map(
+        (enabled) => ["options.enabled", { ...payload, options: { enabled } }] as const,
+      ),
+    ];
+
+    it.each(invalidPayloads)(
+      "rejects malformed %s input %# before resolving or dispatching",
+      async (_field, input) => {
+        const execute = vi.fn().mockResolvedValue("handled");
+        class PayloadJob {
+          execute = execute;
+        }
+        triggerRegistry.register({
+          type: "cron",
+          expression: payload.cronExpression,
+          methodName: "execute",
+          target: PayloadJob.prototype,
+          options: { name: "payload-job" },
+        });
+        const deliveryIdentityVerifier = vi.fn().mockResolvedValue(true);
+        const serviceResolver = vi.fn(() => new PayloadJob());
+        const { manager, create } = createIdempotentExecutionManager();
+        const handler = new QStashTriggerHandlerBase({
+          receiver: { verify: vi.fn().mockResolvedValue(true) } as unknown as Receiver,
+          deliveryIdentityVerifier,
+          serviceResolver,
+          executionManager: manager,
+          executionTimeout: 60_000,
+        });
+
+        const result = await handler.handle(JSON.stringify(input), "valid-signature", delivery);
+
+        expect(result).toMatchObject({
+          success: false,
+          statusCode: 400,
+          body: { code: "triggers-qstash/invalid-payload", category: ProblemCategory.BadRequest },
+        });
+        expect(deliveryIdentityVerifier).not.toHaveBeenCalled();
+        expect(serviceResolver).not.toHaveBeenCalled();
+        expect(create).not.toHaveBeenCalled();
+        expect(manager.start).not.toHaveBeenCalled();
+        expect(execute).not.toHaveBeenCalled();
+      },
+    );
+
+    it.each(["{", ""])("rejects invalid JSON syntax %j", async (body) => {
+      const { manager, create } = createIdempotentExecutionManager();
+      const handler = new QStashTriggerHandler({
+        receiver: { verify: vi.fn().mockResolvedValue(true) } as unknown as Receiver,
+        executionManager: manager,
+      });
+
+      await expect(handler.handle(body, "valid-signature", delivery)).resolves.toMatchObject({
+        success: false,
+        statusCode: 400,
+        body: { error: "Invalid JSON payload", code: "triggers-qstash/invalid-payload" },
+      });
+      expect(create).not.toHaveBeenCalled();
+    });
+
+    it.each(["payload-job", " ", ""])(
+      "dispatches scheduler name %j unchanged through the Lambda response boundary",
+      async (name) => {
+        const execute = vi.fn().mockResolvedValue("handled");
+        class PayloadJob {
+          execute = execute;
+        }
+        triggerRegistry.register({
+          type: "cron",
+          expression: payload.cronExpression,
+          methodName: "execute",
+          target: PayloadJob.prototype,
+          options: { name, description: "", enabled: true, timezone: "Asia/Seoul" },
+        });
+        const create = vi.fn().mockResolvedValue({});
+        const scheduler = new QStashScheduler({
+          client: {
+            schedules: { list: vi.fn().mockResolvedValue([]), create },
+          } as unknown as Client,
+          webhookUrl: "https://example.com/webhooks/qstash",
+        });
+        expect((await scheduler.sync()).created).toBe(1);
+        const body: string = create.mock.calls[0]?.[0].body;
+        const deliveryIdentityVerifier = vi.fn().mockResolvedValue(true);
+        const { manager } = createIdempotentExecutionManager();
+        const handler = QStashTriggerHandlerBase.createLambdaHandler({
+          receiver: { verify: vi.fn().mockResolvedValue(true) } as unknown as Receiver,
+          deliveryIdentityVerifier,
+          serviceResolver: () => new PayloadJob(),
+          executionManager: manager,
+          executionTimeout: 60_000,
+        });
+        const headers = {
+          "Upstash-Signature": "valid-signature",
+          "Upstash-Message-Id": "msg-payload",
+        };
+
+        const response = await handler({ body, headers });
+        expect(response.statusCode).toBe(200);
+        expect(JSON.parse(response.body)).toMatchObject({ result: "handled" });
+        expect(execute).toHaveBeenCalledWith(
+          JSON.parse(body),
+          expect.objectContaining({ executionId: "exec-1" }),
+        );
+        expect(deliveryIdentityVerifier).toHaveBeenCalledOnce();
+
+        const malformed = await handler({ body: "null", headers });
+        expect(malformed.statusCode).toBe(400);
+        expect(JSON.parse(malformed.body)).toMatchObject({
+          code: "triggers-qstash/invalid-payload",
+        });
+        expect(execute).toHaveBeenCalledOnce();
+        expect(deliveryIdentityVerifier).toHaveBeenCalledOnce();
+      },
+    );
   });
 
   it("records processing time for each firing while preserving the schedule sync payload", async () => {

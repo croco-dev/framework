@@ -113,6 +113,12 @@ and an `AbortSignal`. Existing zero-argument targets remain valid because JavaSc
   Targets explicitly configured with `timeoutRetryPolicy: "idempotent"` may recover the same execution through
   atomic attempt fencing when the execution manager supports it.
 - Invalid JSON or malformed payloads return `400` with `code: "triggers-qstash/invalid-payload"`.
+  Payloads must be non-null objects with non-blank string `scheduleId`, `methodName`,
+  `cronExpression` and `timestamp` fields. Optional `className` and `triggerName` must be
+  strings when present. Optional `options` must be an object with string `name`,
+  `description` and `timezone` fields and a boolean `enabled` when supplied. Invalid shapes are
+  rejected before delivery identity verification, service resolution or execution creation;
+  accepted payloads retain their original values.
 - Unknown target classes and methods return deterministic diagnostic-coded response bodies instead
   of generic strings.
 - Target execution Problems preserve their original code and category in the webhook response body.

@@ -31383,7 +31383,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/triggers-qstash/src/libs/QStashTriggerHandler.ts";
-          readonly line: 406;
+          readonly line: 405;
           readonly column: 13;
           readonly kind: "problem-metadata";
         },
@@ -68450,7 +68450,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/triggers-qstash/src/libs/QStashTriggerHandler.ts",
-          line: 406,
+          line: 405,
           column: 13,
           kind: "problem-metadata",
         },
