@@ -2,6 +2,8 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSy
 import { dirname, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { compareStrings } from "../tooling/compareStrings.mjs";
+
 import {
   assertTestEvidenceBundle,
   assertTestEvidenceRecord,
@@ -312,7 +314,7 @@ export function writeTestEvidenceBundle(options: {
           );
         }
         return files
-          .sort((left, right) => left.name.localeCompare(right.name))
+          .sort((left, right) => compareStrings(left.name, right.name))
           .flatMap((entry) => {
             const filePath = resolve(absolutePath, entry.name);
             return normalizeTestEvidenceInput(
