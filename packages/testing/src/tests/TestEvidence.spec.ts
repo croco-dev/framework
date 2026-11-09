@@ -1191,6 +1191,7 @@ for (const [title, label] of ${JSON.stringify([
   it("isolates consecutive reporter instances when timing and outcomes change", async () => {
     const outputDirectory = mkdtempSync(resolve(tmpdir(), "croco-evidence-rerun-"));
     try {
+      vi.stubEnv("CROCO_TEST_EVIDENCE_RUN_ID", undefined);
       for (const [duration, state] of [
         [5, "failed"],
         [6, "passed"],
@@ -1212,6 +1213,7 @@ for (const [title, label] of ${JSON.stringify([
       );
       expect(files).toHaveLength(2);
     } finally {
+      vi.unstubAllEnvs();
       rmSync(outputDirectory, { force: true, recursive: true });
     }
   });
@@ -1219,6 +1221,7 @@ for (const [title, label] of ${JSON.stringify([
   it("rotates automatic evidence namespaces across Vitest watch runs", async () => {
     const outputDirectory = mkdtempSync(resolve(tmpdir(), "croco-evidence-watch-"));
     try {
+      vi.stubEnv("CROCO_TEST_EVIDENCE_RUN_ID", undefined);
       const reporter = new CrocoVitestEvidenceReporter({
         fidelity: isolatedFidelity,
         outputDirectory,
@@ -1239,6 +1242,7 @@ for (const [title, label] of ${JSON.stringify([
       expect(readdirSync(firstDirectory ?? "missing")).toHaveLength(1);
       expect(readdirSync(reporter.outputDirectory ?? "missing")).toHaveLength(1);
     } finally {
+      vi.unstubAllEnvs();
       rmSync(outputDirectory, { force: true, recursive: true });
     }
   });
@@ -1300,6 +1304,7 @@ for (const [title, label] of ${JSON.stringify([
   it("starts independent Playwright runs without retaining previous attempts", async () => {
     const outputDirectory = mkdtempSync(resolve(tmpdir(), "croco-evidence-pw-rerun-"));
     try {
+      vi.stubEnv("CROCO_TEST_EVIDENCE_RUN_ID", undefined);
       const reporter = new CrocoPlaywrightEvidenceReporter({
         fidelity: isolatedFidelity,
         outputDirectory,
@@ -1321,6 +1326,7 @@ for (const [title, label] of ${JSON.stringify([
         records: [{ id: "current", outcome: "passed" }],
       });
     } finally {
+      vi.unstubAllEnvs();
       rmSync(outputDirectory, { force: true, recursive: true });
     }
   });
