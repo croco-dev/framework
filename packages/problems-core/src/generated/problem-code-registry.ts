@@ -29377,7 +29377,7 @@ export type CrocoProblemRegistry = {
       readonly recovery: {
         readonly cause: "SQS publication failed or returned no valid acceptance receipt, leaving message acceptance and delivery unknown.";
         readonly userAction: "Do not automatically republish. Reconcile whether the original message was accepted and whether its execution or side effects completed before any manual retry.";
-        readonly operatorAction: "Inspect producer, queue and durable execution evidence using trusted identifiers. Preserve the original idempotencyKey and payload when a key was supplied. Without that key, each new publication creates a new dispatchId: do not republish unless non-acceptance is proven or independent effect deduplication is guaranteed. Native SDK retries are owned by the SDK.";
+        readonly operatorAction: "Inspect producer, queue and durable execution evidence using trusted identifiers. For a keyed manual retry, preserve the original queue, tenant, task ID, idempotencyKey and payload, using the same execution ledger with its retained receipts. Changing the queue, identity scope or ledger creates another deduplication boundary: do not do so unless original non-acceptance is proven or independent effect deduplication is guaranteed. Without a caller key, each new publication creates a new dispatchId: do not republish unless non-acceptance is proven or independent effect deduplication is guaranteed. Native SDK retries are owned by the SDK.";
         readonly retryability: "not-retryable";
         readonly redactionPolicy: "operator-only";
         readonly telemetry: {
@@ -66277,7 +66277,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
         userAction:
           "Do not automatically republish. Reconcile whether the original message was accepted and whether its execution or side effects completed before any manual retry.",
         operatorAction:
-          "Inspect producer, queue and durable execution evidence using trusted identifiers. Preserve the original idempotencyKey and payload when a key was supplied. Without that key, each new publication creates a new dispatchId: do not republish unless non-acceptance is proven or independent effect deduplication is guaranteed. Native SDK retries are owned by the SDK.",
+          "Inspect producer, queue and durable execution evidence using trusted identifiers. For a keyed manual retry, preserve the original queue, tenant, task ID, idempotencyKey and payload, using the same execution ledger with its retained receipts. Changing the queue, identity scope or ledger creates another deduplication boundary: do not do so unless original non-acceptance is proven or independent effect deduplication is guaranteed. Without a caller key, each new publication creates a new dispatchId: do not republish unless non-acceptance is proven or independent effect deduplication is guaranteed. Native SDK retries are owned by the SDK.",
         retryability: "not-retryable",
         redactionPolicy: "operator-only",
         telemetry: {

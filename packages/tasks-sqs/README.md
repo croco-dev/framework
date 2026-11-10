@@ -110,8 +110,13 @@ or exactly-once execution. A hung handler is not acknowledged early.
 
 Publication failures report `tasks-sqs/publish-failed` with `outcome: unknown` and omit
 raw SDK errors, endpoints, credentials and payloads. The SDK owns native request retries;
-the plugin adds no blind publication retry. Reconcile an uncertain send before retrying
-and reuse the same logical key where effects are idempotent. Other stable diagnostics
+the plugin adds no blind publication retry. Before manual republication, reconcile
+the original acceptance, execution and effects. A keyed retry preserves the original
+queue, tenant, task, key and payload, using the same durable execution ledger and its
+retained receipts. Changing the queue, identity scope or ledger creates a different
+deduplication boundary. Without an original caller key, each publication also creates a
+new dispatch ID. Either change requires proven original non-acceptance or independent
+effect deduplication. Other stable diagnostics
 are `tasks-sqs/invalid-configuration`, `tasks-sqs/invalid-message` and
 `tasks-sqs/unsupported-host-event`. Non-SQS host events reject the invocation.
 
