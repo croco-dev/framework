@@ -9,6 +9,7 @@ import { createDrizzleTxAdapter, DrizzleHealthIndicator } from "@croco/tx-drizzl
 import type { DrizzleAuditDatabase as DrizzleDb } from "../libs/DrizzleAuditLogRepository";
 import { DrizzleAuditLogRepository } from "../libs/DrizzleAuditLogRepository";
 import { auditLogsPg, auditLogsSqlite } from "../libs/schema";
+import { defineBigintAuditPersistenceTests } from "./bigintAuditPersistence";
 
 describe("DrizzleAuditLogRepository", () => {
   let repository!: DrizzleAuditLogRepository;
@@ -64,6 +65,8 @@ describe("DrizzleAuditLogRepository", () => {
     vi.useRealTimers();
     sqlite.close();
   });
+
+  defineBigintAuditPersistenceTests(() => repository);
 
   describe("deterministic ordering", () => {
     const startDate = new Date("2026-01-01T00:00:00.000Z");

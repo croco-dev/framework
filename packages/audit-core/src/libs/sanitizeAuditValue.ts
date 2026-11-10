@@ -149,6 +149,10 @@ function sanitizeObject(
 }
 
 function sanitizeValue(value: unknown, ancestors: WeakSet<object>): unknown {
+  if (typeof value === "bigint") {
+    return String(value);
+  }
+
   if (typeof value === "string") {
     return sanitizeText(value);
   }

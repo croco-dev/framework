@@ -7,6 +7,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { DrizzleAuditLogRepository } from "../libs/DrizzleAuditLogRepository";
 import type { DrizzleAuditDatabase } from "../libs/DrizzleAuditLogRepository";
 import { auditLogsPg } from "../libs/schema";
+import { defineBigintAuditPersistenceTests } from "./bigintAuditPersistence";
 
 const connectionString = process.env.AUDIT_POSTGRES_URL ?? "";
 const timestamp = new Date("2026-01-01T00:00:01.000Z");
@@ -32,7 +33,7 @@ describe.skipIf(connectionString.length === 0)(
       await client.query(`SET LOCAL search_path TO "${schema}"`);
       await client.query(`
       CREATE TABLE audit_logs (
-        id uuid PRIMARY KEY,
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
         tenant_id text NOT NULL,
         actor_id text NOT NULL,
         action text NOT NULL,
@@ -72,6 +73,8 @@ describe.skipIf(connectionString.length === 0)(
         }
       }
     });
+
+    defineBigintAuditPersistenceTests(() => repository);
 
     const queries = [
       {

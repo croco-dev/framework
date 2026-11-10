@@ -53,6 +53,10 @@ default 또는 rest 파라미터와 그 뒤의 파라미터는 단일 인덱스�
 labelled secret 문자열을 재귀적으로 치환합니다. 메서드 결과는 기본적으로 저장하지 않으며, 필요한 경우에만
 `includeResult: true`로 활성화하면 치환된 결과가 기록됩니다.
 
+감사 snapshot의 `bigint` 값은 중첩 객체와 배열에서도 정밀도를 보존하는 10진 문자열로 저장됩니다.
+서비스에 전달한 인자와 반환값의 `bigint` 타입은 유지됩니다. 저장된 문자열은 조회 시에도 문자열이며,
+기존 문자열과 구별해 `bigint`로 자동 복원하지 않습니다.
+
 ```ts
 import { AuditInterceptor } from "@croco/audit-core";
 
