@@ -3,6 +3,7 @@ import { isDeepStrictEqual } from "node:util";
 import { sql } from "drizzle-orm";
 import {
   CohortInvalidProblem,
+  CohortUnavailableProblem,
   PublishedCohortReader,
   cohortContentHash,
   cohortTimestamp,
@@ -250,6 +251,15 @@ export class PostgresCohortStore implements CohortPublicationStore {
     expectedRevision: number,
     audit: Readonly<{ actor: string; reason: string; idempotencyKey: string }>,
   ): Promise<CohortPublication> {
+    return this.publishSnapshot(runId, snapshot, expectedRevision, audit);
+  }
+  private async publishSnapshot(
+    runId: string,
+    snapshot: CohortSnapshot,
+    expectedRevision: number,
+    audit: Readonly<{ actor: string; reason: string; idempotencyKey: string }>,
+    rollbackSourceId?: string,
+  ): Promise<CohortPublication> {
     assert(
       audit.actor &&
         audit.reason &&
@@ -260,6 +270,14 @@ export class PostgresCohortStore implements CohortPublicationStore {
     return this.database.transaction(async (tx) => {
       const key = scopeKey(snapshot.scope);
       await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtextextended(${key},0))`);
+      if (rollbackSourceId !== undefined) {
+        const source = await tx.execute(
+          sql`SELECT publication FROM croco_cohort_publications WHERE snapshot_id=${rollbackSourceId} AND scope_key=${key}`,
+        );
+        const publication = source.rows[0]?.publication as CohortPublication | undefined;
+        if (!publication || publication.withdrawn)
+          throw new CohortUnavailableProblem("Snapshot is absent or withdrawn");
+      }
       const previous = await tx.execute(
         sql`SELECT publication FROM croco_cohort_publications WHERE scope_key=${key} AND definition_id=${snapshot.definitionId} AND idempotency_key=${audit.idempotencyKey}`,
       );
@@ -359,7 +377,13 @@ export class PostgresCohortStore implements CohortPublicationStore {
       cohortTimestamp(snapshot.validUntil) <= cohortTimestamp(previous.snapshot.validUntil),
       "Rollback cannot extend retained snapshot validity",
     );
-    return this.publish(snapshot.membershipRef, snapshot, expectedRevision, audit);
+    return this.publishSnapshot(
+      snapshot.membershipRef,
+      snapshot,
+      expectedRevision,
+      audit,
+      previousSnapshotId,
+    );
   }
   /** Erasure invalidates affected publications and completed runs, then prevents source replay. */
   async eraseSubject(scope: CohortScope, subjectId: string): Promise<void> {
@@ -388,9 +412,13 @@ export class PostgresCohortStore implements CohortPublicationStore {
     return result.rows[0]?.publication as CohortPublication | undefined;
   }
   async withdraw(snapshotId: string, scope: CohortScope): Promise<void> {
-    const result = await this.database.execute(
-      sql`UPDATE croco_cohort_publications SET publication=jsonb_set(publication,'{withdrawn}','true') WHERE snapshot_id=${snapshotId} AND scope_key=${scopeKey(scope)} RETURNING snapshot_id`,
-    );
-    assert(result.rows.length === 1, "Publication is absent");
+    await this.database.transaction(async (tx) => {
+      const key = scopeKey(scope);
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtextextended(${key},0))`);
+      const result = await tx.execute(
+        sql`UPDATE croco_cohort_publications SET publication=jsonb_set(publication,'{withdrawn}','true') WHERE snapshot_id=${snapshotId} AND scope_key=${key} RETURNING snapshot_id`,
+      );
+      assert(result.rows.length === 1, "Publication is absent");
+    });
   }
 }

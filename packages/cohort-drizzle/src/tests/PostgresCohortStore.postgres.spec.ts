@@ -1,9 +1,15 @@
+import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { describe, expect, it } from "vitest";
 import { PgDialect } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
-import { PublishedCohortReader, cohortContentHash, evaluateCohort } from "@croco/cohort-core";
+import {
+  CohortUnavailableProblem,
+  PublishedCohortReader,
+  cohortContentHash,
+  evaluateCohort,
+} from "@croco/cohort-core";
 import { compileCohortPredicate, PostgresCohortStore } from "../index";
 import type { CohortMaterialization, CohortPgDatabase, CohortPgExecutor } from "../index";
 import type {
@@ -436,4 +442,267 @@ describe.skipIf(!url)("PostgreSQL materialization and publication", () => {
       await pool.end();
     }
   }, 30000);
+});
+
+type PgConnection = {
+  query(text: string, values?: unknown[]): Promise<{ rows: Record<string, unknown>[] }>;
+  release(): void;
+};
+
+function barrier(): { reached: Promise<void>; release(): void } {
+  let release = () => {};
+  const reached = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  return { reached, release };
+}
+
+async function publicationFixture(
+  work: (fixture: {
+    first: CohortPgDatabase;
+    second: CohortPgDatabase;
+    observer: Pick<PgConnection, "query">;
+    secondPid: number;
+    snapshot: CohortSnapshot;
+    audit: { actor: string; reason: string; idempotencyKey: string };
+  }) => Promise<void>,
+): Promise<void> {
+  const { Pool } = createRequire(import.meta.url)("pg") as {
+    Pool: new (options: { connectionString: string; options?: string }) => {
+      query: PgConnection["query"];
+      connect(): Promise<PgConnection>;
+      end(): Promise<void>;
+    };
+  };
+  const schema = `cohort_rollback_${randomUUID().replaceAll("-", "")}`;
+  const setup = new Pool({ connectionString: url as string });
+  await setup.query(`CREATE SCHEMA ${schema}`);
+  const pool = new Pool({
+    connectionString: url as string,
+    options: `-c search_path=${schema} -c statement_timeout=5000`,
+  });
+  const firstClient = await pool.connect();
+  const secondClient = await pool.connect();
+  function database(client: PgConnection): CohortPgDatabase {
+    const execute: CohortPgExecutor["execute"] = (query) => {
+      const compiled = dialect.sqlToQuery(query);
+      return client.query(compiled.sql, compiled.params);
+    };
+    return {
+      execute,
+      transaction: async (operation) => {
+        await client.query("BEGIN");
+        try {
+          const result = await operation({ execute });
+          await client.query("COMMIT");
+          return result;
+        } catch (error) {
+          await client.query("ROLLBACK");
+          throw error;
+        }
+      },
+    };
+  }
+  try {
+    await pool.query(
+      readFileSync(new URL("../../migrations/0001_cohort.up.sql", import.meta.url), "utf8"),
+    );
+    const run = {
+      id: "publication-run",
+      definitionVersion: 1,
+      asOf,
+      sourceSnapshotRefs: ["source-1"],
+      sourceWatermarks: { source: "v1" },
+      status: "complete",
+    };
+    await pool.query(
+      "INSERT INTO croco_cohort_runs (id,scope_key,definition,run,fingerprint,status) VALUES ($1,$2,$3,$4,'fixed-source','complete')",
+      [
+        run.id,
+        JSON.stringify([scope.appId, scope.environment, scope.tenantId]),
+        JSON.stringify(input.definition),
+        JSON.stringify(run),
+      ],
+    );
+    await pool.query(
+      "INSERT INTO croco_cohort_members (run_id,subject_id,member) VALUES ($1,'member',$2)",
+      [run.id, JSON.stringify({ subjectId: "member", result: "match" })],
+    );
+    const snapshot: CohortSnapshot = {
+      snapshotId: "retained",
+      scope,
+      subjectKind: "customer",
+      definitionId: input.definition.id,
+      definitionVersion: 1,
+      schemaVersion: 1,
+      sourceSnapshotRefs: run.sourceSnapshotRefs,
+      asOf,
+      generatedAt: asOf,
+      validUntil: "2026-09-21T00:00:00.000Z",
+      contentHash: cohortContentHash(["member"]),
+      publicationRevision: 1,
+      privacyVersion: "1",
+      membershipRef: run.id,
+    };
+    const first = database(firstClient);
+    const second = database(secondClient);
+    const audit = { actor: "operator", reason: "rollback race", idempotencyKey: "initial" };
+    await new PostgresCohortStore(first).publish(run.id, snapshot, 0, audit);
+    const pid = await secondClient.query("SELECT pg_backend_pid() AS pid");
+    await work({
+      first,
+      second,
+      observer: pool,
+      secondPid: Number(pid.rows[0]?.pid),
+      snapshot,
+      audit,
+    });
+  } finally {
+    firstClient.release();
+    secondClient.release();
+    await pool.end();
+    await setup.query(`DROP SCHEMA ${schema} CASCADE`);
+    await setup.end();
+  }
+}
+
+const allowedPrivacy = { currentVersion: async () => "1", isAllowed: async () => true };
+
+describe.skipIf(!url)("PostgreSQL rollback and withdrawal ordering", () => {
+  it("rejects rollback when withdrawal commits after privacy validation and before publication", async () => {
+    await publicationFixture(async ({ first, second, snapshot, audit }) => {
+      const ready = barrier();
+      const resume = barrier();
+      const store = new PostgresCohortStore({
+        ...first,
+        transaction: async (work) => {
+          ready.release();
+          await resume.reached;
+          return first.transaction(work);
+        },
+      });
+      const target = { ...snapshot, snapshotId: "rejected-rollback", publicationRevision: 2 };
+      const rollback = Promise.allSettled([
+        store.rollback(
+          snapshot.snapshotId,
+          target,
+          1,
+          { ...audit, idempotencyKey: "rollback" },
+          allowedPrivacy,
+          new Date(asOf),
+        ),
+      ]);
+      try {
+        await ready.reached;
+        await new PostgresCohortStore(second).withdraw(snapshot.snapshotId, scope);
+        expect((await new PostgresCohortStore(second).read(snapshot.snapshotId))?.withdrawn).toBe(
+          true,
+        );
+      } finally {
+        resume.release();
+      }
+      expect((await rollback)[0]).toMatchObject({
+        status: "rejected",
+        reason: expect.any(CohortUnavailableProblem),
+      });
+      expect(await store.read(target.snapshotId)).toBeUndefined();
+      expect((await store.current(scope, snapshot.definitionId))?.snapshot.snapshotId).toBe(
+        snapshot.snapshotId,
+      );
+    });
+  }, 15000);
+
+  it("commits rollback before a waiting withdrawal and preserves the derived publication", async () => {
+    await publicationFixture(async ({ first, second, observer, secondPid, snapshot, audit }) => {
+      const ready = barrier();
+      const resume = barrier();
+      const store = new PostgresCohortStore({
+        ...first,
+        transaction: (work) =>
+          first.transaction(async (tx) => {
+            const result = await work(tx);
+            ready.release();
+            await resume.reached;
+            return result;
+          }),
+      });
+      const target = { ...snapshot, snapshotId: "committed-rollback", publicationRevision: 2 };
+      const rollback = Promise.allSettled([
+        store.rollback(
+          snapshot.snapshotId,
+          target,
+          1,
+          { ...audit, idempotencyKey: "rollback" },
+          allowedPrivacy,
+          new Date(asOf),
+        ),
+      ]);
+      await ready.reached;
+      let withdrawn = false;
+      const withdrawal = new PostgresCohortStore(second)
+        .withdraw(snapshot.snapshotId, scope)
+        .then(() => {
+          withdrawn = true;
+        });
+      const completedWithdrawal = Promise.allSettled([withdrawal]);
+      try {
+        const deadline = performance.now() + 5000;
+        let blocked = false;
+        while (!withdrawn && performance.now() < deadline) {
+          const locks = await observer.query("SELECT cardinality(pg_blocking_pids($1)) AS count", [
+            secondPid,
+          ]);
+          if (Number(locks.rows[0]?.count) > 0) {
+            blocked = true;
+            break;
+          }
+        }
+        expect(blocked).toBe(true);
+        expect(withdrawn).toBe(false);
+        const source = await observer.query(
+          "SELECT publication FROM croco_cohort_publications WHERE snapshot_id=$1",
+          [snapshot.snapshotId],
+        );
+        expect((source.rows[0]?.publication as { withdrawn: boolean }).withdrawn).toBe(false);
+      } finally {
+        resume.release();
+        await Promise.all([rollback, completedWithdrawal]);
+      }
+      expect((await rollback)[0]).toMatchObject({
+        status: "fulfilled",
+        value: { snapshot: target, subjectIds: ["member"], withdrawn: false },
+      });
+      expect((await completedWithdrawal)[0]?.status).toBe("fulfilled");
+      expect((await store.read(snapshot.snapshotId))?.withdrawn).toBe(true);
+      expect((await store.current(scope, snapshot.definitionId))?.snapshot).toEqual(target);
+      expect((await store.read(target.snapshotId))?.withdrawn).toBe(false);
+    });
+  }, 15000);
+
+  it("replays a successful rollback without creating another publication revision", async () => {
+    await publicationFixture(async ({ first, snapshot, audit }) => {
+      const store = new PostgresCohortStore(first);
+      const target = { ...snapshot, snapshotId: "idempotent-rollback", publicationRevision: 2 };
+      const rollbackAudit = { ...audit, idempotencyKey: "rollback" };
+      const original = await store.rollback(
+        snapshot.snapshotId,
+        target,
+        1,
+        rollbackAudit,
+        allowedPrivacy,
+        new Date(asOf),
+      );
+      expect(
+        await store.rollback(
+          snapshot.snapshotId,
+          target,
+          1,
+          rollbackAudit,
+          allowedPrivacy,
+          new Date(asOf),
+        ),
+      ).toEqual(original);
+      expect((await store.current(scope, snapshot.definitionId))?.snapshot).toEqual(target);
+    });
+  }, 15000);
 });
