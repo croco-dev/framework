@@ -1,4 +1,4 @@
-import { decodeCharacters } from "./characters";
+import { decodeCharacterChunks } from "./characters";
 import { normalizeValue } from "./normalize";
 import { SourceDecodeProblem } from "./SourceDecodeProblem";
 import type { SourcePosition, SourceRow, SourceSchema } from "./types";
@@ -76,75 +76,82 @@ export async function* decodeCsv(
     return undefined;
   }
 
-  for await (const character of decodeCharacters(bytes, schema.limits)) {
-    const { value, position, byteLength } = character;
-    if (records === 0 && fieldPosition.byteOffset === 0 && !sawContent && position.byteOffset > 0) {
-      fieldPosition = position;
-    }
-    if (skipLF) {
-      skipLF = false;
-      if (value === "\n") {
+  for await (const characters of decodeCharacterChunks(bytes, schema.limits)) {
+    for (const character of characters) {
+      const { value, position, byteLength } = character;
+      if (
+        records === 0 &&
+        fieldPosition.byteOffset === 0 &&
+        !sawContent &&
+        position.byteOffset > 0
+      ) {
+        fieldPosition = position;
+      }
+      if (skipLF) {
+        skipLF = false;
+        if (value === "\n") {
+          fieldPosition = {
+            byteOffset: position.byteOffset + byteLength,
+            line: position.line,
+            column: 1,
+          };
+          continue;
+        }
+      }
+      const newline = !inQuotes && (value === "\n" || value === "\r");
+      if (!newline) {
+        recordBytes += byteLength;
+        if (recordBytes > schema.limits.maxRowBytes) {
+          throw new SourceDecodeProblem(
+            "row-limit",
+            position,
+            `CSV record exceeds ${schema.limits.maxRowBytes} bytes`,
+          );
+        }
+      }
+      sawContent = true;
+      if (inQuotes) {
+        if (value === '"') {
+          inQuotes = false;
+          afterQuote = true;
+        } else {
+          field += value;
+        }
+        continue;
+      }
+      if (afterQuote && value === '"') {
+        field += '"';
+        inQuotes = true;
+        afterQuote = false;
+        continue;
+      }
+      if (value === delimiter || newline) {
+        finishField();
+        if (newline) {
+          const row = finishRecord(position);
+          if (row !== undefined) yield row;
+          skipLF = value === "\r";
+        }
         fieldPosition = {
           byteOffset: position.byteOffset + byteLength,
-          line: position.line,
-          column: 1,
+          line: newline ? position.line + 1 : position.line,
+          column: newline ? 1 : position.column + 1,
         };
         continue;
       }
-    }
-    const newline = !inQuotes && (value === "\n" || value === "\r");
-    if (!newline) {
-      recordBytes += byteLength;
-      if (recordBytes > schema.limits.maxRowBytes) {
+      if (afterQuote || value === '"') {
+        if (value === '"' && field.length === 0 && !afterQuote) {
+          inQuotes = true;
+          continue;
+        }
         throw new SourceDecodeProblem(
-          "row-limit",
+          "invalid-csv",
           position,
-          `CSV record exceeds ${schema.limits.maxRowBytes} bytes`,
+          "Unexpected character after a quote or quote inside an unquoted field",
         );
       }
+      field += value;
     }
-    sawContent = true;
-    if (inQuotes) {
-      if (value === '"') {
-        inQuotes = false;
-        afterQuote = true;
-      } else {
-        field += value;
-      }
-      continue;
-    }
-    if (afterQuote && value === '"') {
-      field += '"';
-      inQuotes = true;
-      afterQuote = false;
-      continue;
-    }
-    if (value === delimiter || newline) {
-      finishField();
-      if (newline) {
-        const row = finishRecord(position);
-        if (row !== undefined) yield row;
-        skipLF = value === "\r";
-      }
-      fieldPosition = {
-        byteOffset: position.byteOffset + byteLength,
-        line: newline ? position.line + 1 : position.line,
-        column: newline ? 1 : position.column + 1,
-      };
-      continue;
-    }
-    if (afterQuote || value === '"') {
-      if (value === '"' && field.length === 0 && !afterQuote) {
-        inQuotes = true;
-        continue;
-      }
-      throw new SourceDecodeProblem(
-        "invalid-csv",
-        position,
-        "Unexpected character after a quote or quote inside an unquoted field",
-      );
-    }
-    field += value;
   }
   if (inQuotes)
     throw new SourceDecodeProblem(

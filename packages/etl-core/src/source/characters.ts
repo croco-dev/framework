@@ -7,12 +7,11 @@ export type SourceCharacter = {
   readonly byteLength: number;
 };
 
-export async function* decodeCharacters(
+export async function* decodeCharacterChunks(
   bytes: AsyncIterable<Uint8Array>,
   limits: SourceLimits,
-): AsyncGenerator<SourceCharacter> {
+): AsyncGenerator<Iterable<SourceCharacter>> {
   const decoder = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true });
-  const encoder = new TextEncoder();
   let position: SourcePosition = { byteOffset: 0, line: 1, column: 1 };
   let received = 0;
   let previousWasCR = false;
@@ -21,7 +20,8 @@ export async function* decodeCharacters(
 
   function* emit(text: string): Generator<SourceCharacter> {
     for (const value of text) {
-      const byteLength = encoder.encode(value).byteLength;
+      const codeUnit = value.charCodeAt(0);
+      const byteLength = value.length === 2 ? 4 : codeUnit < 0x80 ? 1 : codeUnit < 0x800 ? 2 : 3;
       const current = position;
       if (first && value === "\uFEFF") {
         first = false;
@@ -56,14 +56,15 @@ export async function* decodeCharacters(
       probe.decode(pending, { stream: true });
       for (const byte of chunk) {
         try {
-          yield* emit(probe.decode(Uint8Array.of(byte), { stream: true }));
+          yield emit(probe.decode(Uint8Array.of(byte), { stream: true }));
         } catch {
           throw new SourceDecodeProblem("invalid-utf8", position, "Source contains invalid UTF-8");
         }
       }
       throw new SourceDecodeProblem("invalid-utf8", position, "Source contains invalid UTF-8");
     }
-    yield* emit(decoded);
+    // Await input chunks, not individual characters; each parser consumes this iterator synchronously.
+    yield emit(decoded);
     received += chunk.byteLength;
     const pendingCount = received - position.byteOffset;
     if (pendingCount <= chunk.byteLength) {
@@ -76,7 +77,7 @@ export async function* decodeCharacters(
     }
   }
   try {
-    yield* emit(decoder.decode());
+    yield emit(decoder.decode());
   } catch {
     throw new SourceDecodeProblem("invalid-utf8", position, "Source ends with incomplete UTF-8");
   }

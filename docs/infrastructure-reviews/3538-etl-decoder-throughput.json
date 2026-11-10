@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "etl-core",
+      "classification": "internal-pure-refactor",
+      "reason": "Internal streaming decoder optimization: consume characters synchronously within each decoded input chunk and derive UTF-8 widths without per-character byte buffers. CSV/JSONL parsing, limits, diagnostics and source positions remain unchanged; no host, provider, storage or lifecycle contract is introduced.",
+      "files": {
+        "packages/etl-core/src/source/characters.ts": "850f0fab1ea4cc198fcc06aed8cd80a9cd2c8d8ea917ab3ed0ec4c88875a813a",
+        "packages/etl-core/src/source/decodeCsv.ts": "221602b47b09dd393e2eed27a30f7989d1f7ffc5616d3013dfea8fb9b280e711",
+        "packages/etl-core/src/source/decodeJsonl.ts": "d11993a3c8105a0c8d444ec3c284526c9056bfd8924fb8fffd66d7fda3fd71e2"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Internal streaming decoder optimization: consume characters synchronously within each decoded input chunk and derive UTF-8 widths without per-character byte buffers. CSV/JSONL parsing, limits, diagnostics and source positions remain unchanged; no host, provider, storage or lifecycle contract is introduced.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/etl-core/src/source/characters.ts",
+            "packages/etl-core/src/source/decodeCsv.ts",
+            "packages/etl-core/src/source/decodeJsonl.ts",
+            "packages/etl-core/src/tests/SourceDecoder.spec.ts",
+            "packages/etl-core/src/tests/Pipeline.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Internal streaming decoder optimization: consume characters synchronously within each decoded input chunk and derive UTF-8 widths without per-character byte buffers. CSV/JSONL parsing, limits, diagnostics and source positions remain unchanged; no host, provider, storage or lifecycle contract is introduced.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/etl-core/src/source/characters.ts",
+            "packages/etl-core/src/source/decodeCsv.ts",
+            "packages/etl-core/src/source/decodeJsonl.ts",
+            "packages/etl-core/src/tests/SourceDecoder.spec.ts",
+            "packages/etl-core/src/tests/Pipeline.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Internal streaming decoder optimization: consume characters synchronously within each decoded input chunk and derive UTF-8 widths without per-character byte buffers. CSV/JSONL parsing, limits, diagnostics and source positions remain unchanged; no host, provider, storage or lifecycle contract is introduced.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/etl-core/src/source/characters.ts",
+            "packages/etl-core/src/source/decodeCsv.ts",
+            "packages/etl-core/src/source/decodeJsonl.ts",
+            "packages/etl-core/src/tests/SourceDecoder.spec.ts",
+            "packages/etl-core/src/tests/Pipeline.spec.ts"
+          ]
+        }
+      }
+    }
+  ]
+}

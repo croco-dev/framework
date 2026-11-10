@@ -1,4 +1,4 @@
-import { decodeCharacters } from "./characters";
+import { decodeCharacterChunks } from "./characters";
 import { normalizeValue } from "./normalize";
 import { SourceDecodeProblem } from "./SourceDecodeProblem";
 import type { SourcePosition, SourceRow, SourceSchema } from "./types";
@@ -86,48 +86,50 @@ export async function* decodeJsonl(
     };
   }
 
-  for await (const character of decodeCharacters(bytes, schema.limits)) {
-    const { value, position, byteLength } = character;
-    if (
-      records === 0 &&
-      linePosition.byteOffset === 0 &&
-      line.length === 0 &&
-      position.byteOffset > 0
-    ) {
-      linePosition = position;
-    }
-    if (skipLF) {
-      skipLF = false;
-      if (value === "\n") {
+  for await (const characters of decodeCharacterChunks(bytes, schema.limits)) {
+    for (const character of characters) {
+      const { value, position, byteLength } = character;
+      if (
+        records === 0 &&
+        linePosition.byteOffset === 0 &&
+        line.length === 0 &&
+        position.byteOffset > 0
+      ) {
+        linePosition = position;
+      }
+      if (skipLF) {
+        skipLF = false;
+        if (value === "\n") {
+          linePosition = {
+            byteOffset: position.byteOffset + byteLength,
+            line: position.line,
+            column: 1,
+          };
+          continue;
+        }
+      }
+      if (value === "\n" || value === "\r") {
+        yield finishLine(position);
+        line = "";
+        lineBytes = 0;
+        skipLF = value === "\r";
         linePosition = {
           byteOffset: position.byteOffset + byteLength,
-          line: position.line,
+          line: position.line + 1,
           column: 1,
         };
         continue;
       }
+      lineBytes += byteLength;
+      if (lineBytes > schema.limits.maxRowBytes) {
+        throw new SourceDecodeProblem(
+          "row-limit",
+          position,
+          `JSONL record exceeds ${schema.limits.maxRowBytes} bytes`,
+        );
+      }
+      line += value;
     }
-    if (value === "\n" || value === "\r") {
-      yield finishLine(position);
-      line = "";
-      lineBytes = 0;
-      skipLF = value === "\r";
-      linePosition = {
-        byteOffset: position.byteOffset + byteLength,
-        line: position.line + 1,
-        column: 1,
-      };
-      continue;
-    }
-    lineBytes += byteLength;
-    if (lineBytes > schema.limits.maxRowBytes) {
-      throw new SourceDecodeProblem(
-        "row-limit",
-        position,
-        `JSONL record exceeds ${schema.limits.maxRowBytes} bytes`,
-      );
-    }
-    line += value;
   }
   if (line.length > 0) yield finishLine(linePosition);
 }
