@@ -421,3 +421,5 @@ export type {
   TestRuntimeOptions,
   TestScheduledWork,
 } from "./libs/TestRuntime";
+export { createTaskDispatcherConformanceSuite } from "./libs/taskDispatcherConformance";
+export type { TaskDispatcherConformanceHarness } from "./libs/taskDispatcherConformance";

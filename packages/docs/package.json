@@ -148,6 +148,7 @@
     "@croco/storage-s3": "workspace:*",
     "@croco/tasks-core": "workspace:*",
     "@croco/tasks-qstash": "workspace:*",
+    "@croco/tasks-sqs": "workspace:*",
     "@croco/telemetry-api": "workspace:*",
     "@croco/telemetry-sdk-node": "workspace:*",
     "@croco/tenant-core": "workspace:*",

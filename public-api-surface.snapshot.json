@@ -41762,6 +41762,116 @@
       ]
     },
     {
+      "packageName": "@croco/tasks-sqs",
+      "relativeDir": "packages/tasks-sqs",
+      "entrypoints": [
+        {
+          "exportPath": ".",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
+              "target": "./dist/index.d.ts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/index.mjs"
+            },
+            {
+              "conditions": ["require"],
+              "target": "./dist/index.js"
+            }
+          ],
+          "sourceEntrypoint": "packages/tasks-sqs/src/index.ts",
+          "runtimeExports": [
+            {
+              "name": "SqsTaskConfigurationProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/SqsTaskProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "SqsTaskDispatcher",
+              "exportKind": "named",
+              "source": "./libs/SqsTaskDispatcher",
+              "declarationKind": "class"
+            },
+            {
+              "name": "SqsTaskHostProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/SqsTaskProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "SqsTaskMessageProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/SqsTaskProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "SqsTaskPublishProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/SqsTaskProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "createSqsTaskHandler",
+              "exportKind": "named",
+              "source": "./libs/createSqsTaskHandler",
+              "declarationKind": "function"
+            },
+            {
+              "name": "sqsTasks",
+              "exportKind": "named",
+              "source": "./libs/SqsTasksPlugin",
+              "declarationKind": "const"
+            }
+          ],
+          "typeExports": [
+            {
+              "name": "SqsTaskBatchResponse",
+              "exportKind": "named",
+              "source": "./libs/createSqsTaskHandler"
+            },
+            {
+              "name": "SqsTaskClient",
+              "exportKind": "named",
+              "source": "./libs/SqsTaskDispatcher"
+            },
+            {
+              "name": "SqsTaskDispatchOptions",
+              "exportKind": "named",
+              "source": "./libs/SqsTaskDispatcher"
+            },
+            {
+              "name": "SqsTaskDispatcherOptions",
+              "exportKind": "named",
+              "source": "./libs/SqsTaskDispatcher"
+            },
+            {
+              "name": "SqsTaskEvent",
+              "exportKind": "named",
+              "source": "./libs/createSqsTaskHandler"
+            },
+            {
+              "name": "SqsTaskHandlerOptions",
+              "exportKind": "named",
+              "source": "./libs/createSqsTaskHandler"
+            },
+            {
+              "name": "SqsTaskRecord",
+              "exportKind": "named",
+              "source": "./libs/createSqsTaskHandler"
+            }
+          ]
+        }
+      ]
+    },
+    {
       "packageName": "@croco/telemetry-api",
       "relativeDir": "packages/telemetry-api",
       "entrypoints": [
@@ -43348,6 +43458,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "createTaskDispatcherConformanceSuite",
+              "exportKind": "named",
+              "source": "./libs/taskDispatcherConformance",
+              "declarationKind": "function"
+            },
+            {
               "name": "createTestEvidenceBundle",
               "exportKind": "named",
               "source": "./libs/test-evidence.mjs",
@@ -44517,6 +44633,11 @@
               "name": "StorageProviderUrlExpectation",
               "exportKind": "named",
               "source": "./libs/provider-conformance"
+            },
+            {
+              "name": "TaskDispatcherConformanceHarness",
+              "exportKind": "named",
+              "source": "./libs/taskDispatcherConformance"
             },
             {
               "name": "TestDuration",

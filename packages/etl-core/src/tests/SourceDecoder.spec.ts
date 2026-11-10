@@ -79,6 +79,70 @@ describe("source decoder", () => {
     expect(rows).toEqual([{ id: 1, name: "한글", created: new Date("2024-04-01T00:30:00.000Z") }]);
   });
 
+  it.each(["csv", "jsonl"] as const)(
+    "preserves %s row-byte limits across UTF-8 width boundaries and input chunks",
+    async (format) => {
+      const value = "A\u007f\u0080\u07ff\u0800\ud7ff\ue000\uffff\u{10000}\u{10ffff}";
+      const record = format === "csv" ? value : JSON.stringify({ name: value });
+      const maxRowBytes = encoder.encode(record).byteLength;
+      const schema: SourceSchema = {
+        format,
+        encoding: "utf-8",
+        fields: [{ name: "name", type: "string" }],
+        limits: { ...limits, maxRowBytes },
+      };
+      for (const size of [1, 64]) {
+        expect(await collect(chunks(`\uFEFF${record}\r\n`, size), schema)).toEqual([
+          { name: value },
+        ]);
+        await expect(
+          collect(chunks(`\uFEFF${record}\r\n`, size), {
+            ...schema,
+            limits: { ...schema.limits, maxRowBytes: maxRowBytes - 1 },
+          }),
+        ).rejects.toMatchObject({ reason: "row-limit" });
+      }
+    },
+  );
+
+  it("locates a JSONL field after every UTF-8 width boundary without counting a BOM as a column", async () => {
+    const value = "A\u007f\u0080\u07ff\u0800\ud7ff\ue000\uffff\u{10000}\u{10ffff}";
+    const schema: SourceSchema = {
+      format: "jsonl",
+      encoding: "utf-8",
+      fields: [{ name: "name", type: "string" }],
+      limits,
+    };
+    for (const size of [1, 64]) {
+      await expect(
+        collect(chunks(`\uFEFF{"name":"${value}","bad":1}`, size), schema),
+      ).rejects.toMatchObject({
+        reason: "invalid-field",
+        field: "bad",
+        position: { byteOffset: 40, line: 1, column: 22 },
+      });
+    }
+  });
+
+  it("reports invalid UTF-8 after a split supplementary character and CRLF", async () => {
+    async function* invalidBytes() {
+      yield encoder.encode("\uFEFFA¢한😀\r\n");
+      yield Uint8Array.of(0xf0, 0x9f);
+      yield Uint8Array.of(0x98, 0x80, 0xff);
+    }
+    await expect(
+      collect(invalidBytes(), {
+        format: "csv",
+        encoding: "utf-8",
+        fields: [{ name: "name", type: "string" }],
+        limits,
+      }),
+    ).rejects.toMatchObject({
+      reason: "invalid-utf8",
+      position: { byteOffset: 19, line: 2, column: 2 },
+    });
+  });
+
   it("reports malformed CSV and JSONL with source positions", async () => {
     const csv = await errorFor('id,name,created\n1,"bad"x,2024-01-01', csvSchema);
     expect(csv.code).toBe("etl-core/source-decode-failed");

@@ -5181,6 +5181,28 @@ const recoveryMetadataByCode = {
     redactionPolicy: "operator-only",
     severity: "error",
   }),
+  "tasks-sqs/invalid-configuration": recovery({
+    cause:
+      "SQS publisher or Lambda consumer configuration is missing or invalid before message processing.",
+    userAction:
+      "Correct the publisher queue URL, region and FIFO settings or the consumer queue ARN, together with the server-owned tenant authority. Reconstruct the affected dispatcher or Lambda handler; do not retry unchanged configuration.",
+    operatorAction:
+      "Use extensions.field to locate the invalid setting and validate the publisher or consumer configuration against the trusted deployment mapping without logging credentials or private values. This validation failure starts neither publication nor consumption.",
+    retryability: "not-retryable",
+    redactionPolicy: "operator-only",
+    severity: "error",
+  }),
+  "tasks-sqs/publish-failed": recovery({
+    cause:
+      "SQS publication failed or returned no valid acceptance receipt, leaving message acceptance and delivery unknown.",
+    userAction:
+      "Do not automatically republish. Reconcile whether the original message was accepted and whether its execution or side effects completed before any manual retry.",
+    operatorAction:
+      "Inspect producer, queue and durable execution evidence using trusted identifiers. For a keyed manual retry, preserve the original queue, tenant, task ID, idempotencyKey and payload, using the same execution ledger with its retained receipts. For FIFO, preserve the original messageGroupId and reconcile ordering with preceding and subsequent messages before republishing. A newly enqueued retry receives a new queue position; it does not restore the original position. Changing the queue, identity scope or ledger creates another deduplication boundary: do not do so unless original non-acceptance is proven or independent effect deduplication is guaranteed. Without a caller key, each new publication creates a new dispatchId: do not republish unless non-acceptance is proven or independent effect deduplication is guaranteed. Native SDK retries are owned by the SDK.",
+    retryability: "not-retryable",
+    redactionPolicy: "operator-only",
+    severity: "error",
+  }),
   "tasks-core/task-reference-invalid": recovery({
     cause:
       "A typed task reference is missing its factory contract or no longer matches the registered handler metadata.",

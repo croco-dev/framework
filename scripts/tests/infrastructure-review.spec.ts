@@ -513,6 +513,8 @@ it('real host', async () => {
         "packages/create-croco-app/templates/addons/agent-rules/.agents/skills/croco";
       cpSync(join(repository, generated), join(root, generated), { recursive: true });
       symlinkSync(join(repository, "examples"), join(root, "examples"));
+      const sqsExample = "packages/tasks-sqs/README.md";
+      write(root, sqsExample, readFileSync(join(repository, sqsExample), "utf8"));
       const apiTemplate = "packages/create-croco-app/templates/saas/apps/api-server/src";
       for (const file of ["compositionRoot.ts", "index.ts", "lambda.ts", "worker.ts"]) {
         write(

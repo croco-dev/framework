@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export type CrocoProblemRegistry = {
   readonly version: "croco.problem-code-registry.v1";
-  readonly problemCount: 1180;
+  readonly problemCount: 1184;
   readonly problems: readonly [
     {
       readonly code: "ACCESS_DENIED";
@@ -29313,6 +29313,118 @@ export type CrocoProblemRegistry = {
       ];
     },
     {
+      readonly code: "tasks-sqs/invalid-configuration";
+      readonly category: "InternalServerError";
+      readonly status: 500;
+      readonly title: "Internal Server Error";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#tasks-sqs-invalid-configuration";
+      readonly recovery: {
+        readonly cause: "SQS publisher or Lambda consumer configuration is missing or invalid before message processing.";
+        readonly userAction: "Correct the publisher queue URL, region and FIFO settings or the consumer queue ARN, together with the server-owned tenant authority. Reconstruct the affected dispatcher or Lambda handler; do not retry unchanged configuration.";
+        readonly operatorAction: "Use extensions.field to locate the invalid setting and validate the publisher or consumer configuration against the trusted deployment mapping without logging credentials or private values. This validation failure starts neither publication nor consumption.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "operator-only";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.error";
+          readonly severity: "error";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/tasks-sqs/src/libs/problems/SqsTaskProblems.ts";
+          readonly line: 3;
+          readonly column: 1;
+          readonly kind: "problem-class";
+        },
+      ];
+    },
+    {
+      readonly code: "tasks-sqs/invalid-message";
+      readonly category: "BadRequest";
+      readonly status: 400;
+      readonly title: "Bad Request";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#tasks-sqs-invalid-message";
+      readonly recovery: {
+        readonly cause: "The caller sent malformed input or unsupported request options.";
+        readonly userAction: "Correct the request input and retry after validation passes.";
+        readonly operatorAction: "Inspect validation details and request logs; do not retry unchanged input.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/tasks-sqs/src/libs/problems/SqsTaskProblems.ts";
+          readonly line: 14;
+          readonly column: 1;
+          readonly kind: "problem-class";
+        },
+      ];
+    },
+    {
+      readonly code: "tasks-sqs/publish-failed";
+      readonly category: "InternalServerError";
+      readonly status: 500;
+      readonly title: "Internal Server Error";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#tasks-sqs-publish-failed";
+      readonly recovery: {
+        readonly cause: "SQS publication failed or returned no valid acceptance receipt, leaving message acceptance and delivery unknown.";
+        readonly userAction: "Do not automatically republish. Reconcile whether the original message was accepted and whether its execution or side effects completed before any manual retry.";
+        readonly operatorAction: "Inspect producer, queue and durable execution evidence using trusted identifiers. For a keyed manual retry, preserve the original queue, tenant, task ID, idempotencyKey and payload, using the same execution ledger with its retained receipts. For FIFO, preserve the original messageGroupId and reconcile ordering with preceding and subsequent messages before republishing. A newly enqueued retry receives a new queue position; it does not restore the original position. Changing the queue, identity scope or ledger creates another deduplication boundary: do not do so unless original non-acceptance is proven or independent effect deduplication is guaranteed. Without a caller key, each new publication creates a new dispatchId: do not republish unless non-acceptance is proven or independent effect deduplication is guaranteed. Native SDK retries are owned by the SDK.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "operator-only";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.error";
+          readonly severity: "error";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/tasks-sqs/src/libs/problems/SqsTaskProblems.ts";
+          readonly line: 25;
+          readonly column: 1;
+          readonly kind: "problem-class";
+        },
+      ];
+    },
+    {
+      readonly code: "tasks-sqs/unsupported-host-event";
+      readonly category: "BadRequest";
+      readonly status: 400;
+      readonly title: "Bad Request";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#tasks-sqs-unsupported-host-event";
+      readonly recovery: {
+        readonly cause: "The caller sent malformed input or unsupported request options.";
+        readonly userAction: "Correct the request input and retry after validation passes.";
+        readonly operatorAction: "Inspect validation details and request logs; do not retry unchanged input.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/tasks-sqs/src/libs/problems/SqsTaskProblems.ts";
+          readonly line: 37;
+          readonly column: 1;
+          readonly kind: "problem-class";
+        },
+      ];
+    },
+    {
       readonly code: "telemetry-sdk-node/batch-configuration-invalid";
       readonly category: "InternalServerError";
       readonly status: 500;
@@ -33354,7 +33466,7 @@ export type CrocoProblemRegistry = {
 
 export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 1180,
+  problemCount: 1184,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -66084,6 +66196,134 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
         {
           file: "packages/tasks-qstash/src/libs/problems/QStashTaskProblems.ts",
           line: 30,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "tasks-sqs/invalid-configuration",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#tasks-sqs-invalid-configuration",
+      recovery: {
+        cause:
+          "SQS publisher or Lambda consumer configuration is missing or invalid before message processing.",
+        userAction:
+          "Correct the publisher queue URL, region and FIFO settings or the consumer queue ARN, together with the server-owned tenant authority. Reconstruct the affected dispatcher or Lambda handler; do not retry unchanged configuration.",
+        operatorAction:
+          "Use extensions.field to locate the invalid setting and validate the publisher or consumer configuration against the trusted deployment mapping without logging credentials or private values. This validation failure starts neither publication nor consumption.",
+        retryability: "not-retryable",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/tasks-sqs/src/libs/problems/SqsTaskProblems.ts",
+          line: 3,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "tasks-sqs/invalid-message",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#tasks-sqs-invalid-message",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/tasks-sqs/src/libs/problems/SqsTaskProblems.ts",
+          line: 14,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "tasks-sqs/publish-failed",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#tasks-sqs-publish-failed",
+      recovery: {
+        cause:
+          "SQS publication failed or returned no valid acceptance receipt, leaving message acceptance and delivery unknown.",
+        userAction:
+          "Do not automatically republish. Reconcile whether the original message was accepted and whether its execution or side effects completed before any manual retry.",
+        operatorAction:
+          "Inspect producer, queue and durable execution evidence using trusted identifiers. For a keyed manual retry, preserve the original queue, tenant, task ID, idempotencyKey and payload, using the same execution ledger with its retained receipts. For FIFO, preserve the original messageGroupId and reconcile ordering with preceding and subsequent messages before republishing. A newly enqueued retry receives a new queue position; it does not restore the original position. Changing the queue, identity scope or ledger creates another deduplication boundary: do not do so unless original non-acceptance is proven or independent effect deduplication is guaranteed. Without a caller key, each new publication creates a new dispatchId: do not republish unless non-acceptance is proven or independent effect deduplication is guaranteed. Native SDK retries are owned by the SDK.",
+        retryability: "not-retryable",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/tasks-sqs/src/libs/problems/SqsTaskProblems.ts",
+          line: 25,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "tasks-sqs/unsupported-host-event",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#tasks-sqs-unsupported-host-event",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/tasks-sqs/src/libs/problems/SqsTaskProblems.ts",
+          line: 37,
           column: 1,
           kind: "problem-class",
         },

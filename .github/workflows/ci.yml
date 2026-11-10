@@ -815,6 +815,7 @@ jobs:
               - 'packages/storage-s3/src/**'
               - 'packages/tasks-core/src/**'
               - 'packages/tasks-qstash/src/**'
+              - 'packages/tasks-sqs/src/**'
               - 'packages/telemetry-api/src/**'
               - 'packages/telemetry-sdk-node/src/**'
               - 'packages/tenant-core/src/**'
