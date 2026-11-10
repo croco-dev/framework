@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "audit-core",
+      "classification": "pure-contract",
+      "reason": "Normalize bigint audit snapshots to lossless decimal strings before the existing JSON persistence boundary. Business inputs and results, database schemas, provider selection and host lifecycles remain unchanged.",
+      "files": {
+        "packages/audit-core/src/libs/sanitizeAuditValue.ts": "f01fc51864f0e7087cd0e72153611bef6ff06594c77cbf7514872ee7bb4eaa06"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Bigint-to-decimal normalization uses only pure JavaScript data traversal. It needs no host capability, credentials, storage connection or lifecycle hook on this profile. Existing audit-drizzle adapters continue to own persistence.",
+          "providers": [],
+          "constraints": [
+            "No new runtime support or live infrastructure certification is claimed; audit-drizzle retains its existing Node/Lambda constraints."
+          ],
+          "references": [
+            "packages/audit-core/src/libs/sanitizeAuditValue.ts",
+            "packages/audit-drizzle/src/libs/schema.ts",
+            "packages/audit-drizzle/src/tests/bigintAuditPersistence.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Bigint-to-decimal normalization uses only pure JavaScript data traversal. It needs no host capability, credentials, storage connection or lifecycle hook on this profile. Existing audit-drizzle adapters continue to own persistence.",
+          "providers": [],
+          "constraints": [
+            "No new runtime support or live infrastructure certification is claimed; audit-drizzle retains its existing Node/Lambda constraints."
+          ],
+          "references": [
+            "packages/audit-core/src/libs/sanitizeAuditValue.ts",
+            "packages/audit-drizzle/src/libs/schema.ts",
+            "packages/audit-drizzle/src/tests/bigintAuditPersistence.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Bigint-to-decimal normalization uses only pure JavaScript data traversal. It needs no host capability, credentials, storage connection or lifecycle hook on this profile. Existing audit-drizzle adapters continue to own persistence.",
+          "providers": [],
+          "constraints": [
+            "No new runtime support or live infrastructure certification is claimed; audit-drizzle retains its existing Node/Lambda constraints."
+          ],
+          "references": [
+            "packages/audit-core/src/libs/sanitizeAuditValue.ts",
+            "packages/audit-drizzle/src/libs/schema.ts",
+            "packages/audit-drizzle/src/tests/bigintAuditPersistence.ts"
+          ]
+        }
+      }
+    }
+  ]
+}
