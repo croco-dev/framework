@@ -3886,71 +3886,93 @@ function schemaDescriptorToTypeScript(
   descriptor: ContractSchemaDescriptor,
   options: TypeScriptTypeOptions = {},
 ): string {
+  return unionTypes(schemaDescriptorToTypeScriptMembers(descriptor, options));
+}
+
+function schemaDescriptorToTypeScriptMembers(
+  descriptor: ContractSchemaDescriptor,
+  options: TypeScriptTypeOptions,
+): string[] {
   if (descriptor.kind === "string") {
-    return "string";
+    return ["string"];
   }
 
   if (descriptor.kind === "number") {
-    return "number";
+    return ["number"];
   }
 
   if (descriptor.kind === "boolean") {
-    return "boolean";
+    return ["boolean"];
   }
 
   if (descriptor.kind === "unknown" || descriptor.kind === "any") {
-    return "unknown";
+    return ["unknown"];
   }
 
   if (descriptor.kind === "never") {
-    return "never";
+    return ["never"];
   }
 
   if (descriptor.kind === "null") {
-    return "null";
+    return ["null"];
   }
 
   if (descriptor.kind === "undefined" || descriptor.kind === "void") {
-    return "undefined";
+    return ["undefined"];
   }
 
   if (descriptor.kind === "literal") {
-    return literalValueToTypeScript(descriptor.value);
+    return [literalValueToTypeScript(descriptor.value)];
   }
 
   if (descriptor.kind === "enum") {
-    return unionTypes((descriptor.values ?? []).map(literalValueToTypeScript));
+    return (descriptor.values ?? []).map(literalValueToTypeScript);
   }
 
   if (descriptor.kind === "union") {
-    return unionTypes(
-      (descriptor.options ?? []).map((option) => schemaDescriptorToTypeScript(option, options)),
+    return (descriptor.options ?? []).flatMap((option) =>
+      schemaDescriptorToTypeScriptMembers(option, options),
     );
   }
 
   if (descriptor.kind === "optional") {
-    return `${schemaDescriptorToTypeScript(getRequiredChildDescriptor(descriptor, "inner"), options)} | undefined`;
+    return [
+      ...schemaDescriptorToTypeScriptMembers(
+        getRequiredChildDescriptor(descriptor, "inner"),
+        options,
+      ),
+      "undefined",
+    ];
   }
 
   if (descriptor.kind === "nullable") {
-    return `${schemaDescriptorToTypeScript(getRequiredChildDescriptor(descriptor, "inner"), options)} | null`;
+    return [
+      ...schemaDescriptorToTypeScriptMembers(
+        getRequiredChildDescriptor(descriptor, "inner"),
+        options,
+      ),
+      "null",
+    ];
   }
 
   if (descriptor.kind === "default") {
-    const inner = schemaDescriptorToTypeScript(
+    const members = schemaDescriptorToTypeScriptMembers(
       getRequiredChildDescriptor(descriptor, "inner"),
       options,
     );
 
     return options.lifecycle === "input"
-      ? includeUndefinedType(inner)
-      : excludeUndefinedType(inner);
+      ? [...members, "undefined"]
+      : members.filter((member) => member !== "undefined");
   }
 
   if (descriptor.kind === "catch") {
     return options.lifecycle === "input"
-      ? "unknown"
-      : schemaDescriptorToTypeScript(getRequiredChildDescriptor(descriptor, "inner"), options);
+      ? ["unknown"]
+      : schemaDescriptorToTypeScriptMembers(
+          getRequiredChildDescriptor(descriptor, "inner"),
+          options,
+        );
   }
 
   if (
@@ -3958,7 +3980,10 @@ function schemaDescriptorToTypeScript(
     descriptor.kind === "branded" ||
     descriptor.kind === "readonly"
   ) {
-    return schemaDescriptorToTypeScript(getRequiredChildDescriptor(descriptor, "inner"), options);
+    return schemaDescriptorToTypeScriptMembers(
+      getRequiredChildDescriptor(descriptor, "inner"),
+      options,
+    );
   }
 
   if (descriptor.kind === "array") {
@@ -3966,15 +3991,17 @@ function schemaDescriptorToTypeScript(
       schemaDescriptorToTypeScript(getRequiredChildDescriptor(descriptor, "element"), options),
     );
 
-    return options.readonlyArrays ? `readonly ${element}[]` : `${element}[]`;
+    return [options.readonlyArrays ? `readonly ${element}[]` : `${element}[]`];
   }
 
   if (descriptor.kind === "record") {
-    return `Record<string, ${descriptor.element ? schemaDescriptorToTypeScript(descriptor.element, options) : "unknown"}>`;
+    return [
+      `Record<string, ${descriptor.element ? schemaDescriptorToTypeScript(descriptor.element, options) : "unknown"}>`,
+    ];
   }
 
   if (descriptor.kind === "object") {
-    return getObjectTypeScript(descriptor, options);
+    return [getObjectTypeScript(descriptor, options)];
   }
 
   throw new RpcCodegenContractProblem(
@@ -4009,14 +4036,6 @@ function unionTypes(types: readonly string[]): string {
   const uniqueTypes = [...new Set(types)];
 
   return uniqueTypes.length === 0 ? "never" : uniqueTypes.join(" | ");
-}
-
-function includeUndefinedType(type: string): string {
-  return type.split(" | ").includes("undefined") ? type : `${type} | undefined`;
-}
-
-function excludeUndefinedType(type: string): string {
-  return unionTypes(type.split(" | ").filter((member) => member !== "undefined"));
 }
 
 function escapeTypeScriptString(value: string): string {
