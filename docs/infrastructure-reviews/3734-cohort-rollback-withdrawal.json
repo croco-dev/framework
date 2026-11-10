@@ -6,7 +6,7 @@
       "classification": "durable-provider",
       "reason": "Revalidate the retained rollback source under the publication scope lock and serialize withdrawal with publication. PostgreSQL transaction boundaries change without a schema or public signature change.",
       "files": {
-        "packages/cohort-drizzle/src/libs/PostgresCohortStore.ts": "a091b2659149f70352f9efed84ed005dd33101b7152f03ae108680b8c76e1bf7"
+        "packages/cohort-drizzle/src/libs/PostgresCohortStore.ts": "4e0656304d95844f0b38b9a5ec5070e6cd3821905ad295625fa7bc34854a33bf"
       },
       "catalogRuntimes": ["node", "lambda"],
       "profiles": {

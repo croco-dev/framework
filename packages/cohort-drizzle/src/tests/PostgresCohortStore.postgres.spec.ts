@@ -462,10 +462,13 @@ async function publicationFixture(
     first: CohortPgDatabase;
     second: CohortPgDatabase;
     observer: Pick<PgConnection, "query">;
+    firstPid: number;
     secondPid: number;
     snapshot: CohortSnapshot;
     audit: { actor: string; reason: string; idempotencyKey: string };
   }) => Promise<void>,
+  isolation: "READ COMMITTED" | "REPEATABLE READ" | "SERIALIZABLE" = "READ COMMITTED",
+  driver: "pg" | "drizzle" = "pg",
 ): Promise<void> {
   const { Pool } = createRequire(import.meta.url)("pg") as {
     Pool: new (options: { connectionString: string; options?: string }) => {
@@ -491,7 +494,7 @@ async function publicationFixture(
     return {
       execute,
       transaction: async (operation) => {
-        await client.query("BEGIN");
+        await client.query(`BEGIN ISOLATION LEVEL ${isolation}`);
         try {
           const result = await operation({ execute });
           await client.query("COMMIT");
@@ -544,15 +547,41 @@ async function publicationFixture(
       privacyVersion: "1",
       membershipRef: run.id,
     };
-    const first = database(firstClient);
+    const first: CohortPgDatabase =
+      driver === "drizzle"
+        ? (() => {
+            const { drizzle } = createRequire(import.meta.url)("drizzle-orm/node-postgres") as {
+              drizzle(client: PgConnection): {
+                execute: CohortPgExecutor["execute"];
+                transaction<T>(
+                  operation: (tx: CohortPgExecutor) => Promise<T>,
+                  config: { isolationLevel: "read committed" | "repeatable read" | "serializable" },
+                ): Promise<T>;
+              };
+            };
+            const db = drizzle(firstClient);
+            const levels = {
+              "READ COMMITTED": "read committed",
+              "REPEATABLE READ": "repeatable read",
+              SERIALIZABLE: "serializable",
+            } as const;
+            return {
+              execute: (query) => db.execute(query),
+              transaction: (operation) =>
+                db.transaction(operation, { isolationLevel: levels[isolation] }),
+            };
+          })()
+        : database(firstClient);
     const second = database(secondClient);
     const audit = { actor: "operator", reason: "rollback race", idempotencyKey: "initial" };
     await new PostgresCohortStore(first).publish(run.id, snapshot, 0, audit);
+    const firstPid = await firstClient.query("SELECT pg_backend_pid() AS pid");
     const pid = await secondClient.query("SELECT pg_backend_pid() AS pid");
     await work({
       first,
       second,
       observer: pool,
+      firstPid: Number(firstPid.rows[0]?.pid),
       secondPid: Number(pid.rows[0]?.pid),
       snapshot,
       audit,
@@ -569,6 +598,92 @@ async function publicationFixture(
 const allowedPrivacy = { currentVersion: async () => "1", isAllowed: async () => true };
 
 describe.skipIf(!url)("PostgreSQL rollback and withdrawal ordering", () => {
+  it.each([
+    ["READ COMMITTED", "pg"],
+    ["REPEATABLE READ", "pg"],
+    ["SERIALIZABLE", "pg"],
+    ["REPEATABLE READ", "drizzle"],
+  ] as const)(
+    "rejects rollback when a prior withdrawal commits after the %s %s transaction snapshot starts",
+    async (isolation, driver) => {
+      await publicationFixture(
+        async ({ first, second, observer, firstPid, snapshot, audit }) => {
+          const updated = barrier();
+          const commit = barrier();
+          const withdrawing = new PostgresCohortStore({
+            ...second,
+            transaction: (work) =>
+              second.transaction(async (tx) => {
+                const result = await work(tx);
+                updated.release();
+                await commit.reached;
+                return result;
+              }),
+          });
+          const withdrawal = Promise.allSettled([withdrawing.withdraw(snapshot.snapshotId, scope)]);
+          await updated.reached;
+          const store = new PostgresCohortStore(first);
+          const target = {
+            ...snapshot,
+            snapshotId: "snapshot-isolation-rollback",
+            publicationRevision: 2,
+          };
+          let rollbackFinished = false;
+          const rollback = Promise.allSettled([
+            store.rollback(
+              snapshot.snapshotId,
+              target,
+              1,
+              { ...audit, idempotencyKey: "rollback" },
+              allowedPrivacy,
+              new Date(asOf),
+            ),
+          ]).then((results) => {
+            rollbackFinished = true;
+            return results;
+          });
+          try {
+            const deadline = performance.now() + 5000;
+            let blocked = false;
+            while (!rollbackFinished && performance.now() < deadline) {
+              const locks = await observer.query(
+                "SELECT cardinality(pg_blocking_pids($1)) AS count",
+                [firstPid],
+              );
+              if (Number(locks.rows[0]?.count) > 0) {
+                blocked = true;
+                break;
+              }
+            }
+            expect(blocked).toBe(true);
+            expect(rollbackFinished).toBe(false);
+            const source = await observer.query(
+              "SELECT publication FROM croco_cohort_publications WHERE snapshot_id=$1",
+              [snapshot.snapshotId],
+            );
+            expect((source.rows[0]?.publication as { withdrawn: boolean }).withdrawn).toBe(false);
+          } finally {
+            commit.release();
+            await Promise.all([withdrawal, rollback]);
+          }
+          expect((await withdrawal)[0]?.status).toBe("fulfilled");
+          expect((await rollback)[0]).toMatchObject({
+            status: "rejected",
+            reason: expect.any(CohortUnavailableProblem),
+          });
+          expect((await store.read(snapshot.snapshotId))?.withdrawn).toBe(true);
+          expect(await store.read(target.snapshotId)).toBeUndefined();
+          expect((await store.current(scope, snapshot.definitionId))?.snapshot.snapshotId).toBe(
+            snapshot.snapshotId,
+          );
+        },
+        isolation,
+        driver,
+      );
+    },
+    15000,
+  );
+
   it("rejects rollback when withdrawal commits after privacy validation and before publication", async () => {
     await publicationFixture(async ({ first, second, snapshot, audit }) => {
       const ready = barrier();

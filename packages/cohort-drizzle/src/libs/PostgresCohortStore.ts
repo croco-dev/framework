@@ -45,6 +45,15 @@ type StoredRun = {
 const scopeKey = (scope: CohortScope): string =>
   JSON.stringify([scope.appId, scope.environment, scope.tenantId]);
 const json = (value: unknown): SQL => sql`${JSON.stringify(value)}::jsonb`;
+function isSerializationFailure(error: unknown): boolean {
+  const seen = new Set<object>();
+  while (typeof error === "object" && error !== null && !seen.has(error)) {
+    if ("code" in error && error.code === "40001") return true;
+    seen.add(error);
+    error = "cause" in error ? error.cause : undefined;
+  }
+  return false;
+}
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new CohortInvalidProblem(message);
 }
@@ -271,10 +280,17 @@ export class PostgresCohortStore implements CohortPublicationStore {
       const key = scopeKey(snapshot.scope);
       await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtextextended(${key},0))`);
       if (rollbackSourceId !== undefined) {
-        const source = await tx.execute(
-          sql`SELECT publication FROM croco_cohort_publications WHERE snapshot_id=${rollbackSourceId} AND scope_key=${key}`,
-        );
-        const publication = source.rows[0]?.publication as CohortPublication | undefined;
+        let publication: CohortPublication | undefined;
+        try {
+          const source = await tx.execute(
+            sql`SELECT publication FROM croco_cohort_publications WHERE snapshot_id=${rollbackSourceId} AND scope_key=${key} FOR SHARE`,
+          );
+          publication = source.rows[0]?.publication as CohortPublication | undefined;
+        } catch (error) {
+          if (isSerializationFailure(error))
+            throw new CohortUnavailableProblem("Snapshot changed during rollback");
+          throw error;
+        }
         if (!publication || publication.withdrawn)
           throw new CohortUnavailableProblem("Snapshot is absent or withdrawn");
       }
