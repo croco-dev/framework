@@ -5182,11 +5182,12 @@ const recoveryMetadataByCode = {
     severity: "error",
   }),
   "tasks-sqs/invalid-configuration": recovery({
-    cause: "SQS dispatcher configuration is missing or invalid before publication.",
+    cause:
+      "SQS publisher or Lambda consumer configuration is missing or invalid before message processing.",
     userAction:
-      "Correct the server-owned queue URL, tenant, region and FIFO settings, then reconstruct the dispatcher. Do not retry unchanged configuration.",
+      "Correct the publisher queue URL, region and FIFO settings or the consumer queue ARN, together with the server-owned tenant authority. Reconstruct the affected dispatcher or Lambda handler; do not retry unchanged configuration.",
     operatorAction:
-      "Use extensions.field to locate the invalid setting and validate it against the deployment configuration without logging credentials or private values. This validation failure did not publish a message.",
+      "Use extensions.field to locate the invalid setting and validate the publisher or consumer configuration against the trusted deployment mapping without logging credentials or private values. This validation failure starts neither publication nor consumption.",
     retryability: "not-retryable",
     redactionPolicy: "operator-only",
     severity: "error",
@@ -5197,7 +5198,7 @@ const recoveryMetadataByCode = {
     userAction:
       "Do not automatically republish. Reconcile whether the original message was accepted and whether its execution or side effects completed before any manual retry.",
     operatorAction:
-      "Inspect producer, queue and durable execution evidence using trusted identifiers. Retry only after resolving the unknown outcome, preserving the original logical idempotency identity and effect deduplication. Native SDK retries are owned by the SDK.",
+      "Inspect producer, queue and durable execution evidence using trusted identifiers. Preserve the original idempotencyKey and payload when a key was supplied. Without that key, each new publication creates a new dispatchId: do not republish unless non-acceptance is proven or independent effect deduplication is guaranteed. Native SDK retries are owned by the SDK.",
     retryability: "not-retryable",
     redactionPolicy: "operator-only",
     severity: "error",
