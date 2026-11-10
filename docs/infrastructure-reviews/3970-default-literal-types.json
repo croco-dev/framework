@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "rpc-codegen",
+      "classification": "pure-contract",
+      "reason": "Default schema input and output types preserve literal contents and nested unions by projecting top-level descriptor members rather than splitting emitted TypeScript text.",
+      "files": {
+        "packages/rpc-codegen/src/libs/generate.ts": "9534ddfc6e1b70642fa25d9ca6b6b9ceae1c83655ec96f2e06d92af7240009ff"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "This build-time type printer uses schema descriptors and has no host capability, provider, storage or lifecycle dependency. Generated consumer typechecking does not establish deployment support.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/rpc-codegen/src/libs/generate.ts",
+            "packages/rpc-codegen/src/tests/codegen.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "This build-time type printer uses schema descriptors and has no host capability, provider, storage or lifecycle dependency. Generated consumer typechecking does not establish deployment support.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/rpc-codegen/src/libs/generate.ts",
+            "packages/rpc-codegen/src/tests/codegen.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "This build-time type printer uses schema descriptors and has no host capability, provider, storage or lifecycle dependency. Generated consumer typechecking does not establish deployment support.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/rpc-codegen/src/libs/generate.ts",
+            "packages/rpc-codegen/src/tests/codegen.spec.ts"
+          ]
+        }
+      }
+    }
+  ]
+}

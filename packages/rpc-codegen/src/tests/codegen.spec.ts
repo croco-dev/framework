@@ -2278,6 +2278,121 @@ void result;
     );
   });
 
+  it.each([
+    [
+      "literal",
+      z.literal("pending | undefined | done").default("pending | undefined | done"),
+      "'pending | undefined | done'",
+    ],
+    [
+      "enum",
+      z.enum(["pending | undefined | done", "ready"]).default("pending | undefined | done"),
+      "'pending | undefined | done' | 'ready'",
+    ],
+    [
+      "wrapped union",
+      z
+        .union([z.literal("pending | undefined | done"), z.literal("ready").optional()])
+        .nullable()
+        .readonly()
+        .default("pending | undefined | done"),
+      "'pending | undefined | done' | 'ready' | null",
+    ],
+  ])(
+    "preserves %s defaults in generated consumer types",
+    (_name, statusSchema, expectedStatusType) => {
+      const schema = z
+        .object({ status: statusSchema })
+        .default({ status: "pending | undefined | done" });
+      const routes: RouteIR[] = [
+        {
+          controllerName: "StatusController",
+          methodName: "echo",
+          httpMethod: "GET",
+          path: "/status",
+          routeContract: null,
+          params: [{ kind: "query", name: "status", schema: null }],
+          inputSchema: null,
+          inputSchemas: {
+            body: null,
+            path: null,
+            query: schema as unknown as RouteIR["inputSchemas"]["query"],
+            headers: null,
+          },
+          outputSchema: schema as unknown as RouteIR["outputSchema"],
+          domain: null,
+        },
+      ];
+      const files = generateClientFiles(routes, tempDir);
+      const content = fs.readFileSync(files[0], "utf-8");
+
+      expect(statusSchema.parse(undefined)).toBe("pending | undefined | done");
+      assertGeneratedClientTypechecks(`${content}
+const input: EchoInput = { query: undefined };
+const literalInput: EchoInput = { query: { status: 'pending | undefined | done' } };
+const output: EchoOutput = { status: 'pending | undefined | done' };
+declare const generatedStatus: EchoOutput['status'];
+const supportedStatus: ${expectedStatusType} = generatedStatus;
+declare const expectedStatus: ${expectedStatusType};
+const completeStatus: EchoOutput['status'] = expectedStatus;
+// @ts-expect-error A default output excludes only the top-level undefined type.
+const missingOutput: EchoOutput = { status: undefined };
+// @ts-expect-error Literal content must not lose an embedded undefined token.
+const changedOutput: EchoOutput = { status: 'pending | done' };
+// @ts-expect-error The same changed literal is invalid as input.
+const changedInput: EchoInput = { query: { status: 'pending | done' } };
+void [input, literalInput, output, supportedStatus, completeStatus, missingOutput, changedOutput, changedInput];
+`);
+    },
+    GENERATED_CLIENT_TYPECHECK_TIMEOUT_MS,
+  );
+
+  it(
+    "keeps nested undefined types when projecting default outputs",
+    () => {
+      const schema = z
+        .object({
+          label: z.literal("pending | undefined | done").optional(),
+          items: z.array(z.string().optional()),
+        })
+        .default({ items: [] });
+      const routes: RouteIR[] = [
+        {
+          controllerName: "StatusController",
+          methodName: "echo",
+          httpMethod: "GET",
+          path: "/status",
+          routeContract: null,
+          params: [{ kind: "query", name: "status", schema: null }],
+          inputSchema: null,
+          inputSchemas: {
+            body: null,
+            path: null,
+            query: schema as unknown as RouteIR["inputSchemas"]["query"],
+            headers: null,
+          },
+          outputSchema: schema as unknown as RouteIR["outputSchema"],
+          domain: null,
+        },
+      ];
+      const files = generateClientFiles(routes, tempDir);
+      const content = fs.readFileSync(files[0], "utf-8");
+
+      assertGeneratedClientTypechecks(`${content}
+const input: EchoInput = { query: undefined };
+const objectOutput: EchoOutput = { label: undefined, items: [] };
+const literalOutput: EchoOutput = { label: 'pending | undefined | done', items: [] };
+const arrayOutput: EchoOutput = { items: ['first', undefined, 'last'] };
+// @ts-expect-error The outer default does not allow an undefined output.
+const missingOutput: EchoOutput = undefined;
+// @ts-expect-error Nested literals must retain their original content.
+const changedOutput: EchoOutput = { label: 'pending | done', items: [] };
+void [input, objectOutput, literalOutput, arrayOutput, missingOutput, changedOutput];
+`);
+    },
+    GENERATED_CLIENT_TYPECHECK_TIMEOUT_MS,
+  );
+
   it("should generate combined input types from inputSchemas", () => {
     const routes: RouteIR[] = [
       {
