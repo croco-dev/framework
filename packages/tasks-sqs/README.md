@@ -95,8 +95,14 @@ status transitions. `TaskRunner` owns all execution attempts, task retry classif
 timeouts and indeterminate recovery. The provider does not create another ledger.
 Execution identity includes queue ARN, tenant, task and the logical idempotency key
 (or dispatch ID). Keep those receipts for the entire queue retention, DLQ and replay
-horizon. Reusing a key for different payloads fails through the existing execution
-fingerprint contract. Concurrent delivery cannot start an already running execution.
+horizon. When conflicting messages reach the consumer, reusing a key for different
+payloads fails through the existing execution fingerprint contract. In FIFO queues,
+SQS can accept and suppress a publication with the same generated deduplication ID
+within its five-minute deduplication interval, even when the payload differs. The
+provider's deduplication ID does not include the payload, and the execution ledger
+cannot report a conflict for a message it never receives. See the
+[AWS SendMessage contract](https://docs.aws.amazon.com/AWSSimpleQueueService/latest/APIReference/API_SendMessage.html).
+Concurrent delivery cannot start an already running execution.
 
 Malformed, unauthorized, unknown-task, terminal-failure and unresolved-running messages
 remain failed for native SQS redrive. Configure a DLQ and finite `maxReceiveCount`,
@@ -113,7 +119,12 @@ raw SDK errors, endpoints, credentials and payloads. The SDK owns native request
 the plugin adds no blind publication retry. Before manual republication, reconcile
 the original acceptance, execution and effects. A keyed retry preserves the original
 queue, tenant, task, key and payload, using the same durable execution ledger and its
-retained receipts. Changing the queue, identity scope or ledger creates a different
+retained receipts. For FIFO, preserve the original `messageGroupId` and reconcile
+ordering with preceding and subsequent messages before republishing. A newly enqueued
+retry receives a new queue position; the same group alone does not restore the
+original position. Native deduplicated send retries are distinct from a new enqueue;
+see [AWS FIFO delivery and retry behavior](https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/FIFO-queues-understanding-logic.html).
+Changing the queue, identity scope or ledger creates a different
 deduplication boundary. Without an original caller key, each publication also creates a
 new dispatch ID. Either change requires proven original non-acceptance or independent
 effect deduplication. Other stable diagnostics

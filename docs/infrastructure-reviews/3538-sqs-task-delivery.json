@@ -151,7 +151,7 @@
       "classification": "pure-contract",
       "reason": "Generated Problem registry exposes the four SQS diagnostic codes, recovery metadata and source locations. It adds no host capability, provider, storage or lifecycle.",
       "files": {
-        "packages/problems-core/src/generated/problem-code-registry.ts": "ff07fbfb8319d7e9a1ec79ca021e59b480346d4cae00b220e665a44d1e4bfd43"
+        "packages/problems-core/src/generated/problem-code-registry.ts": "c6b5f02fabd5f40434212f44e55164d72e52bada3f67bf8350204fc3b1bed48f"
       },
       "catalogRuntimes": [],
       "profiles": {
