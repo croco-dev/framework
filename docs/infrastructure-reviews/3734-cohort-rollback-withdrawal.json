@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "cohort-drizzle",
+      "classification": "durable-provider",
+      "reason": "Revalidate the retained rollback source under the publication scope lock and serialize withdrawal with publication. PostgreSQL transaction boundaries change without a schema or public signature change.",
+      "files": {
+        "packages/cohort-drizzle/src/libs/PostgresCohortStore.ts": "4e0656304d95844f0b38b9a5ec5070e6cd3821905ad295625fa7bc34854a33bf"
+      },
+      "catalogRuntimes": ["node", "lambda"],
+      "profiles": {
+        "kubernetes": {
+          "result": "unverified",
+          "reason": "Reuses the existing Node PostgreSQL provider; real local PostgreSQL concurrency tests do not exercise a Kubernetes Node Host deployment.",
+          "providers": ["@croco/cohort-drizzle"],
+          "constraints": [
+            "Application-owned PostgreSQL pool and transaction-capable connection required; no live Kubernetes verification."
+          ],
+          "references": [
+            "packages/cohort-drizzle/src/libs/PostgresCohortStore.ts",
+            "packages/cohort-core/src/libs/publication.ts",
+            "packages/cohort-drizzle/src/tests/PostgresCohortStore.postgres.spec.ts",
+            "packages/cohort-drizzle/README.md"
+          ]
+        },
+        "aws-lambda": {
+          "result": "conditional",
+          "reason": "The existing Lambda-compatible Node provider uses the same PostgreSQL transaction and scope lock.",
+          "providers": ["@croco/cohort-drizzle"],
+          "constraints": [
+            "Bound connection use and await COMMIT or ROLLBACK before the invocation returns; no live Lambda verification."
+          ],
+          "references": [
+            "packages/cohort-drizzle/src/libs/PostgresCohortStore.ts",
+            "packages/cohort-core/src/libs/publication.ts",
+            "packages/cohort-drizzle/src/tests/PostgresCohortStore.postgres.spec.ts",
+            "packages/cohort-drizzle/README.md"
+          ]
+        },
+        "cloudflare": {
+          "result": "unsupported",
+          "host": "workers",
+          "reason": "The adapter has no claimed Workers runtime or isolate-compatible PostgreSQL driver; this correction does not extend runtime support.",
+          "providers": ["@croco/cohort-drizzle"],
+          "constraints": [
+            "Workers isolates remain unsupported; no Cloudflare Node Container deployment is selected."
+          ],
+          "references": [
+            "packages/cohort-drizzle/src/libs/PostgresCohortStore.ts",
+            "packages/cohort-core/src/libs/publication.ts",
+            "packages/cohort-drizzle/src/tests/PostgresCohortStore.postgres.spec.ts",
+            "packages/cohort-drizzle/README.md"
+          ]
+        }
+      }
+    }
+  ]
+}
