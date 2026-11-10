@@ -36,7 +36,7 @@ export const sqsTasks: PluginFactory<SqsTaskDispatcherOptions> = (options) => {
       verification: [
         {
           command: "pnpm --filter @croco/tasks-sqs test",
-          reference: "packages/tasks-sqs/src/tests/SqsTasks.spec.ts",
+          reference: "packages/tasks-sqs/src/tests/SqsTaskDispatcher.spec.ts",
         },
       ],
       examples: ["packages/tasks-sqs/README.md"],

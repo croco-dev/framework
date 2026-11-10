@@ -2798,7 +2798,7 @@
           "redactionTests": {
             "status": "present",
             "command": "pnpm --filter @croco/tasks-sqs test",
-            "artifact": "packages/tasks-sqs/src/tests/SqsTasks.spec.ts",
+            "artifact": "packages/tasks-sqs/src/tests/SqsTaskDispatcher.spec.ts",
             "description": "Raw SDK errors, credentials and payloads are excluded from publication failure diagnostics."
           }
         },

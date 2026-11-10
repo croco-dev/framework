@@ -1974,6 +1974,29 @@ export const failure = ProblemFactory.badRequest("${code}", "Invalid fetch confi
     expect(generatedRegistrySource).toContain(': Extract<Entry["status"], number>');
   });
 
+  it.each(["tasks-sqs/invalid-configuration", "tasks-sqs/publish-failed"])(
+    "preserves explicit non-retryable SQS recovery for %s",
+    (code) => {
+      const repo = createTempRepo();
+      writeFile(
+        repo,
+        "packages/tasks-sqs/src/problems.ts",
+        readFileSync(resolve("packages/tasks-sqs/src/libs/problems/SqsTaskProblems.ts"), "utf8"),
+      );
+      const registry = createProblemCodeRegistry(discoverProblemCodes(repo));
+      const guidance = registry.problems.find((problem) => problem.code === code)?.recovery;
+      expect(guidance).toMatchObject({
+        retryability: "not-retryable",
+        redactionPolicy: "operator-only",
+      });
+      expect(guidance?.telemetry.attributes).toEqual([
+        "problem.code",
+        "problem.category",
+        "problem.status",
+      ]);
+    },
+  );
+
   it("publishes deterministic recovery metadata for graceful shutdown configuration", () => {
     const repo = createTempRepo();
     writeFile(

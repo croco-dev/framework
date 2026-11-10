@@ -5181,6 +5181,27 @@ const recoveryMetadataByCode = {
     redactionPolicy: "operator-only",
     severity: "error",
   }),
+  "tasks-sqs/invalid-configuration": recovery({
+    cause: "SQS dispatcher configuration is missing or invalid before publication.",
+    userAction:
+      "Correct the server-owned queue URL, tenant, region and FIFO settings, then reconstruct the dispatcher. Do not retry unchanged configuration.",
+    operatorAction:
+      "Use extensions.field to locate the invalid setting and validate it against the deployment configuration without logging credentials or private values. This validation failure did not publish a message.",
+    retryability: "not-retryable",
+    redactionPolicy: "operator-only",
+    severity: "error",
+  }),
+  "tasks-sqs/publish-failed": recovery({
+    cause:
+      "SQS publication failed or returned no valid acceptance receipt, leaving message acceptance and delivery unknown.",
+    userAction:
+      "Do not automatically republish. Reconcile whether the original message was accepted and whether its execution or side effects completed before any manual retry.",
+    operatorAction:
+      "Inspect producer, queue and durable execution evidence using trusted identifiers. Retry only after resolving the unknown outcome, preserving the original logical idempotency identity and effect deduplication. Native SDK retries are owned by the SDK.",
+    retryability: "not-retryable",
+    redactionPolicy: "operator-only",
+    severity: "error",
+  }),
   "tasks-core/task-reference-invalid": recovery({
     cause:
       "A typed task reference is missing its factory contract or no longer matches the registered handler metadata.",

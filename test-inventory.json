@@ -5856,13 +5856,19 @@
       "owner": "@croco/tasks-qstash"
     },
     {
-      "path": "packages/tasks-sqs/src/tests/SqsTasks.spec.ts",
+      "path": "packages/tasks-sqs/src/tests/SqsTaskDispatcher.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/tasks-sqs"
     },
     {
       "path": "packages/tasks-sqs/src/tests/TaskDispatcherConformance.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/tasks-sqs"
+    },
+    {
+      "path": "packages/tasks-sqs/src/tests/createSqsTaskHandler.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/tasks-sqs"

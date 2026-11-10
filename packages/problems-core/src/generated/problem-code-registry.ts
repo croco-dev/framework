@@ -29319,10 +29319,10 @@ export type CrocoProblemRegistry = {
       readonly title: "Internal Server Error";
       readonly cookbookPath: "/reference/problem-recovery-cookbook/#tasks-sqs-invalid-configuration";
       readonly recovery: {
-        readonly cause: "Croco or an upstream dependency failed after accepting the request.";
-        readonly userAction: "Retry later only when the operation is idempotent or the caller owns retry safety.";
-        readonly operatorAction: "Use traces, logs, and upstream diagnostics to isolate the failing boundary.";
-        readonly retryability: "conditional";
+        readonly cause: "SQS dispatcher configuration is missing or invalid before publication.";
+        readonly userAction: "Correct the server-owned queue URL, tenant, region and FIFO settings, then reconstruct the dispatcher. Do not retry unchanged configuration.";
+        readonly operatorAction: "Use extensions.field to locate the invalid setting and validate it against the deployment configuration without logging credentials or private values. This validation failure did not publish a message.";
+        readonly retryability: "not-retryable";
         readonly redactionPolicy: "operator-only";
         readonly telemetry: {
           readonly eventName: "croco.problem.error";
@@ -29375,10 +29375,10 @@ export type CrocoProblemRegistry = {
       readonly title: "Internal Server Error";
       readonly cookbookPath: "/reference/problem-recovery-cookbook/#tasks-sqs-publish-failed";
       readonly recovery: {
-        readonly cause: "Croco or an upstream dependency failed after accepting the request.";
-        readonly userAction: "Retry later only when the operation is idempotent or the caller owns retry safety.";
-        readonly operatorAction: "Use traces, logs, and upstream diagnostics to isolate the failing boundary.";
-        readonly retryability: "conditional";
+        readonly cause: "SQS publication failed or returned no valid acceptance receipt, leaving message acceptance and delivery unknown.";
+        readonly userAction: "Do not automatically republish. Reconcile whether the original message was accepted and whether its execution or side effects completed before any manual retry.";
+        readonly operatorAction: "Inspect producer, queue and durable execution evidence using trusted identifiers. Retry only after resolving the unknown outcome, preserving the original logical idempotency identity and effect deduplication. Native SDK retries are owned by the SDK.";
+        readonly retryability: "not-retryable";
         readonly redactionPolicy: "operator-only";
         readonly telemetry: {
           readonly eventName: "croco.problem.error";
@@ -66208,12 +66208,12 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       title: "Internal Server Error",
       cookbookPath: "/reference/problem-recovery-cookbook/#tasks-sqs-invalid-configuration",
       recovery: {
-        cause: "Croco or an upstream dependency failed after accepting the request.",
+        cause: "SQS dispatcher configuration is missing or invalid before publication.",
         userAction:
-          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+          "Correct the server-owned queue URL, tenant, region and FIFO settings, then reconstruct the dispatcher. Do not retry unchanged configuration.",
         operatorAction:
-          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
-        retryability: "conditional",
+          "Use extensions.field to locate the invalid setting and validate it against the deployment configuration without logging credentials or private values. This validation failure did not publish a message.",
+        retryability: "not-retryable",
         redactionPolicy: "operator-only",
         telemetry: {
           eventName: "croco.problem.error",
@@ -66271,12 +66271,13 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       title: "Internal Server Error",
       cookbookPath: "/reference/problem-recovery-cookbook/#tasks-sqs-publish-failed",
       recovery: {
-        cause: "Croco or an upstream dependency failed after accepting the request.",
+        cause:
+          "SQS publication failed or returned no valid acceptance receipt, leaving message acceptance and delivery unknown.",
         userAction:
-          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+          "Do not automatically republish. Reconcile whether the original message was accepted and whether its execution or side effects completed before any manual retry.",
         operatorAction:
-          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
-        retryability: "conditional",
+          "Inspect producer, queue and durable execution evidence using trusted identifiers. Retry only after resolving the unknown outcome, preserving the original logical idempotency identity and effect deduplication. Native SDK retries are owned by the SDK.",
+        retryability: "not-retryable",
         redactionPolicy: "operator-only",
         telemetry: {
           eventName: "croco.problem.error",

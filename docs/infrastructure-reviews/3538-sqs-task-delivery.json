@@ -6,11 +6,11 @@
       "classification": "durable-provider",
       "reason": "SQS TaskDispatcher publication and trusted Lambda batch consumption reuse the existing TaskRunner and execution ledger. Node has publication only; queue admission and task completion remain distinct.",
       "files": {
-        "docs/package-catalog.json": "a5be0d486d6f7c0f0c025d8471802eccce99c479df7f8eafbd79157df2e4574c",
+        "docs/package-catalog.json": "26a2cb92854e788c79ade80fc6536bc84c71ebf88955189b5b162fe7e3181071",
         "packages/tasks-sqs/package.json": "ddb8740b6df3139cde70bd184e03e95ade1c0309c019a4695eee5963341654dd",
         "packages/tasks-sqs/src/index.ts": "67f09885140356408da542bbd5854f37b53f11096fe979fcd6364f483513b0cb",
         "packages/tasks-sqs/src/libs/SqsTaskDispatcher.ts": "b747ef89d5444df9aaa344f5a64aede34c9f68afc4f47f64b709ba666bcfe7dc",
-        "packages/tasks-sqs/src/libs/SqsTasksPlugin.ts": "93a5e8bfea4ff80788f84e523d7525a3c1be9f39de5a6cb7b6c04b9ce399f5cc",
+        "packages/tasks-sqs/src/libs/SqsTasksPlugin.ts": "4751202a4c770ebcbb81edb1b3af96c2f5c4c1196c3d2d2ff4d13791336b8c70",
         "packages/tasks-sqs/src/libs/createSqsTaskHandler.ts": "c7f35883600c553f38f746e0a91aa89657efe485b06f9586a72eb1112f3c8f83",
         "packages/tasks-sqs/src/libs/envelope.ts": "11967fdc7a42bd2464c2814b014db0e32bd9a9f69ef69fcd0f87aed1393bfd3d",
         "packages/tasks-sqs/src/libs/problems/SqsTaskProblems.ts": "d153fc6020caa4781cbf6a2f91766cccea81d72ed71508e8d2bb262ad91c5965"
@@ -31,7 +31,8 @@
           ],
           "references": [
             "packages/tasks-sqs/README.md",
-            "packages/tasks-sqs/src/tests/SqsTasks.spec.ts"
+            "packages/tasks-sqs/src/tests/SqsTaskDispatcher.spec.ts",
+            "packages/tasks-sqs/src/tests/createSqsTaskHandler.spec.ts"
           ]
         },
         "aws-lambda": {
@@ -49,7 +50,8 @@
           ],
           "references": [
             "packages/tasks-sqs/README.md",
-            "packages/tasks-sqs/src/tests/SqsTasks.spec.ts"
+            "packages/tasks-sqs/src/tests/SqsTaskDispatcher.spec.ts",
+            "packages/tasks-sqs/src/tests/createSqsTaskHandler.spec.ts"
           ]
         },
         "cloudflare": {
@@ -63,7 +65,8 @@
           "constraints": ["No Worker isolate or Node Container consumption is provided."],
           "references": [
             "packages/tasks-sqs/README.md",
-            "packages/tasks-sqs/src/tests/SqsTasks.spec.ts"
+            "packages/tasks-sqs/src/tests/SqsTaskDispatcher.spec.ts",
+            "packages/tasks-sqs/src/tests/createSqsTaskHandler.spec.ts"
           ],
           "host": "workers"
         }
@@ -148,7 +151,7 @@
       "classification": "pure-contract",
       "reason": "Generated Problem registry exposes the four SQS diagnostic codes, recovery metadata and source locations. It adds no host capability, provider, storage or lifecycle.",
       "files": {
-        "packages/problems-core/src/generated/problem-code-registry.ts": "befda2db2bd5a79ddd66a217fa154af7fecdde0e5a8cdaa61cbbee6dfe4af491"
+        "packages/problems-core/src/generated/problem-code-registry.ts": "59ede93ca0e2da52c8cd2980eb1f4a81ca00f160b31b7f6119f15ee9bf4c82b0"
       },
       "catalogRuntimes": [],
       "profiles": {

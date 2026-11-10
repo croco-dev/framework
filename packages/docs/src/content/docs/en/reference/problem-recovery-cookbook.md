@@ -1058,9 +1058,9 @@ This cookbook documents 1184 public Croco Problem codes. The deterministic JSON 
 | [`tasks-qstash/invalid-publish-request`](#tasks-qstash-invalid-publish-request)                                                                 | BadRequest                                                                               |                     400 | not-retryable | public        | active     |       1 |
 | [`tasks-qstash/missing-config`](#tasks-qstash-missing-config)                                                                                   | InternalServerError                                                                      |                     500 | conditional   | operator-only | active     |       1 |
 | [`tasks-qstash/publish-failed`](#tasks-qstash-publish-failed)                                                                                   | Runtime-dependent: BadRequest, InternalServerError, TooManyRequests                      |           400, 429, 500 | conditional   | safe-message  | active     |       1 |
-| [`tasks-sqs/invalid-configuration`](#tasks-sqs-invalid-configuration)                                                                           | InternalServerError                                                                      |                     500 | conditional   | operator-only | active     |       1 |
+| [`tasks-sqs/invalid-configuration`](#tasks-sqs-invalid-configuration)                                                                           | InternalServerError                                                                      |                     500 | not-retryable | operator-only | active     |       1 |
 | [`tasks-sqs/invalid-message`](#tasks-sqs-invalid-message)                                                                                       | BadRequest                                                                               |                     400 | not-retryable | public        | active     |       1 |
-| [`tasks-sqs/publish-failed`](#tasks-sqs-publish-failed)                                                                                         | InternalServerError                                                                      |                     500 | conditional   | operator-only | active     |       1 |
+| [`tasks-sqs/publish-failed`](#tasks-sqs-publish-failed)                                                                                         | InternalServerError                                                                      |                     500 | not-retryable | operator-only | active     |       1 |
 | [`tasks-sqs/unsupported-host-event`](#tasks-sqs-unsupported-host-event)                                                                         | BadRequest                                                                               |                     400 | not-retryable | public        | active     |       1 |
 | [`telemetry-sdk-node/batch-configuration-invalid`](#telemetry-sdk-node-batch-configuration-invalid)                                             | InternalServerError                                                                      |                     500 | not-retryable | operator-only | active     |       1 |
 | [`telemetry-sdk-node/init-configuration-conflict`](#telemetry-sdk-node-init-configuration-conflict)                                             | Conflict                                                                                 |                     409 | conditional   | safe-message  | active     |       1 |
@@ -20208,12 +20208,12 @@ Sources:
 
 - Category: `InternalServerError`
 - HTTP status: `500` Internal Server Error
-- Retryability: `conditional`
+- Retryability: `not-retryable`
 - Redaction policy: `operator-only`
 - Lifecycle: `active`
-- Cause: Croco or an upstream dependency failed after accepting the request.
-- User action: Retry later only when the operation is idempotent or the caller owns retry safety.
-- Operator action: Use traces, logs, and upstream diagnostics to isolate the failing boundary.
+- Cause: SQS dispatcher configuration is missing or invalid before publication.
+- User action: Correct the server-owned queue URL, tenant, region and FIFO settings, then reconstruct the dispatcher. Do not retry unchanged configuration.
+- Operator action: Use extensions.field to locate the invalid setting and validate it against the deployment configuration without logging credentials or private values. This validation failure did not publish a message.
 - Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
 
 Sources:
@@ -20244,12 +20244,12 @@ Sources:
 
 - Category: `InternalServerError`
 - HTTP status: `500` Internal Server Error
-- Retryability: `conditional`
+- Retryability: `not-retryable`
 - Redaction policy: `operator-only`
 - Lifecycle: `active`
-- Cause: Croco or an upstream dependency failed after accepting the request.
-- User action: Retry later only when the operation is idempotent or the caller owns retry safety.
-- Operator action: Use traces, logs, and upstream diagnostics to isolate the failing boundary.
+- Cause: SQS publication failed or returned no valid acceptance receipt, leaving message acceptance and delivery unknown.
+- User action: Do not automatically republish. Reconcile whether the original message was accepted and whether its execution or side effects completed before any manual retry.
+- Operator action: Inspect producer, queue and durable execution evidence using trusted identifiers. Retry only after resolving the unknown outcome, preserving the original logical idempotency identity and effect deduplication. Native SDK retries are owned by the SDK.
 - Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
 
 Sources:
