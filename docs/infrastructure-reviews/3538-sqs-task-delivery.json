@@ -74,7 +74,7 @@
       "classification": "pure-contract",
       "reason": "Provider-neutral test conformance checks accepted task identity and invalid-task rejection. Test-runner utilities add no application host capability, storage or lifecycle.",
       "files": {
-        "packages/testing/src/index.ts": "1c9832497ebe345197ad7e3c162e9dd864954f44b1228a928c8738ad2a521b18",
+        "packages/testing/src/index.ts": "4f44d0e9dab2bc5339e686f98c092e1314cfd7da1acdfe3701b7b6ff2acfcc4f",
         "packages/testing/src/libs/taskDispatcherConformance.ts": "97eaa36af5ec34c4894db50cb0e811690aaea405aa921628aa36e18d033d839c"
       },
       "catalogRuntimes": [],
@@ -148,7 +148,7 @@
       "classification": "pure-contract",
       "reason": "Generated Problem registry exposes the four SQS diagnostic codes, recovery metadata and source locations. It adds no host capability, provider, storage or lifecycle.",
       "files": {
-        "packages/problems-core/src/generated/problem-code-registry.ts": "7fd1fc30fae6d87956f5a1b680bda92bb73464915972b861f79adc92841ac203"
+        "packages/problems-core/src/generated/problem-code-registry.ts": "befda2db2bd5a79ddd66a217fa154af7fecdde0e5a8cdaa61cbbee6dfe4af491"
       },
       "catalogRuntimes": [],
       "profiles": {
