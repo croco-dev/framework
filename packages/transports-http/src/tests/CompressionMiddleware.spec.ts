@@ -1,5 +1,6 @@
 import "reflect-metadata";
-import { gunzipSync } from "node:zlib";
+import { createHash } from "node:crypto";
+import { brotliDecompressSync, gunzipSync, inflateSync } from "node:zlib";
 
 import { Container } from "@croco/framework-context";
 import { Logger } from "@croco/framework-logger";
@@ -122,6 +123,92 @@ describe("compressionMiddleware", () => {
 
     expect(JSON.parse(decoded)).toEqual({ payload: LARGE_PAYLOAD });
   });
+
+  it.each(
+    ["gzip", "br", "deflate"].flatMap((encoding) =>
+      ["response", "context", "raw", "all"].map((source) => ({ encoding, source })),
+    ),
+  )(
+    "discards original integrity headers for $encoding from $source",
+    async ({ encoding, source }) => {
+      const original = Buffer.from(JSON.stringify({ payload: LARGE_PAYLOAD }));
+      const digest = createHash("sha256").update(original).digest("base64");
+      const app = createApp({
+        controllers: [CompressionController],
+        middlewares: [
+          compressionMiddleware({ threshold: 64 }),
+          async (ctx, next) => {
+            const response = await next();
+            if (!(response instanceof Response)) return response;
+            for (const [key, value] of Object.entries({
+              "CoNtEnT-DiGeSt": `sha-256=:${digest}:`,
+              "RePr-DiGeSt": `sha-256=:${digest}:`,
+              DiGeSt: `sha-256=${digest}`,
+              "CoNtEnT-Md5": createHash("md5").update(original).digest("base64"),
+              ETaG: '"identity-1"',
+              "X-Preserved": "yes",
+            })) {
+              if (source === "response" || source === "all") response.headers.set(key, value);
+              if (source === "raw" || source === "all") ctx.raw.header(key, value);
+              if (source === "context" || source === "all") {
+                ctx.res.headers[key] = value;
+                ctx.res.headers[key.toLowerCase()] = value;
+              }
+            }
+            return response;
+          },
+        ],
+        securityValidation: "off",
+      });
+
+      const response = await app.fetch(
+        new Request("http://localhost/compression/large-json", {
+          headers: { "Accept-Encoding": encoding },
+        }),
+      );
+      const compressed = Buffer.from(await response.arrayBuffer());
+      expect(response.headers.get("Content-Encoding")).toBe(encoding);
+      expect(createHash("sha256").update(compressed).digest("base64")).not.toBe(digest);
+      const decode =
+        encoding === "br" ? brotliDecompressSync : encoding === "gzip" ? gunzipSync : inflateSync;
+      expect(decode(compressed)).toEqual(original);
+      for (const header of ["Content-Digest", "Repr-Digest", "Digest", "Content-MD5", "ETag"]) {
+        expect(response.headers.get(header), header).toBeNull();
+      }
+      expect(response.headers.get("X-Preserved")).toBe("yes");
+    },
+  );
+
+  it.each(["response", "context", "raw"])(
+    "preserves a weak ETag from $source after compression",
+    async (source) => {
+      const app = createApp({
+        controllers: [CompressionController],
+        middlewares: [
+          compressionMiddleware({ threshold: 64 }),
+          async (ctx, next) => {
+            const response = await next();
+            if (!(response instanceof Response)) return response;
+            if (source === "response") response.headers.set("ETag", 'W/"semantic-1"');
+            if (source === "raw") ctx.raw.header("eTAG", 'W/"semantic-1"');
+            if (source === "context") ctx.res.headers["eTaG"] = 'W/"semantic-1"';
+            return response;
+          },
+        ],
+        securityValidation: "off",
+      });
+      const response = await app.fetch(
+        new Request("http://localhost/compression/large-json", {
+          headers: { "Accept-Encoding": "gzip" },
+        }),
+      );
+      expect(response.headers.get("Content-Encoding")).toBe("gzip");
+      expect(response.headers.get("ETag")).toBe('W/"semantic-1"');
+      expect(JSON.parse(gunzipSync(Buffer.from(await response.arrayBuffer())).toString())).toEqual({
+        payload: LARGE_PAYLOAD,
+      });
+    },
+  );
 
   it.each([
     { name: "rejects a preferred encoding with q=0", header: "gzip; q=0, br; q=1", expected: "br" },
@@ -328,6 +415,16 @@ describe("compressionMiddleware", () => {
             if (!(response instanceof Response)) return response;
             originalBody = await response.clone().arrayBuffer();
             const length = String(originalBody.byteLength);
+            const digest = `sha-256=:${createHash("sha256").update(Buffer.from(originalBody)).digest("base64")}:`;
+            for (const [key, value] of Object.entries({
+              "Content-Digest": digest,
+              "Repr-Digest": digest,
+              ETag: '"unchanged-1"',
+            })) {
+              response.headers.set(key, value);
+              ctx.raw.header(key, value);
+              ctx.res.headers[key] = value;
+            }
             response.headers.set("Content-Length", length);
             ctx.raw.header("Content-Length", length);
             ctx.res.headers["CoNtEnT-LeNgTh"] = length;
@@ -347,6 +444,10 @@ describe("compressionMiddleware", () => {
       expect(response.headers.get("Content-Encoding")).toBe(encoding);
       const body = await response.arrayBuffer();
       expect(response.headers.get("Content-Length")).toBe(String(body.byteLength));
+      const digest = `sha-256=:${createHash("sha256").update(Buffer.from(body)).digest("base64")}:`;
+      expect(response.headers.get("Content-Digest")).toBe(digest);
+      expect(response.headers.get("Repr-Digest")).toBe(digest);
+      expect(response.headers.get("ETag")).toBe('"unchanged-1"');
       expect(body).toEqual(originalBody);
     },
   );

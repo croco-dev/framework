@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "transports-http",
+      "classification": "pure-contract",
+      "reason": "Compression invalidates original byte digests and strong ETags in response, context and raw headers; weak ETags and uncompressed responses retain their validators. The correction has no new infrastructure dependency.",
+      "files": {
+        "packages/transports-http/src/libs/middleware/CompressionMiddleware.ts": "eddda0cd0f9549a1dc55e5e2754a7d8b61487a8a197d8a734aaa8f2535c61f4e"
+      },
+      "catalogRuntimes": ["node", "lambda"],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "This correction removes stale in-memory HTTP metadata after existing buffered compression. It adds no host capability, storage or lifecycle requirement.",
+          "providers": ["@croco/transports-http/compressionMiddleware"],
+          "constraints": [
+            "Existing Node/Lambda runtime claims and compression algorithms remain unchanged. No Workers support, live deployment or provider certification is claimed."
+          ],
+          "references": [
+            "packages/transports-http/src/libs/middleware/CompressionMiddleware.ts",
+            "packages/transports-http/src/tests/CompressionMiddleware.spec.ts",
+            "packages/transports-http/src/tests/LambdaAdapterConformance.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "This correction removes stale in-memory HTTP metadata after existing buffered compression. It adds no host capability, storage or lifecycle requirement.",
+          "providers": ["@croco/transports-http/compressionMiddleware"],
+          "constraints": [
+            "Existing Node/Lambda runtime claims and compression algorithms remain unchanged. No Workers support, live deployment or provider certification is claimed."
+          ],
+          "references": [
+            "packages/transports-http/src/libs/middleware/CompressionMiddleware.ts",
+            "packages/transports-http/src/tests/CompressionMiddleware.spec.ts",
+            "packages/transports-http/src/tests/LambdaAdapterConformance.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "This correction removes stale in-memory HTTP metadata after existing buffered compression. It adds no host capability, storage or lifecycle requirement.",
+          "providers": ["@croco/transports-http/compressionMiddleware"],
+          "constraints": [
+            "Existing Node/Lambda runtime claims and compression algorithms remain unchanged. No Workers support, live deployment or provider certification is claimed."
+          ],
+          "references": [
+            "packages/transports-http/src/libs/middleware/CompressionMiddleware.ts",
+            "packages/transports-http/src/tests/CompressionMiddleware.spec.ts",
+            "packages/transports-http/src/tests/LambdaAdapterConformance.spec.ts"
+          ]
+        }
+      }
+    }
+  ]
+}
