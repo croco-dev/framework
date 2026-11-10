@@ -607,6 +607,11 @@ depend on the opt-out for normal first-run or production bootstrap.
   `hasSecurityMiddlewareCapability`
 - 타입: `AppConfig`, `CrocoHttpContext`, `CrocoRequest`, `CrocoResponse`, `LambdaEvent`, `LambdaResponse`
 
+When `compressionMiddleware` compresses a buffered response, it removes the original `Content-Length`,
+`Content-Digest`, `Repr-Digest`, legacy `Digest` and `Content-MD5`, and strong `ETag` from the response,
+context and raw headers. These values describe the original bytes and are not recalculated. Weak ETags
+are preserved. Responses that are not compressed retain their integrity headers and validators.
+
 Node apps that pass a middleware from `createGracefulShutdownController()` or
 `gracefulShutdownMiddleware()` to `createApp()` bind every `listen()` server to that lifecycle. A signal
 rejects new work, drains active requests, closes the Node listener, drains the event bus, and then runs the

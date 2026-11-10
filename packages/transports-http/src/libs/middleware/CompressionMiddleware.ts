@@ -12,6 +12,13 @@ const DEFAULT_THRESHOLD = 1024;
 const DEFAULT_ENCODINGS: CompressionEncoding[] = ["br", "gzip"];
 
 const COMPRESSION_ALGORITHMS: CompressionEncoding[] = ["br", "gzip", "deflate"];
+const COMPRESSION_INVALIDATED_HEADERS = new Set([
+  "content-length",
+  "content-md5",
+  "content-digest",
+  "repr-digest",
+  "digest",
+]);
 
 /**
  * 응답 크기와 Accept-Encoding 헤더를 기준으로 압축을 적용하는 미들웨어입니다.
@@ -49,16 +56,22 @@ export const compressionMiddleware = (options: CompressionOptions = {}): Middlew
     if (!compressed) return identityResponse;
 
     headers.set("Content-Encoding", encoding);
-    headers.delete("Content-Length");
+
+    // Header iterators are live, so snapshot them before deleting entries.
+    for (const [key, value] of Array.from(headers)) {
+      if (isInvalidAfterCompression(key, value)) headers.delete(key);
+    }
+    for (const [key, value] of Array.from(ctx.raw.res.headers)) {
+      if (isInvalidAfterCompression(key, value)) ctx.raw.header(key, undefined);
+    }
 
     ctx.res.status = response.status;
     ctx.res.headers["content-encoding"] = encoding;
-    for (const key of Object.keys(ctx.res.headers)) {
-      if (key.toLowerCase() === "content-length") {
+    for (const [key, value] of Object.entries(ctx.res.headers)) {
+      if (isInvalidAfterCompression(key, value)) {
         delete ctx.res.headers[key];
       }
     }
-    ctx.raw.header("Content-Length", undefined);
 
     return new Response(toResponseBody(compressed), {
       status: response.status,
@@ -67,6 +80,14 @@ export const compressionMiddleware = (options: CompressionOptions = {}): Middlew
     });
   };
 };
+
+function isInvalidAfterCompression(name: string, value: string): boolean {
+  const normalized = name.toLowerCase();
+  return (
+    COMPRESSION_INVALIDATED_HEADERS.has(normalized) ||
+    (normalized === "etag" && !value.trimStart().startsWith("W/"))
+  );
+}
 
 function shouldCompress(contentType: string): boolean {
   const type = contentType.split(";")[0]?.trim().toLowerCase() ?? "";

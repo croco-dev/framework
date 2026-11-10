@@ -1,5 +1,6 @@
 import "reflect-metadata";
 import { Buffer } from "node:buffer";
+import { createHash } from "node:crypto";
 import { brotliDecompressSync, gunzipSync, inflateSync } from "node:zlib";
 import type { ILogger } from "@croco/framework-context";
 import { Container, LOGGER_TOKEN } from "@croco/framework-context";
@@ -522,7 +523,19 @@ describe("Lambda adapter API Gateway v2 conformance", () => {
     async ({ encoding, decompress }) => {
       app = createApp({
         controllers: [LambdaConformanceController],
-        middlewares: [compressionMiddleware({ encodings: [encoding] })],
+        middlewares: [
+          compressionMiddleware({ encodings: [encoding] }),
+          async (ctx, next) => {
+            const response = await next();
+            if (!(response instanceof Response)) return response;
+            const digest = createHash("sha256")
+              .update(JSON.stringify(LARGE_JSON_PAYLOAD))
+              .digest("base64");
+            ctx.res.headers["CoNtEnT-DiGeSt"] = `sha-256=:${digest}:`;
+            ctx.raw.header("ETag", '"lambda-identity"');
+            return response;
+          },
+        ],
         securityValidation: "off",
       });
       handler = toLambdaHandler(app);
@@ -542,6 +555,8 @@ describe("Lambda adapter API Gateway v2 conformance", () => {
       expect(response.statusCode).toBe(200);
       expect(response.headers?.["content-encoding"]).toBe(encoding);
       expect(response.headers?.["content-type"]).toContain("application/json");
+      expect(response.headers?.["content-digest"]).toBeUndefined();
+      expect(response.headers?.["etag"]).toBeUndefined();
       expect(response.isBase64Encoded).toBe(true);
       expect(
         JSON.parse(decompress(Buffer.from(response.body ?? "", "base64")).toString("utf8")),
