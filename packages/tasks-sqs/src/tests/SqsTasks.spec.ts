@@ -273,6 +273,57 @@ describe("SqsTaskDispatcher", () => {
     expect(destroy).toHaveBeenCalledTimes(1);
     external.destroy();
   });
+
+  it.each([false, true])(
+    "leaves application replacements alone at shutdown (disposable: %s)",
+    async (disposable) => {
+      const destroy = vi.spyOn(SQSClient.prototype, "destroy");
+      const dispose = vi.fn();
+      const replacement = {
+        execute: vi.fn().mockResolvedValue({ messageId: "replacement-message" }),
+        ...(disposable ? { dispose } : {}),
+      };
+      const app = createApplicationRuntime(
+        defineCrocoApplication({
+          name: "replacement-sdk",
+          imports: [sqsTasks(config)],
+          providerReplacements: [
+            {
+              provider: { provide: TASK_DISPATCHER_TOKEN, useValue: replacement },
+              replaces: ["@croco/tasks-sqs/dispatcher"],
+            },
+          ],
+        }),
+      );
+      await app.initialize();
+      expect(app.get(TASK_DISPATCHER_TOKEN)).toBe(replacement);
+      await expect(app.dispose()).resolves.toBeUndefined();
+      expect(dispose).not.toHaveBeenCalled();
+      expect(destroy).not.toHaveBeenCalled();
+    },
+  );
+
+  it("keeps cleanup independent when two applications reuse one plugin", async () => {
+    const send = vi.fn().mockResolvedValue({ MessageId: "accepted", $metadata: {} });
+    const plugin = sqsTasks({ ...config, client: { send } });
+    const first = createApplicationRuntime(
+      defineCrocoApplication({ name: "first", imports: [plugin] }),
+    );
+    const second = createApplicationRuntime(
+      defineCrocoApplication({ name: "second", imports: [plugin] }),
+    );
+    owned.push(first, second);
+    await first.initialize();
+    await second.initialize();
+    const firstDispatcher = first.get(TASK_DISPATCHER_TOKEN);
+    const secondDispatcher = second.get(TASK_DISPATCHER_TOKEN);
+    await first.dispose();
+    await expect(firstDispatcher.execute("send", {})).rejects.toMatchObject({
+      code: "tasks-sqs/invalid-message",
+    });
+    await expect(secondDispatcher.execute("send", {})).resolves.toEqual({ messageId: "accepted" });
+    expect(send).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe("createSqsTaskHandler", () => {

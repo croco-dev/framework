@@ -10,7 +10,7 @@
         "packages/tasks-sqs/package.json": "ddb8740b6df3139cde70bd184e03e95ade1c0309c019a4695eee5963341654dd",
         "packages/tasks-sqs/src/index.ts": "67f09885140356408da542bbd5854f37b53f11096fe979fcd6364f483513b0cb",
         "packages/tasks-sqs/src/libs/SqsTaskDispatcher.ts": "b747ef89d5444df9aaa344f5a64aede34c9f68afc4f47f64b709ba666bcfe7dc",
-        "packages/tasks-sqs/src/libs/SqsTasksPlugin.ts": "702f550974618e9133a3aa3feac2de348954d8ff72c5fa43936bba2f03f10429",
+        "packages/tasks-sqs/src/libs/SqsTasksPlugin.ts": "93a5e8bfea4ff80788f84e523d7525a3c1be9f39de5a6cb7b6c04b9ce399f5cc",
         "packages/tasks-sqs/src/libs/createSqsTaskHandler.ts": "c7f35883600c553f38f746e0a91aa89657efe485b06f9586a72eb1112f3c8f83",
         "packages/tasks-sqs/src/libs/envelope.ts": "11967fdc7a42bd2464c2814b014db0e32bd9a9f69ef69fcd0f87aed1393bfd3d",
         "packages/tasks-sqs/src/libs/problems/SqsTaskProblems.ts": "d153fc6020caa4781cbf6a2f91766cccea81d72ed71508e8d2bb262ad91c5965"

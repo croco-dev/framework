@@ -1,8 +1,14 @@
 import { defineCrocoModule, defineCrocoPlugin } from "@croco/framework-module";
-import type { PluginFactory } from "@croco/framework-module";
+import type { ModuleToken, PluginFactory } from "@croco/framework-module";
 import { TASK_DISPATCHER_TOKEN } from "@croco/tasks-core";
 import { SqsTaskDispatcher } from "./SqsTaskDispatcher";
 import type { SqsTaskDispatcherOptions } from "./SqsTaskDispatcher";
+
+type SqsDispatcherOwner = { dispatcher: SqsTaskDispatcher | undefined };
+
+const SQS_DISPATCHER_OWNER_TOKEN = Symbol(
+  "@croco/tasks-sqs/dispatcher-owner",
+) as ModuleToken<SqsDispatcherOwner>;
 
 export const sqsTasks: PluginFactory<SqsTaskDispatcherOptions> = (options) => {
   const snapshot = Object.freeze({ ...options });
@@ -39,11 +45,21 @@ export const sqsTasks: PluginFactory<SqsTaskDispatcherOptions> = (options) => {
       defineCrocoModule({
         name: "@croco/tasks-sqs/dispatcher",
         providers: [
-          { provide: TASK_DISPATCHER_TOKEN, useFactory: () => new SqsTaskDispatcher(snapshot) },
+          { provide: SQS_DISPATCHER_OWNER_TOKEN, useFactory: () => ({ dispatcher: undefined }) },
+          {
+            provide: TASK_DISPATCHER_TOKEN,
+            useFactory: (context) => {
+              const dispatcher = new SqsTaskDispatcher(snapshot);
+              context.get(SQS_DISPATCHER_OWNER_TOKEN).dispatcher = dispatcher;
+              return dispatcher;
+            },
+          },
         ],
         exports: [TASK_DISPATCHER_TOKEN],
         shutdown: (context) => {
-          (context.get(TASK_DISPATCHER_TOKEN) as SqsTaskDispatcher).dispose();
+          const owner = context.get(SQS_DISPATCHER_OWNER_TOKEN);
+          owner.dispatcher?.dispose();
+          owner.dispatcher = undefined;
         },
       }),
     ],

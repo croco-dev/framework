@@ -35,6 +35,8 @@ await application.dispose();
 The AWS SDK uses its credential chain; grant only the intended queue's `sqs:SendMessage`.
 An optional `client` is externally owned. The application disposes internally created
 clients through module shutdown; imports alone create no SDK client or consumer.
+Cleanup belongs to each application's SQS module instance. Replacing `TASK_DISPATCHER_TOKEN`
+leaves the replacement's lifecycle with the application that supplied it.
 Create a dispatcher for each server-authorized tenant/queue binding. Never construct
 these options from untrusted request fields. Plugin metadata excludes configured values.
 
