@@ -69,6 +69,88 @@ describe("loadRestControllerSources", () => {
   });
 
   it(
+    "loads re-exported controllers once while preserving module exports and source locations",
+    async () => {
+      const controllerPath = path.join(sourceDir, "LocatedController.ts");
+      fs.writeFileSync(path.join(tempRoot, "package.json"), '{"type":"module"}');
+      fs.writeFileSync(
+        path.join(tempRoot, "tsconfig.json"),
+        JSON.stringify({
+          compilerOptions: {
+            module: "NodeNext",
+            experimentalDecorators: true,
+            emitDecoratorMetadata: true,
+          },
+        }),
+      );
+      fs.writeFileSync(
+        controllerPath,
+        `${readSharedFixture("LocatedController.ts.fixture")}\nexport { LocatedController as default };\n`,
+      );
+      fs.writeFileSync(
+        path.join(sourceDir, "A-barrel.ts"),
+        'export { default, LocatedController as Alias } from "./LocatedController.js";\n',
+      );
+      fs.writeFileSync(
+        path.join(sourceDir, "Z-barrel.ts"),
+        'export { Alias as Controller } from "./A-barrel.js";\n',
+      );
+
+      const { controllers, modules } = await loadRestControllerSources({
+        controllers: [path.join(sourceDir, "*.ts"), controllerPath],
+        problems: TEST_SOURCE_PROBLEMS,
+      });
+      const graph = buildContractGraph(controllers, { strictSchemas: true });
+
+      expect(graph.routes).toHaveLength(1);
+      expect(graph.routes[0]?.sourceLocation).toEqual({
+        path: "LocatedController.ts",
+        line: 60,
+        column: 3,
+      });
+      expect(
+        graph.diagnostics.find(
+          (diagnostic) => diagnostic.code === "contract-route-missing-named-param-schema",
+        )?.sourceLocation,
+      ).toEqual({ path: "LocatedController.ts", line: 61, column: 11 });
+      expect(modules).toHaveLength(3);
+      for (const module of modules) {
+        expect(module.controllers).toHaveLength(1);
+        expect(module.controllers[0]).toBe(controllers[0]);
+      }
+      expect(modules[0]?.moduleExports.Alias).toBe(controllers[0]);
+      expect(modules[1]?.moduleExports.LocatedController).toBe(controllers[0]);
+      expect(modules[2]?.moduleExports.Controller).toBe(controllers[0]);
+    },
+    LOAD_CONTROLLER_TIMEOUT_MS,
+  );
+
+  it(
+    "reports contract collisions between distinct constructors with the same name and path",
+    async () => {
+      const source = readSharedFixture("LocatedController.ts.fixture");
+      fs.writeFileSync(path.join(sourceDir, "FirstController.ts"), source);
+      fs.writeFileSync(path.join(sourceDir, "SecondController.ts"), source);
+
+      const { controllers } = await loadRestControllerSources({
+        controllers: path.join(sourceDir, "*.ts"),
+        problems: TEST_SOURCE_PROBLEMS,
+      });
+      const graph = buildContractGraph(controllers);
+
+      expect(controllers).toHaveLength(2);
+      expect(controllers[0]).not.toBe(controllers[1]);
+      expect(graph.diagnostics.map(({ code }) => code)).toEqual(
+        expect.arrayContaining([
+          "contract-controller-duplicate-name",
+          "contract-route-duplicate-path",
+        ]),
+      );
+    },
+    LOAD_CONTROLLER_TIMEOUT_MS,
+  );
+
+  it(
     "loads controller modules with normalized decorator locations",
     async () => {
       const controllerPath = path.join(sourceDir, "LocatedController.ts");

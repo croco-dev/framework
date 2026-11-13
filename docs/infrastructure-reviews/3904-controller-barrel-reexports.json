@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "protocol-codegen",
+      "classification": "protocol-render",
+      "reason": "RPC and OpenAPI generation pass each controller constructor to the contract graph once when multiple matched source modules export it.",
+      "files": {
+        "packages/protocol-codegen/src/libs/RestControllerSources.ts": "2812ca97685484f153663faef4d74a41e212954125b4af1615788129d9a8eae0"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Controller discovery runs in the Node build process before deployment to the Kubernetes Node Host.",
+          "providers": [],
+          "constraints": [
+            "Only the build process uses Node filesystem and compiler access. No deployed storage or lifecycle requirements apply."
+          ],
+          "references": [
+            "packages/protocol-codegen/src/libs/RestControllerSources.ts",
+            "packages/protocol-codegen/src/tests/RestControllerSources.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Controller discovery runs in the Node build process before deployment to the Lambda Host.",
+          "providers": [],
+          "constraints": [
+            "Only the build process uses Node filesystem and compiler access. No deployed storage or lifecycle requirements apply."
+          ],
+          "references": [
+            "packages/protocol-codegen/src/libs/RestControllerSources.ts",
+            "packages/protocol-codegen/src/tests/RestControllerSources.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Controller discovery runs in the Node build process before deployment to the Workers or Node Container Host.",
+          "providers": [],
+          "constraints": [
+            "Only the build process uses Node filesystem and compiler access. No deployed storage or lifecycle requirements apply."
+          ],
+          "references": [
+            "packages/protocol-codegen/src/libs/RestControllerSources.ts",
+            "packages/protocol-codegen/src/tests/RestControllerSources.spec.ts"
+          ]
+        }
+      }
+    }
+  ]
+}

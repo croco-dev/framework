@@ -111,7 +111,7 @@ export async function loadRestControllerSources(
     controllerProject.emit();
 
     const modules: RestControllerSourceModule[] = [];
-    const controllers: Constructor[] = [];
+    const controllers = new Set<Constructor>();
 
     for (const sourceFile of sourceFiles) {
       const moduleExports = await controllerProject.importModule(sourceFile);
@@ -119,18 +119,18 @@ export async function loadRestControllerSources(
       const sourceFileLocations = sourceLocations.get(sourceFile.getFilePath());
 
       for (const controller of moduleControllers) {
+        controllers.add(controller);
         applyControllerSourceLocations(controller, sourceFileLocations?.get(controller.name));
       }
 
       modules.push({ moduleExports, controllers: moduleControllers });
-      controllers.push(...moduleControllers);
     }
 
-    if (controllers.length === 0) {
+    if (controllers.size === 0) {
       throw options.problems.noControllersFound(controllerPatterns);
     }
 
-    return { controllers, modules };
+    return { controllers: [...controllers], modules };
   } finally {
     controllerProject.dispose();
   }
