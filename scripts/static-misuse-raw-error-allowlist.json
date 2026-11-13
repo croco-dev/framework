@@ -96,7 +96,7 @@
     {
       "package": "@croco/meta-vite",
       "file": "packages/meta-vite/src/libs/isr/isrMiddleware.ts",
-      "line": 40,
+      "line": 39,
       "excerpt": "throw new Error(\"CacheStore returned no ISR response\");",
       "reason": "Reviewed 2026-10-30 (#4004): CacheStore.getOrSet permits undefined, including invalidated in-flight loads. The current ISR middleware promises its caller a Response and rejects this no-response outcome. Retain that existing rejection during exception maintenance; changing invalidation, fallback rendering or the public error model requires a separate ISR behavior review.",
       "owner": "framework-error-handling",

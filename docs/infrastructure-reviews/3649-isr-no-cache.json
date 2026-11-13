@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "meta-vite",
+      "classification": "protocol-render",
+      "reason": "Apply the response no-cache directive to ISR cache writes, stored responses and requests sharing an initial cache fill.",
+      "files": {
+        "packages/meta-vite/src/libs/isr/isrMiddleware.ts": "c9882949933dd4d951053f176474c1cec79b0d557f4f2f396589dc9fb03ed30e"
+      },
+      "catalogRuntimes": ["node", "lambda", "cloudflare-workers", "browser"],
+      "profiles": {
+        "kubernetes": {
+          "result": "conditional",
+          "reason": "The existing Node ISR composition applies the same Fetch response policy before returning a response.",
+          "providers": ["createNodeComposedHandler", "RedisCacheStoreAdapter"],
+          "constraints": [
+            "Cross-process durable caching still requires Redis or another durable store. Existing no-cache entries are bypassed until TTL expiry.",
+            "Local HTTP and adapter tests do not verify a Kubernetes deployment."
+          ],
+          "references": [
+            "packages/meta-vite/src/libs/isr/runtimeSupport.ts",
+            "packages/meta-vite/src/tests/isr-runtime-support.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "conditional",
+          "reason": "The existing Lambda composition uses the same ISR response policy before serializing the invocation response.",
+          "providers": ["createLambdaComposedHandler", "RedisCacheStoreAdapter"],
+          "constraints": [
+            "Durable caching still requires a reachable store with caller-managed connection lifetime.",
+            "Local handler tests do not verify a deployed Lambda or live Redis."
+          ],
+          "references": [
+            "packages/meta-vite/src/libs/isr/runtimeSupport.ts",
+            "packages/meta-vite/src/tests/isr-runtime-support.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "conditional",
+          "host": "workers",
+          "reason": "The Workers composition uses the same Fetch response policy without a new binding or Node dependency.",
+          "providers": ["createCloudflareComposedHandler", "IsrCacheStore"],
+          "constraints": [
+            "Durable caching still requires a Worker-safe store. The in-memory store is isolate-local.",
+            "Local handler tests do not verify a deployed Worker or a durable Worker store."
+          ],
+          "references": [
+            "packages/meta-vite/src/libs/isr/runtimeSupport.ts",
+            "packages/meta-vite/src/tests/isr-runtime-support.spec.ts"
+          ]
+        }
+      }
+    }
+  ]
+}

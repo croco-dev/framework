@@ -31,6 +31,111 @@ describe("createIsrMiddleware", () => {
     expect(renderCount).toBe(1);
   });
 
+  it.each([
+    "no-cache",
+    'public, No-CaChE = "ETag, Last-Modified", max-age=60',
+    String.raw`ext="value with an escaped \" and a comma,", no-cache`,
+  ])("does not store responses with Cache-Control: %s", async (cacheControl) => {
+    const url = "https://example.com/fresh";
+    const render = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response("initial", { headers: { "Cache-Control": cacheControl } }),
+      )
+      .mockImplementation(async () => new Response("updated"));
+    const middleware = createIsrMiddleware({ cache, ttlMs: 60_000, render });
+
+    const first = await middleware(new Request(url));
+    expect(first.headers.get("Cache-Control")).toBe(cacheControl);
+    await expect(first.text()).resolves.toBe("initial");
+    await expect(cache.get(`GET:${url}`)).resolves.toBeUndefined();
+    await expect((await middleware(new Request(url))).text()).resolves.toBe("updated");
+    await expect((await middleware(new Request(url))).text()).resolves.toBe("updated");
+    expect(render).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not interpret a quoted Cache-Control extension value as a directive", async () => {
+    const render = vi.fn(
+      async () =>
+        new Response("cached", {
+          headers: { "Cache-Control": 'public, ext="before, no-cache, after", max-age=60' },
+        }),
+    );
+    const middleware = createIsrMiddleware({ cache, ttlMs: 60_000, render });
+    const url = "https://example.com/extension";
+
+    await expect((await middleware(new Request(url))).text()).resolves.toBe("cached");
+    await expect((await middleware(new Request(url))).text()).resolves.toBe("cached");
+    expect(render).toHaveBeenCalledOnce();
+  });
+
+  it.each([
+    ["misplaced quote before private", 'ext=bad", private, other="ok'],
+    ["misplaced quote before no-store", 'ext=bad", no-store, other="ok'],
+    ["control byte in quoted text", `ext="bad${String.fromCharCode(1)}, private, after"`],
+    ["escaped control byte", `ext="bad\\${String.fromCharCode(127)}, no-store, after"`],
+  ])("bypasses malformed Cache-Control: %s", async (_label, cacheControl) => {
+    const url = "https://example.com/malformed-cache-control";
+    const middleware = createIsrMiddleware({
+      cache,
+      ttlMs: 60_000,
+      render: async (request) =>
+        new Response(request.headers.get("X-Label") ?? "anonymous", {
+          headers: { "Cache-Control": cacheControl },
+        }),
+    });
+    const first = await middleware(new Request(url, { headers: { "X-Label": "first" } }));
+    await expect(first.text()).resolves.toBe("first");
+    const second = await middleware(new Request(url));
+    await expect(second.text()).resolves.toBe("anonymous");
+    await expect(cache.get(`GET:${url}`)).resolves.toBeUndefined();
+  });
+
+  it("renders around a previously stored no-cache response while it remains in the store", async () => {
+    const url = "https://example.com/legacy-no-cache";
+    await cache.set(
+      `GET:${url}`,
+      new Response("old", { headers: { "Cache-Control": "no-cache" } }),
+    );
+    let renderCount = 0;
+    const middleware = createIsrMiddleware({
+      cache,
+      ttlMs: 60_000,
+      render: async () => new Response(`current-${++renderCount}`),
+    });
+
+    await expect((await middleware(new Request(url))).text()).resolves.toBe("current-1");
+    await expect((await middleware(new Request(url))).text()).resolves.toBe("current-2");
+  });
+
+  it("renders each concurrent request when the first fill returns no-cache", async () => {
+    let signalFirstStarted!: () => void;
+    const firstStarted = new Promise<void>((resolve) => {
+      signalFirstStarted = resolve;
+    });
+    let releaseFirst!: () => void;
+    const firstReleased = new Promise<void>((resolve) => {
+      releaseFirst = resolve;
+    });
+    const render = vi.fn(async () => {
+      const attempt = render.mock.calls.length;
+      if (attempt === 1) {
+        signalFirstStarted();
+        await firstReleased;
+      }
+      return new Response(`render-${attempt}`, { headers: { "Cache-Control": "no-cache" } });
+    });
+    const middleware = createIsrMiddleware({ cache: new TestAdapter(), ttlMs: 60_000, render });
+    const request = new Request("https://example.com/concurrent");
+    const first = middleware(request);
+    await firstStarted;
+    const second = middleware(request);
+    releaseFirst();
+
+    await expect((await first).text()).resolves.toBe("render-1");
+    await expect((await second).text()).resolves.toBe("render-2");
+  });
+
   it.each([false, true])(
     "keeps range responses separate with a warm full entry: %s",
     async (warm) => {
