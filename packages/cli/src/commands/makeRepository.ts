@@ -49,7 +49,7 @@ export async function generateRepository(
   const sourceRoot = join(workspace.root, workspace.apiServerDir, "src");
   const targetPath = join(sourceRoot, "repositories", `${className}Repository.ts`);
   const content = `import type { KeyedRepositoryResult, Repository } from "@croco/repository-core";
-import type { ${className}Entity } from "../entities/${className}Entity${generatedImportExtension(targetPath)}";
+import type { ${className}Entity } from "../entities/${className}Entity${generatedImportExtension(targetPath, undefined, overwrite, sourceRoot)}";
 
 export class ${className}Repository implements Repository<${className}Entity, string> {
   async findById(id: string): Promise<${className}Entity | null> {

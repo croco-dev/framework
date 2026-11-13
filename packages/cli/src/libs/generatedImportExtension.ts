@@ -23,6 +23,7 @@ export function generatedImportExtension(
   importerPath: string,
   generatedSources: ReadonlyMap<string, string> = new Map(),
   overwrite = false,
+  sourceRoot = dirname(importerPath),
 ): ImportExtension {
   const fileName = ts.sys.resolvePath(importerPath);
   const planned = new Map(
@@ -37,16 +38,24 @@ export function generatedImportExtension(
 
   const visited = new Set([configPath]);
   const configs = [configPath];
+  const sourcePrefix = `${ts.sys.resolvePath(sourceRoot)}/`;
+  let directlyIncluded = false;
+  let hasNodeEsmApp = false;
   for (const path of configs) {
     const candidate = path === configPath ? project : readProject(path, plannedPaths);
+    const roots = candidate.fileNames;
+    const includesImporter = roots.includes(fileName);
+    directlyIncluded ||= includesImporter;
     if (importExtension(fileName, candidate.options) === ".js") {
-      const roots = candidate.fileNames;
-      if (roots.includes(fileName)) return ".js";
+      if (includesImporter) return ".js";
+      const actualRoots = readProject(path, plannedPaths, true).fileNames;
+      hasNodeEsmApp ||=
+        !candidate.options.noResolve && actualRoots.some((root) => root.startsWith(sourcePrefix));
       if (
         !candidate.options.noResolve &&
         resolvesGeneratedSource(
           candidate.options,
-          [...new Set([...roots, ...readProject(path, plannedPaths, true).fileNames])],
+          [...new Set([...roots, ...actualRoots])],
           fileName,
           planned,
           overwrite,
@@ -62,7 +71,7 @@ export function generatedImportExtension(
       configs.push(path);
     }
   }
-  return "";
+  return !directlyIncluded && hasNodeEsmApp ? ".js" : "";
 }
 
 function resolvesGeneratedSource(

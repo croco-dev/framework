@@ -193,12 +193,15 @@ describe("generateRepository", () => {
 
       await generateEntity("Order", { cwd });
       if (hasExplicitEntry) {
+        await fs.writeFile(path.join(appDir, "src", "index.ts"), "export {};\n");
+      }
+      const result = await generateRepository("Order", { cwd });
+      if (hasExplicitEntry) {
         await fs.writeFile(
           path.join(appDir, "src", "index.ts"),
           'export { OrderRepository } from "./repositories/OrderRepository.js";\n',
         );
       }
-      const result = await generateRepository("Order", { cwd });
 
       expect(result?.status).toBe("created");
       await expectGeneratedFixtureToTypecheck(

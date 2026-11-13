@@ -77,7 +77,7 @@ export async function runCreateDomain(
       path: repositoryPath,
       content: repositoryTemplate(
         className,
-        generatedImportExtension(repositoryPath, domainSources, overwrite),
+        generatedImportExtension(repositoryPath, domainSources, overwrite, apiServerSrc),
       ),
     },
     {
@@ -86,7 +86,10 @@ export async function runCreateDomain(
     },
     {
       path: barrelPath,
-      content: barrelTemplate(className, generatedImportExtension(barrelPath)),
+      content: barrelTemplate(
+        className,
+        generatedImportExtension(barrelPath, undefined, overwrite, apiServerSrc),
+      ),
     },
   ];
 
