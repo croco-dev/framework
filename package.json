@@ -102,7 +102,7 @@
     "infrastructure-review:check": "node --experimental-strip-types scripts/verification-command.mts --id infrastructure-review"
   },
   "dependencies": {
-    "@vitejs/plugin-rsc": "0.5.26"
+    "@vitejs/plugin-rsc": "0.5.38"
   },
   "devDependencies": {
     "@astrojs/internal-helpers": "0.10.0",
@@ -115,6 +115,9 @@
     "madge": "8.0.0",
     "oxfmt": "*",
     "oxlint": "*",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "react-server-dom-webpack": "19.3.1",
     "remark-directive": "4.0.0",
     "remark-gfm": "4.0.1",
     "remark-mdx": "3.1.1",

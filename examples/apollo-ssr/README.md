@@ -1,6 +1,6 @@
 # Apollo request-owned SSR
 
-A buffered Node SSR → browser path using Apollo Client **4.3.3**, React **19.2.6**, real GraphQL HTTP
+A buffered Node SSR → browser path using Apollo Client **4.3.3**, React **19.3.1**, real GraphQL HTTP
 and the common Croco `GraphQLAuthGuard`. No Croco query hook or second cache is involved. This is a
 loopback-only example with synthetic Alice/Bob sessions and process-local discounts, not production auth.
 

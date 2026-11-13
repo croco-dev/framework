@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "meta-vite",
+      "classification": "protocol-render",
+      "reason": "Use patched standalone and Vite-vendored React Flight codecs for the existing Node RSC path.",
+      "files": {
+        "packages/meta-vite/package.json": "52e9d31ab0a5b54e17a33d205ae63210c73423060e7e49c22be7f3c2b1a59024"
+      },
+      "catalogRuntimes": ["node", "lambda", "cloudflare-workers", "browser"],
+      "profiles": {
+        "kubernetes": {
+          "result": "supported",
+          "reason": "The Node fetch adapters and isolated encoder serve real HTML and negotiated Flight using the patched React codec.",
+          "providers": [
+            "@croco/meta-vite/createNodeHandler",
+            "@croco/meta-vite/createNodeComposedHandler"
+          ],
+          "constraints": [
+            "Use matching React, React DOM and React Flight versions and a patched Vite RSC plugin.",
+            "Local host-runtime evidence does not certify a deployed Kubernetes cluster."
+          ],
+          "references": [
+            "packages/meta-vite/src/libs/providers/node.ts",
+            "packages/meta-vite/src/tests/NodeRscContext.spec.ts",
+            "packages/meta-vite/scripts/verify-node-rsc-context.mjs",
+            "examples/rsc-node-example/vite.config.ts"
+          ],
+          "evidence": {
+            "kind": "host-runtime",
+            "runtime": "node",
+            "path": "packages/meta-vite/src/tests/NodeRscContext.spec.ts",
+            "testName": "Node RSC context through the standalone adapter renders the real component as HTML and negotiated Flight with Node metadata",
+            "sha256": "31173bca772c52886cc7cf8864ecfeb6879abfd8a18bd40c8690da8bde4aaa94"
+          }
+        },
+        "aws-lambda": {
+          "result": "unverified",
+          "reason": "This fix covers the Node adapters only. The Lambda adapter supplies event and invocation context that the default isolated encoder still rejects.",
+          "providers": ["@croco/meta-vite/createLambdaHandler"],
+          "constraints": [
+            "No Lambda RSC integration or deployment evidence is claimed.",
+            "The existing buffered Lambda response contract is unchanged."
+          ],
+          "references": [
+            "packages/meta-vite/src/libs/providers/lambda.ts",
+            "packages/meta-vite/README.md"
+          ]
+        },
+        "cloudflare": {
+          "result": "unsupported",
+          "reason": "The default isolated encoder needs Node child_process and cannot carry Workers bindings or executionContext.",
+          "providers": ["@croco/meta-vite/createCloudflareHandler"],
+          "constraints": ["No Workers isolate or Node Container support is added by this change."],
+          "references": [
+            "packages/meta-vite/src/libs/providers/cloudflare.ts",
+            "packages/meta-vite/src/libs/rsc/isolatedEncode.ts"
+          ],
+          "host": "workers"
+        }
+      }
+    }
+  ]
+}

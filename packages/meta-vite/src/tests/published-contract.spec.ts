@@ -96,9 +96,9 @@ describe("published @croco/meta-vite contract", () => {
         writeConsumerPackageJson(consumerRoot, tarballs);
         installMetaViteConsumer(consumerRoot, tarballs, [
           tarballs.frameworkContext,
-          "react@19.2.6",
-          "react-dom@19.2.6",
-          "react-server-dom-webpack@19.2.6",
+          "react@19.3.1",
+          "react-dom@19.3.1",
+          "react-server-dom-webpack@19.3.1",
           "vite@6.4.3",
           "zod@^4.6.6",
         ]);
@@ -182,6 +182,10 @@ describe("published @croco/meta-vite contract", () => {
         expect(packedManifest.peerDependencies?.zod).toBe("^4.6.6");
         expect(packedManifest.peerDependencies?.ioredis).toBe("5.10.1");
         expect(packedManifest.peerDependencies?.["react-dom"]).toBe("^19.2.6");
+        expect(packedManifest.peerDependencies?.["@vitejs/plugin-rsc"]).toBe("^0.5.38");
+        expect(packedManifest.peerDependencies?.["react-server-dom-webpack"]).toBe(
+          "~19.2.9 || ^19.3.1",
+        );
         expect(packedManifest.peerDependencies?.vite).toBe("^6.4.3");
         expect(packedManifest.peerDependenciesMeta?.ioredis?.optional).toBe(true);
         expect(packedManifest.peerDependenciesMeta?.["react-dom"]).toBeUndefined();
@@ -241,7 +245,7 @@ describe("published @croco/meta-vite contract", () => {
         installMetaViteConsumer(rootConsumerRoot, tarballs, [
           "@types/node@^22",
           "@types/react@^19",
-          "react@19.2.6",
+          "react@19.3.1",
           "vite@6.4.3",
           "zod@^4.6.6",
         ]);
@@ -278,7 +282,7 @@ describe("published @croco/meta-vite contract", () => {
           "@types/node@^22",
           "@types/react@^19",
           "ioredis@5.10.1",
-          "react@19.2.6",
+          "react@19.3.1",
           "vite@6.4.3",
           "zod@^4.6.6",
         ]);
