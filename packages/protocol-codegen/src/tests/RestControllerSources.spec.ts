@@ -73,13 +73,17 @@ describe("loadRestControllerSources", () => {
     async () => {
       const controllerPath = path.join(sourceDir, "LocatedController.ts");
       writeEsmControllerProject(tempRoot);
+      const source = readSharedFixture("LocatedController.ts.fixture").replace(
+        "export class LocatedController",
+        "class LocatedController",
+      );
       fs.writeFileSync(
         controllerPath,
-        `${readSharedFixture("LocatedController.ts.fixture")}\nconst PublicController = LocatedController;\nexport { PublicController as default };\n`,
+        `${source}\nconst PublicController = (LocatedController satisfies typeof LocatedController);\nexport { PublicController as LocatedControllerExport, PublicController as default };\n`,
       );
       fs.writeFileSync(
         path.join(sourceDir, "A-barrel.ts"),
-        'export { default, LocatedController as Alias } from "./LocatedController.js";\n',
+        'export { default, LocatedControllerExport as Alias } from "./LocatedController.js";\n',
       );
       fs.writeFileSync(
         path.join(sourceDir, "Z-barrel.ts"),
@@ -115,7 +119,7 @@ describe("loadRestControllerSources", () => {
       }
       expect(modules[0]?.moduleExports.Alias).toBe(controllers[0]);
       expect(modules[0]?.moduleExports.default).toBe(controllers[0]);
-      expect(modules[1]?.moduleExports.LocatedController).toBe(controllers[0]);
+      expect(modules[1]?.moduleExports.LocatedControllerExport).toBe(controllers[0]);
       expect(modules[2]?.moduleExports.Controller).toBe(controllers[0]);
     },
     LOAD_CONTROLLER_TIMEOUT_MS,

@@ -182,7 +182,16 @@ function resolveControllerClassDeclaration(declaration: Node): ClassDeclaration 
     }
 
     visited.add(current);
-    const initializer = current.getInitializer();
+    let initializer = current.getInitializer();
+    while (
+      Node.isParenthesizedExpression(initializer) ||
+      Node.isAsExpression(initializer) ||
+      Node.isSatisfiesExpression(initializer) ||
+      Node.isTypeAssertion(initializer) ||
+      Node.isNonNullExpression(initializer)
+    ) {
+      initializer = initializer.getExpression();
+    }
     if (!Node.isIdentifier(initializer)) return undefined;
     const symbol = initializer.getSymbol();
     current = (symbol?.getAliasedSymbol() ?? symbol)?.getValueDeclaration();
