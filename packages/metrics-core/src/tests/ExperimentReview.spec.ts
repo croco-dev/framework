@@ -313,10 +313,20 @@ describe("ExperimentReview", () => {
   });
 
   it("returns smd 0 with a distinguishing reason when the pooled SD is 0", () => {
-    const result = standardizedMeanDifference([1, 1, 1], [1, 1]);
+    const result = standardizedMeanDifference([0.1, 0.1, 0.1], [0.1, 0.1]);
     expect(result.smd).toBe(0);
     expect(result.pooledSd).toBe(0);
-    expect(result.reason).toContain("pooled SD is 0");
+    expect(result.reason).toContain("identical constants");
+  });
+
+  it("reports an undefined SMD when groups have different constant values", () => {
+    expect(() => standardizedMeanDifference([-100, -100], [100, 100])).toThrow(
+      ExperimentInputProblem,
+    );
+  });
+
+  it("requires positive pooled degrees of freedom even when both values are equal", () => {
+    expect(() => standardizedMeanDifference([1], [1])).toThrow(ExperimentInputProblem);
   });
 
   it("computes the textbook pooled-SD smd", () => {
@@ -347,6 +357,31 @@ describe("ExperimentReview", () => {
     expect(balance).toHaveLength(1);
     expect(balance[0]?.result).toBe("not_assessed");
     expect(balance[0]?.evidence ?? "").toContain("SMD=");
+  });
+
+  it.each([
+    { control: [-100, -100], treatment: [100, 100], reason: "different constant values" },
+    { control: [1], treatment: [1], reason: "at least three observations" },
+  ])("explains an unavailable balance SMD for $reason", ({ control, treatment, reason }) => {
+    const base = makeDataset();
+    const assignments = base.assignments.map((row, index) => ({
+      ...row,
+      attributes: {
+        score: (row.variantId === "control" ? control[index] : treatment[index - 100]) ?? null,
+      },
+    }));
+    const review = summarizeExperiment({
+      ...base,
+      plan: { ...base.plan, preTreatmentAttributes: ["score"] },
+      assignments,
+    });
+    const balance = review.quality.find((check) => check.kind === "balance:score");
+    expect(balance?.result).toBe("not_assessed");
+    expect(balance?.evidence).toContain(reason);
+    expect(balance?.evidence).toContain(
+      `control n=${control.length}, treatment n=${treatment.length}`,
+    );
+    expect(balance?.evidence).not.toContain("SMD=");
   });
 
   it("warns on cross-variant treatment receipts", () => {

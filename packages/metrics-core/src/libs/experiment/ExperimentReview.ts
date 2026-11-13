@@ -497,17 +497,48 @@ export function checkSampleRatioMismatch(
 /**
  * Pooled-SD standardized mean difference between control and treatment samples.
  * Uses sqrt(((n1-1)s1^2 + (n2-1)s2^2) / (n1+n2-2)) with sample variances.
- * A zero pooled SD (identical constants) yields smd 0 with a distinguishing reason.
+ * Identical constant groups with positive pooled degrees of freedom yield SMD 0.
+ * @throws {ExperimentInputProblem} If samples are empty or non-finite, pooled degrees of freedom
+ * are insufficient, or pooled SD is zero without identical constant groups.
  */
 export function standardizedMeanDifference(
   control: readonly number[],
   treatment: readonly number[],
 ): StandardizedMeanDifference {
-  if (control.length === 0 || treatment.length === 0) {
-    failInput("SMD requires non-empty control and treatment samples");
-  }
   for (const value of [...control, ...treatment]) {
     if (!Number.isFinite(value)) failInput("SMD inputs must be finite numbers");
+  }
+  const balance = calculateStandardizedMeanDifference(control, treatment);
+  if (!("smd" in balance)) failInput(balance.reason);
+  return balance;
+}
+
+function calculateStandardizedMeanDifference(
+  control: readonly number[],
+  treatment: readonly number[],
+): StandardizedMeanDifference | { readonly reason: string } {
+  const controlFirst = control[0];
+  const treatmentFirst = treatment[0];
+  if (controlFirst === undefined || treatmentFirst === undefined) {
+    return { reason: "SMD requires non-empty control and treatment samples" };
+  }
+  const degreesOfFreedom = control.length + treatment.length - 2;
+  if (degreesOfFreedom === 0) {
+    return { reason: "SMD requires at least three observations across the two groups" };
+  }
+  // Compare constant samples directly because arithmetic means can differ by rounding.
+  if (
+    control.every((value) => value === controlFirst) &&
+    treatment.every((value) => value === treatmentFirst)
+  ) {
+    if (controlFirst !== treatmentFirst) {
+      return { reason: "SMD is undefined when groups have different constant values" };
+    }
+    return {
+      smd: 0,
+      pooledSd: 0,
+      reason: "pooled SD is 0; groups are identical constants; SMD set to 0",
+    };
   }
   const mean = (values: readonly number[]): number =>
     values.reduce((sum, value) => sum + value, 0) / values.length;
@@ -517,20 +548,13 @@ export function standardizedMeanDifference(
   };
   const controlMean = mean(control);
   const treatmentMean = mean(treatment);
-  const degreesOfFreedom = control.length - 1 + (treatment.length - 1);
   const pooledVariance =
-    degreesOfFreedom <= 0
-      ? 0
-      : ((control.length - 1) * sampleVariance(control, controlMean) +
-          (treatment.length - 1) * sampleVariance(treatment, treatmentMean)) /
-        degreesOfFreedom;
+    ((control.length - 1) * sampleVariance(control, controlMean) +
+      (treatment.length - 1) * sampleVariance(treatment, treatmentMean)) /
+    degreesOfFreedom;
   const pooledSd = Math.sqrt(Math.max(pooledVariance, 0));
   if (pooledSd === 0) {
-    return {
-      smd: 0,
-      pooledSd: 0,
-      reason: "pooled SD is 0; groups are identical constants; SMD set to 0",
-    };
+    return { reason: "SMD is undefined when pooled SD is zero for nonconstant samples" };
   }
   return {
     smd: (treatmentMean - controlMean) / pooledSd,
@@ -908,24 +932,18 @@ export function summarizeExperiment(input: ExperimentReviewInput): ExperimentRev
     }
     const controlValues = numericByVariant[controlId] ?? [];
     const treatmentValues = numericByVariant[treatmentId] ?? [];
-    if (controlValues.length === 0 || treatmentValues.length === 0) {
-      quality.push({
-        kind: `balance:${attribute}`,
-        result: "not_assessed",
-        evidence: `Insufficient numeric observations (control=${controlValues.length}, treatment=${treatmentValues.length}, non-numeric-or-missing=${skipped}); SMD not computed`,
-        limitations:
-          "Descriptive balance signal only; no threshold is judged and missingness is reported, not imputed",
-      });
-    } else {
-      const balance = standardizedMeanDifference(controlValues, treatmentValues);
-      quality.push({
-        kind: `balance:${attribute}`,
-        result: "not_assessed",
-        evidence: `SMD=${balance.smd.toFixed(4)} pooledSD=${balance.pooledSd.toFixed(4)} (control n=${controlValues.length}, treatment n=${treatmentValues.length}, non-numeric-or-missing=${skipped})`,
-        limitations:
-          "Descriptive balance signal only; no threshold is judged and missingness is reported, not imputed",
-      });
-    }
+    const balance = calculateStandardizedMeanDifference(controlValues, treatmentValues);
+    const evidence =
+      "smd" in balance
+        ? `SMD=${balance.smd.toFixed(4)} pooledSD=${balance.pooledSd.toFixed(4)}`
+        : balance.reason;
+    quality.push({
+      kind: `balance:${attribute}`,
+      result: "not_assessed",
+      evidence: `${evidence} (control n=${controlValues.length}, treatment n=${treatmentValues.length}, non-numeric-or-missing=${skipped})`,
+      limitations:
+        "Descriptive balance signal only; no threshold is judged and missingness is reported, not imputed",
+    });
   }
 
   return {
