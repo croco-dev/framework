@@ -109,7 +109,7 @@ describe("runCreateDomain", () => {
     expect(entryContent).toContain("app.addControllers([UserController]);");
   });
 
-  it.each(["standalone", "referenced", "referenced entrypoint"])(
+  it.each(["standalone", "referenced", "referenced entrypoint", "root entrypoint"])(
     "typechecks the generated domain and controller registration in a %s NodeNext ESM app",
     async (project) => {
       const cwd = await createWorkspace();
@@ -119,9 +119,15 @@ describe("runCreateDomain", () => {
         const manifest = JSON.parse(await fs.readFile(manifestPath, "utf-8"));
         await fs.writeFile(manifestPath, JSON.stringify({ ...manifest, type: "module" }));
         const entryPath = path.join(appDir, "src", "index.ts");
-        const explicitEntry = project === "referenced entrypoint";
+        const rootEntry = project === "root entrypoint";
+        const explicitEntry = project === "referenced entrypoint" || rootEntry;
         const bootstrapPath = path.join(appDir, "src", "bootstrap", "index.ts");
-        if (explicitEntry) {
+        if (rootEntry) {
+          await fs.writeFile(
+            path.join(appDir, "server.ts"),
+            'import "./src/index.js";\nexport * from "./src/domains/order/index.js";\n',
+          );
+        } else if (explicitEntry) {
           await fs.mkdir(path.dirname(bootstrapPath));
           await fs.writeFile(
             bootstrapPath,
@@ -167,7 +173,9 @@ export const app = createApp({ controllers: [] });
                 ),
               ),
             },
-            include: [explicitEntry ? "src/bootstrap" : "src"],
+            ...(rootEntry
+              ? { files: ["server.ts"] }
+              : { include: [explicitEntry ? "src/bootstrap" : "src"] }),
             ...(project === "referenced" ? { exclude: ["src/domains/*/index.ts"] } : {}),
           }),
         );

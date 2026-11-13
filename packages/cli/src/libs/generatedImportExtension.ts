@@ -21,10 +21,9 @@ const { matchFiles } = ts as typeof ts & {
 
 export function generatedImportExtension(
   importerPath: string,
-  sourceRoot = dirname(importerPath),
+  generatedSources: ReadonlyMap<string, string> = new Map(),
 ): ImportExtension {
   const fileName = ts.sys.resolvePath(importerPath);
-  const sourcePrefix = `${ts.sys.resolvePath(sourceRoot)}/`;
   const configPath = ts.findConfigFile(dirname(fileName), ts.sys.fileExists);
   if (!configPath) return "";
 
@@ -38,11 +37,14 @@ export function generatedImportExtension(
     if (importExtension(fileName, candidate.options) === ".js") {
       const roots = candidate.fileNames;
       if (roots.includes(fileName)) return ".js";
-      // Existing application entries can reach newly generated modules through imports.
       if (
         !candidate.options.noResolve &&
-        (roots.some((root) => root.startsWith(sourcePrefix)) ||
-          readProject(path, fileName, true).fileNames.some((root) => root.startsWith(sourcePrefix)))
+        resolvesGeneratedSource(
+          candidate.options,
+          readProject(path, fileName, true).fileNames,
+          fileName,
+          generatedSources,
+        )
       ) {
         return ".js";
       }
@@ -55,6 +57,38 @@ export function generatedImportExtension(
     }
   }
   return importExtension(fileName, project.options);
+}
+
+function resolvesGeneratedSource(
+  options: ts.CompilerOptions,
+  roots: string[],
+  fileName: string,
+  generatedSources: ReadonlyMap<string, string>,
+): boolean {
+  if (!roots.length) return false;
+
+  const sources = new Map(
+    Array.from(generatedSources, ([path, content]) => [ts.sys.resolvePath(path), content]),
+  );
+  if (!sources.has(fileName)) sources.set(fileName, "");
+  const directories = new Set<string>();
+  for (const path of sources.keys()) {
+    for (
+      let directory = dirname(path);
+      !ts.sys.directoryExists(directory);
+      directory = dirname(directory)
+    ) {
+      if (directories.has(directory)) break;
+      directories.add(directory);
+    }
+  }
+
+  const compilerOptions = { ...options, noLib: true, types: [] };
+  const host = ts.createCompilerHost(compilerOptions);
+  host.readFile = (path) => ts.sys.readFile(path) ?? sources.get(path);
+  host.fileExists = (path) => sources.has(path) || ts.sys.fileExists(path);
+  host.directoryExists = (path) => directories.has(path) || ts.sys.directoryExists(path);
+  return ts.createProgram(roots, compilerOptions, host).getSourceFile(fileName) !== undefined;
 }
 
 function readProject(

@@ -6,10 +6,10 @@
       "classification": "pure-contract",
       "reason": "Generated repository and domain modules and controller registrations use explicit JavaScript extensions when TypeScript resolves the importing source as Node ESM.",
       "files": {
-        "packages/cli/src/commands/createDomain.ts": "e5e79d9718cc8dc4ad1d05dabd97dacd4da4ebb2753e345268143db1cee241c5",
-        "packages/cli/src/commands/makeRepository.ts": "93d40e40d076248e6e2c7b7b5fd13ecad4d16bbb9a0b6fd5133c55eee4ea749a",
+        "packages/cli/src/commands/createDomain.ts": "e638dfcf872a889fb139629ab7e8df2ffcafa02ff0fbfaf6567f99db06c72a18",
+        "packages/cli/src/commands/makeRepository.ts": "a7bf769828c1ae9299f910eb0987d57c5d98780932a38a4d33ba95032d5b4c93",
         "packages/cli/src/libs/codemods/registerController.ts": "a56a3cbce745855ec686b444fb47bbdb68279908b7f15a38831ad67d93e12d8c",
-        "packages/cli/src/libs/generatedImportExtension.ts": "d5dd30255bfb22a142e21f834696338d4b0541ae6ebaca5cdebc42172cfe395f"
+        "packages/cli/src/libs/generatedImportExtension.ts": "e075f40e62dc9a48415bb636c2e17f84db65481fc52f20c7fdda37782dc86795"
       },
       "catalogRuntimes": [],
       "profiles": {

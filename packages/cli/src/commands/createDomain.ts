@@ -62,6 +62,8 @@ export async function runCreateDomain(
   const barrelPath = join(apiServerSrc, "domains", kebab, "index.ts");
   const domainDir = dirname(barrelPath);
   const repositoryPath = join(domainDir, `${className}Repository.ts`);
+  // A configured entry can reach the new repository through the new domain barrel.
+  const domainSources = new Map([[barrelPath, barrelTemplate(className, ".js")]]);
   const generatedSources = [
     {
       path: join(domainDir, `${className}Controller.ts`),
@@ -75,7 +77,7 @@ export async function runCreateDomain(
       path: repositoryPath,
       content: repositoryTemplate(
         className,
-        generatedImportExtension(repositoryPath, apiServerSrc),
+        generatedImportExtension(repositoryPath, domainSources),
       ),
     },
     {
@@ -84,7 +86,7 @@ export async function runCreateDomain(
     },
     {
       path: barrelPath,
-      content: barrelTemplate(className, generatedImportExtension(barrelPath, apiServerSrc)),
+      content: barrelTemplate(className, generatedImportExtension(barrelPath)),
     },
   ];
 
