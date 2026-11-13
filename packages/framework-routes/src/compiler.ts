@@ -180,8 +180,11 @@ export function generateModuleFromRouteRegistrationTable(
     );
   }
   for (const [index, binding] of sortedControllerBindings.entries()) {
+    const exportName = /^[$_\p{ID_Start}][$\u200c\u200d\p{ID_Continue}]*$/u.test(binding.exportName)
+      ? binding.exportName
+      : JSON.stringify(binding.exportName);
     lines.push(
-      `import { ${binding.exportName} as GeneratedController${index} } from ${JSON.stringify(binding.importPath)};`,
+      `import { ${exportName} as GeneratedController${index} } from ${JSON.stringify(binding.importPath)};`,
     );
   }
   lines.push("");

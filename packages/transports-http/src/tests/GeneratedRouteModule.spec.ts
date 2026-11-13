@@ -1,7 +1,8 @@
 import "reflect-metadata";
+import { execFileSync } from "node:child_process";
 import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { Container } from "@croco/framework-context";
 import { compileRoutes, generateModule } from "@croco/framework-routes";
 import { ProblemFactory } from "@croco/problems-core";
@@ -15,6 +16,7 @@ import {
   RejectGeneratedRequest,
 } from "./fixtures/GeneratedArgumentsController";
 import { GeneratedRouteController } from "./fixtures/GeneratedRouteController";
+import * as aliasedControllers from "./fixtures/AliasedRouteControllers";
 import {
   GeneratedCatchAllController,
   GeneratedRootCatchAllController,
@@ -38,6 +40,32 @@ async function createGeneratedModuleDirectory(prefix: string): Promise<string> {
 }
 
 describe("generated route module", () => {
+  it("registers routes from string, default, and identifier controller exports", async () => {
+    const outputDir = await createGeneratedModuleDirectory(".croco-generated-export-names-");
+
+    try {
+      const moduleUrl = new URL("./fixtures/AliasedRouteControllers.ts", import.meta.url).href;
+      await compileRoutes({ controllerPaths: [moduleUrl], sourcePaths: [moduleUrl], outputDir });
+      for (const ControllerType of Object.values(aliasedControllers)) {
+        Container.set(ControllerType, new ControllerType());
+      }
+      const routesModulePath = join(outputDir, ".croco", "build", "routes.mjs");
+      execFileSync(process.execPath, ["--check", routesModulePath]);
+      const generated = await import(pathToFileURL(routesModulePath).href);
+      const app = new Hono();
+      generated.registerRoutes(app);
+
+      for (const name of ["dash", "space", "unicode", "default", "named"]) {
+        const response = await app.request(`http://localhost/export-names/${name}`);
+        expect(response.status).toBe(200);
+        await expect(response.text()).resolves.toBe(name);
+      }
+    } finally {
+      Container.reset();
+      await rm(outputDir, { recursive: true, force: true });
+    }
+  });
+
   it("binds decorated arguments and validates bodies like reflection routes while preserving raw Hono handlers", async () => {
     const outputDir = await createGeneratedModuleDirectory(".croco-generated-arguments-");
     try {

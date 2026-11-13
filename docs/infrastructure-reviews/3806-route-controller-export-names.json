@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "framework-routes",
+      "classification": "pure-contract",
+      "reason": "The route compiler preserves ESM export names in static imports. The change requires no infrastructure provider, storage, or host lifecycle capability.",
+      "files": {
+        "packages/framework-routes/src/compiler.ts": "76719d14b8ab096ac15579094b568d68ad9e6db4515b9e14c0ae4ccd0fca5f44"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The compiler emits the same ESM bindings independently of Kubernetes and the Node Host lifecycle.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/framework-routes/src/compiler.ts"]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The compiler emits the same ESM bindings independently of Lambda handlers and invocation scope.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/framework-routes/src/compiler.ts"]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The compiler emits the same ESM bindings without using Worker or Node Container APIs.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/framework-routes/src/compiler.ts"]
+        }
+      }
+    }
+  ]
+}
