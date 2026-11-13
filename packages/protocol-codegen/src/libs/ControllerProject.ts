@@ -213,6 +213,8 @@ export function createControllerProject(
           } else {
             context.project.getProgram().emitSync({
               targetSourceFile: sourceFile,
+              // Normalize before CommonJS lowering so direct template requires keep their behavior.
+              customTransformers: { before: [normalizeDynamicImportTemplates] },
               writeFile(filePath, text, writeByteOrderMark) {
                 fs.mkdirSync(path.dirname(filePath), { recursive: true });
                 fs.writeFileSync(filePath, writeByteOrderMark ? `\uFEFF${text}` : text);
@@ -276,6 +278,31 @@ function addControllerSourceFiles(project: Project, patterns: readonly string[])
   ].sort((left, right) => compareStrings(left.getFilePath(), right.getFilePath()));
 }
 
+function getStaticDynamicImportSpecifier(
+  node: ts.CallExpression,
+): ts.StringLiteralLike | undefined {
+  if (node.expression.kind !== ts.SyntaxKind.ImportKeyword) return;
+  const specifier = node.arguments[0];
+  if (specifier && ts.isStringLiteralLike(specifier)) return specifier;
+}
+
+function normalizeDynamicImportTemplates(
+  context: ts.TransformationContext,
+): ts.Transformer<ts.SourceFile> {
+  const { factory } = context;
+  const visit: ts.Visitor = (node) => {
+    const visited = ts.visitEachChild(node, visit, context);
+    if (!ts.isCallExpression(visited)) return visited;
+    const specifier = getStaticDynamicImportSpecifier(visited);
+    if (!specifier || !ts.isNoSubstitutionTemplateLiteral(specifier)) return visited;
+    return factory.updateCallExpression(visited, visited.expression, visited.typeArguments, [
+      factory.createStringLiteral(specifier.text),
+      ...visited.arguments.slice(1),
+    ]);
+  };
+  return (sourceFile) => ts.visitEachChild(sourceFile, visit, context);
+}
+
 function resolveProjectSourceDependencies(project: Project): void {
   let addedDynamicDependency: boolean;
   let pendingNodeFormats = isNodeModuleKind(project.getCompilerOptions().module);
@@ -295,14 +322,12 @@ function resolveProjectSourceDependencies(project: Project): void {
     for (const sourceFile of project.getSourceFiles()) {
       const sourcePath = sourceFile.getFilePath();
       const visit = (node: ts.Node): void => {
-        if (
-          ts.isCallExpression(node) &&
-          node.expression.kind === ts.SyntaxKind.ImportKeyword &&
-          node.arguments.length >= 1 &&
-          ts.isStringLiteral(node.arguments[0])
-        ) {
+        const specifier = ts.isCallExpression(node)
+          ? getStaticDynamicImportSpecifier(node)
+          : undefined;
+        if (specifier) {
           const resolvedPath = ts.resolveModuleName(
-            node.arguments[0].text,
+            specifier.text,
             sourcePath,
             compilerOptions,
             ts.sys,

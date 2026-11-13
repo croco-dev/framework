@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "protocol-codegen",
+      "classification": "protocol-render",
+      "reason": "Resolve fixed template specifiers in the shared build-time OpenAPI and RPC controller loader using the existing application path and emit mapping.",
+      "files": {
+        "packages/protocol-codegen/src/libs/ControllerProject.ts": "ddac20233bf3e8b682cb3d00b4bfc81fe7da626d5daa1a0a13fe1171c685c934"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Controller import resolution runs in the Node build process before deployment to the Kubernetes Node Host. It adds no deployed capability, storage or lifecycle requirement.",
+          "providers": [],
+          "constraints": [
+            "The existing generator requires Node filesystem and compiler access in the build environment."
+          ],
+          "references": [
+            "packages/protocol-codegen/src/libs/ControllerProject.ts",
+            "packages/protocol-codegen/src/tests/ControllerProject.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Controller import resolution runs in the Node build process before deployment to the Lambda Host. It adds no deployed capability, storage or lifecycle requirement.",
+          "providers": [],
+          "constraints": [
+            "The existing generator requires Node filesystem and compiler access in the build environment."
+          ],
+          "references": [
+            "packages/protocol-codegen/src/libs/ControllerProject.ts",
+            "packages/protocol-codegen/src/tests/ControllerProject.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Controller import resolution runs in the Node build process before deployment to the Workers or Node Container Host. It adds no deployed capability, storage or lifecycle requirement.",
+          "providers": [],
+          "constraints": [
+            "The existing generator requires Node filesystem and compiler access in the build environment."
+          ],
+          "references": [
+            "packages/protocol-codegen/src/libs/ControllerProject.ts",
+            "packages/protocol-codegen/src/tests/ControllerProject.spec.ts"
+          ]
+        }
+      }
+    }
+  ]
+}

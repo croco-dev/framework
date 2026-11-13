@@ -298,9 +298,12 @@ schema.parse({ id: 'user-1' });`,
     LOAD_CONTROLLER_TIMEOUT_MS,
   );
 
-  it(
-    "loads runtime path aliases with an explicit NodeNext application config",
-    async () => {
+  it.each([
+    "import { controllerPath } from '@app/paths';",
+    "const { controllerPath } = await import(`@app/paths`);",
+  ])(
+    "loads runtime path aliases with an explicit NodeNext application config (%s)",
+    async (dependency) => {
       const tsconfigPath = path.join(tempRoot, "tsconfig.codegen.json");
       fs.writeFileSync(path.join(tempRoot, "package.json"), JSON.stringify({ type: "module" }));
       fs.writeFileSync(
@@ -322,7 +325,7 @@ schema.parse({ id: 'user-1' });`,
       fs.writeFileSync(
         path.join(sourceDir, "AliasedController.ts"),
         getMixedControllerSource()
-          .replace("import 'reflect-metadata';", "import { controllerPath } from '@app/paths';")
+          .replace("import 'reflect-metadata';", dependency)
           .replace("@Controller('/users')", "@Controller(controllerPath)"),
       );
 

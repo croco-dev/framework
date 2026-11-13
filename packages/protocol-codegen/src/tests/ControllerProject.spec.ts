@@ -653,19 +653,22 @@ describe("createControllerProject", () => {
       name: "single-quoted apostrophe",
       directory: "team's",
       literal: String.raw`'./team\'s/value'`,
+      template: "`./team's/value`",
     },
     {
       name: "double-quoted quotation mark",
       directory: 'team"s',
       literal: String.raw`"./team\"s/value"`,
+      template: '`./team"s/value`',
     },
     {
       name: "escaped backslash separators",
       directory: "team's",
       literal: String.raw`'.\\team\'s\\value'`,
+      template: "`.\\\\team's\\\\value`",
     },
-  ])("runtime import literals: $name", ({ directory, literal }) => {
-    it.each(["relative", "alias", "dynamic", "CommonJS"] as const)(
+  ])("runtime import literals: $name", ({ directory, literal, template }) => {
+    it.each(["relative", "alias", "dynamic", "dynamic template", "CommonJS"] as const)(
       "preserves the dependency through a %s import",
       async (kind) => {
         const root = createTemporaryDirectory();
@@ -684,9 +687,10 @@ describe("createControllerProject", () => {
           path.join(root, directory, "value.ts"),
           "export const value = 'literal-dependency';",
         );
-        const specifier = kind === "alias" ? "'@helper/value'" : literal;
+        const specifier =
+          kind === "alias" ? "'@helper/value'" : kind === "dynamic template" ? template : literal;
         const dependency =
-          kind === "dynamic"
+          kind === "dynamic" || kind === "dynamic template"
             ? `const { value } = await import(${specifier});`
             : `import { value } from ${specifier};`;
         writeFile(
@@ -1238,32 +1242,124 @@ describe("createControllerProject", () => {
     }
   });
 
-  it("rewrites dynamic NodeNext path-alias imports", async () => {
+  it.each(["'@app/value'", "`@app/value`"])(
+    "rewrites dynamic NodeNext path-alias import %s",
+    async (specifier) => {
+      const root = createTemporaryDirectory();
+      writeJson(path.join(root, "package.json"), { type: "module" });
+      writeJson(path.join(root, "tsconfig.json"), {
+        compilerOptions: {
+          module: "NodeNext",
+          moduleResolution: "NodeNext",
+          paths: { "@app/*": ["./src/*.ts"] },
+          target: "ES2022",
+        },
+      });
+      writeFile(path.join(root, "src", "value.ts"), "export const value = 'dynamic';");
+      writeFile(
+        path.join(root, "src", "Controller.ts"),
+        `const loaded = await import(${specifier}); export class Controller { static value = loaded.value; }`,
+      );
+      const session = createControllerProject({ cwd: root, controllers: "src/Controller.ts" });
+
+      try {
+        session.emit();
+        const [moduleExports] = await session.importControllerModules();
+        const Controller = moduleExports.Controller as { value: string };
+        expect(Controller.value).toBe("dynamic");
+        const emitted = fs.readFileSync(path.join(session.emitDir, "Controller.js"), "utf8");
+        expect(emitted).not.toContain("@app/value");
+        expect(emitted).toContain("./value.js");
+      } finally {
+        session.dispose();
+      }
+    },
+  );
+
+  it("loads emitted .mts and .cts dependencies and keeps interpolated imports dynamic", async () => {
     const root = createTemporaryDirectory();
     writeJson(path.join(root, "package.json"), { type: "module" });
     writeJson(path.join(root, "tsconfig.json"), {
       compilerOptions: {
+        target: "ES2022",
         module: "NodeNext",
         moduleResolution: "NodeNext",
-        paths: { "@app/*": ["./src/*.ts"] },
-        target: "ES2022",
       },
     });
-    writeFile(path.join(root, "src", "value.ts"), "export const value = 'dynamic';");
+    writeFile(path.join(root, "esm.mts"), "export const value = 'esm';");
+    writeFile(path.join(root, "legacy.cts"), "export = { value: 'commonjs' };");
+    writeFile(
+      path.join(root, "Controller.ts"),
+      [
+        "const esm = await import(`./esm.mjs`);",
+        "const legacy = await import(`./legacy.cjs`);",
+        "export class Controller {",
+        "  static values = [esm.value, legacy.default.value];",
+        "  static load(name: string, extension: string) { return import(`./${name}.${extension}`); }",
+        "}",
+      ].join("\n"),
+    );
+    const session = createControllerProject({ cwd: root, controllers: "Controller.ts" });
+    try {
+      expect(session.getPreEmitDiagnostics()).toEqual([]);
+      session.emit();
+      const emittedPath = path.join(session.emitDir, "Controller.js");
+      const loadedValues = execFileSync(
+        process.execPath,
+        [
+          "--input-type=module",
+          "-e",
+          [
+            "import { pathToFileURL } from 'node:url';",
+            "const { Controller } = await import(pathToFileURL(process.argv[1]).href);",
+            "const esm = await Controller.load('esm', 'mjs');",
+            "const cjs = await Controller.load('legacy', 'cjs');",
+            "process.stdout.write(JSON.stringify([Controller.values, esm.value, cjs.default.value]));",
+          ].join("\n"),
+          emittedPath,
+        ],
+        { encoding: "utf8" },
+      );
+      expect(JSON.parse(loadedValues)).toEqual([["esm", "commonjs"], "esm", "commonjs"]);
+      expect(fs.readFileSync(emittedPath, "utf8")).toContain("import(`./${name}.${extension}`)");
+    } finally {
+      session.dispose();
+    }
+  });
+
+  it("rewrites lowered template imports while preserving direct template requires", async () => {
+    const root = createTemporaryDirectory();
+    writeJson(path.join(root, "tsconfig.json"), {
+      compilerOptions: {
+        target: "ES2022",
+        module: "CommonJS",
+        paths: { "@app/*": ["./src/*.ts"] },
+      },
+    });
+    writeFile(path.join(root, "src", "value.ts"), "export const value = 'commonjs-template';");
     writeFile(
       path.join(root, "src", "Controller.ts"),
-      "const loaded = await import('@app/value'); export class Controller { static value = loaded.value; }",
+      [
+        "declare function require(id: string): unknown;",
+        "let fallback = false;",
+        "try { require(`missing-optional-controller-module`); } catch { fallback = true; }",
+        "export class Controller {",
+        "  static fallback = fallback;",
+        "  static async value() { return (await import(`@app/value`)).value; }",
+        "}",
+      ].join("\n"),
     );
     const session = createControllerProject({ cwd: root, controllers: "src/Controller.ts" });
-
     try {
+      expect(session.getPreEmitDiagnostics()).toEqual([]);
       session.emit();
       const [moduleExports] = await session.importControllerModules();
-      const Controller = moduleExports.Controller as { value: string };
-      expect(Controller.value).toBe("dynamic");
-      const emitted = fs.readFileSync(path.join(session.emitDir, "Controller.js"), "utf8");
-      expect(emitted).not.toContain("@app/value");
-      expect(emitted).toContain("./value.js");
+      const Controller = moduleExports.Controller as {
+        fallback: boolean;
+        value(): Promise<string>;
+      };
+      expect(Controller.fallback).toBe(true);
+      await expect(Controller.value()).resolves.toBe("commonjs-template");
     } finally {
       session.dispose();
     }
