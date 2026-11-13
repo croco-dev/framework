@@ -4,6 +4,7 @@ import type {
   ListBenefitIntentsFilter,
   ListReferralLinksFilter,
   ReferralAttribution,
+  ReferralAttributionState,
   ReferralAuditEntry,
   ReferralBenefitIntent,
   ReferralBenefitIntentStatus,
@@ -155,6 +156,11 @@ export interface ReferralStore {
   getLinkByTokenHash(tokenHash: string): Promise<ReferralLink | null>;
   getAttribution(attributionId: string): Promise<ReferralAttribution | null>;
   getBenefitIntent(intentId: string): Promise<ReferralBenefitIntent | null>;
+  /** Counts all attributions by state for the program and, when supplied, the family. */
+  countAttributionsByState(
+    programId: string,
+    familyId?: string,
+  ): Promise<Partial<Record<ReferralAttributionState, number>>>;
   listAttributions(filter: ListAttributionsFilter): Promise<readonly ReferralAttribution[]>;
   listBenefitIntents(filter: ListBenefitIntentsFilter): Promise<readonly ReferralBenefitIntent[]>;
 }

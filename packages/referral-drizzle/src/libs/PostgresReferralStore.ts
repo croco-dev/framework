@@ -262,6 +262,23 @@ export class PostgresReferralStore implements ReferralStore {
     });
   }
 
+  async countAttributionsByState(
+    programId: string,
+    familyId?: string,
+  ): Promise<Partial<Record<ReferralAttributionState, number>>> {
+    return run("count referral attributions by state", async () => {
+      const familyFilter = familyId === undefined ? sql`` : sql`AND family_id = ${familyId}`;
+      const result = await this.database.execute(sql`
+        SELECT state, COUNT(*) AS total FROM croco_referral_attributions
+        WHERE program_id = ${programId} ${familyFilter}
+        GROUP BY state
+      `);
+      return Object.fromEntries(
+        result.rows.map((row) => [row.state as ReferralAttributionState, Number(row.total)]),
+      );
+    });
+  }
+
   async listAttributions(filter: ListAttributionsFilter): Promise<readonly ReferralAttribution[]> {
     return run("list referral attributions", () => listAttributionsWith(this.database, filter));
   }

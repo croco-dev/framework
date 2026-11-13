@@ -121,6 +121,12 @@ in-flight return requests to finish. Then reconcile all outstanding returns
 before starting older handlers. Do not run old and new return handlers
 concurrently.
 
+`funnelCounts({ programId, familyId })` counts all attributions in the selected
+program and optional family. Clicks are program-wide. Custom `ReferralStore`
+implementations must provide `countAttributionsByState(programId, familyId?)`
+and return complete counts for the matching states. Omit states with zero rows
+or return zero for them. Upgrade the service and store together.
+
 Link tokens are issued via `@croco/referral-core/link-token`; only the
 SHA-256 hash is persisted. Use `@croco/referral-drizzle` for PostgreSQL
 persistence.
