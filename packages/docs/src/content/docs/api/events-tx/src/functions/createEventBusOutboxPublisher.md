@@ -5,7 +5,7 @@ prev: false
 title: "createEventBusOutboxPublisher"
 ---
 
-> **createEventBusOutboxPublisher**(`eventBus`, `serializer?`): (`message`) => `Promise`\<`void`\>
+> **createEventBusOutboxPublisher**(`eventBus`, `serializer?`): (`message`, `signal?`) => `Promise`\<`void`\>
 
 Outbox append, relay, inbox idempotency를 제공하는 런타임 서비스입니다.
 
@@ -21,4 +21,4 @@ Outbox append, relay, inbox idempotency를 제공하는 런타임 서비스입�
 
 ## Returns
 
-(`message`) => `Promise`\<`void`\>
+(`message`, `signal?`) => `Promise`\<`void`\>

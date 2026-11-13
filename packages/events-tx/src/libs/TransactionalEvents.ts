@@ -1234,15 +1234,19 @@ export class TransactionalInboxConsumer<TClient = unknown> {
 export function createEventBusOutboxPublisher(
   eventBus: EventBus,
   serializer: EventSerializer = new DefaultEventSerializer(),
-): (message: TransactionalOutboxMessage) => Promise<void> {
-  return async (message) => {
+): (message: TransactionalOutboxMessage, signal?: AbortSignal) => Promise<void> {
+  return async (message, signal) => {
     const event = serializer.deserialize(buildSerializedEvent(message));
     event.metadata = {
       ...event.metadata,
       ...message.metadata,
       ...(message.traceContext ? { traceContext: message.traceContext } : {}),
     };
-    await eventBus.publish(event);
+    if (signal === undefined) {
+      await eventBus.publish(event);
+      return;
+    }
+    await eventBus.publish(event, { signal });
   };
 }
 

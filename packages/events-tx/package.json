@@ -45,6 +45,7 @@
     "drizzle-orm": "catalog:"
   },
   "devDependencies": {
+    "@croco/events-inmemory": "workspace:*",
     "@croco/idempotency-core": "workspace:*"
   }
 }
