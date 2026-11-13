@@ -5,6 +5,7 @@ import type { WriteResult } from "../libs/fileWriter.js";
 import { write as fileWriterWrite } from "../libs/fileWriter.js";
 import { getCrocoCommandRuntime, logWriteResult } from "../libs/cliRuntime.js";
 import { assertGeneratedImportDependencies } from "../libs/generatedImportContract.js";
+import { generatedImportExtension } from "../libs/generatedImportExtension.js";
 import { normalize, validate } from "../libs/naming.js";
 import { detect } from "../libs/workspace.js";
 import { GLOBAL_OPTIONS } from "./options.js";
@@ -53,7 +54,7 @@ export async function generateRepository(
     `${className}Repository.ts`,
   );
   const content = `import type { KeyedRepositoryResult, Repository } from "@croco/repository-core";
-import type { ${className}Entity } from "../entities/${className}Entity";
+import type { ${className}Entity } from "../entities/${className}Entity${generatedImportExtension(targetPath)}";
 
 export class ${className}Repository implements Repository<${className}Entity, string> {
   async findById(id: string): Promise<${className}Entity | null> {

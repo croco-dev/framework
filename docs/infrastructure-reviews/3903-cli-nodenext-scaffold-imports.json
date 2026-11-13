@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "cli",
+      "classification": "pure-contract",
+      "reason": "Generated repository and domain modules and controller registrations use explicit JavaScript extensions when TypeScript resolves the importing source as Node ESM.",
+      "files": {
+        "packages/cli/src/commands/createDomain.ts": "46ea53f4ab6a2de3b5f1c9fc379ec5d707ef16e92491fc09fa662e47bd647581",
+        "packages/cli/src/commands/makeRepository.ts": "8ba46455ec6b648b31066321aeb503dbf426b649c75deae1483a06a74c5a82ac",
+        "packages/cli/src/libs/codemods/registerController.ts": "649ce50fcf07db1dc748d20e8a9dffa61914f6414da57a52fd4a3e307520bdd2",
+        "packages/cli/src/libs/generatedImportExtension.ts": "ea7aa31091a4461867d017ac86d851ad334afa697771b1ccc58b6b50dc1c89ae"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The CLI selects relative module specifiers while generating application source. This uses the local TypeScript configuration and has no deployment host capability, storage, or lifecycle dependency.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/cli/src/libs/generatedImportExtension.ts",
+            "packages/cli/src/tests/createDomain.spec.ts",
+            "packages/cli/src/tests/makeRepository.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The CLI selects relative module specifiers while generating application source. This uses the local TypeScript configuration and has no deployment host capability, storage, or lifecycle dependency.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/cli/src/libs/generatedImportExtension.ts",
+            "packages/cli/src/tests/createDomain.spec.ts",
+            "packages/cli/src/tests/makeRepository.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The CLI selects relative module specifiers while generating application source. This uses the local TypeScript configuration and has no deployment host capability, storage, or lifecycle dependency.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/cli/src/libs/generatedImportExtension.ts",
+            "packages/cli/src/tests/createDomain.spec.ts",
+            "packages/cli/src/tests/makeRepository.spec.ts"
+          ]
+        }
+      }
+    }
+  ]
+}

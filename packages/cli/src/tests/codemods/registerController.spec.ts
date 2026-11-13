@@ -42,6 +42,31 @@ api.listen(3000);
     expect(await readFixture()).toBe(content);
   });
 
+  it("repairs an existing NodeNext ESM controller import without duplicating registration", async () => {
+    await writeFile(join(fixtureDir, "package.json"), '{"type":"module"}');
+    await writeFile(join(fixtureDir, "tsconfig.json"), '{"compilerOptions":{"module":"NodeNext"}}');
+    await writeFixture(`
+import { createApp } from '@croco/transports-http';
+import { BarController } from './domains/bar/BarController';
+const app = createApp({ controllers: [BarController] });
+`);
+    const before = await readFixture();
+    const preview = await registerBarController({ dryRun: true });
+
+    expect(preview).toMatchObject({
+      status: "updated",
+      importPath: "./domains/bar/BarController.js",
+    });
+    expect(await readFixture()).toBe(before);
+    expect((await registerBarController()).status).toBe("updated");
+    const after = await readFixture();
+    expect(after).toBe(
+      before.replace("./domains/bar/BarController", "./domains/bar/BarController.js"),
+    );
+    expect((await registerBarController()).status).toBe("updated-idempotent");
+    expect(await readFixture()).toBe(after);
+  });
+
   it("checks the controller binding in the verified registration", async () => {
     await writeFixture(`
 import { createApp } from '@croco/transports-http';

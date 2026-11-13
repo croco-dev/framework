@@ -132,6 +132,60 @@ describe("generateRepository", () => {
     await expectGeneratedFixtureToTypecheck(tsconfigPath);
   });
 
+  it.each(["NodeNext ESM", "NodeNext CommonJS", "Bundler ESM"])(
+    "should generate a typecheckable repository in a %s app",
+    async (mode) => {
+      const cwd = await createWorkspace();
+      try {
+        const appDir = path.join(cwd, "apps", "api-server");
+        const packageType = mode === "NodeNext CommonJS" ? "commonjs" : "module";
+        const isBundler = mode === "Bundler ESM";
+        await fs.writeFile(
+          path.join(appDir, "package.json"),
+          JSON.stringify({
+            type: packageType,
+            dependencies: { "@croco/repository-core": "workspace:*" },
+          }),
+        );
+        await fs.writeFile(
+          path.join(cwd, "tsconfig.base.json"),
+          JSON.stringify({
+            compilerOptions: {
+              module: isBundler ? "ESNext" : "NodeNext",
+              ...(isBundler ? { moduleResolution: "Bundler" } : {}),
+              paths: {
+                "@croco/repository-core": [
+                  path.join(REPO_ROOT, "packages/repository-core/src/libs/Repository.ts"),
+                ],
+              },
+              skipLibCheck: true,
+              strict: true,
+            },
+          }),
+        );
+        const tsconfigPath = path.join(appDir, "tsconfig.json");
+        await fs.writeFile(
+          tsconfigPath,
+          '{"extends":"../../tsconfig.base.json","include":["src"]}',
+        );
+
+        await generateEntity("Order", { cwd });
+        const result = await generateRepository("Order", { cwd });
+
+        expect(result?.status).toBe("created");
+        await expectGeneratedFixtureToTypecheck(tsconfigPath);
+        const extension = mode === "NodeNext ESM" ? ".js" : "";
+        const repository = await fs.readFile(
+          path.join(appDir, "src", "repositories", "OrderRepository.ts"),
+          "utf-8",
+        );
+        expect(repository).toContain(`from "../entities/OrderEntity${extension}";`);
+      } finally {
+        await fs.rm(cwd, { recursive: true, force: true });
+      }
+    },
+  );
+
   it("should reject missing generated import dependencies before writing files", async () => {
     const cwd = await createWorkspace({ apiServerManifest: "{}" });
     const filePath = path.join(

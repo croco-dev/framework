@@ -2,6 +2,7 @@ import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
+import ts from "typescript";
 import { describe, expect, it } from "vitest";
 import { createCrocoCommandRuntime, runWithCrocoCommandRuntime } from "../libs/cliRuntime.js";
 import { runCreateDomain } from "../commands/createDomain.js";
@@ -106,6 +107,70 @@ describe("runCreateDomain", () => {
       "import { UserController } from './domains/user/UserController';",
     );
     expect(entryContent).toContain("app.addControllers([UserController]);");
+  });
+
+  it("typechecks the generated domain and controller registration in a NodeNext ESM app", async () => {
+    const cwd = await createWorkspace();
+    try {
+      const appDir = path.join(cwd, "apps", "api-server");
+      const manifestPath = path.join(appDir, "package.json");
+      const manifest = JSON.parse(await fs.readFile(manifestPath, "utf-8"));
+      await fs.writeFile(manifestPath, JSON.stringify({ ...manifest, type: "module" }));
+      const entryPath = path.join(appDir, "src", "index.ts");
+      await fs.writeFile(
+        entryPath,
+        `import { createApp } from "@croco/transports-http";
+export const app = createApp({ controllers: [] });
+`,
+      );
+      const packageDir = fileURLToPath(new URL("../../../", import.meta.url));
+      const tsconfigPath = path.join(appDir, "tsconfig.json");
+      await fs.writeFile(
+        tsconfigPath,
+        JSON.stringify({
+          compilerOptions: {
+            module: "NodeNext",
+            experimentalDecorators: true,
+            lib: ["ESNext", "DOM"],
+            noEmit: true,
+            skipLibCheck: true,
+            strict: true,
+            paths: Object.fromEntries(
+              ["framework-context", "protocols-rest", "repository-core", "transports-http"].map(
+                (name) => [`@croco/${name}`, [path.join(packageDir, name, "dist", "index.d.ts")]],
+              ),
+            ),
+          },
+          include: ["src"],
+        }),
+      );
+
+      const result = await runCreateDomain("Order", { cwd });
+
+      expect(result?.registration?.status).toBe("updated");
+      const parsed = ts.getParsedCommandLineOfConfigFile(
+        tsconfigPath,
+        {},
+        {
+          ...ts.sys,
+          onUnRecoverableConfigFileDiagnostic: (diagnostic) => {
+            throw new Error(ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n"));
+          },
+        },
+      );
+      expect(parsed).toBeDefined();
+      if (!parsed) return;
+      const program = ts.createProgram(parsed.fileNames, parsed.options);
+      const diagnostics = [...parsed.errors, ...ts.getPreEmitDiagnostics(program)];
+      expect(
+        diagnostics.map(({ code, messageText }) => ({
+          code,
+          message: ts.flattenDiagnosticMessageText(messageText, "\n"),
+        })),
+      ).toEqual([]);
+    } finally {
+      await fs.rm(cwd, { recursive: true, force: true });
+    }
   });
 
   it("should create files without registering the controller", async () => {
