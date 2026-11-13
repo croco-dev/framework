@@ -48,6 +48,7 @@ api.listen(3000);
     await writeFixture(`
 import { createApp } from '@croco/transports-http';
 import { BarController } from './domains/bar/BarController';
+import { traceInitializer } from './trace-initializer.js';
 const app = createApp({ controllers: [BarController] });
 `);
     const before = await readFixture();

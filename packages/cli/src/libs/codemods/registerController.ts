@@ -34,7 +34,11 @@ export type RegisterControllerResult =
     };
 
 type UpdateResult = "updated" | "updated-idempotent" | "unsupported-pattern" | "not-found";
-type ImportUpdateResult = "updated" | "updated-idempotent" | "conflicting-binding";
+type ImportUpdateResult =
+  | "updated"
+  | "updated-idempotent"
+  | "specifier-updated"
+  | "conflicting-binding";
 
 export async function registerController(
   options: RegisterControllerOptions,
@@ -108,9 +112,11 @@ export async function registerController(
   }
 
   const status =
-    finalResult === "updated" || importResult === "updated" ? "updated" : "updated-idempotent";
+    finalResult === "updated" || importResult !== "updated-idempotent"
+      ? "updated"
+      : "updated-idempotent";
 
-  if (status === "updated") {
+  if (finalResult === "updated" || importResult === "updated") {
     sourceFile.organizeImports();
   }
 
@@ -448,7 +454,7 @@ function reconcileImport(
     }
     if (expectedImport.getModuleSpecifierValue() === importPath) return "updated-idempotent";
     expectedImport.setModuleSpecifier(importPath);
-    return "updated";
+    return "specifier-updated";
   }
 
   if (hasNonImportDeclaration) {

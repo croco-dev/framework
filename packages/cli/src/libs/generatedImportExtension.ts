@@ -1,29 +1,103 @@
-import { dirname } from "node:path";
+import { basename, dirname, posix } from "node:path";
 import ts from "typescript";
 import { CliError } from "./CliError.js";
 
-export function generatedImportExtension(importerPath: string): "" | ".js" {
+type ImportExtension = "" | ".js";
+
+// Use the pinned compiler's own include/exclude matcher for a file that may not exist yet.
+const { matchFiles } = ts as typeof ts & {
+  matchFiles(
+    path: string,
+    extensions: readonly string[] | undefined,
+    excludes: readonly string[] | undefined,
+    includes: readonly string[] | undefined,
+    caseSensitive: boolean,
+    cwd: string,
+    depth: number | undefined,
+    readEntries: (directory: string) => { files: string[]; directories: string[] },
+    realpath: (path: string) => string,
+  ): string[];
+};
+
+export function generatedImportExtension(importerPath: string): ImportExtension {
   const fileName = ts.sys.resolvePath(importerPath);
   const configPath = ts.findConfigFile(dirname(fileName), ts.sys.fileExists);
   if (!configPath) return "";
 
+  const project = readProject(configPath, fileName);
+  return (
+    findProjectExtension(project, fileName, new Set([configPath])) ??
+    importExtension(fileName, project.options)
+  );
+}
+
+function findProjectExtension(
+  project: ts.ParsedCommandLine,
+  fileName: string,
+  visited: Set<string>,
+): ImportExtension | undefined {
+  let extension = project.fileNames.includes(fileName)
+    ? importExtension(fileName, project.options)
+    : undefined;
+  for (const reference of project.projectReferences ?? []) {
+    if (extension === ".js") break;
+    const path = ts.resolveProjectReferencePath(reference);
+    if (visited.has(path)) continue;
+    visited.add(path);
+    extension = findProjectExtension(readProject(path, fileName), fileName, visited) ?? extension;
+  }
+  return extension;
+}
+
+function readProject(configPath: string, fileName: string): ts.ParsedCommandLine {
+  const sourceDirectory = posix.dirname(fileName);
   const parsed = ts.getParsedCommandLineOfConfigFile(
     configPath,
     {},
     {
       ...ts.sys,
-      // The generator needs compiler options, including when no source has been written yet.
-      readDirectory: () => [],
+      readDirectory: (path, extensions, excludes, includes, depth) =>
+        matchFiles(
+          path,
+          extensions,
+          excludes,
+          includes,
+          ts.sys.useCaseSensitiveFileNames,
+          ts.sys.getCurrentDirectory(),
+          depth,
+          (directory) => {
+            const absoluteDirectory = ts.sys.resolvePath(directory);
+            if (
+              absoluteDirectory === sourceDirectory ||
+              (!ts.sys.useCaseSensitiveFileNames &&
+                absoluteDirectory.toLowerCase() === sourceDirectory.toLowerCase())
+            ) {
+              return { files: [basename(fileName)], directories: [] };
+            }
+            const relative = posix.relative(absoluteDirectory, sourceDirectory);
+            const child = relative.split("/")[0];
+            return { files: [], directories: child && child !== ".." ? [child] : [] };
+          },
+          (path) => path,
+        ),
       onUnRecoverableConfigFileDiagnostic: failInvalidConfig,
     },
   );
+  if (!parsed) {
+    throw new CliError(
+      "CROCO_CLI_GENERATION_FAILED",
+      `Cannot read TypeScript config ${configPath}.`,
+    );
+  }
   // Empty files and include lists do not affect module resolution.
-  const invalidConfig = parsed?.errors.find(({ code }) => code !== 18002 && code !== 18003);
+  const invalidConfig = parsed.errors.find(({ code }) => code !== 18002 && code !== 18003);
   if (invalidConfig) failInvalidConfig(invalidConfig);
+  return parsed;
+}
 
-  return parsed &&
-    ts.getImpliedNodeFormatForFile(fileName, undefined, ts.sys, parsed.options) ===
-      ts.ModuleKind.ESNext
+function importExtension(fileName: string, options: ts.CompilerOptions): ImportExtension {
+  return ts.getImpliedNodeFormatForFile(fileName, undefined, ts.sys, options) ===
+    ts.ModuleKind.ESNext
     ? ".js"
     : "";
 }

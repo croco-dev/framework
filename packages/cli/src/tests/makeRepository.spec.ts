@@ -132,7 +132,7 @@ describe("generateRepository", () => {
     await expectGeneratedFixtureToTypecheck(tsconfigPath);
   });
 
-  it.each(["NodeNext ESM", "NodeNext CommonJS", "Bundler ESM"])(
+  it.each(["NodeNext ESM", "NodeNext CommonJS", "Bundler ESM", "NodeNext solution ESM"])(
     "should generate a typecheckable repository in a %s app",
     async (mode) => {
       const cwd = await createWorkspace();
@@ -140,6 +140,7 @@ describe("generateRepository", () => {
         const appDir = path.join(cwd, "apps", "api-server");
         const packageType = mode === "NodeNext CommonJS" ? "commonjs" : "module";
         const isBundler = mode === "Bundler ESM";
+        const isSolution = mode === "NodeNext solution ESM";
         await fs.writeFile(
           path.join(appDir, "package.json"),
           JSON.stringify({
@@ -164,17 +165,32 @@ describe("generateRepository", () => {
           }),
         );
         const tsconfigPath = path.join(appDir, "tsconfig.json");
-        await fs.writeFile(
-          tsconfigPath,
-          '{"extends":"../../tsconfig.base.json","include":["src"]}',
-        );
+        const appConfig = '{"extends":"../../tsconfig.base.json","include":["src"]}';
+        if (isSolution) {
+          await fs.writeFile(
+            tsconfigPath,
+            JSON.stringify({
+              files: [],
+              references: [{ path: "./tsconfig.tools.json" }, { path: "./tsconfig.app.json" }],
+            }),
+          );
+          await fs.writeFile(
+            path.join(appDir, "tsconfig.tools.json"),
+            '{"compilerOptions":{"module":"ESNext","moduleResolution":"Bundler"},"include":["tools"]}',
+          );
+          await fs.writeFile(path.join(appDir, "tsconfig.app.json"), appConfig);
+        } else {
+          await fs.writeFile(tsconfigPath, appConfig);
+        }
 
         await generateEntity("Order", { cwd });
         const result = await generateRepository("Order", { cwd });
 
         expect(result?.status).toBe("created");
-        await expectGeneratedFixtureToTypecheck(tsconfigPath);
-        const extension = mode === "NodeNext ESM" ? ".js" : "";
+        await expectGeneratedFixtureToTypecheck(
+          isSolution ? path.join(appDir, "tsconfig.app.json") : tsconfigPath,
+        );
+        const extension = packageType === "module" && !isBundler ? ".js" : "";
         const repository = await fs.readFile(
           path.join(appDir, "src", "repositories", "OrderRepository.ts"),
           "utf-8",
