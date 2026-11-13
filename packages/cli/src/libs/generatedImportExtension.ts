@@ -41,6 +41,8 @@ export function generatedImportExtension(
   const sourcePrefix = `${ts.sys.resolvePath(sourceRoot)}/`;
   let directlyIncluded = false;
   let hasNodeEsmApp = false;
+  let hasOtherApp = false;
+  const otherProjects: Array<{ path: string; project: ts.ParsedCommandLine }> = [];
   for (const path of configs) {
     const candidate = path === configPath ? project : readProject(path, plannedPaths);
     const roots = candidate.fileNames;
@@ -62,6 +64,8 @@ export function generatedImportExtension(
           program?.getSourceFiles().some((source) => source.fileName.startsWith(sourcePrefix)) ??
           false;
       }
+    } else if (!includesImporter && !candidate.options.noResolve) {
+      otherProjects.push({ path, project: candidate });
     }
     for (const reference of candidate.projectReferences ?? []) {
       const path = ts.resolveProjectReferencePath(reference);
@@ -70,7 +74,21 @@ export function generatedImportExtension(
       configs.push(path);
     }
   }
-  return !directlyIncluded && hasNodeEsmApp ? ".js" : "";
+  if (directlyIncluded || !hasNodeEsmApp) return "";
+  for (const { path, project: candidate } of otherProjects) {
+    const actualRoots = readProject(path, plannedPaths, true).fileNames;
+    const program = createReferenceProgram(
+      candidate.options,
+      [...new Set([...candidate.fileNames, ...actualRoots])],
+      fileName,
+      planned,
+      overwrite,
+    );
+    if (program?.getSourceFile(fileName)) return "";
+    hasOtherApp ||=
+      program?.getSourceFiles().some((source) => source.fileName.startsWith(sourcePrefix)) ?? false;
+  }
+  return hasOtherApp ? "" : ".js";
 }
 
 function createReferenceProgram(

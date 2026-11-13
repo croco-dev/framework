@@ -246,7 +246,12 @@ describe("generateRepository", () => {
       const entityDir = path.join(appDir, "src", "entities", "OrderEntity");
       await fs.mkdir(entityDir, { recursive: true });
       await fs.writeFile(path.join(entityDir, "index.ts"), "export class OrderEntity {}");
-      await fs.writeFile(path.join(appDir, "vite.config.ts"), "export {};");
+      await fs.writeFile(path.join(appDir, "vite.config.ts"), 'import "./src/config.js";');
+      await fs.writeFile(path.join(appDir, "src", "config.ts"), "export {};");
+      await fs.writeFile(
+        path.join(appDir, "src", "index.ts"),
+        'export { OrderRepository } from "./repositories/OrderRepository";',
+      );
       await fs.writeFile(
         path.join(appDir, "tsconfig.json"),
         JSON.stringify({
@@ -272,7 +277,7 @@ describe("generateRepository", () => {
               ],
             },
           },
-          include: ["src"],
+          files: ["src/index.ts"],
         }),
       );
 
