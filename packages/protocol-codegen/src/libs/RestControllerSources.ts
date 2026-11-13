@@ -1,7 +1,7 @@
 import "reflect-metadata";
 import * as path from "node:path";
 import type { Problem } from "@croco/problems-core";
-import { discoverControllerConstructors } from "@croco/protocols-core";
+import { discoverControllerConstructors, isControllerConstructor } from "@croco/protocols-core";
 import type { Constructor, RouteContractSourceLocation } from "@croco/protocols-core";
 import { Node, ts } from "ts-morph";
 import type { Decorator, Diagnostic, SourceFile } from "ts-morph";
@@ -111,7 +111,8 @@ export async function loadRestControllerSources(
     controllerProject.emit();
 
     const modules: RestControllerSourceModule[] = [];
-    const controllers = new Set<Constructor>();
+    const controllers = new Map<Constructor, ControllerSourceLocations | undefined>();
+    const exportedLocations = new Map<Constructor, ControllerSourceLocations | undefined>();
 
     for (const sourceFile of sourceFiles) {
       const moduleExports = await controllerProject.importModule(sourceFile);
@@ -119,8 +120,19 @@ export async function loadRestControllerSources(
       const sourceFileLocations = sourceLocations.get(sourceFile.getFilePath());
 
       for (const controller of moduleControllers) {
-        controllers.add(controller);
-        applyControllerSourceLocations(controller, sourceFileLocations?.get(controller.name));
+        const localLocations = sourceFileLocations?.get(controller.name);
+        if (localLocations || !controllers.has(controller)) {
+          controllers.set(controller, localLocations);
+        }
+      }
+
+      if (moduleControllers.length > 0) {
+        collectExportedControllerLocations(
+          sourceFile,
+          moduleExports,
+          sourceLocations,
+          exportedLocations,
+        );
       }
 
       modules.push({ moduleExports, controllers: moduleControllers });
@@ -130,9 +142,35 @@ export async function loadRestControllerSources(
       throw options.problems.noControllersFound(controllerPatterns);
     }
 
-    return { controllers: [...controllers], modules };
+    for (const [controller, localLocations] of controllers) {
+      // A re-export can share a name with an unrelated class in the barrel.
+      applyControllerSourceLocations(
+        controller,
+        exportedLocations.has(controller) ? exportedLocations.get(controller) : localLocations,
+      );
+    }
+
+    return { controllers: [...controllers.keys()], modules };
   } finally {
     controllerProject.dispose();
+  }
+}
+
+function collectExportedControllerLocations(
+  sourceFile: SourceFile,
+  moduleExports: ControllerModule,
+  sourceLocations: ReadonlyMap<string, SourceFileControllerSourceLocations>,
+  exportedLocations: Map<Constructor, ControllerSourceLocations | undefined>,
+): void {
+  for (const [name, declarations] of sourceFile.getExportedDeclarations()) {
+    const exported = moduleExports[name];
+    if (!isControllerConstructor(exported) || exportedLocations.has(exported)) continue;
+
+    const declaration = declarations.find(Node.isClassDeclaration);
+    if (!declaration) continue;
+    const className = declaration.getName();
+    const locations = sourceLocations.get(declaration.getSourceFile().getFilePath());
+    exportedLocations.set(exported, className ? locations?.get(className) : undefined);
   }
 }
 

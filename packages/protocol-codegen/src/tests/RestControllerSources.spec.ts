@@ -93,7 +93,12 @@ describe("loadRestControllerSources", () => {
       );
       fs.writeFileSync(
         path.join(sourceDir, "Z-barrel.ts"),
-        'export { Alias as Controller } from "./A-barrel.js";\n',
+        `${readSharedFixture("LocatedController.ts.fixture")
+          .replace("export class LocatedController", "class LocatedController")
+          .replace(
+            "@Get('/:id')",
+            "\n  @Get('/:id')",
+          )}\nvoid LocatedController;\nexport { Alias as Controller } from "./A-barrel.js";\n`,
       );
 
       const { controllers, modules } = await loadRestControllerSources({
@@ -119,6 +124,7 @@ describe("loadRestControllerSources", () => {
         expect(module.controllers[0]).toBe(controllers[0]);
       }
       expect(modules[0]?.moduleExports.Alias).toBe(controllers[0]);
+      expect(modules[0]?.moduleExports.default).toBe(controllers[0]);
       expect(modules[1]?.moduleExports.LocatedController).toBe(controllers[0]);
       expect(modules[2]?.moduleExports.Controller).toBe(controllers[0]);
     },
