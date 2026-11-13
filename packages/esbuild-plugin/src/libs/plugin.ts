@@ -118,19 +118,26 @@ function toEntryImport(entryPoint: string, target: string): string {
   return relative.startsWith(".") ? relative : `./${relative}`;
 }
 
-function toBuildErrors(error: unknown): esbuild.PartialMessage[] {
+function toBuildErrors(error: unknown, baseDir: string): esbuild.PartialMessage[] {
   if (error instanceof DiCompilerError) {
-    return error.diagnostics.map((diagnostic) => ({
-      text: `${diagnostic.code}: ${diagnostic.message}`,
-      detail: error,
-      location: {
-        file: diagnostic.file,
-        line: diagnostic.line,
-        column: diagnostic.column - 1,
-        length: 0,
-        lineText: "",
-      },
-    }));
+    return error.diagnostics.map((diagnostic) => {
+      const character = diagnostic.column - 1;
+      const lineText = ts.sys
+        .readFile(path.resolve(baseDir, diagnostic.file))
+        ?.split(/\r\n?|\n|\u2028|\u2029/u)[diagnostic.line - 1];
+      return {
+        text: `${diagnostic.code}: ${diagnostic.message}`,
+        detail: error,
+        location: {
+          file: diagnostic.file,
+          line: diagnostic.line,
+          column:
+            lineText === undefined ? character : Buffer.byteLength(lineText.slice(0, character)),
+          length: 0,
+          lineText: lineText ?? "",
+        },
+      };
+    });
   }
   return [
     {
@@ -257,7 +264,7 @@ export function crocoPlugin(config?: CrocoPluginConfig): esbuild.Plugin {
   let boundRuntime = false;
   let graphWatchFiles: string[] = [];
   let graphWatchDirs: string[] = [];
-  let graphErrors: esbuild.PartialMessage[] = [];
+  let graphCompilationFailed = false;
 
   return {
     name: "croco-plugin",
@@ -267,7 +274,7 @@ export function crocoPlugin(config?: CrocoPluginConfig): esbuild.Plugin {
         entryPointPaths = resolveEntryPointPaths(build.initialOptions.entryPoints, scanRoot);
         compiledGraph = undefined;
         boundRuntime = false;
-        graphErrors = [];
+        graphCompilationFailed = false;
         if (config?.generateRegistry !== undefined) {
           return {
             errors: [
@@ -309,7 +316,7 @@ export function crocoPlugin(config?: CrocoPluginConfig): esbuild.Plugin {
           compiledGraph = result;
           return undefined;
         } catch (error) {
-          graphErrors = toBuildErrors(error);
+          graphCompilationFailed = true;
           const watchInputs = collectDiGraphWatchInputs({
             baseDir: scanRoot,
             scanDirs: normalizedConfig.scan.dirs,
@@ -324,7 +331,7 @@ export function crocoPlugin(config?: CrocoPluginConfig): esbuild.Plugin {
           graphWatchFiles = [...new Set([...graphWatchFiles, ...watchInputs.watchFiles])].sort();
           graphWatchDirs = [...new Set([...graphWatchDirs, ...watchInputs.watchDirs])].sort();
           if (graphWatchDirs.length === 0) graphWatchDirs = [scanRoot];
-          return undefined;
+          return { errors: toBuildErrors(error, scanRoot) };
         }
       });
 
@@ -348,8 +355,8 @@ export function crocoPlugin(config?: CrocoPluginConfig): esbuild.Plugin {
 
       build.onLoad({ filter: /\.[cm]?tsx?$/ }, async (args: { path: string }) => {
         const isEntryPoint = entryPointPaths.includes(args.path);
-        if (isEntryPoint && graphErrors.length > 0) {
-          return { errors: graphErrors, watchFiles: graphWatchFiles, watchDirs: graphWatchDirs };
+        if (isEntryPoint && graphCompilationFailed) {
+          return { watchFiles: graphWatchFiles, watchDirs: graphWatchDirs };
         }
         const relativePath = path.relative(resolveScanRoot(build), args.path);
         const isLocalModule =

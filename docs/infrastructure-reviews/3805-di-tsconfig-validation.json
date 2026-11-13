@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "esbuild-plugin",
+      "classification": "pure-contract",
+      "reason": "Reject invalid TypeScript configuration before graph generation and report the original TypeScript diagnostic. Server builds report the same diagnostic independently of entry point resolution, and DI continues to discover source files through its own scan.",
+      "files": {
+        "packages/esbuild-plugin/src/libs/DiCompiler.ts": "6107d2027a9144ca93fb2f18318a7ce621da655d6b1f8d90c10511f95e28cc83",
+        "packages/esbuild-plugin/src/libs/plugin.ts": "87c4f391d73dfa062a0772b95f0bb2cf7adde86a4ee4be710f2b4858d56916bd"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "TypeScript configuration is validated in the build process before the graph artifact is written. This validation has no capability, storage, or lifecycle requirements for the deployed Node host.",
+          "providers": [],
+          "constraints": ["Build-time validation only."],
+          "references": [
+            "packages/esbuild-plugin/src/libs/DiCompiler.ts",
+            "packages/esbuild-plugin/src/libs/plugin.ts",
+            "packages/esbuild-plugin/README.md",
+            "packages/esbuild-plugin/src/tests/DiCompiler.spec.ts",
+            "packages/esbuild-plugin/src/tests/CrocoPlugin.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "TypeScript configuration is validated in the build process before the graph artifact is written. This validation has no capability, storage, or lifecycle requirements for the Lambda invocation host.",
+          "providers": [],
+          "constraints": ["Build-time validation only."],
+          "references": [
+            "packages/esbuild-plugin/src/libs/DiCompiler.ts",
+            "packages/esbuild-plugin/src/libs/plugin.ts",
+            "packages/esbuild-plugin/README.md",
+            "packages/esbuild-plugin/src/tests/DiCompiler.spec.ts",
+            "packages/esbuild-plugin/src/tests/CrocoPlugin.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "TypeScript configuration is validated in the build process before the graph artifact is written. This validation has no capability, storage, or lifecycle requirements for Workers or Node Container hosts.",
+          "providers": [],
+          "constraints": ["Build-time validation only."],
+          "references": [
+            "packages/esbuild-plugin/src/libs/DiCompiler.ts",
+            "packages/esbuild-plugin/src/libs/plugin.ts",
+            "packages/esbuild-plugin/README.md",
+            "packages/esbuild-plugin/src/tests/DiCompiler.spec.ts",
+            "packages/esbuild-plugin/src/tests/CrocoPlugin.spec.ts"
+          ]
+        }
+      }
+    }
+  ]
+}

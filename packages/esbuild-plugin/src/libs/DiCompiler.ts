@@ -1794,15 +1794,48 @@ function readCompilerOptions(baseDir: string, explicitConfig?: string): ts.Compi
       skipLibCheck: true,
     };
   }
-  const config = ts.readConfigFile(configPath, ts.sys.readFile);
-  if (config.error) {
-    throw packageDescriptorError(
-      baseDir,
-      configPath,
-      ts.flattenDiagnosticMessageText(config.error.messageText, "\n"),
-    );
+  const configLocation = {
+    file: normalizePath(path.relative(baseDir, configPath)),
+    line: 1,
+    column: 1,
+  };
+  let configText = "";
+  const config = ts.readConfigFile(configPath, (file) => {
+    const text = ts.sys.readFile(file);
+    if (text !== undefined) configText = text;
+    return text;
+  });
+  if (config.error) throw new DiCompilerError([toDiDiagnostic(config.error)]);
+
+  const configDir = path.dirname(configPath);
+  const sourceConfig = ts.parseJsonSourceFileConfigFileContent(
+    ts.parseJsonText(configPath, configText),
+    ts.sys,
+    configDir,
+  );
+  checkConfigDiagnostics(sourceConfig.errors);
+
+  // Keep the existing option precedence and serialization for generated graphs.
+  const parsed = ts.parseJsonConfigFileContent(config.config, ts.sys, configDir);
+  checkConfigDiagnostics(parsed.errors);
+  return parsed.options;
+
+  function checkConfigDiagnostics(diagnostics: readonly ts.Diagnostic[]): void {
+    // DI scans its own inputs and accepts an empty files list (TS18002) or no matching inputs (TS18003).
+    const errors = diagnostics.filter(({ code }) => code !== 18002 && code !== 18003);
+    if (errors.length) throw new DiCompilerError(sortDiagnostics(errors.map(toDiDiagnostic)));
   }
-  return ts.parseJsonConfigFileContent(config.config, ts.sys, path.dirname(configPath)).options;
+
+  function toDiDiagnostic(diagnostic: ts.Diagnostic): DiCompilerDiagnostic {
+    const source = diagnostic.file;
+    return {
+      code: "CROCO_DI_COMPILE_001",
+      ...(source && diagnostic.start !== undefined
+        ? getSourceLocationAtPosition(source, diagnostic.start, baseDir)
+        : configLocation),
+      message: `TS${diagnostic.code}: ${ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n")}`,
+    };
+  }
 }
 
 function getNamedClassExport(

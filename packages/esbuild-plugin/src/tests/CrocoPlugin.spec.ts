@@ -101,6 +101,66 @@ describe("crocoPlugin", () => {
     },
   );
 
+  it.each(["./src/index.ts", "./src/index"])(
+    "fails the server build for entry %s without writing artifacts when its DI config has a missing parent",
+    async (entryPoint) => {
+      createProject();
+      fs.writeFileSync(
+        path.join(tempDir, "tsconfig.di.json"),
+        '{"extends":"./missing-parent.json","compilerOptions":{"experimentalDecorators":true}}',
+      );
+
+      await expect(
+        esbuild.build({
+          absWorkingDir: tempDir,
+          entryPoints: [entryPoint],
+          platform: "node",
+          bundle: true,
+          outfile: "dist/server.cjs",
+          logLevel: "silent",
+          external: ["@croco/framework-context", "@croco/framework-module", "reflect-metadata"],
+          plugins: [crocoPlugin({ di: { tsconfig: "tsconfig.di.json" } })],
+        }),
+      ).rejects.toMatchObject({
+        errors: [
+          {
+            text: expect.stringMatching(/CROCO_DI_COMPILE_001: TS5083: .*missing-parent\.json/u),
+            location: { file: "tsconfig.di.json", line: 1, column: 0 },
+          },
+        ],
+      });
+      expect(fs.existsSync(path.join(tempDir, ".croco", "di.generated.ts"))).toBe(false);
+      expect(fs.existsSync(path.join(tempDir, ".croco", "di.manifest.json"))).toBe(false);
+      expect(fs.existsSync(path.join(tempDir, "dist", "server.cjs"))).toBe(false);
+    },
+  );
+
+  it("reports the byte column of an invalid tsconfig option after multibyte text", async () => {
+    const { entry } = createProject();
+    const prefix = '{ /* 한글 */ "compilerOptions": { "module": ';
+    fs.writeFileSync(path.join(tempDir, "tsconfig.di.json"), `${prefix}"invalid" } }`);
+
+    await expect(
+      esbuild.build({
+        absWorkingDir: tempDir,
+        entryPoints: [entry],
+        platform: "node",
+        bundle: true,
+        write: false,
+        logLevel: "silent",
+        external: ["@croco/framework-module"],
+        plugins: [crocoPlugin({ di: { tsconfig: "tsconfig.di.json" } })],
+      }),
+    ).rejects.toMatchObject({
+      errors: [
+        {
+          text: expect.stringContaining("CROCO_DI_COMPILE_001: TS6046"),
+          location: { file: "tsconfig.di.json", line: 1, column: Buffer.byteLength(prefix) },
+        },
+      ],
+    });
+  });
+
   it("bundles a sibling DI graph with local, parent, and neighboring component imports", async () => {
     const { entry } = createProject();
     const componentSource = fs.readFileSync(path.join(tempDir, "src", "Service.ts"), "utf8");

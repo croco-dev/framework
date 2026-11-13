@@ -456,6 +456,93 @@ describe("compileDiGraph", () => {
     fs.rmSync(TEMP_DIR, { recursive: true, force: true });
   });
 
+  it("keeps the graph and hash when tsconfig selection leaves input discovery to DI", () => {
+    writeProject({
+      "src/Service.ts":
+        'import { Component } from "@croco/framework-context"; @Component() export class Service {}',
+    });
+    const options = { baseDir: TEMP_DIR };
+    const direct = compileDiGraph(options);
+    const config = JSON.parse(fs.readFileSync(path.join(TEMP_DIR, "tsconfig.json"), "utf8")) as {
+      compilerOptions: Record<string, unknown>;
+    };
+    fs.writeFileSync(
+      path.join(TEMP_DIR, "tsconfig.empty-files.json"),
+      JSON.stringify({ ...config, files: [] }),
+    );
+    fs.writeFileSync(
+      path.join(TEMP_DIR, "jsconfig.json"),
+      JSON.stringify({ extends: "./tsconfig.json", include: ["empty/**/*.ts"] }),
+    );
+    fs.writeFileSync(
+      path.join(TEMP_DIR, "tsconfig.repeated-options.json"),
+      '{"extends":"./tsconfig.json","compilerOptions":{"target":"ES2019"},"compilerOptions":{"strict":true}}',
+    );
+
+    expect(direct.manifest.providers).toMatchObject([{ exportName: "Service" }]);
+    for (const tsconfig of [
+      "tsconfig.empty-files.json",
+      "jsconfig.json",
+      "tsconfig.repeated-options.json",
+    ]) {
+      const result = compileDiGraph({ ...options, tsconfig });
+      expect(result.manifest).toEqual(direct.manifest);
+      expect(result.code).toBe(direct.code);
+    }
+  });
+
+  it.each([
+    {
+      config: '{"extends":"./missing-parent.json"}',
+      file: "tsconfig.di.json",
+      line: 1,
+      message: /TS5083: Cannot read file '.*missing-parent\.json'/u,
+    },
+    {
+      config: '{"extends":"./tsconfig.base.json"}',
+      file: "tsconfig.base.json",
+      line: 2,
+      message: /TS6046: Argument for '--module' option/u,
+    },
+    {
+      config: '{\n  "extends": false\n}',
+      file: "tsconfig.di.json",
+      line: 2,
+      message: /TS5024: Compiler option 'extends' requires/u,
+    },
+    {
+      config: '{\n  "extends": "./malformed-parent.json"',
+      file: "tsconfig.di.json",
+      line: 2,
+      message: /TS1005: '\}' expected/u,
+    },
+  ])(
+    "reports the TypeScript diagnostic while reading $config",
+    ({ config, file, line, message }) => {
+      writeProject({
+        "src/Service.ts":
+          'import { Component } from "@croco/framework-context"; @Component() export class Service {}',
+        "tsconfig.di.json": config,
+        "tsconfig.base.json": '{\n  "compilerOptions": { "module": "invalid-value" }\n}',
+        "malformed-parent.json": '{"include":[42]}',
+      });
+
+      expect(() => compileDiGraph({ baseDir: TEMP_DIR, tsconfig: "tsconfig.di.json" })).toThrow(
+        expect.objectContaining({
+          name: "DiCompilerError",
+          diagnostics: [
+            expect.objectContaining({
+              code: "CROCO_DI_COMPILE_001",
+              file,
+              line,
+              message: expect.stringMatching(message),
+            }),
+          ],
+        }),
+      );
+    },
+  );
+
   it("preserves protocol roles and request scope in either decorator order", async () => {
     writeProject({
       "src/Controllers.ts": `
