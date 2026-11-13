@@ -339,6 +339,9 @@ request rules, `2xx`-only response caching, and `getOrSet()` singleflight behavi
 - concurrent same-key misses rely on the cache store's `getOrSet()` singleflight behavior;
 - responses with any nonempty `Vary` token bypass storage and reuse, including entries from older
   writers; concurrent waiters render their own negotiated response. Empty `Vary` retains TTL caching.
+- responses with `Cache-Control: no-cache` (including field-qualified directives) are returned to
+  the requesting caller and are never stored or reused by ISR. Concurrent waiters render independently;
+  previously stored entries are bypassed until they expire. ISR does not perform conditional revalidation.
 - `InMemoryCacheStore` is for local, development, or single-process deployments only;
 - `RedisCacheStoreAdapter` is the shipped durable adapter for Node and Lambda;
 - `createDurableIsrCacheProfile()` only reports non-local stores as durable; known `InMemoryCacheStore`
