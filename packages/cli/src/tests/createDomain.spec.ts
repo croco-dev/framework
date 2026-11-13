@@ -172,10 +172,11 @@ export const app = createApp({ controllers: [] });
             compilerOptions: {
               module: "NodeNext",
               experimentalDecorators: true,
-              lib: ["ESNext", "DOM"],
+              lib: ["ES2022", "ESNext.Disposable", "DOM"],
               noEmit: true,
               skipLibCheck: true,
               strict: true,
+              types: [],
               paths: Object.fromEntries(
                 ["framework-context", "protocols-rest", "repository-core", "transports-http"].map(
                   (name) => [`@croco/${name}`, [path.join(packageDir, name, "dist", "index.d.ts")]],
