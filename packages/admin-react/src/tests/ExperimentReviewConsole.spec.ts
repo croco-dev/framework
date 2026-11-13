@@ -72,12 +72,12 @@ function makeDataset(): ExperimentDatasetInput {
   };
 }
 
-async function readySnapshot(): Promise<ExperimentReviewSnapshot> {
+async function readySnapshot(dataset = makeDataset()): Promise<ExperimentReviewSnapshot> {
   const source: ExperimentReviewSource = {
     requiredPermissions: ["experiments:read"],
     load: async () => ({
       kind: "ready",
-      dataset: makeDataset(),
+      dataset,
       generatedAt: new Date("2026-09-08T00:00:00.000Z"),
     }),
   };
@@ -93,6 +93,29 @@ async function readySnapshot(): Promise<ExperimentReviewSnapshot> {
 }
 
 describe("ExperimentReviewConsole", () => {
+  it("shows why SMD is unavailable when groups have different constant values", async () => {
+    const dataset = makeDataset();
+    const snapshot = await readySnapshot({
+      ...dataset,
+      plan: { ...dataset.plan, preTreatmentAttributes: ["score"] },
+      assignments: dataset.assignments.map((row) => ({
+        ...row,
+        attributes: { score: row.variantId === "control" ? -100 : 100 },
+      })),
+    });
+    const markup = renderToStaticMarkup(
+      h(ExperimentReviewConsole, {
+        state: { kind: "ready", snapshot, grantedPermissions: ["experiments:read"], actions: [] },
+      }),
+    );
+
+    expect(markup).toContain(
+      'data-quality-kind="balance:score" data-quality-result="not_assessed"',
+    );
+    expect(markup).toContain("SMD is undefined when groups have different constant values");
+    expect(markup).not.toContain("SMD=0.0000");
+  });
+
   it("renders the ready review without winner language", async () => {
     const snapshot = await readySnapshot();
     const markup = renderToStaticMarkup(

@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "metrics-core",
+      "classification": "pure-contract",
+      "reason": "Report undefined pooled-SD balance estimates explicitly while preserving the result shape for defined estimates.",
+      "files": {
+        "packages/metrics-core/src/libs/experiment/ExperimentReview.ts": "7b17b4b22467ed8967c4b0c8a59f081ff3480d27c7d4d2f63564b0bff3aba220"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "SMD estimation and its availability reason operate on in-memory samples without host capabilities, storage or lifecycle requirements.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/metrics-core/src/libs/experiment/ExperimentReview.ts",
+            "packages/metrics-core/src/tests/ExperimentReview.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "SMD estimation and its availability reason operate on in-memory samples without host capabilities, storage or lifecycle requirements.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/metrics-core/src/libs/experiment/ExperimentReview.ts",
+            "packages/metrics-core/src/tests/ExperimentReview.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "SMD estimation and its availability reason operate on in-memory samples without host capabilities, storage or lifecycle requirements.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/metrics-core/src/libs/experiment/ExperimentReview.ts",
+            "packages/metrics-core/src/tests/ExperimentReview.spec.ts"
+          ]
+        }
+      }
+    }
+  ]
+}
