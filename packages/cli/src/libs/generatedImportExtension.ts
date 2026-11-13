@@ -88,6 +88,27 @@ function resolvesGeneratedSource(
   host.readFile = (path) => ts.sys.readFile(path) ?? sources.get(path);
   host.fileExists = (path) => sources.has(path) || ts.sys.fileExists(path);
   host.directoryExists = (path) => directories.has(path) || ts.sys.directoryExists(path);
+  const cache = ts.createModuleResolutionCache(
+    host.getCurrentDirectory(),
+    host.getCanonicalFileName,
+    compilerOptions,
+  );
+  host.resolveModuleNameLiterals = (literals, containingFile, _redirect, options, source) =>
+    literals.map((literal) => {
+      const resolved = ts.resolveModuleName(
+        literal.text,
+        containingFile,
+        options,
+        host,
+        cache,
+        undefined,
+        ts.getModeForUsageLocation(source, literal, options),
+      );
+      // Package declarations cannot make an application source a root or a local import.
+      return resolved.resolvedModule?.isExternalLibraryImport
+        ? { resolvedModule: undefined }
+        : resolved;
+    });
   return ts.createProgram(roots, compilerOptions, host).getSourceFile(fileName) !== undefined;
 }
 

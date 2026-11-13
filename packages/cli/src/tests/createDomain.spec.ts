@@ -120,14 +120,14 @@ describe("runCreateDomain", () => {
         await fs.writeFile(manifestPath, JSON.stringify({ ...manifest, type: "module" }));
         const entryPath = path.join(appDir, "src", "index.ts");
         const rootEntry = project === "root entrypoint";
-        const explicitEntry = project === "referenced entrypoint" || rootEntry;
+        const mixedProjects = project === "referenced entrypoint";
         const bootstrapPath = path.join(appDir, "src", "bootstrap", "index.ts");
         if (rootEntry) {
           await fs.writeFile(
             path.join(appDir, "server.ts"),
             'import "./src/index.js";\nexport * from "./src/domains/order/index.js";\n',
           );
-        } else if (explicitEntry) {
+        } else if (mixedProjects) {
           await fs.mkdir(path.dirname(bootstrapPath));
           await fs.writeFile(
             bootstrapPath,
@@ -151,7 +151,7 @@ export const app = createApp({ controllers: [] });
             JSON.stringify({
               files: [],
               references: [
-                ...(explicitEntry ? [{ path: "./tsconfig.test.json" }] : []),
+                ...(mixedProjects ? [{ path: "./tsconfig.test.json" }] : []),
                 { path: "./tsconfig.app.json" },
               ],
             }),
@@ -175,12 +175,12 @@ export const app = createApp({ controllers: [] });
             },
             ...(rootEntry
               ? { files: ["server.ts"] }
-              : { include: [explicitEntry ? "src/bootstrap" : "src"] }),
+              : { include: [mixedProjects ? "src/bootstrap" : "src"] }),
             ...(project === "referenced" ? { exclude: ["src/domains/*/index.ts"] } : {}),
           }),
         );
         const bundlerConfigPath = path.join(appDir, "tsconfig.test.json");
-        if (explicitEntry) {
+        if (mixedProjects) {
           await fs.writeFile(
             bundlerConfigPath,
             JSON.stringify({
@@ -195,7 +195,7 @@ export const app = createApp({ controllers: [] });
 
         expect(result?.registration?.status).toBe("updated");
         expectToTypecheck(appConfigPath);
-        if (explicitEntry) expectToTypecheck(bundlerConfigPath);
+        if (mixedProjects) expectToTypecheck(bundlerConfigPath);
       } finally {
         await fs.rm(cwd, { recursive: true, force: true });
       }
