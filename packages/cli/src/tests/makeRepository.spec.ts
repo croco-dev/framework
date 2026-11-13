@@ -245,7 +245,11 @@ describe("generateRepository", () => {
       await fs.writeFile(path.join(appDir, "vite.config.ts"), "export {};");
       await fs.writeFile(
         path.join(appDir, "tsconfig.json"),
-        '{"files":[],"references":[{"path":"./tsconfig.tools.json"},{"path":"./tsconfig.app.json"}]}',
+        JSON.stringify({
+          compilerOptions: { module: "NodeNext" },
+          files: [],
+          references: [{ path: "./tsconfig.tools.json" }, { path: "./tsconfig.app.json" }],
+        }),
       );
       await fs.writeFile(
         path.join(appDir, "tsconfig.tools.json"),

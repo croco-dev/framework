@@ -62,7 +62,7 @@ export function generatedImportExtension(
       configs.push(path);
     }
   }
-  return importExtension(fileName, project.options);
+  return "";
 }
 
 function resolvesGeneratedSource(
