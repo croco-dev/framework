@@ -213,6 +213,8 @@ export function createControllerProject(
           } else {
             context.project.getProgram().emitSync({
               targetSourceFile: sourceFile,
+              // Normalize before CommonJS lowering so direct template requires keep their behavior.
+              customTransformers: { before: [normalizeDynamicImportTemplates] },
               writeFile(filePath, text, writeByteOrderMark) {
                 fs.mkdirSync(path.dirname(filePath), { recursive: true });
                 fs.writeFileSync(filePath, writeByteOrderMark ? `\uFEFF${text}` : text);
@@ -276,10 +278,29 @@ function addControllerSourceFiles(project: Project, patterns: readonly string[])
   ].sort((left, right) => compareStrings(left.getFilePath(), right.getFilePath()));
 }
 
-function getStaticDynamicImportSpecifier(node: ts.Node): ts.StringLiteralLike | undefined {
-  if (!ts.isCallExpression(node) || node.expression.kind !== ts.SyntaxKind.ImportKeyword) return;
+function getStaticDynamicImportSpecifier(
+  node: ts.CallExpression,
+): ts.StringLiteralLike | undefined {
+  if (node.expression.kind !== ts.SyntaxKind.ImportKeyword) return;
   const specifier = node.arguments[0];
   if (specifier && ts.isStringLiteralLike(specifier)) return specifier;
+}
+
+function normalizeDynamicImportTemplates(
+  context: ts.TransformationContext,
+): ts.Transformer<ts.SourceFile> {
+  const { factory } = context;
+  const visit: ts.Visitor = (node) => {
+    const visited = ts.visitEachChild(node, visit, context);
+    if (!ts.isCallExpression(visited)) return visited;
+    const specifier = getStaticDynamicImportSpecifier(visited);
+    if (!specifier || !ts.isNoSubstitutionTemplateLiteral(specifier)) return visited;
+    return factory.updateCallExpression(visited, visited.expression, visited.typeArguments, [
+      factory.createStringLiteral(specifier.text),
+      ...visited.arguments.slice(1),
+    ]);
+  };
+  return (sourceFile) => ts.visitEachChild(sourceFile, visit, context);
 }
 
 function resolveProjectSourceDependencies(project: Project): void {
@@ -301,7 +322,9 @@ function resolveProjectSourceDependencies(project: Project): void {
     for (const sourceFile of project.getSourceFiles()) {
       const sourcePath = sourceFile.getFilePath();
       const visit = (node: ts.Node): void => {
-        const specifier = getStaticDynamicImportSpecifier(node);
+        const specifier = ts.isCallExpression(node)
+          ? getStaticDynamicImportSpecifier(node)
+          : undefined;
         if (specifier) {
           const resolvedPath = ts.resolveModuleName(
             specifier.text,
@@ -660,7 +683,7 @@ function rewriteRuntimeSpecifiers(
       if (
         ts.isCallExpression(node) &&
         node.arguments.length === 1 &&
-        ts.isStringLiteralLike(node.arguments[0]) &&
+        ts.isStringLiteral(node.arguments[0]) &&
         isGenuineRequireCall(node, checker)
       ) {
         addRuntimeAliasReplacement(
@@ -676,10 +699,15 @@ function rewriteRuntimeSpecifiers(
           externalImports,
         );
       }
-      const specifier = getStaticDynamicImportSpecifier(node);
-      if (specifier) {
+      if (
+        ts.isCallExpression(node) &&
+        (node.expression.getText(syntaxTree) === "import" ||
+          node.expression.kind === ts.SyntaxKind.ImportKeyword) &&
+        node.arguments.length >= 1 &&
+        ts.isStringLiteral(node.arguments[0])
+      ) {
         addRuntimeAliasReplacement(
-          specifier,
+          node.arguments[0],
           sourcePath,
           emittedPath,
           compilerOptions,
@@ -724,7 +752,7 @@ function rewriteRuntimeSpecifiers(
 }
 
 function addRuntimeAliasReplacement(
-  moduleSpecifier: ts.StringLiteralLike,
+  moduleSpecifier: ts.StringLiteral,
   sourcePath: string,
   emittedPath: string,
   compilerOptions: ts.CompilerOptions,
@@ -794,7 +822,7 @@ function isGenuineRequireCall(node: ts.CallExpression, checker: ts.TypeChecker):
 }
 
 function addSpecifierReplacement(
-  moduleSpecifier: ts.StringLiteralLike,
+  moduleSpecifier: ts.StringLiteral,
   value: string,
   syntaxTree: ts.SourceFile,
   replacements: Array<{ start: number; end: number; value: string }>,
@@ -816,7 +844,7 @@ function rewriteTypeScriptExtension(specifier: string): string {
 type SpecifierReplacement = { start: number; end: number; value: string };
 
 type ExternalImport = {
-  moduleSpecifier: ts.StringLiteralLike;
+  moduleSpecifier: ts.StringLiteral;
   sourcePath: string;
   syntaxTree: ts.SourceFile;
   replacements: SpecifierReplacement[];

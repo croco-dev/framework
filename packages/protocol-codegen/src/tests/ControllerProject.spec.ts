@@ -1327,7 +1327,7 @@ describe("createControllerProject", () => {
     }
   });
 
-  it("rewrites template aliases lowered to require by CommonJS emit", async () => {
+  it("rewrites lowered template imports while preserving direct template requires", async () => {
     const root = createTemporaryDirectory();
     writeJson(path.join(root, "tsconfig.json"), {
       compilerOptions: {
@@ -1339,14 +1339,26 @@ describe("createControllerProject", () => {
     writeFile(path.join(root, "src", "value.ts"), "export const value = 'commonjs-template';");
     writeFile(
       path.join(root, "src", "Controller.ts"),
-      "export class Controller { static async value() { return (await import(`@app/value`)).value; } }",
+      [
+        "declare function require(id: string): unknown;",
+        "let fallback = false;",
+        "try { require(`missing-optional-controller-module`); } catch { fallback = true; }",
+        "export class Controller {",
+        "  static fallback = fallback;",
+        "  static async value() { return (await import(`@app/value`)).value; }",
+        "}",
+      ].join("\n"),
     );
     const session = createControllerProject({ cwd: root, controllers: "src/Controller.ts" });
     try {
       expect(session.getPreEmitDiagnostics()).toEqual([]);
       session.emit();
       const [moduleExports] = await session.importControllerModules();
-      const Controller = moduleExports.Controller as { value(): Promise<string> };
+      const Controller = moduleExports.Controller as {
+        fallback: boolean;
+        value(): Promise<string>;
+      };
+      expect(Controller.fallback).toBe(true);
       await expect(Controller.value()).resolves.toBe("commonjs-template");
     } finally {
       session.dispose();

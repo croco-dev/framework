@@ -6,7 +6,7 @@
       "classification": "protocol-render",
       "reason": "Resolve fixed template specifiers in the shared build-time OpenAPI and RPC controller loader using the existing application path and emit mapping.",
       "files": {
-        "packages/protocol-codegen/src/libs/ControllerProject.ts": "5d18b1da30b60ed06fb425814675823a1cdf6141dfcac3a62b97f8881d2a5c7b"
+        "packages/protocol-codegen/src/libs/ControllerProject.ts": "ddac20233bf3e8b682cb3d00b4bfc81fe7da626d5daa1a0a13fe1171c685c934"
       },
       "catalogRuntimes": [],
       "profiles": {
