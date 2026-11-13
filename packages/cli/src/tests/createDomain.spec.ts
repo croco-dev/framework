@@ -109,7 +109,7 @@ describe("runCreateDomain", () => {
     expect(entryContent).toContain("app.addControllers([UserController]);");
   });
 
-  it.each(["standalone", "referenced"])(
+  it.each(["standalone", "referenced", "referenced entrypoint"])(
     "typechecks the generated domain and controller registration in a %s NodeNext ESM app",
     async (project) => {
       const cwd = await createWorkspace();
@@ -119,18 +119,20 @@ describe("runCreateDomain", () => {
         const manifest = JSON.parse(await fs.readFile(manifestPath, "utf-8"));
         await fs.writeFile(manifestPath, JSON.stringify({ ...manifest, type: "module" }));
         const entryPath = path.join(appDir, "src", "index.ts");
+        const explicitEntry = project === "referenced entrypoint";
         await fs.writeFile(
           entryPath,
           `import { createApp } from "@croco/transports-http";
 export const app = createApp({ controllers: [] });
+${explicitEntry ? 'export * from "./domains/order/index.js";' : ""}
 `,
         );
         const packageDir = fileURLToPath(new URL("../../../", import.meta.url));
         const appConfigPath = path.join(
           appDir,
-          project === "referenced" ? "tsconfig.app.json" : "tsconfig.json",
+          project === "standalone" ? "tsconfig.json" : "tsconfig.app.json",
         );
-        if (project === "referenced") {
+        if (project !== "standalone") {
           await fs.writeFile(
             path.join(appDir, "tsconfig.json"),
             '{"files":[],"references":[{"path":"./tsconfig.app.json"}]}',
@@ -152,7 +154,7 @@ export const app = createApp({ controllers: [] });
                 ),
               ),
             },
-            include: ["src"],
+            ...(explicitEntry ? { files: ["src/index.ts"] } : { include: ["src"] }),
             ...(project === "referenced" ? { exclude: ["src/domains/*/index.ts"] } : {}),
           }),
         );
