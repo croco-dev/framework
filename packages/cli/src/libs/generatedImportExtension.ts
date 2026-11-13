@@ -66,8 +66,13 @@ function includesSource(
   const host = ts.createCompilerHost(project.options);
   const readFile = host.readFile;
   const fileExists = host.fileExists;
+  const sourceDirectory = dirname(fileName);
   host.readFile = (path) => (path === fileName ? "" : readFile(path));
   host.fileExists = (path) => path === fileName || fileExists(path);
+  host.directoryExists = (path) =>
+    path === sourceDirectory ||
+    sourceDirectory.startsWith(`${path}/`) ||
+    ts.sys.directoryExists(path);
   const program = ts.createProgram({
     rootNames: [...rootFiles],
     options: { ...project.options, noLib: true, types: [] },
