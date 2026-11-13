@@ -172,7 +172,7 @@ describe("generateRepository", () => {
       const tsconfigPath = path.join(appDir, "tsconfig.json");
       const appConfig = JSON.stringify({
         extends: "../../tsconfig.base.json",
-        ...(hasExplicitEntry ? { files: ["src/index.ts"] } : { include: ["src"] }),
+        ...(hasExplicitEntry ? { files: ["server.ts"] } : { include: ["src"] }),
       });
       if (isSolution) {
         await fs.writeFile(
@@ -194,6 +194,7 @@ describe("generateRepository", () => {
       await generateEntity("Order", { cwd });
       if (hasExplicitEntry) {
         await fs.writeFile(path.join(appDir, "src", "index.ts"), "export {};\n");
+        await fs.writeFile(path.join(appDir, "server.ts"), 'import "./src/index.js";\n');
       }
       const result = await generateRepository("Order", { cwd });
       if (hasExplicitEntry) {

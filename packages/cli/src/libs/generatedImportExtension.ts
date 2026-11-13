@@ -49,19 +49,18 @@ export function generatedImportExtension(
     if (importExtension(fileName, candidate.options) === ".js") {
       if (includesImporter) return ".js";
       const actualRoots = readProject(path, plannedPaths, true).fileNames;
-      hasNodeEsmApp ||=
-        !candidate.options.noResolve && actualRoots.some((root) => root.startsWith(sourcePrefix));
-      if (
-        !candidate.options.noResolve &&
-        resolvesGeneratedSource(
+      if (!candidate.options.noResolve) {
+        const program = createReferenceProgram(
           candidate.options,
           [...new Set([...roots, ...actualRoots])],
           fileName,
           planned,
           overwrite,
-        )
-      ) {
-        return ".js";
+        );
+        if (program?.getSourceFile(fileName)) return ".js";
+        hasNodeEsmApp ||=
+          program?.getSourceFiles().some((source) => source.fileName.startsWith(sourcePrefix)) ??
+          false;
       }
     }
     for (const reference of candidate.projectReferences ?? []) {
@@ -74,14 +73,14 @@ export function generatedImportExtension(
   return !directlyIncluded && hasNodeEsmApp ? ".js" : "";
 }
 
-function resolvesGeneratedSource(
+function createReferenceProgram(
   options: ts.CompilerOptions,
   roots: string[],
   fileName: string,
   planned: ReadonlyMap<string, string>,
   overwrite: boolean,
-): boolean {
-  if (!roots.length) return false;
+): ts.Program | undefined {
+  if (!roots.length) return undefined;
 
   const sources = new Map(planned);
   if (!sources.has(fileName)) sources.set(fileName, "");
@@ -124,7 +123,7 @@ function resolvesGeneratedSource(
         ? { resolvedModule: undefined }
         : resolved;
     });
-  return ts.createProgram(roots, compilerOptions, host).getSourceFile(fileName) !== undefined;
+  return ts.createProgram(roots, compilerOptions, host);
 }
 
 function readProject(
