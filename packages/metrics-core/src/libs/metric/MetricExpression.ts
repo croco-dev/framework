@@ -506,33 +506,18 @@ function distinctKey(
   const value = valueAt(row, column);
   if (value === null) return null;
   switch (column.column.type) {
-    case "int64":
-      return integer(value).toString();
     case "decimal":
       return decimal(value, column.column.scale).toString();
     case "money": {
       const currency = valueAt(row, { ...column, key: column.column.currency });
       requireCondition(typeof currency === "string", "METRIC_INVALID_CURRENCY");
-      return `${currency}:${integer(value)}`;
+      return `${currency}:${canonicalMetricScalar(value, column)}`;
     }
     case "instant":
       requireCondition(typeof value === "string", "METRIC_INVALID_INSTANT");
       return instantNanoseconds(value, "METRIC_INVALID_INSTANT").toString();
-    case "date":
-      requireCondition(
-        typeof value === "string" && validCalendarDate(value),
-        "METRIC_INVALID_DATE",
-      );
-      return value;
-    case "boolean":
-      requireCondition(typeof value === "boolean", "METRIC_INVALID_BOOLEAN");
-      return String(value);
-    case "id":
-    case "string":
-    case "currency":
-    case "subject":
-      requireCondition(typeof value === "string", "METRIC_INVALID_STRING");
-      return value;
+    default:
+      return String(canonicalMetricScalar(value, column));
   }
 }
 
@@ -633,9 +618,10 @@ function instantNanoseconds(value: string, code: string): bigint {
   return BigInt(seconds) * BigInt(1_000_000) + BigInt((match[2] ?? "").padEnd(9, "0"));
 }
 
-function groupValue(value: string | boolean, column: MetricColumnRef): string | boolean {
+function canonicalMetricScalar(value: unknown, column: MetricColumnRef): string | boolean {
   switch (column.column.type) {
     case "int64":
+    case "money":
       return integer(value).toString();
     case "decimal":
       return formatDecimal(decimal(value, column.column.scale), column.column.scale);
@@ -650,7 +636,20 @@ function groupValue(value: string | boolean, column: MetricColumnRef): string | 
       const digits = fraction.toString().padStart(9, "0").replace(/0+$/, "");
       return `${seconds}${digits ? `.${digits}` : ""}Z`;
     }
-    default:
+    case "date":
+      requireCondition(
+        typeof value === "string" && validCalendarDate(value),
+        "METRIC_INVALID_DATE",
+      );
+      return value;
+    case "boolean":
+      requireCondition(typeof value === "boolean", "METRIC_INVALID_BOOLEAN");
+      return value;
+    case "id":
+    case "string":
+    case "currency":
+    case "subject":
+      requireCondition(typeof value === "string", "METRIC_INVALID_STRING");
       return value;
   }
 }
@@ -695,7 +694,7 @@ export function evaluateMetric(
         typeof value === "string" || typeof value === "boolean",
         "METRIC_INVALID_GROUP",
       );
-      group[column.key] = groupValue(value, column);
+      group[column.key] = canonicalMetricScalar(value, column);
     }
     const bucket = definition.bucket
       ? isDate

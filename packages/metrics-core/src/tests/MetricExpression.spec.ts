@@ -323,6 +323,22 @@ describe("MetricExpression", () => {
       ],
     },
     {
+      column: { type: "boolean" },
+      values: [true, false, true],
+      groups: [
+        [false, "1"],
+        [true, "2"],
+      ],
+    },
+    {
+      column: { type: "date", zone: "UTC" },
+      values: ["2024-02-29", "2024-03-01", "2024-02-29"],
+      groups: [
+        ["2024-02-29", "2"],
+        ["2024-03-01", "1"],
+      ],
+    },
+    {
       column: { type: "instant" },
       values: [
         "2026-01-01T00:00:00.123456Z",
@@ -393,24 +409,67 @@ describe("MetricExpression", () => {
       code: "METRIC_INVALID_INSTANT_PRECISION",
     },
     { column: { type: "decimal", scale: 2 }, value: null, code: "METRIC_INVALID_GROUP" },
+    { column: { type: "boolean" }, value: "false", code: "METRIC_INVALID_BOOLEAN" },
+    { column: { type: "date", zone: "UTC" }, value: "2026-02-30", code: "METRIC_INVALID_DATE" },
+    {
+      column: { type: "money", currency: "currency" },
+      value: "not-money",
+      code: "METRIC_INVALID_INTEGER",
+    },
+    {
+      column: { type: "money", currency: "currency" },
+      value: "9223372036854775808",
+      code: "METRIC_INTEGER_OVERFLOW",
+    },
   ] as const)("rejects invalid $column.type group values ($code)", ({ column, value, code }) => {
     const fact = {
       name: "samples",
       kind: "transaction",
-      columns: { at: { type: "instant" }, dimension: column },
+      columns: { at: { type: "instant" }, dimension: column, units: { type: "int64" } },
     } as const;
-    const metric = defineMetric("invalid_group", {
-      version: 1,
-      from: fact,
-      time: project(fact, "at"),
-      measure: count(),
-      groupByRequired: [project(fact, "dimension")],
-      unit: "rows",
-      population: "samples",
-    });
-    expect(() =>
-      evaluateMetric(metric, [{ at: window.from, dimension: value }], window),
-    ).toThrowError(code);
+    const units = project(fact, "units");
+    for (const measure of [count(), sum(units), exactDistinct(units)]) {
+      const metric = defineMetric("invalid_group", {
+        version: 1,
+        from: fact,
+        time: project(fact, "at"),
+        measure,
+        groupByRequired: [project(fact, "dimension")],
+        unit: "rows",
+        population: "samples",
+      });
+      expect(() =>
+        evaluateMetric(metric, [{ at: window.from, dimension: value, units: "1" }], window),
+      ).toThrowError(expect.objectContaining({ name: "MetricExpressionError", code }));
+    }
+  });
+
+  it("groups money as exact minor units independently of the measure", () => {
+    const amount = project(captures, "amountMinor");
+    const customer = project(captures, "customer");
+    const rows = ["-0", "0", "9223372036854775807"].map((amountMinor) => ({
+      capturedAt: window.from,
+      amountMinor,
+      customer: "same-customer",
+    }));
+    for (const [measure, zeroGroupCount] of [
+      [count(), "2"],
+      [exactDistinct(customer), "1"],
+    ] as const) {
+      const metric = defineMetric("grouped_money", {
+        version: 1,
+        from: captures,
+        time: project(captures, "capturedAt"),
+        measure,
+        groupByRequired: [amount],
+        unit: "rows",
+        population: "captures",
+      });
+      expect(evaluateMetric(metric, rows, window)).toEqual([
+        { group: { amountMinor: "0" }, value: zeroGroupCount },
+        { group: { amountMinor: "9223372036854775807" }, value: "1" },
+      ]);
+    }
   });
 
   it("rejects a time reference not declared by the fact", () => {

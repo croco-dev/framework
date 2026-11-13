@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "metrics-core",
+      "classification": "pure-contract",
+      "reason": "Reject malformed boolean, date and money group values before aggregation, and canonicalize valid money groups as exact minor-unit strings.",
+      "files": {
+        "packages/metrics-core/src/libs/metric/MetricExpression.ts": "b964b48d15bd3895ca782007be2b8e6aeba9fda7e1a853476697ddb56048e703"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The evaluator validates and groups in-memory scalar values. This change needs no host capabilities, storage, transport or lifecycle integration.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/metrics-core/src/libs/metric/MetricExpression.ts",
+            "packages/metrics-core/src/tests/MetricExpression.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The evaluator validates and groups in-memory scalar values. This change needs no host capabilities, storage, transport or lifecycle integration.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/metrics-core/src/libs/metric/MetricExpression.ts",
+            "packages/metrics-core/src/tests/MetricExpression.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The evaluator validates and groups in-memory scalar values. This change needs no host capabilities, storage, transport or lifecycle integration.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/metrics-core/src/libs/metric/MetricExpression.ts",
+            "packages/metrics-core/src/tests/MetricExpression.spec.ts"
+          ]
+        }
+      }
+    }
+  ]
+}
