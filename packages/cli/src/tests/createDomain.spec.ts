@@ -135,7 +135,13 @@ ${explicitEntry ? 'export * from "./domains/order/index.js";' : ""}
         if (project !== "standalone") {
           await fs.writeFile(
             path.join(appDir, "tsconfig.json"),
-            '{"files":[],"references":[{"path":"./tsconfig.app.json"}]}',
+            JSON.stringify({
+              files: [],
+              references: [
+                ...(explicitEntry ? [{ path: "./tsconfig.test.json" }] : []),
+                { path: "./tsconfig.app.json" },
+              ],
+            }),
           );
         }
         await fs.writeFile(
@@ -158,30 +164,23 @@ ${explicitEntry ? 'export * from "./domains/order/index.js";' : ""}
             ...(project === "referenced" ? { exclude: ["src/domains/*/index.ts"] } : {}),
           }),
         );
+        const bundlerConfigPath = path.join(appDir, "tsconfig.test.json");
+        if (explicitEntry) {
+          await fs.writeFile(
+            bundlerConfigPath,
+            JSON.stringify({
+              extends: "./tsconfig.app.json",
+              compilerOptions: { module: "ESNext", moduleResolution: "Bundler" },
+              include: ["src"],
+            }),
+          );
+        }
 
         const result = await runCreateDomain("Order", { cwd });
 
         expect(result?.registration?.status).toBe("updated");
-        const parsed = ts.getParsedCommandLineOfConfigFile(
-          appConfigPath,
-          {},
-          {
-            ...ts.sys,
-            onUnRecoverableConfigFileDiagnostic: (diagnostic) => {
-              throw new Error(ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n"));
-            },
-          },
-        );
-        expect(parsed).toBeDefined();
-        if (!parsed) return;
-        const program = ts.createProgram(parsed.fileNames, parsed.options);
-        const diagnostics = [...parsed.errors, ...ts.getPreEmitDiagnostics(program)];
-        expect(
-          diagnostics.map(({ code, messageText }) => ({
-            code,
-            message: ts.flattenDiagnosticMessageText(messageText, "\n"),
-          })),
-        ).toEqual([]);
+        expectToTypecheck(appConfigPath);
+        if (explicitEntry) expectToTypecheck(bundlerConfigPath);
       } finally {
         await fs.rm(cwd, { recursive: true, force: true });
       }
@@ -341,6 +340,28 @@ app.listen({ port: 3000 });
     expect(appSource).not.toContain("InvoiceController");
   });
 });
+
+function expectToTypecheck(configPath: string): void {
+  const parsed = ts.getParsedCommandLineOfConfigFile(
+    configPath,
+    {},
+    {
+      ...ts.sys,
+      onUnRecoverableConfigFileDiagnostic: (diagnostic) => {
+        throw new Error(ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n"));
+      },
+    },
+  );
+  if (!parsed) throw new Error(`Cannot read fixture config ${configPath}.`);
+  const program = ts.createProgram(parsed.fileNames, parsed.options);
+  const diagnostics = [...parsed.errors, ...ts.getPreEmitDiagnostics(program)];
+  expect(
+    diagnostics.map(({ code, messageText }) => ({
+      code,
+      message: ts.flattenDiagnosticMessageText(messageText, "\n"),
+    })),
+  ).toEqual([]);
+}
 
 async function createWorkspace(options: { apiServerManifest?: string } = {}): Promise<string> {
   const cwd = await fs.mkdtemp(path.join(os.tmpdir(), "croco-cli-domain-"));
