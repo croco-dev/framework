@@ -132,75 +132,88 @@ describe("generateRepository", () => {
     await expectGeneratedFixtureToTypecheck(tsconfigPath);
   });
 
-  it.each(["NodeNext ESM", "NodeNext CommonJS", "Bundler ESM", "NodeNext solution ESM"])(
-    "should generate a typecheckable repository in a %s app",
-    async (mode) => {
-      const cwd = await createWorkspace();
-      try {
-        const appDir = path.join(cwd, "apps", "api-server");
-        const packageType = mode === "NodeNext CommonJS" ? "commonjs" : "module";
-        const isBundler = mode === "Bundler ESM";
-        const isSolution = mode === "NodeNext solution ESM";
-        await fs.writeFile(
-          path.join(appDir, "package.json"),
-          JSON.stringify({
-            type: packageType,
-            dependencies: { "@croco/repository-core": "workspace:*" },
-          }),
-        );
-        await fs.writeFile(
-          path.join(cwd, "tsconfig.base.json"),
-          JSON.stringify({
-            compilerOptions: {
-              module: isBundler ? "ESNext" : "NodeNext",
-              ...(isBundler ? { moduleResolution: "Bundler" } : {}),
-              paths: {
-                "@croco/repository-core": [
-                  path.join(REPO_ROOT, "packages/repository-core/src/libs/Repository.ts"),
-                ],
-              },
-              skipLibCheck: true,
-              strict: true,
+  it.each([
+    "NodeNext ESM",
+    "NodeNext CommonJS",
+    "Bundler ESM",
+    "NodeNext solution ESM",
+    "NodeNext solution entrypoint ESM",
+  ])("should generate a typecheckable repository in a %s app", async (mode) => {
+    const cwd = await createWorkspace();
+    try {
+      const appDir = path.join(cwd, "apps", "api-server");
+      const packageType = mode === "NodeNext CommonJS" ? "commonjs" : "module";
+      const isBundler = mode === "Bundler ESM";
+      const isSolution = mode.startsWith("NodeNext solution");
+      const hasExplicitEntry = mode === "NodeNext solution entrypoint ESM";
+      await fs.writeFile(
+        path.join(appDir, "package.json"),
+        JSON.stringify({
+          type: packageType,
+          dependencies: { "@croco/repository-core": "workspace:*" },
+        }),
+      );
+      await fs.writeFile(
+        path.join(cwd, "tsconfig.base.json"),
+        JSON.stringify({
+          compilerOptions: {
+            module: isBundler ? "ESNext" : "NodeNext",
+            ...(isBundler ? { moduleResolution: "Bundler" } : {}),
+            paths: {
+              "@croco/repository-core": [
+                path.join(REPO_ROOT, "packages/repository-core/src/libs/Repository.ts"),
+              ],
             },
+            skipLibCheck: true,
+            strict: true,
+          },
+        }),
+      );
+      const tsconfigPath = path.join(appDir, "tsconfig.json");
+      const appConfig = JSON.stringify({
+        extends: "../../tsconfig.base.json",
+        ...(hasExplicitEntry ? { files: ["src/index.ts"] } : { include: ["src"] }),
+      });
+      if (isSolution) {
+        await fs.writeFile(
+          tsconfigPath,
+          JSON.stringify({
+            files: [],
+            references: [{ path: "./tsconfig.tools.json" }, { path: "./tsconfig.app.json" }],
           }),
         );
-        const tsconfigPath = path.join(appDir, "tsconfig.json");
-        const appConfig = '{"extends":"../../tsconfig.base.json","include":["src"]}';
-        if (isSolution) {
-          await fs.writeFile(
-            tsconfigPath,
-            JSON.stringify({
-              files: [],
-              references: [{ path: "./tsconfig.tools.json" }, { path: "./tsconfig.app.json" }],
-            }),
-          );
-          await fs.writeFile(
-            path.join(appDir, "tsconfig.tools.json"),
-            '{"compilerOptions":{"module":"ESNext","moduleResolution":"Bundler"},"include":["tools"]}',
-          );
-          await fs.writeFile(path.join(appDir, "tsconfig.app.json"), appConfig);
-        } else {
-          await fs.writeFile(tsconfigPath, appConfig);
-        }
-
-        await generateEntity("Order", { cwd });
-        const result = await generateRepository("Order", { cwd });
-
-        expect(result?.status).toBe("created");
-        await expectGeneratedFixtureToTypecheck(
-          isSolution ? path.join(appDir, "tsconfig.app.json") : tsconfigPath,
+        await fs.writeFile(
+          path.join(appDir, "tsconfig.tools.json"),
+          '{"compilerOptions":{"module":"ESNext","moduleResolution":"Bundler"},"include":["tools"]}',
         );
-        const extension = packageType === "module" && !isBundler ? ".js" : "";
-        const repository = await fs.readFile(
-          path.join(appDir, "src", "repositories", "OrderRepository.ts"),
-          "utf-8",
-        );
-        expect(repository).toContain(`from "../entities/OrderEntity${extension}";`);
-      } finally {
-        await fs.rm(cwd, { recursive: true, force: true });
+        await fs.writeFile(path.join(appDir, "tsconfig.app.json"), appConfig);
+      } else {
+        await fs.writeFile(tsconfigPath, appConfig);
       }
-    },
-  );
+
+      await generateEntity("Order", { cwd });
+      if (hasExplicitEntry) {
+        await fs.writeFile(
+          path.join(appDir, "src", "index.ts"),
+          'export { OrderRepository } from "./repositories/OrderRepository.js";\n',
+        );
+      }
+      const result = await generateRepository("Order", { cwd });
+
+      expect(result?.status).toBe("created");
+      await expectGeneratedFixtureToTypecheck(
+        isSolution ? path.join(appDir, "tsconfig.app.json") : tsconfigPath,
+      );
+      const extension = packageType === "module" && !isBundler ? ".js" : "";
+      const repository = await fs.readFile(
+        path.join(appDir, "src", "repositories", "OrderRepository.ts"),
+        "utf-8",
+      );
+      expect(repository).toContain(`from "../entities/OrderEntity${extension}";`);
+    } finally {
+      await fs.rm(cwd, { recursive: true, force: true });
+    }
+  });
 
   it("should reject missing generated import dependencies before writing files", async () => {
     const cwd = await createWorkspace({ apiServerManifest: "{}" });

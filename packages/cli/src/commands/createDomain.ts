@@ -67,7 +67,7 @@ export async function runCreateDomain(
     "index.ts",
   );
   const domainDir = dirname(barrelPath);
-  const extension = generatedImportExtension(barrelPath);
+  const repositoryPath = join(domainDir, `${className}Repository.ts`);
   const generatedSources = [
     {
       path: join(domainDir, `${className}Controller.ts`),
@@ -78,8 +78,8 @@ export async function runCreateDomain(
       content: serviceTemplate(className),
     },
     {
-      path: join(domainDir, `${className}Repository.ts`),
-      content: repositoryTemplate(className, extension),
+      path: repositoryPath,
+      content: repositoryTemplate(className, generatedImportExtension(repositoryPath)),
     },
     {
       path: join(domainDir, `${className}Entity.ts`),
@@ -87,7 +87,7 @@ export async function runCreateDomain(
     },
     {
       path: barrelPath,
-      content: barrelTemplate(className, extension),
+      content: barrelTemplate(className, generatedImportExtension(barrelPath)),
     },
   ];
 

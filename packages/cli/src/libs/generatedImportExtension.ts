@@ -19,6 +19,11 @@ const { matchFiles } = ts as typeof ts & {
   ): string[];
 };
 
+type ProjectFiles = {
+  project: ts.ParsedCommandLine;
+  rootFiles: readonly string[];
+};
+
 export function generatedImportExtension(importerPath: string): ImportExtension {
   const fileName = ts.sys.resolvePath(importerPath);
   const configPath = ts.findConfigFile(dirname(fileName), ts.sys.fileExists);
@@ -27,16 +32,16 @@ export function generatedImportExtension(importerPath: string): ImportExtension 
   const project = readProject(configPath, fileName);
   return (
     findProjectExtension(project, fileName, new Set([configPath])) ??
-    importExtension(fileName, project.options)
+    importExtension(fileName, project.project.options)
   );
 }
 
 function findProjectExtension(
-  project: ts.ParsedCommandLine,
+  { project, rootFiles }: ProjectFiles,
   fileName: string,
   visited: Set<string>,
 ): ImportExtension | undefined {
-  let extension = project.fileNames.includes(fileName)
+  let extension = includesSource(project, rootFiles, fileName)
     ? importExtension(fileName, project.options)
     : undefined;
   for (const reference of project.projectReferences ?? []) {
@@ -49,7 +54,29 @@ function findProjectExtension(
   return extension;
 }
 
-function readProject(configPath: string, fileName: string): ts.ParsedCommandLine {
+function includesSource(
+  project: ts.ParsedCommandLine,
+  rootFiles: readonly string[],
+  fileName: string,
+): boolean {
+  if (project.fileNames.includes(fileName)) return true;
+  if (rootFiles.length === 0 || importExtension(fileName, project.options) !== ".js") return false;
+
+  // Explicit entry-point lists can reach generated source through imports.
+  const host = ts.createCompilerHost(project.options);
+  const readFile = host.readFile;
+  const fileExists = host.fileExists;
+  host.readFile = (path) => (path === fileName ? "" : readFile(path));
+  host.fileExists = (path) => path === fileName || fileExists(path);
+  const program = ts.createProgram({
+    rootNames: [...rootFiles],
+    options: { ...project.options, noLib: true, types: [] },
+    host,
+  });
+  return program.getSourceFile(fileName) !== undefined;
+}
+
+function readProject(configPath: string, fileName: string): ProjectFiles {
   const sourceDirectory = posix.dirname(fileName);
   const parsed = ts.getParsedCommandLineOfConfigFile(
     configPath,
@@ -92,7 +119,18 @@ function readProject(configPath: string, fileName: string): ts.ParsedCommandLine
   // Empty files and include lists do not affect module resolution.
   const invalidConfig = parsed.errors.find(({ code }) => code !== 18002 && code !== 18003);
   if (invalidConfig) failInvalidConfig(invalidConfig);
-  return parsed;
+  // Read actual entry points only when the proposed source is absent from the root patterns.
+  const rootFiles = parsed.fileNames.includes(fileName)
+    ? parsed.fileNames
+    : (ts.getParsedCommandLineOfConfigFile(
+        configPath,
+        {},
+        {
+          ...ts.sys,
+          onUnRecoverableConfigFileDiagnostic: failInvalidConfig,
+        },
+      )?.fileNames ?? []);
+  return { project: parsed, rootFiles };
 }
 
 function importExtension(fileName: string, options: ts.CompilerOptions): ImportExtension {
