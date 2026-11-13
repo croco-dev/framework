@@ -769,10 +769,15 @@ export class ReferralService {
       (counts["benefits-pending"] ?? 0) +
       (counts["benefits-partial"] ?? 0) +
       fulfilled;
-    const total = Object.values(counts).reduce((sum, count) => sum + count, 0);
+    const claims =
+      (counts.claimed ?? 0) +
+      (counts.rejected ?? 0) +
+      (counts.expired ?? 0) +
+      (counts.indeterminate ?? 0) +
+      qualified;
     return {
       clicks,
-      claims: total - (counts.held ?? 0),
+      claims,
       signups: qualified,
       qualified,
       fulfilled,

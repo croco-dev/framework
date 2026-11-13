@@ -182,26 +182,26 @@ describe.skipIf(!url)("PostgreSQL referral budgets and attribution recovery", ()
             return outside;
           }),
         );
-        const states = [
-          "held",
-          "rejected",
-          "expired",
-          "indeterminate",
-          "qualified",
-          "benefits-pending",
-          "benefits-partial",
-          "fulfilled",
+        const stateCounts = [
+          ["held", 1],
+          ["rejected", 1],
+          ["expired", 1],
+          ["indeterminate", 1],
+          ["qualified", 2],
+          ["benefits-pending", 3],
+          ["benefits-partial", 4],
+          ["fulfilled", 5],
         ] as const;
         await store.transact(async (tx) => {
           for (let index = 1; index < 1000; index += 1) {
             const id = `earlier-${index}`;
             await tx.saveAttribution({ ...attribution, id, recipient: subject(id) }, id);
           }
-          for (const state of states) {
-            await tx.saveAttribution(
-              { ...attribution, id: `later-${state}`, recipient: subject(state), state },
-              state,
-            );
+          for (const [state, count] of stateCounts) {
+            for (let index = 0; index < count; index += 1) {
+              const id = `later-${state}-${index}`;
+              await tx.saveAttribution({ ...attribution, id, recipient: subject(id), state }, id);
+            }
           }
           for (const outside of excluded) {
             await tx.compareAndSetAttribution(outside.id, ["claimed"], {
@@ -211,16 +211,16 @@ describe.skipIf(!url)("PostgreSQL referral budgets and attribution recovery", ()
           }
         });
 
-        const scoped = { clicks: 2, claims: 1007, signups: 4, qualified: 4, fulfilled: 1 };
+        const scoped = { clicks: 2, claims: 1017, signups: 14, qualified: 14, fulfilled: 5 };
         await expect(
           service.funnelCounts({ programId, familyId: attribution.familyId }),
         ).resolves.toEqual(scoped);
         await expect(service.funnelCounts({ programId })).resolves.toEqual({
           clicks: 2,
-          claims: 1008,
-          signups: 5,
-          qualified: 5,
-          fulfilled: 2,
+          claims: 1018,
+          signups: 15,
+          qualified: 15,
+          fulfilled: 6,
         });
         await expect(service.funnelCounts({ programId, familyId: "missing" })).resolves.toEqual({
           clicks: 2,

@@ -1032,6 +1032,22 @@ describe("ReferralService", () => {
     expect(funnel.clicks).not.toBe(funnel.fulfilled);
   });
 
+  it("uses only known attribution states from a custom store", async () => {
+    class CustomStore extends InMemoryReferralStore {
+      override async countAttributionsByState() {
+        return { claimed: 1003, qualified: 2, fulfilled: undefined, total: 1005 };
+      }
+    }
+    const { service } = serviceWith({ store: new CustomStore() });
+    await expect(service.funnelCounts({ programId: "referral-welcome" })).resolves.toEqual({
+      clicks: 0,
+      claims: 1005,
+      signups: 2,
+      qualified: 2,
+      fulfilled: 0,
+    });
+  });
+
   it("cancels a pending side and returns a granted side with explicit policy", async () => {
     const { service } = serviceWith();
     await service.registerProgram(programInput());
