@@ -38,8 +38,12 @@ export function generatedImportExtension(
     if (importExtension(fileName, candidate.options) === ".js") {
       const roots = candidate.fileNames;
       if (roots.includes(fileName)) return ".js";
-      // An explicit application entry can reach newly generated modules through imports.
-      if (!candidate.options.noResolve && roots.some((root) => root.startsWith(sourcePrefix))) {
+      // Existing application entries can reach newly generated modules through imports.
+      if (
+        !candidate.options.noResolve &&
+        (roots.some((root) => root.startsWith(sourcePrefix)) ||
+          readProject(path, fileName, true).fileNames.some((root) => root.startsWith(sourcePrefix)))
+      ) {
         return ".js";
       }
     }
@@ -53,13 +57,19 @@ export function generatedImportExtension(
   return importExtension(fileName, project.options);
 }
 
-function readProject(configPath: string, fileName: string): ts.ParsedCommandLine {
+function readProject(
+  configPath: string,
+  fileName: string,
+  readExistingFiles = false,
+): ts.ParsedCommandLine {
   const parsed = ts.getParsedCommandLineOfConfigFile(
     configPath,
     {},
     {
       ...ts.sys,
       readDirectory: (path, extensions, excludes, includes, depth) => {
+        if (readExistingFiles)
+          return ts.sys.readDirectory(path, extensions, excludes, includes, depth);
         const sourceDirectory = posix.dirname(fileName);
         return matchFiles(
           path,

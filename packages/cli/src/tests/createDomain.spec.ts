@@ -167,7 +167,7 @@ export const app = createApp({ controllers: [] });
                 ),
               ),
             },
-            ...(explicitEntry ? { files: ["src/bootstrap/index.ts"] } : { include: ["src"] }),
+            include: [explicitEntry ? "src/bootstrap" : "src"],
             ...(project === "referenced" ? { exclude: ["src/domains/*/index.ts"] } : {}),
           }),
         );
