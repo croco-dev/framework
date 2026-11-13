@@ -172,16 +172,16 @@ export const app = createApp({ controllers: [] });
             compilerOptions: {
               module: "NodeNext",
               experimentalDecorators: true,
-              lib: ["ES2022", "ESNext.Disposable", "DOM"],
+              lib: ["ESNext"],
               noEmit: true,
               skipLibCheck: true,
               strict: true,
               types: [],
-              paths: Object.fromEntries(
-                ["framework-context", "protocols-rest", "repository-core", "transports-http"].map(
-                  (name) => [`@croco/${name}`, [path.join(packageDir, name, "dist", "index.d.ts")]],
-                ),
-              ),
+              paths: {
+                "@croco/repository-core": [
+                  path.join(packageDir, "repository-core", "src", "libs", "Repository.ts"),
+                ],
+              },
             },
             ...(rootEntry
               ? { files: ["server.ts"] }
@@ -385,7 +385,28 @@ function expectToTypecheck(configPath: string): void {
     },
   );
   if (!parsed) throw new Error(`Cannot read fixture config ${configPath}.`);
-  const program = ts.createProgram(parsed.fileNames, parsed.options);
+  // This fixture checks application-relative resolution; generated dependency contracts have their own tests.
+  const packageTypes = path.join(path.dirname(configPath), "fixture-packages.d.ts");
+  const declarations = `
+declare module "@croco/framework-context" {
+  export function Component(): ClassDecorator;
+}
+declare module "@croco/protocols-rest" {
+  export function Controller(path: string): ClassDecorator;
+  export function Ctx(): ParameterDecorator;
+  export function Get(path: string): MethodDecorator;
+  export function Post(path: string): MethodDecorator;
+  export function Put(path: string): MethodDecorator;
+  export function Delete(path: string): MethodDecorator;
+}
+declare module "@croco/transports-http" {
+  export type CrocoHttpContext = unknown;
+  export function createApp(config: { controllers: unknown[] }): unknown;
+}
+`;
+  const host = ts.createCompilerHost(parsed.options);
+  host.readFile = (name) => (name === packageTypes ? declarations : ts.sys.readFile(name));
+  const program = ts.createProgram([...parsed.fileNames, packageTypes], parsed.options, host);
   const diagnostics = [...parsed.errors, ...ts.getPreEmitDiagnostics(program)];
   expect(
     diagnostics.map(({ code, messageText }) => ({
