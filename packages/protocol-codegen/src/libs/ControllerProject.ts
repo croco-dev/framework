@@ -276,6 +276,12 @@ function addControllerSourceFiles(project: Project, patterns: readonly string[])
   ].sort((left, right) => compareStrings(left.getFilePath(), right.getFilePath()));
 }
 
+function getStaticDynamicImportSpecifier(node: ts.Node): ts.StringLiteralLike | undefined {
+  if (!ts.isCallExpression(node) || node.expression.kind !== ts.SyntaxKind.ImportKeyword) return;
+  const specifier = node.arguments[0];
+  if (specifier && ts.isStringLiteralLike(specifier)) return specifier;
+}
+
 function resolveProjectSourceDependencies(project: Project): void {
   let addedDynamicDependency: boolean;
   let pendingNodeFormats = isNodeModuleKind(project.getCompilerOptions().module);
@@ -295,14 +301,10 @@ function resolveProjectSourceDependencies(project: Project): void {
     for (const sourceFile of project.getSourceFiles()) {
       const sourcePath = sourceFile.getFilePath();
       const visit = (node: ts.Node): void => {
-        if (
-          ts.isCallExpression(node) &&
-          node.expression.kind === ts.SyntaxKind.ImportKeyword &&
-          node.arguments.length >= 1 &&
-          ts.isStringLiteral(node.arguments[0])
-        ) {
+        const specifier = getStaticDynamicImportSpecifier(node);
+        if (specifier) {
           const resolvedPath = ts.resolveModuleName(
-            node.arguments[0].text,
+            specifier.text,
             sourcePath,
             compilerOptions,
             ts.sys,
@@ -658,7 +660,7 @@ function rewriteRuntimeSpecifiers(
       if (
         ts.isCallExpression(node) &&
         node.arguments.length === 1 &&
-        ts.isStringLiteral(node.arguments[0]) &&
+        ts.isStringLiteralLike(node.arguments[0]) &&
         isGenuineRequireCall(node, checker)
       ) {
         addRuntimeAliasReplacement(
@@ -674,15 +676,10 @@ function rewriteRuntimeSpecifiers(
           externalImports,
         );
       }
-      if (
-        ts.isCallExpression(node) &&
-        (node.expression.getText(syntaxTree) === "import" ||
-          node.expression.kind === ts.SyntaxKind.ImportKeyword) &&
-        node.arguments.length >= 1 &&
-        ts.isStringLiteral(node.arguments[0])
-      ) {
+      const specifier = getStaticDynamicImportSpecifier(node);
+      if (specifier) {
         addRuntimeAliasReplacement(
-          node.arguments[0],
+          specifier,
           sourcePath,
           emittedPath,
           compilerOptions,
@@ -727,7 +724,7 @@ function rewriteRuntimeSpecifiers(
 }
 
 function addRuntimeAliasReplacement(
-  moduleSpecifier: ts.StringLiteral,
+  moduleSpecifier: ts.StringLiteralLike,
   sourcePath: string,
   emittedPath: string,
   compilerOptions: ts.CompilerOptions,
@@ -797,7 +794,7 @@ function isGenuineRequireCall(node: ts.CallExpression, checker: ts.TypeChecker):
 }
 
 function addSpecifierReplacement(
-  moduleSpecifier: ts.StringLiteral,
+  moduleSpecifier: ts.StringLiteralLike,
   value: string,
   syntaxTree: ts.SourceFile,
   replacements: Array<{ start: number; end: number; value: string }>,
@@ -819,7 +816,7 @@ function rewriteTypeScriptExtension(specifier: string): string {
 type SpecifierReplacement = { start: number; end: number; value: string };
 
 type ExternalImport = {
-  moduleSpecifier: ts.StringLiteral;
+  moduleSpecifier: ts.StringLiteralLike;
   sourcePath: string;
   syntaxTree: ts.SourceFile;
   replacements: SpecifierReplacement[];
