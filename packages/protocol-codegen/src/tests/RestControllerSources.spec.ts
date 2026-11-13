@@ -68,22 +68,29 @@ describe("loadRestControllerSources", () => {
     fs.rmSync(tempRoot, { recursive: true, force: true });
   });
 
-  it(
-    "loads re-exported controllers once while preserving module exports and source locations",
-    async () => {
+  it.each([
+    {
+      binding: "const alias",
+      exports:
+        "const PublicController = (LocatedController satisfies typeof LocatedController);\nexport default PublicController;",
+    },
+    {
+      binding: "default expression",
+      exports: "export default (LocatedController);",
+    },
+  ])(
+    "loads re-exported controllers once and preserves source locations through a $binding",
+    async ({ exports }) => {
       const controllerPath = path.join(sourceDir, "LocatedController.ts");
       writeEsmControllerProject(tempRoot);
       const source = readSharedFixture("LocatedController.ts.fixture").replace(
         "export class LocatedController",
         "class LocatedController",
       );
-      fs.writeFileSync(
-        controllerPath,
-        `${source}\nconst PublicController = (LocatedController satisfies typeof LocatedController);\nexport { PublicController as LocatedControllerExport, PublicController as default };\n`,
-      );
+      fs.writeFileSync(controllerPath, `${source}\n${exports}\n`);
       fs.writeFileSync(
         path.join(sourceDir, "A-barrel.ts"),
-        'export { default, LocatedControllerExport as Alias } from "./LocatedController.js";\n',
+        'export { default, default as Alias } from "./LocatedController.js";\n',
       );
       fs.writeFileSync(
         path.join(sourceDir, "Z-barrel.ts"),
@@ -119,7 +126,7 @@ describe("loadRestControllerSources", () => {
       }
       expect(modules[0]?.moduleExports.Alias).toBe(controllers[0]);
       expect(modules[0]?.moduleExports.default).toBe(controllers[0]);
-      expect(modules[1]?.moduleExports.LocatedControllerExport).toBe(controllers[0]);
+      expect(modules[1]?.moduleExports.default).toBe(controllers[0]);
       expect(modules[2]?.moduleExports.Controller).toBe(controllers[0]);
     },
     LOAD_CONTROLLER_TIMEOUT_MS,

@@ -173,28 +173,27 @@ function resolveControllerClassDeclaration(declaration: Node): ClassDeclaration 
   const visited = new Set<Node>();
   let current: Node | undefined = declaration;
   while (current && !visited.has(current)) {
+    visited.add(current);
     if (Node.isClassDeclaration(current)) return current;
     if (
-      !Node.isVariableDeclaration(current) ||
-      current.getVariableStatement()?.getDeclarationKind() !== "const"
+      Node.isParenthesizedExpression(current) ||
+      Node.isAsExpression(current) ||
+      Node.isSatisfiesExpression(current) ||
+      Node.isTypeAssertion(current) ||
+      Node.isNonNullExpression(current)
     ) {
+      current = current.getExpression();
+    } else if (Node.isIdentifier(current)) {
+      const symbol = current.getSymbol();
+      current = (symbol?.getAliasedSymbol() ?? symbol)?.getValueDeclaration();
+    } else if (
+      Node.isVariableDeclaration(current) &&
+      current.getVariableStatement()?.getDeclarationKind() === "const"
+    ) {
+      current = current.getInitializer();
+    } else {
       return undefined;
     }
-
-    visited.add(current);
-    let initializer = current.getInitializer();
-    while (
-      Node.isParenthesizedExpression(initializer) ||
-      Node.isAsExpression(initializer) ||
-      Node.isSatisfiesExpression(initializer) ||
-      Node.isTypeAssertion(initializer) ||
-      Node.isNonNullExpression(initializer)
-    ) {
-      initializer = initializer.getExpression();
-    }
-    if (!Node.isIdentifier(initializer)) return undefined;
-    const symbol = initializer.getSymbol();
-    current = (symbol?.getAliasedSymbol() ?? symbol)?.getValueDeclaration();
   }
 }
 
