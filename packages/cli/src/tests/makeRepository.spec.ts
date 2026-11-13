@@ -232,6 +232,50 @@ describe("generateRepository", () => {
     await expect(fs.access(filePath)).rejects.toThrow();
   });
 
+  it("preserves a Bundler directory import when a separate tools project uses NodeNext", async () => {
+    const cwd = await createWorkspace({
+      apiServerManifest:
+        '{"type":"module","dependencies":{"@croco/repository-core":"workspace:*"}}',
+    });
+    try {
+      const appDir = path.join(cwd, "apps", "api-server");
+      const entityDir = path.join(appDir, "src", "entities", "OrderEntity");
+      await fs.mkdir(entityDir, { recursive: true });
+      await fs.writeFile(path.join(entityDir, "index.ts"), "export class OrderEntity {}");
+      await fs.mkdir(path.join(appDir, "tools"));
+      await fs.writeFile(path.join(appDir, "tools", "index.ts"), "export {};");
+      await fs.writeFile(
+        path.join(appDir, "tsconfig.json"),
+        '{"files":[],"references":[{"path":"./tsconfig.tools.json"},{"path":"./tsconfig.app.json"}]}',
+      );
+      await fs.writeFile(
+        path.join(appDir, "tsconfig.tools.json"),
+        '{"compilerOptions":{"module":"NodeNext"},"include":["tools"]}',
+      );
+      const appConfigPath = path.join(appDir, "tsconfig.app.json");
+      await fs.writeFile(
+        appConfigPath,
+        JSON.stringify({
+          compilerOptions: {
+            module: "ESNext",
+            moduleResolution: "Bundler",
+            paths: {
+              "@croco/repository-core": [
+                path.join(REPO_ROOT, "packages/repository-core/src/libs/Repository.ts"),
+              ],
+            },
+          },
+          include: ["src"],
+        }),
+      );
+
+      expect((await generateRepository("Order", { cwd }))?.status).toBe("created");
+      await expectGeneratedFixtureToTypecheck(appConfigPath);
+    } finally {
+      await fs.rm(cwd, { recursive: true, force: true });
+    }
+  });
+
   it("should not write files in dry-run mode", async () => {
     const cwd = await createWorkspace();
     const filePath = path.join(
