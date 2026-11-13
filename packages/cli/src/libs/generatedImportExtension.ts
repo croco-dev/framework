@@ -25,16 +25,20 @@ export function generatedImportExtension(
   overwrite = false,
 ): ImportExtension {
   const fileName = ts.sys.resolvePath(importerPath);
+  const planned = new Map(
+    Array.from(generatedSources, ([path, content]) => [ts.sys.resolvePath(path), content]),
+  );
+  const plannedPaths = [...planned.keys(), fileName];
   const configPath = ts.findConfigFile(dirname(fileName), ts.sys.fileExists);
   if (!configPath) return "";
 
-  const project = readProject(configPath, fileName);
+  const project = readProject(configPath, plannedPaths);
   if (!project.projectReferences?.length) return importExtension(fileName, project.options);
 
   const visited = new Set([configPath]);
   const configs = [configPath];
   for (const path of configs) {
-    const candidate = path === configPath ? project : readProject(path, fileName);
+    const candidate = path === configPath ? project : readProject(path, plannedPaths);
     if (importExtension(fileName, candidate.options) === ".js") {
       const roots = candidate.fileNames;
       if (roots.includes(fileName)) return ".js";
@@ -42,9 +46,9 @@ export function generatedImportExtension(
         !candidate.options.noResolve &&
         resolvesGeneratedSource(
           candidate.options,
-          readProject(path, fileName, true).fileNames,
+          [...new Set([...roots, ...readProject(path, plannedPaths, true).fileNames])],
           fileName,
-          generatedSources,
+          planned,
           overwrite,
         )
       ) {
@@ -65,14 +69,11 @@ function resolvesGeneratedSource(
   options: ts.CompilerOptions,
   roots: string[],
   fileName: string,
-  generatedSources: ReadonlyMap<string, string>,
+  planned: ReadonlyMap<string, string>,
   overwrite: boolean,
 ): boolean {
   if (!roots.length) return false;
 
-  const planned = new Map(
-    Array.from(generatedSources, ([path, content]) => [ts.sys.resolvePath(path), content]),
-  );
   const sources = new Map(planned);
   if (!sources.has(fileName)) sources.set(fileName, "");
   const directories = new Set<string>();
@@ -119,7 +120,7 @@ function resolvesGeneratedSource(
 
 function readProject(
   configPath: string,
-  fileName: string,
+  plannedPaths: readonly string[],
   readExistingFiles = false,
 ): ts.ParsedCommandLine {
   const parsed = ts.getParsedCommandLineOfConfigFile(
@@ -130,7 +131,6 @@ function readProject(
       readDirectory: (path, extensions, excludes, includes, depth) => {
         if (readExistingFiles)
           return ts.sys.readDirectory(path, extensions, excludes, includes, depth);
-        const sourceDirectory = posix.dirname(fileName);
         return matchFiles(
           path,
           extensions,
@@ -141,16 +141,16 @@ function readProject(
           depth,
           (directory) => {
             const absoluteDirectory = ts.sys.resolvePath(directory);
-            if (
-              absoluteDirectory === sourceDirectory ||
-              (!ts.sys.useCaseSensitiveFileNames &&
-                absoluteDirectory.toLowerCase() === sourceDirectory.toLowerCase())
-            ) {
-              return { files: [basename(fileName)], directories: [] };
+            const files = new Set<string>();
+            const directories = new Set<string>();
+            for (const path of plannedPaths) {
+              const relative = posix.relative(absoluteDirectory, path);
+              const slash = relative.indexOf("/");
+              if (relative.startsWith("../") || !relative) continue;
+              if (slash === -1) files.add(basename(path));
+              else directories.add(relative.slice(0, slash));
             }
-            const relative = posix.relative(absoluteDirectory, sourceDirectory);
-            const child = relative.split("/")[0];
-            return { files: [], directories: child && child !== ".." ? [child] : [] };
+            return { files: [...files], directories: [...directories] };
           },
           (path) => path,
         );

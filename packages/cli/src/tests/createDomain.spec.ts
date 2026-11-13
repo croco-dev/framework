@@ -109,7 +109,13 @@ describe("runCreateDomain", () => {
     expect(entryContent).toContain("app.addControllers([UserController]);");
   });
 
-  it.each(["standalone", "referenced", "nested entrypoint", "root entrypoint"])(
+  it.each([
+    "standalone",
+    "referenced",
+    "nested entrypoint",
+    "root entrypoint",
+    "generated entrypoint",
+  ])(
     "typechecks the generated domain and controller registration in a %s NodeNext ESM app",
     async (project) => {
       const cwd = await createWorkspace();
@@ -125,7 +131,7 @@ describe("runCreateDomain", () => {
         if (rootEntry) {
           await fs.writeFile(
             path.join(appDir, "server.ts"),
-            'import "./src/index.js";\nexport * from "./src/domains/order/index.js";\n',
+            'import "./src/index.js";\nexport { OrderRepository } from "./src/domains/order/index.js";\n',
           );
           const domainDir = path.join(appDir, "src", "domains", "order");
           await fs.mkdir(domainDir, { recursive: true });
@@ -178,7 +184,15 @@ export const app = createApp({ controllers: [] });
             },
             ...(rootEntry
               ? { files: ["server.ts"] }
-              : { include: [nestedEntry ? "src/bootstrap" : "src"] }),
+              : {
+                  include: [
+                    nestedEntry
+                      ? "src/bootstrap"
+                      : project === "generated entrypoint"
+                        ? "src/domains/*/index.ts"
+                        : "src",
+                  ],
+                }),
             ...(project === "referenced" ? { exclude: ["src/domains/*/index.ts"] } : {}),
           }),
         );

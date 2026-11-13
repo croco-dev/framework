@@ -9,7 +9,7 @@
         "packages/cli/src/commands/createDomain.ts": "7695c879969b48fcd1cdbc597ba47b273e61a53d7ceb6adf4e43ebf523a4d254",
         "packages/cli/src/commands/makeRepository.ts": "a7bf769828c1ae9299f910eb0987d57c5d98780932a38a4d33ba95032d5b4c93",
         "packages/cli/src/libs/codemods/registerController.ts": "a56a3cbce745855ec686b444fb47bbdb68279908b7f15a38831ad67d93e12d8c",
-        "packages/cli/src/libs/generatedImportExtension.ts": "b3496124e0cc793c896f721d13fec971ef5197f38b7354d20a787325bec9177d"
+        "packages/cli/src/libs/generatedImportExtension.ts": "bb4de8110b0217a8423c2e63285b8e87d14530c76f1caa88779a4d83734f01f7"
       },
       "catalogRuntimes": [],
       "profiles": {
