@@ -19,8 +19,12 @@ const { matchFiles } = ts as typeof ts & {
   ): string[];
 };
 
-export function generatedImportExtension(importerPath: string): ImportExtension {
+export function generatedImportExtension(
+  importerPath: string,
+  sourceRoot = dirname(importerPath),
+): ImportExtension {
   const fileName = ts.sys.resolvePath(importerPath);
+  const sourcePrefix = `${ts.sys.resolvePath(sourceRoot)}/`;
   const configPath = ts.findConfigFile(dirname(fileName), ts.sys.fileExists);
   if (!configPath) return "";
 
@@ -35,10 +39,7 @@ export function generatedImportExtension(importerPath: string): ImportExtension 
       const roots = candidate.fileNames;
       if (roots.includes(fileName)) return ".js";
       // An explicit application entry can reach newly generated modules through imports.
-      if (
-        !candidate.options.noResolve &&
-        roots.some((root) => fileName.startsWith(`${posix.dirname(root)}/`))
-      ) {
+      if (!candidate.options.noResolve && roots.some((root) => root.startsWith(sourcePrefix))) {
         return ".js";
       }
     }

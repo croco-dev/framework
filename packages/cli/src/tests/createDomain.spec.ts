@@ -120,11 +120,18 @@ describe("runCreateDomain", () => {
         await fs.writeFile(manifestPath, JSON.stringify({ ...manifest, type: "module" }));
         const entryPath = path.join(appDir, "src", "index.ts");
         const explicitEntry = project === "referenced entrypoint";
+        const bootstrapPath = path.join(appDir, "src", "bootstrap", "index.ts");
+        if (explicitEntry) {
+          await fs.mkdir(path.dirname(bootstrapPath));
+          await fs.writeFile(
+            bootstrapPath,
+            'import "../index.js";\nexport * from "../domains/order/index.js";\n',
+          );
+        }
         await fs.writeFile(
           entryPath,
           `import { createApp } from "@croco/transports-http";
 export const app = createApp({ controllers: [] });
-${explicitEntry ? 'export * from "./domains/order/index.js";' : ""}
 `,
         );
         const packageDir = fileURLToPath(new URL("../../../", import.meta.url));
@@ -160,7 +167,7 @@ ${explicitEntry ? 'export * from "./domains/order/index.js";' : ""}
                 ),
               ),
             },
-            ...(explicitEntry ? { files: ["src/index.ts"] } : { include: ["src"] }),
+            ...(explicitEntry ? { files: ["src/bootstrap/index.ts"] } : { include: ["src"] }),
             ...(project === "referenced" ? { exclude: ["src/domains/*/index.ts"] } : {}),
           }),
         );

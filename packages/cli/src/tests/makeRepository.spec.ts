@@ -242,15 +242,14 @@ describe("generateRepository", () => {
       const entityDir = path.join(appDir, "src", "entities", "OrderEntity");
       await fs.mkdir(entityDir, { recursive: true });
       await fs.writeFile(path.join(entityDir, "index.ts"), "export class OrderEntity {}");
-      await fs.mkdir(path.join(appDir, "tools"));
-      await fs.writeFile(path.join(appDir, "tools", "index.ts"), "export {};");
+      await fs.writeFile(path.join(appDir, "vite.config.ts"), "export {};");
       await fs.writeFile(
         path.join(appDir, "tsconfig.json"),
         '{"files":[],"references":[{"path":"./tsconfig.tools.json"},{"path":"./tsconfig.app.json"}]}',
       );
       await fs.writeFile(
         path.join(appDir, "tsconfig.tools.json"),
-        '{"compilerOptions":{"module":"NodeNext"},"include":["tools"]}',
+        '{"compilerOptions":{"module":"NodeNext"},"files":["vite.config.ts"]}',
       );
       const appConfigPath = path.join(appDir, "tsconfig.app.json");
       await fs.writeFile(

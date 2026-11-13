@@ -58,14 +58,8 @@ export async function runCreateDomain(
     return null;
   }
 
-  const barrelPath = join(
-    workspace.root,
-    workspace.apiServerDir,
-    "src",
-    "domains",
-    kebab,
-    "index.ts",
-  );
+  const apiServerSrc = join(workspace.root, workspace.apiServerDir, "src");
+  const barrelPath = join(apiServerSrc, "domains", kebab, "index.ts");
   const domainDir = dirname(barrelPath);
   const repositoryPath = join(domainDir, `${className}Repository.ts`);
   const generatedSources = [
@@ -79,7 +73,10 @@ export async function runCreateDomain(
     },
     {
       path: repositoryPath,
-      content: repositoryTemplate(className, generatedImportExtension(repositoryPath)),
+      content: repositoryTemplate(
+        className,
+        generatedImportExtension(repositoryPath, apiServerSrc),
+      ),
     },
     {
       path: join(domainDir, `${className}Entity.ts`),
@@ -87,7 +84,7 @@ export async function runCreateDomain(
     },
     {
       path: barrelPath,
-      content: barrelTemplate(className, generatedImportExtension(barrelPath)),
+      content: barrelTemplate(className, generatedImportExtension(barrelPath, apiServerSrc)),
     },
   ];
 
@@ -106,7 +103,6 @@ export async function runCreateDomain(
     ),
   );
 
-  const apiServerSrc = join(workspace.root, workspace.apiServerDir, "src");
   const registration = register
     ? await registerController({
         ...resolveControllerRegistrationTarget(apiServerSrc),
