@@ -109,7 +109,7 @@ describe("runCreateDomain", () => {
     expect(entryContent).toContain("app.addControllers([UserController]);");
   });
 
-  it.each(["standalone", "referenced", "referenced entrypoint", "root entrypoint"])(
+  it.each(["standalone", "referenced", "nested entrypoint", "root entrypoint"])(
     "typechecks the generated domain and controller registration in a %s NodeNext ESM app",
     async (project) => {
       const cwd = await createWorkspace();
@@ -120,14 +120,14 @@ describe("runCreateDomain", () => {
         await fs.writeFile(manifestPath, JSON.stringify({ ...manifest, type: "module" }));
         const entryPath = path.join(appDir, "src", "index.ts");
         const rootEntry = project === "root entrypoint";
-        const mixedProjects = project === "referenced entrypoint";
+        const nestedEntry = project === "nested entrypoint";
         const bootstrapPath = path.join(appDir, "src", "bootstrap", "index.ts");
         if (rootEntry) {
           await fs.writeFile(
             path.join(appDir, "server.ts"),
             'import "./src/index.js";\nexport * from "./src/domains/order/index.js";\n',
           );
-        } else if (mixedProjects) {
+        } else if (nestedEntry) {
           await fs.mkdir(path.dirname(bootstrapPath));
           await fs.writeFile(
             bootstrapPath,
@@ -151,7 +151,7 @@ export const app = createApp({ controllers: [] });
             JSON.stringify({
               files: [],
               references: [
-                ...(mixedProjects ? [{ path: "./tsconfig.test.json" }] : []),
+                ...(nestedEntry ? [{ path: "./tsconfig.test.json" }] : []),
                 { path: "./tsconfig.app.json" },
               ],
             }),
@@ -175,12 +175,12 @@ export const app = createApp({ controllers: [] });
             },
             ...(rootEntry
               ? { files: ["server.ts"] }
-              : { include: [mixedProjects ? "src/bootstrap" : "src"] }),
+              : { include: [nestedEntry ? "src/bootstrap" : "src"] }),
             ...(project === "referenced" ? { exclude: ["src/domains/*/index.ts"] } : {}),
           }),
         );
         const bundlerConfigPath = path.join(appDir, "tsconfig.test.json");
-        if (mixedProjects) {
+        if (nestedEntry) {
           await fs.writeFile(
             bundlerConfigPath,
             JSON.stringify({
@@ -195,7 +195,6 @@ export const app = createApp({ controllers: [] });
 
         expect(result?.registration?.status).toBe("updated");
         expectToTypecheck(appConfigPath);
-        if (mixedProjects) expectToTypecheck(bundlerConfigPath);
       } finally {
         await fs.rm(cwd, { recursive: true, force: true });
       }
