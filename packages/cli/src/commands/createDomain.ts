@@ -77,7 +77,7 @@ export async function runCreateDomain(
       path: repositoryPath,
       content: repositoryTemplate(
         className,
-        generatedImportExtension(repositoryPath, domainSources),
+        generatedImportExtension(repositoryPath, domainSources, overwrite),
       ),
     },
     {

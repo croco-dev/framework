@@ -22,6 +22,7 @@ const { matchFiles } = ts as typeof ts & {
 export function generatedImportExtension(
   importerPath: string,
   generatedSources: ReadonlyMap<string, string> = new Map(),
+  overwrite = false,
 ): ImportExtension {
   const fileName = ts.sys.resolvePath(importerPath);
   const configPath = ts.findConfigFile(dirname(fileName), ts.sys.fileExists);
@@ -44,6 +45,7 @@ export function generatedImportExtension(
           readProject(path, fileName, true).fileNames,
           fileName,
           generatedSources,
+          overwrite,
         )
       ) {
         return ".js";
@@ -64,12 +66,14 @@ function resolvesGeneratedSource(
   roots: string[],
   fileName: string,
   generatedSources: ReadonlyMap<string, string>,
+  overwrite: boolean,
 ): boolean {
   if (!roots.length) return false;
 
-  const sources = new Map(
+  const planned = new Map(
     Array.from(generatedSources, ([path, content]) => [ts.sys.resolvePath(path), content]),
   );
+  const sources = new Map(planned);
   if (!sources.has(fileName)) sources.set(fileName, "");
   const directories = new Set<string>();
   for (const path of sources.keys()) {
@@ -85,7 +89,8 @@ function resolvesGeneratedSource(
 
   const compilerOptions = { ...options, noLib: true, types: [] };
   const host = ts.createCompilerHost(compilerOptions);
-  host.readFile = (path) => ts.sys.readFile(path) ?? sources.get(path);
+  host.readFile = (path) =>
+    (overwrite ? planned.get(path) : undefined) ?? ts.sys.readFile(path) ?? sources.get(path);
   host.fileExists = (path) => sources.has(path) || ts.sys.fileExists(path);
   host.directoryExists = (path) => directories.has(path) || ts.sys.directoryExists(path);
   const cache = ts.createModuleResolutionCache(

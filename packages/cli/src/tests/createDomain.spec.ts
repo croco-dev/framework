@@ -127,6 +127,9 @@ describe("runCreateDomain", () => {
             path.join(appDir, "server.ts"),
             'import "./src/index.js";\nexport * from "./src/domains/order/index.js";\n',
           );
+          const domainDir = path.join(appDir, "src", "domains", "order");
+          await fs.mkdir(domainDir, { recursive: true });
+          await fs.writeFile(path.join(domainDir, "index.ts"), "export const custom = true;");
         } else if (nestedEntry) {
           await fs.mkdir(path.dirname(bootstrapPath));
           await fs.writeFile(
@@ -191,7 +194,7 @@ export const app = createApp({ controllers: [] });
           );
         }
 
-        const result = await runCreateDomain("Order", { cwd });
+        const result = await runCreateDomain("Order", { cwd, overwrite: rootEntry });
 
         expect(result?.registration?.status).toBe("updated");
         expectToTypecheck(appConfigPath);
