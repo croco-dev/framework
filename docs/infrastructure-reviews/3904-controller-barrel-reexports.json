@@ -6,7 +6,7 @@
       "classification": "protocol-render",
       "reason": "RPC and OpenAPI generation pass each controller constructor to the contract graph once when multiple matched source modules export it.",
       "files": {
-        "packages/protocol-codegen/src/libs/RestControllerSources.ts": "e42831931a75c413c4661a4834ed801cb76ef4d3b010e9aa21064869b8e63d27"
+        "packages/protocol-codegen/src/libs/RestControllerSources.ts": "4de789e971087fc87eef25434c296f5599f0880a7c346cd889565572145390a6"
       },
       "catalogRuntimes": [],
       "profiles": {

@@ -4,7 +4,7 @@ import type { Problem } from "@croco/problems-core";
 import { discoverControllerConstructors, isControllerConstructor } from "@croco/protocols-core";
 import type { Constructor, RouteContractSourceLocation } from "@croco/protocols-core";
 import { Node, ts } from "ts-morph";
-import type { Decorator, Diagnostic, SourceFile } from "ts-morph";
+import type { ClassDeclaration, Decorator, Diagnostic, SourceFile } from "ts-morph";
 import { createControllerProject, getCommonSourceDirectory } from "./ControllerProject";
 import type { ControllerModule } from "./ControllerProject";
 
@@ -111,20 +111,13 @@ export async function loadRestControllerSources(
     controllerProject.emit();
 
     const modules: RestControllerSourceModule[] = [];
-    const controllers = new Map<Constructor, ControllerSourceLocations | undefined>();
+    const controllers = new Set<Constructor>();
     const exportedLocations = new Map<Constructor, ControllerSourceLocations | undefined>();
 
     for (const sourceFile of sourceFiles) {
       const moduleExports = await controllerProject.importModule(sourceFile);
       const moduleControllers = discoverControllerConstructors(moduleExports);
       const sourceFileLocations = sourceLocations.get(sourceFile.getFilePath());
-
-      for (const controller of moduleControllers) {
-        const localLocations = sourceFileLocations?.get(controller.name);
-        if (localLocations || !controllers.has(controller)) {
-          controllers.set(controller, localLocations);
-        }
-      }
 
       if (moduleControllers.length > 0) {
         collectExportedControllerLocations(
@@ -135,6 +128,16 @@ export async function loadRestControllerSources(
         );
       }
 
+      for (const controller of moduleControllers) {
+        controllers.add(controller);
+        // A re-export can share a name with an unrelated class in the barrel.
+        applyControllerSourceLocations(
+          controller,
+          exportedLocations.has(controller)
+            ? exportedLocations.get(controller)
+            : sourceFileLocations?.get(controller.name),
+        );
+      }
       modules.push({ moduleExports, controllers: moduleControllers });
     }
 
@@ -142,15 +145,7 @@ export async function loadRestControllerSources(
       throw options.problems.noControllersFound(controllerPatterns);
     }
 
-    for (const [controller, localLocations] of controllers) {
-      // A re-export can share a name with an unrelated class in the barrel.
-      applyControllerSourceLocations(
-        controller,
-        exportedLocations.has(controller) ? exportedLocations.get(controller) : localLocations,
-      );
-    }
-
-    return { controllers: [...controllers.keys()], modules };
+    return { controllers: [...controllers], modules };
   } finally {
     controllerProject.dispose();
   }
@@ -166,11 +161,31 @@ function collectExportedControllerLocations(
     const exported = moduleExports[name];
     if (!isControllerConstructor(exported) || exportedLocations.has(exported)) continue;
 
-    const declaration = declarations.find(Node.isClassDeclaration);
+    const declaration = declarations.map(resolveControllerClassDeclaration).find(Boolean);
     if (!declaration) continue;
     const className = declaration.getName();
     const locations = sourceLocations.get(declaration.getSourceFile().getFilePath());
     exportedLocations.set(exported, className ? locations?.get(className) : undefined);
+  }
+}
+
+function resolveControllerClassDeclaration(declaration: Node): ClassDeclaration | undefined {
+  const visited = new Set<Node>();
+  let current: Node | undefined = declaration;
+  while (current && !visited.has(current)) {
+    if (Node.isClassDeclaration(current)) return current;
+    if (
+      !Node.isVariableDeclaration(current) ||
+      current.getVariableStatement()?.getDeclarationKind() !== "const"
+    ) {
+      return undefined;
+    }
+
+    visited.add(current);
+    const initializer = current.getInitializer();
+    if (!Node.isIdentifier(initializer)) return undefined;
+    const symbol = initializer.getSymbol();
+    current = (symbol?.getAliasedSymbol() ?? symbol)?.getValueDeclaration();
   }
 }
 
