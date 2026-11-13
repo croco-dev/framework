@@ -6,7 +6,7 @@ import { PgDialect } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { PostgresReferralStore, ReferralPersistenceProblem } from "../index";
 import type { ReferralPgDatabase, ReferralPgExecutor } from "../index";
-import { ReferralService } from "@croco/referral-core";
+import { InMemoryReferralStore, ReferralService } from "@croco/referral-core";
 import {
   ReferralAttributionStateConflictProblem,
   ReferralDuplicateClaimProblem,
@@ -17,6 +17,7 @@ import {
 } from "@croco/referral-core";
 import type {
   ReferralFulfillmentPort,
+  ReferralStore,
   ReferralSubject,
   ReferralQualificationHook,
   ReferralNoveltyHook,
@@ -102,7 +103,7 @@ async function withStores(
 }
 
 function serviceFor(
-  store: PostgresReferralStore,
+  store: ReferralStore,
   qualification: ReferralQualificationHook = () => ({ qualified: false, reason: "no purchase" }),
   fulfillment: ReferralFulfillmentPort = fulfillmentOk(),
   novelty: ReferralNoveltyHook = () => ({ novelty: "new", reason: "new signup" }),
@@ -123,11 +124,13 @@ function serviceFor(
 async function seed(
   service: ReferralService,
   perSubjectLimit = 10,
+  identity: { programId?: string; version?: number; familyId?: string } = {},
 ): Promise<{ programId: string; token: string }> {
-  const programId = `referral-${randomUUID()}`;
+  const { programId = `referral-${randomUUID()}`, version = 1, familyId } = identity;
   await service.registerProgram({
     id: programId,
-    version: 1,
+    version,
+    familyId,
     benefitCycleId: "cycle",
     conversionWindowMs: 86400000,
     qualifyingAction: "purchase",
@@ -142,11 +145,94 @@ async function seed(
     reason: "regression evidence",
     idempotencyKey: programId,
   });
-  const { token } = await service.createReferralLink({ programId, referrer: subject("referrer") });
+  const { token } = await service.createReferralLink({
+    programId,
+    programVersion: version,
+    referrer: subject("referrer"),
+  });
   return { programId, token };
 }
 
 describe.skipIf(!url)("PostgreSQL referral budgets and attribution recovery", () => {
+  it.each(["in-memory", "postgres"] as const)(
+    "counts the entire scoped funnel on the %s store",
+    async (provider) => {
+      await withStores(async (_pool, postgres) => {
+        const store = provider === "postgres" ? postgres : new InMemoryReferralStore();
+        const service = serviceFor(store);
+        const { programId, token } = await seed(service);
+        const { attribution } = await service.claimAttribution({
+          token,
+          recipient: subject("first"),
+        });
+        await service.recordClick({ linkId: attribution.linkId });
+        const otherFamily = await seed(service, 10, {
+          programId,
+          version: 2,
+          familyId: "another-family",
+        });
+        const otherProgram = await seed(service, 10, { familyId: attribution.familyId });
+        const excluded = await Promise.all(
+          [otherFamily, otherProgram].map(async (entry, index) => {
+            const { attribution: outside } = await service.claimAttribution({
+              token: entry.token,
+              recipient: subject(`outside-${index}`),
+            });
+            await service.recordClick({ linkId: outside.linkId });
+            return outside;
+          }),
+        );
+        const stateCounts = [
+          ["held", 1],
+          ["rejected", 1],
+          ["expired", 1],
+          ["indeterminate", 1],
+          ["qualified", 2],
+          ["benefits-pending", 3],
+          ["benefits-partial", 4],
+          ["fulfilled", 5],
+        ] as const;
+        await store.transact(async (tx) => {
+          for (let index = 1; index < 1000; index += 1) {
+            const id = `earlier-${index}`;
+            await tx.saveAttribution({ ...attribution, id, recipient: subject(id) }, id);
+          }
+          for (const [state, count] of stateCounts) {
+            for (let index = 0; index < count; index += 1) {
+              const id = `later-${state}-${index}`;
+              await tx.saveAttribution({ ...attribution, id, recipient: subject(id), state }, id);
+            }
+          }
+          for (const outside of excluded) {
+            await tx.compareAndSetAttribution(outside.id, ["claimed"], {
+              ...outside,
+              state: "fulfilled",
+            });
+          }
+        });
+
+        const scoped = { clicks: 2, claims: 1017, signups: 14, qualified: 14, fulfilled: 5 };
+        await expect(
+          service.funnelCounts({ programId, familyId: attribution.familyId }),
+        ).resolves.toEqual(scoped);
+        await expect(service.funnelCounts({ programId })).resolves.toEqual({
+          clicks: 2,
+          claims: 1018,
+          signups: 15,
+          qualified: 15,
+          fulfilled: 6,
+        });
+        await expect(service.funnelCounts({ programId, familyId: "missing" })).resolves.toEqual({
+          clicks: 2,
+          claims: 0,
+          signups: 0,
+          qualified: 0,
+          fulfilled: 0,
+        });
+      });
+    },
+  );
+
   it.each(["unknown", "existing", "new"] as const)(
     "rechecks held novelty as %s across independent stores without duplicate budget or benefits",
     async (nextNovelty) => {

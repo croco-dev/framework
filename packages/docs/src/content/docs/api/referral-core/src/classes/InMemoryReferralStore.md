@@ -170,6 +170,32 @@ readonly [`ReferralBenefitIntentStatus`](/api/referral-core/src/type-aliases/ref
 
 ---
 
+### countAttributionsByState()
+
+> **countAttributionsByState**(`programId`, `familyId?`): `Promise`\<`Partial`\<`Record`\<[`ReferralAttributionState`](/api/referral-core/src/type-aliases/referralattributionstate/), `number`\>\>\>
+
+Counts all attributions by state for the program and, when supplied, the family.
+
+#### Parameters
+
+##### programId
+
+`string`
+
+##### familyId?
+
+`string`
+
+#### Returns
+
+`Promise`\<`Partial`\<`Record`\<[`ReferralAttributionState`](/api/referral-core/src/type-aliases/referralattributionstate/), `number`\>\>\>
+
+#### Implementation of
+
+[`ReferralStore`](/api/referral-core/src/interfaces/referralstore/).[`countAttributionsByState`](/api/referral-core/src/interfaces/referralstore/#countattributionsbystate)
+
+---
+
 ### countClicks()
 
 > **countClicks**(`linkId`): `Promise`\<`number`\>

@@ -14,6 +14,7 @@ import type {
   ListBenefitIntentsFilter,
   ListReferralLinksFilter,
   ReferralAttribution,
+  ReferralAttributionState,
   ReferralAuditEntry,
   ReferralBenefitIntent,
   ReferralBenefitIntentStatus,
@@ -473,6 +474,19 @@ export class InMemoryReferralStore implements ReferralStore, ReferralTx {
       if (parties.some((party) => matchesSubject(party, subject))) count += 1;
     }
     return count;
+  }
+
+  async countAttributionsByState(
+    programId: string,
+    familyId?: string,
+  ): Promise<Partial<Record<ReferralAttributionState, number>>> {
+    const counts: Partial<Record<ReferralAttributionState, number>> = {};
+    for (const attribution of this.state.attributions.values()) {
+      if (attribution.programId !== programId) continue;
+      if (familyId !== undefined && attribution.familyId !== familyId) continue;
+      counts[attribution.state] = (counts[attribution.state] ?? 0) + 1;
+    }
+    return counts;
   }
 
   async listAttributions(filter: ListAttributionsFilter): Promise<readonly ReferralAttribution[]> {

@@ -1,0 +1,109 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "referral-core",
+      "classification": "pure-contract",
+      "reason": "Compute the existing funnel stages from all matching attributions without the list page limit.",
+      "files": {
+        "packages/referral-core/src/libs/InMemoryReferralStore.ts": "486d53cffd01e314b32ad1f0a29cd0f365a08e9319c6e4541c8c3f8ce302ea93",
+        "packages/referral-core/src/libs/ReferralService.ts": "2199f0174ef0102ea724c16266e599edbb9ae7abdafce0d54d147c1cd819daa9",
+        "packages/referral-core/src/libs/ReferralStore.ts": "98dd2c646521fa3a420f77f5f1aa23a6db39696a8d39c4f816a09d61529e635b"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The service calculates funnel stages from store counts without requiring host APIs, connections or lifecycle hooks.",
+          "providers": ["ReferralStore", "InMemoryReferralStore"],
+          "constraints": [
+            "The store returns complete attribution counts per state for the requested program and optional family."
+          ],
+          "references": [
+            "packages/referral-core/src/libs/InMemoryReferralStore.ts",
+            "packages/referral-core/src/libs/ReferralService.ts",
+            "packages/referral-core/src/libs/ReferralStore.ts",
+            "packages/referral-drizzle/src/tests/PostgresReferralStore.postgres.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The service calculates funnel stages from store counts without requiring host APIs, connections or lifecycle hooks.",
+          "providers": ["ReferralStore", "InMemoryReferralStore"],
+          "constraints": [
+            "The store returns complete attribution counts per state for the requested program and optional family."
+          ],
+          "references": [
+            "packages/referral-core/src/libs/InMemoryReferralStore.ts",
+            "packages/referral-core/src/libs/ReferralService.ts",
+            "packages/referral-core/src/libs/ReferralStore.ts",
+            "packages/referral-drizzle/src/tests/PostgresReferralStore.postgres.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The service calculates funnel stages from store counts without requiring host APIs, connections or lifecycle hooks.",
+          "providers": ["ReferralStore", "InMemoryReferralStore"],
+          "constraints": [
+            "The store returns complete attribution counts per state for the requested program and optional family."
+          ],
+          "references": [
+            "packages/referral-core/src/libs/InMemoryReferralStore.ts",
+            "packages/referral-core/src/libs/ReferralService.ts",
+            "packages/referral-core/src/libs/ReferralStore.ts",
+            "packages/referral-drizzle/src/tests/PostgresReferralStore.postgres.spec.ts"
+          ]
+        }
+      }
+    },
+    {
+      "package": "referral-drizzle",
+      "classification": "durable-provider",
+      "reason": "Count rows by state using the existing PostgreSQL table and application-owned connection pool.",
+      "files": {
+        "packages/referral-drizzle/src/libs/PostgresReferralStore.ts": "f6e90346259a8298eeccd2ef0ca9ab8b57ab0ba439a901067a9adda90fc0c7f8"
+      },
+      "catalogRuntimes": ["node", "lambda"],
+      "profiles": {
+        "kubernetes": {
+          "result": "unverified",
+          "reason": "The existing Node provider uses the same schema and connection boundary. The local PostgreSQL test does not exercise a Kubernetes deployment.",
+          "providers": ["@croco/referral-drizzle"],
+          "constraints": [
+            "Requires the existing referral schema and a Node PostgreSQL connection pool."
+          ],
+          "references": [
+            "packages/referral-drizzle/src/libs/PostgresReferralStore.ts",
+            "packages/referral-core/src/libs/ReferralStore.ts",
+            "packages/referral-drizzle/src/tests/PostgresReferralStore.postgres.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "conditional",
+          "reason": "The existing Node PostgreSQL provider can use the aggregate query from Lambda.",
+          "providers": ["@croco/referral-drizzle"],
+          "constraints": [
+            "Supply the existing referral schema and a bounded connection pool, and await the query before the invocation returns."
+          ],
+          "references": [
+            "packages/referral-drizzle/src/libs/PostgresReferralStore.ts",
+            "packages/referral-core/src/libs/ReferralStore.ts",
+            "packages/referral-drizzle/src/tests/PostgresReferralStore.postgres.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "unsupported",
+          "host": "workers",
+          "reason": "The provider has no catalog claim for the Worker isolate.",
+          "providers": ["@croco/referral-drizzle"],
+          "constraints": ["The provider requires its existing Node PostgreSQL executor."],
+          "references": [
+            "packages/referral-drizzle/src/libs/PostgresReferralStore.ts",
+            "packages/referral-core/src/libs/ReferralStore.ts",
+            "packages/referral-drizzle/src/tests/PostgresReferralStore.postgres.spec.ts"
+          ]
+        }
+      }
+    }
+  ]
+}

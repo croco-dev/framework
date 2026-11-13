@@ -7,6 +7,28 @@ title: "ReferralStore"
 
 ## Methods
 
+### countAttributionsByState()
+
+> **countAttributionsByState**(`programId`, `familyId?`): `Promise`\<`Partial`\<`Record`\<[`ReferralAttributionState`](/api/referral-core/src/type-aliases/referralattributionstate/), `number`\>\>\>
+
+Counts all attributions by state for the program and, when supplied, the family.
+
+#### Parameters
+
+##### programId
+
+`string`
+
+##### familyId?
+
+`string`
+
+#### Returns
+
+`Promise`\<`Partial`\<`Record`\<[`ReferralAttributionState`](/api/referral-core/src/type-aliases/referralattributionstate/), `number`\>\>\>
+
+---
+
 ### getAttribution()
 
 > **getAttribution**(`attributionId`): `Promise`\<[`ReferralAttribution`](/api/referral-core/src/type-aliases/referralattribution/) \| `null`\>
