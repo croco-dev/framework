@@ -34,6 +34,8 @@ Selected libraries publish a `croco.di-package-descriptor.v1` JSON descriptor ne
 
 The compiler rejects non-exported/default providers, interface/union/generic/primitive parameters without a token, computed tokens, unsupported property targets, missing or ambiguous providers, eager cycles, singleton-to-request captures, and private cross-module access with stable source locations. Provider inheritance is deliberately unsupported in the first compiler schema: an inherited provider fails compilation instead of silently dropping base constructor or property injection. It never substitutes `undefined` or falls back to runtime reflection.
 
+For a scanned provider with constructor overloads, the build reports an error at the overload declaration before generating a graph. Declare a single constructor with the injection decorators on its parameters.
+
 Bindings and module boundaries are build inputs, not runtime mutations. A binding names the exported token and an already discovered class provider. `multiple` preserves declaration order for `@InjectMany`; `override` replaces the original provider before graph validation. Module definitions assign token IDs to one owner and explicitly declare imports and exported tokens. The compiler rejects duplicate ownership, unknown providers or modules, and access to a provider that its owning module did not export.
 
 ```typescript typecheck

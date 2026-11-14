@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "esbuild-plugin",
+      "classification": "pure-contract",
+      "reason": "The DI compiler rejects overloaded provider constructors before emitting a graph that could omit dependencies declared on the constructor implementation.",
+      "files": {
+        "packages/esbuild-plugin/src/libs/DiCompiler.ts": "b12aa213f42452a70f488fa817fd5aebb2847fb154a4a48f1e56e323f447167d"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The TypeScript constructor check runs during graph generation and uses no deployed Node host capabilities.",
+          "providers": [],
+          "constraints": ["Build-time DI validation only."],
+          "references": [
+            "packages/esbuild-plugin/src/libs/DiCompiler.ts",
+            "packages/esbuild-plugin/src/tests/CrocoPlugin.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The check runs before graph emission and does not depend on Lambda invocation or initialization.",
+          "providers": [],
+          "constraints": ["Build-time DI validation only."],
+          "references": [
+            "packages/esbuild-plugin/src/libs/DiCompiler.ts",
+            "packages/esbuild-plugin/src/tests/CrocoPlugin.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The check runs in the TypeScript build process and uses no Workers or Node Container runtime bindings.",
+          "providers": [],
+          "constraints": ["Build-time DI validation only."],
+          "references": [
+            "packages/esbuild-plugin/src/libs/DiCompiler.ts",
+            "packages/esbuild-plugin/src/tests/CrocoPlugin.spec.ts"
+          ]
+        }
+      }
+    }
+  ]
+}

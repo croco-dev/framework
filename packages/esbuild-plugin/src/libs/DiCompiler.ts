@@ -1053,7 +1053,21 @@ function analyzeDependencies(input: {
     );
     return [];
   }
-  const constructor = input.classDeclaration.members.find(ts.isConstructorDeclaration);
+  const constructors = input.classDeclaration.members.filter(ts.isConstructorDeclaration);
+  const overload = constructors.find((declaration) => !declaration.body);
+  if (overload) {
+    input.diagnostics.push(
+      createDiagnostic(
+        overload,
+        input.sourceFile,
+        "CROCO_DI_COMPILE_002",
+        "Constructor overloads are not supported by the DI compiler. Declare a single constructor signature with its injection decorators.",
+        input.baseDir,
+      ),
+    );
+    return [];
+  }
+  const [constructor] = constructors;
   const dependencies: DependencyAnalysis[] = [];
   for (const [parameterIndex, parameter] of (constructor?.parameters ?? []).entries()) {
     const injection = getInjectionDecorator(parameter, input.checker);
