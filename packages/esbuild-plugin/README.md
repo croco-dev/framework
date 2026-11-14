@@ -133,6 +133,11 @@ compile error로 거절하므로, 주입 대상 provider에는 constructor와 in
 
 `compileDiGraph()`과 `writeDiGraph()`은 test/build tooling에서 같은 compiler를 직접 실행할 때 사용할 수 있습니다.
 
+선택한 TypeScript 설정의 구문, `extends`, compiler option을 해석하는 중 오류가 발생하면 그래프를 생성하기 전에
+`CROCO_DI_COMPILE_001`과 함께 원래 TypeScript 진단 코드와 설정 파일 위치를 표시합니다.
+DI 입력 파일은 `scan.dirs`로 찾으므로 TypeScript 설정의 `files` 목록이 비어 있거나 `include`에 맞는 파일이 없어도
+DI 스캔은 실행됩니다.
+
 ## 기존 registry 설정에서 이행
 
 `generateRegistry`는 지원하지 않습니다. 이 옵션을 전달하면 `enabled: false`이거나 browser build여도
