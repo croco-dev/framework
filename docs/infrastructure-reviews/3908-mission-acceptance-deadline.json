@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "gamification-core",
+      "classification": "pure-contract",
+      "reason": "MissionService uses the same acceptance deadline for admitting ordinary evidence and closing a period. The domain rule applies before the store writes receipts or completions.",
+      "files": {
+        "packages/gamification-core/src/libs/MissionService.ts": "6080acee667cb26103b71f719bba701ef1ecd4f95d7820b06c17245308024378"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The Kubernetes Node Host does not decide whether Mission evidence is within its acceptance window.",
+          "providers": [],
+          "constraints": [
+            "MissionService uses the existing server clock and pinned definition inside the existing store transaction. This change adds no host capability or storage requirement."
+          ],
+          "references": [
+            "packages/gamification-core/src/libs/MissionService.ts",
+            "packages/gamification-core/src/tests/MissionService.spec.ts",
+            "packages/gamification-drizzle/src/tests/DrizzleMissionStore.postgres.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The Lambda invocation lifecycle does not decide whether Mission evidence is within its acceptance window.",
+          "providers": [],
+          "constraints": [
+            "MissionService uses the existing server clock and pinned definition inside the existing store transaction. This change adds no host capability or storage requirement."
+          ],
+          "references": [
+            "packages/gamification-core/src/libs/MissionService.ts",
+            "packages/gamification-core/src/tests/MissionService.spec.ts",
+            "packages/gamification-drizzle/src/tests/DrizzleMissionStore.postgres.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The Workers and Node Container Hosts do not decide whether Mission evidence is within its acceptance window.",
+          "providers": [],
+          "constraints": [
+            "MissionService uses the existing server clock and pinned definition inside the existing store transaction. This change adds no host capability or storage requirement."
+          ],
+          "references": [
+            "packages/gamification-core/src/libs/MissionService.ts",
+            "packages/gamification-core/src/tests/MissionService.spec.ts",
+            "packages/gamification-drizzle/src/tests/DrizzleMissionStore.postgres.spec.ts"
+          ]
+        }
+      }
+    }
+  ]
+}

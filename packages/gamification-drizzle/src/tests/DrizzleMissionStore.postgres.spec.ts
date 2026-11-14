@@ -76,13 +76,24 @@ function worker(withOutbox = true) {
   }) as unknown as TransactionalEventStore<DrizzleMissionClient>;
   const outbox = new TransactionalOutbox({ store: eventStore, txManager });
   const store = new DrizzleMissionStore(db, txManager, withOutbox ? outbox : undefined);
+  let now = "2026-03-08T20:00:00Z";
   const service = new MissionService({
     store,
     authorization: { authorize: async () => true },
     verifier: { verify: async () => true },
-    clock: () => new Date("2026-03-08T20:00:00Z"),
+    clock: () => new Date(now),
   });
-  return { pool, db, txManager, store, service, eventStore };
+  return {
+    pool,
+    db,
+    txManager,
+    store,
+    service,
+    eventStore,
+    setNow: (instant = "2026-03-08T20:00:00Z") => {
+      now = instant;
+    },
+  };
 }
 
 describe.skipIf(!connectionString)("DrizzleMissionStore PostgreSQL", () => {
@@ -120,6 +131,8 @@ describe.skipIf(!connectionString)("DrizzleMissionStore PostgreSQL", () => {
     await addGamificationMissions(first.db);
   });
   beforeEach(async () => {
+    first.setNow();
+    second.setNow();
     await first.pool.query(
       "TRUNCATE gamification_completions, gamification_evidence, gamification_instances, gamification_definitions, croco_outbox_messages",
     );
@@ -133,6 +146,32 @@ describe.skipIf(!connectionString)("DrizzleMissionStore PostgreSQL", () => {
   });
   const ingest = (w: ReturnType<typeof worker>, id: string) =>
     w.service.ingestEvidence({ ...command, evidence: evidence(id) });
+
+  it.each(["close", "ingest"] as const)(
+    "does not persist a completion at the acceptance deadline with %s first",
+    async (firstOperation) => {
+      await ingest(first, "1");
+      await ingest(first, "2");
+      first.setNow("2026-03-09T05:00:00.000Z");
+      second.setNow("2026-03-09T05:00:00.000Z");
+
+      if (firstOperation === "close") await first.service.closePeriod(command);
+      await expect(ingest(second, "3")).rejects.toBeInstanceOf(MissionConflictProblem);
+      if (firstOperation === "ingest") await first.service.closePeriod(command);
+
+      const saved = await second.service.getProgress(command);
+      expect(saved.instance).toMatchObject({ state: "closed", progress: 2 });
+      expect(saved.instance.completion).toBeUndefined();
+      expect(
+        (await first.pool.query("SELECT event_id FROM gamification_evidence ORDER BY event_id"))
+          .rows,
+      ).toEqual([{ event_id: "1" }, { event_id: "2" }]);
+      expect((await first.pool.query("SELECT * FROM gamification_completions")).rows).toHaveLength(
+        0,
+      );
+      expect(await first.eventStore.listOutboxMessages()).toHaveLength(0);
+    },
+  );
 
   it("serializes simultaneous last evidence and persists exactly one completion", async () => {
     await ingest(first, "1");
