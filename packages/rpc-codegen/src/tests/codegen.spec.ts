@@ -10,16 +10,19 @@ import {
 import { CROCO_PROBLEM_CODE_REGISTRY, Problem, ProblemCategory } from "@croco/problems-core";
 import {
   CONTRACT_SCHEMA_JSON_UNSAFE_DIAGNOSTIC_CODE,
+  buildContractGraph,
   type ContractGraph,
   defineRouteSchema,
   type InferRouteSchemaRequest,
   type InferRouteSchemaResponse,
   type RouteIR,
 } from "@croco/protocols-core";
+import { Controller, Get } from "@croco/protocols-rest";
 import ts from "typescript";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { z } from "zod";
 import {
+  checkClientFilesFromContractGraph,
   checkGeneratedClientFiles,
   createFrontendActionManifestFromContractGraph,
   generateClientFiles,
@@ -282,7 +285,21 @@ describe("generateClientFiles", () => {
     () => {
       expect(ts.version).toBe("6.0.3");
       const options = { manifestBundlePath: "contracts" };
-      generateClientFiles([createBasicRoute()], tempDir, options);
+      @Controller("")
+      class UserController {
+        @Get("/users")
+        list() {}
+
+        @Get("/default")
+        default() {}
+
+        @Get("/localized")
+        조회() {}
+      }
+
+      const graph = buildContractGraph([UserController]);
+      expect(graph.diagnostics).toEqual([]);
+      generateClientFilesFromContractGraph(graph, tempDir, options);
       fs.writeFileSync(path.join(tempDir, "package.json"), '{"type":"module"}');
       fs.symlinkSync(
         path.resolve(__dirname, "../../node_modules"),
@@ -304,6 +321,8 @@ const config: RpcClientConfig = {
 const client: UserClient = createUserClient(config);
 console.log(JSON.stringify({
   result: await client.list(),
+  defaultResult: await client.default(),
+  localizedResult: await client.조회(),
   requests,
   namespaceFactory: typeof userRpc.createUserClient,
   manifestDirectory: crocoManifestBundleSource.directory,
@@ -332,11 +351,17 @@ console.log(JSON.stringify({
       });
       expect(JSON.parse(output)).toEqual({
         result: { users: ["Ada"] },
-        requests: ["https://example.test/users"],
+        defaultResult: { users: ["Ada"] },
+        localizedResult: { users: ["Ada"] },
+        requests: [
+          "https://example.test/users",
+          "https://example.test/default",
+          "https://example.test/localized",
+        ],
         namespaceFactory: "function",
         manifestDirectory: "contracts",
       });
-      expect(checkGeneratedClientFiles([createBasicRoute()], tempDir, options)).toEqual([]);
+      expect(checkClientFilesFromContractGraph(graph, tempDir, options)).toEqual([]);
     },
     GENERATED_CLIENT_TYPECHECK_TIMEOUT_MS,
   );
