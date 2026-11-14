@@ -27,6 +27,7 @@ import type {
   ReferralAuditEntry,
   ReferralBenefitIntent,
   ReferralBenefitIntentStatus,
+  ReferralFunnelCounts,
   ReferralLink,
   ReferralProgramDefinition,
   ReferralStore,
@@ -262,20 +263,32 @@ export class PostgresReferralStore implements ReferralStore {
     });
   }
 
-  async countAttributionsByState(
+  async countFunnelAttributions(
     programId: string,
     familyId?: string,
-  ): Promise<Partial<Record<ReferralAttributionState, number>>> {
-    return run("count referral attributions by state", async () => {
+  ): Promise<Pick<ReferralFunnelCounts, "claims" | "qualified" | "fulfilled">> {
+    const operation = "count referral funnel attributions";
+    return run(operation, async () => {
       const familyFilter = familyId === undefined ? sql`` : sql`AND family_id = ${familyId}`;
       const result = await this.database.execute(sql`
-        SELECT state, COUNT(*) AS total FROM croco_referral_attributions
-        WHERE program_id = ${programId} ${familyFilter}
-        GROUP BY state
+        SELECT COUNT(*) AS claims,
+               COUNT(*) FILTER (WHERE jsonb_typeof(document -> 'qualification') = 'object') AS qualified,
+               COUNT(*) FILTER (WHERE state = 'fulfilled') AS fulfilled
+        FROM croco_referral_attributions
+        WHERE program_id = ${programId} AND state <> 'held' ${familyFilter}
       `);
-      return Object.fromEntries(
-        result.rows.map((row) => [row.state as ReferralAttributionState, Number(row.total)]),
-      );
+      const [row] = result.rows;
+      if (!row) {
+        throw new ReferralPersistenceProblem(
+          operation,
+          new Error("referral funnel aggregate returned no row"),
+        );
+      }
+      return {
+        claims: Number(row.claims),
+        qualified: Number(row.qualified),
+        fulfilled: Number(row.fulfilled),
+      };
     });
   }
 

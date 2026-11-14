@@ -14,10 +14,10 @@ import type {
   ListBenefitIntentsFilter,
   ListReferralLinksFilter,
   ReferralAttribution,
-  ReferralAttributionState,
   ReferralAuditEntry,
   ReferralBenefitIntent,
   ReferralBenefitIntentStatus,
+  ReferralFunnelCounts,
   ReferralLink,
   ReferralProgramDefinition,
   ReferralSubject,
@@ -476,17 +476,22 @@ export class InMemoryReferralStore implements ReferralStore, ReferralTx {
     return count;
   }
 
-  async countAttributionsByState(
+  async countFunnelAttributions(
     programId: string,
     familyId?: string,
-  ): Promise<Partial<Record<ReferralAttributionState, number>>> {
-    const counts: Partial<Record<ReferralAttributionState, number>> = {};
+  ): Promise<Pick<ReferralFunnelCounts, "claims" | "qualified" | "fulfilled">> {
+    let claims = 0;
+    let qualified = 0;
+    let fulfilled = 0;
     for (const attribution of this.state.attributions.values()) {
       if (attribution.programId !== programId) continue;
       if (familyId !== undefined && attribution.familyId !== familyId) continue;
-      counts[attribution.state] = (counts[attribution.state] ?? 0) + 1;
+      if (attribution.state === "held") continue;
+      claims += 1;
+      if (attribution.qualification !== undefined) qualified += 1;
+      if (attribution.state === "fulfilled") fulfilled += 1;
     }
-    return counts;
+    return { claims, qualified, fulfilled };
   }
 
   async listAttributions(filter: ListAttributionsFilter): Promise<readonly ReferralAttribution[]> {

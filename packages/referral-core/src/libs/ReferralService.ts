@@ -761,20 +761,11 @@ export class ReferralService {
     readonly programId: string;
     readonly familyId?: string;
   }): Promise<ReferralFunnelCounts> {
-    const counts = await this.store.countAttributionsByState(input.programId, input.familyId);
+    const { claims, qualified, fulfilled } = await this.store.countFunnelAttributions(
+      input.programId,
+      input.familyId,
+    );
     const clicks = await this.clicksForProgram(input.programId);
-    const fulfilled = counts.fulfilled ?? 0;
-    const qualified =
-      (counts.qualified ?? 0) +
-      (counts["benefits-pending"] ?? 0) +
-      (counts["benefits-partial"] ?? 0) +
-      fulfilled;
-    const claims =
-      (counts.claimed ?? 0) +
-      (counts.rejected ?? 0) +
-      (counts.expired ?? 0) +
-      (counts.indeterminate ?? 0) +
-      qualified;
     return {
       clicks,
       claims,

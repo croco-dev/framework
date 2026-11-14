@@ -155,11 +155,79 @@ async function seed(
 
 describe.skipIf(!url)("PostgreSQL referral budgets and attribution recovery", () => {
   it.each(["in-memory", "postgres"] as const)(
+    "keeps confirmed funnel stages during payout recovery on the %s store",
+    async (provider) => {
+      await withStores(async (_pool, postgres) => {
+        const store = provider === "postgres" ? postgres : new InMemoryReferralStore();
+        let receiptAvailable = false;
+        const service = serviceFor(
+          store,
+          () => ({
+            qualified: true,
+            sourceEventId: "first-purchase",
+            qualifyingAction: "purchase",
+            eligibleReason: "confirmed purchase",
+          }),
+          {
+            ...fulfillmentOk(),
+            fulfill: async ({ intent }) =>
+              intent.side === "referrer"
+                ? { outcome: "unknown", reason: "response lost" }
+                : { outcome: "granted", grantRef: "recipient-grant" },
+            check: async ({ intent }) =>
+              receiptAvailable && intent.side === "referrer"
+                ? { grantRef: "referrer-grant" }
+                : null,
+          },
+        );
+        const { programId, token } = await seed(service);
+        const recipient = subject("confirmed");
+        const { attribution } = await service.claimAttribution({ token, recipient });
+        const attributionId = attribution.id;
+        const qualified = await service.qualifyAttribution({ attributionId, recipient });
+
+        for (const state of ["held", "indeterminate"] as const) {
+          await store.transact((tx) =>
+            tx.saveAttribution(
+              {
+                ...attribution,
+                id: `legacy-${state}`,
+                recipient: subject(`legacy-${state}`),
+                state,
+              },
+              `legacy-${state}`,
+            ),
+          );
+        }
+        const input = { programId, familyId: attribution.familyId };
+        const expected = { clicks: 0, claims: 2, signups: 1, qualified: 1, fulfilled: 0 };
+        await expect(service.funnelCounts(input)).resolves.toEqual(expected);
+
+        const uncertain = await service.fulfillBenefits({ attributionId });
+        expect(uncertain.state).toBe("indeterminate");
+        expect(uncertain.qualification).toEqual(qualified.qualification);
+        await expect(service.funnelCounts(input)).resolves.toEqual(expected);
+
+        receiptAvailable = true;
+        const recovered = await service.reconcileBenefits({ attributionId });
+        expect(recovered.state).toBe("fulfilled");
+        expect(recovered.qualification).toEqual(qualified.qualification);
+        await expect(service.funnelCounts(input)).resolves.toEqual({ ...expected, fulfilled: 1 });
+      });
+    },
+  );
+
+  it.each(["in-memory", "postgres"] as const)(
     "counts the entire scoped funnel on the %s store",
     async (provider) => {
       await withStores(async (_pool, postgres) => {
         const store = provider === "postgres" ? postgres : new InMemoryReferralStore();
-        const service = serviceFor(store);
+        const service = serviceFor(store, () => ({
+          qualified: true,
+          sourceEventId: "bulk-fixture-purchase",
+          qualifyingAction: "purchase",
+          eligibleReason: "confirmed purchase",
+        }));
         const { programId, token } = await seed(service);
         const { attribution } = await service.claimAttribution({
           token,
@@ -172,6 +240,10 @@ describe.skipIf(!url)("PostgreSQL referral budgets and attribution recovery", ()
           familyId: "another-family",
         });
         const otherProgram = await seed(service, 10, { familyId: attribution.familyId });
+        const { qualification } = await service.qualifyAttribution({
+          attributionId: attribution.id,
+          recipient: subject("first"),
+        });
         const excluded = await Promise.all(
           [otherFamily, otherProgram].map(async (entry, index) => {
             const { attribution: outside } = await service.claimAttribution({
@@ -183,43 +255,54 @@ describe.skipIf(!url)("PostgreSQL referral budgets and attribution recovery", ()
           }),
         );
         const stateCounts = [
-          ["held", 1],
-          ["rejected", 1],
-          ["expired", 1],
-          ["indeterminate", 1],
-          ["qualified", 2],
-          ["benefits-pending", 3],
-          ["benefits-partial", 4],
-          ["fulfilled", 5],
+          ["held", 1, false],
+          ["rejected", 1, true],
+          ["expired", 1, false],
+          ["indeterminate", 1, true],
+          ["qualified", 2, true],
+          ["benefits-pending", 3, true],
+          ["benefits-partial", 4, true],
+          ["fulfilled", 4, true],
+          ["fulfilled", 1, false],
         ] as const;
         await store.transact(async (tx) => {
           for (let index = 1; index < 1000; index += 1) {
             const id = `earlier-${index}`;
             await tx.saveAttribution({ ...attribution, id, recipient: subject(id) }, id);
           }
-          for (const [state, count] of stateCounts) {
+          for (const [state, count, hasQualification] of stateCounts) {
             for (let index = 0; index < count; index += 1) {
-              const id = `later-${state}-${index}`;
-              await tx.saveAttribution({ ...attribution, id, recipient: subject(id), state }, id);
+              const id = `later-${state}-${hasQualification}-${index}`;
+              await tx.saveAttribution(
+                {
+                  ...attribution,
+                  id,
+                  recipient: subject(id),
+                  state,
+                  qualification: hasQualification ? qualification : undefined,
+                },
+                id,
+              );
             }
           }
           for (const outside of excluded) {
             await tx.compareAndSetAttribution(outside.id, ["claimed"], {
               ...outside,
               state: "fulfilled",
+              qualification,
             });
           }
         });
 
-        const scoped = { clicks: 2, claims: 1017, signups: 14, qualified: 14, fulfilled: 5 };
+        const scoped = { clicks: 2, claims: 1017, signups: 16, qualified: 16, fulfilled: 5 };
         await expect(
           service.funnelCounts({ programId, familyId: attribution.familyId }),
         ).resolves.toEqual(scoped);
         await expect(service.funnelCounts({ programId })).resolves.toEqual({
           clicks: 2,
           claims: 1018,
-          signups: 15,
-          qualified: 15,
+          signups: 17,
+          qualified: 17,
           fulfilled: 6,
         });
         await expect(service.funnelCounts({ programId, familyId: "missing" })).resolves.toEqual({

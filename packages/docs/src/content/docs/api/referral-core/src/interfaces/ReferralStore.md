@@ -7,11 +7,11 @@ title: "ReferralStore"
 
 ## Methods
 
-### countAttributionsByState()
+### countFunnelAttributions()
 
-> **countAttributionsByState**(`programId`, `familyId?`): `Promise`\<`Partial`\<`Record`\<[`ReferralAttributionState`](/api/referral-core/src/type-aliases/referralattributionstate/), `number`\>\>\>
+> **countFunnelAttributions**(`programId`, `familyId?`): `Promise`\<`Pick`\<[`ReferralFunnelCounts`](/api/referral-core/src/type-aliases/referralfunnelcounts/), `"qualified"` \| `"fulfilled"` \| `"claims"`\>\>
 
-Counts all attributions by state for the program and, when supplied, the family.
+Counts all matching claims, stored qualifications, and fulfilled states in one read. Held rows are excluded.
 
 #### Parameters
 
@@ -25,7 +25,7 @@ Counts all attributions by state for the program and, when supplied, the family.
 
 #### Returns
 
-`Promise`\<`Partial`\<`Record`\<[`ReferralAttributionState`](/api/referral-core/src/type-aliases/referralattributionstate/), `number`\>\>\>
+`Promise`\<`Pick`\<[`ReferralFunnelCounts`](/api/referral-core/src/type-aliases/referralfunnelcounts/), `"qualified"` \| `"fulfilled"` \| `"claims"`\>\>
 
 ---
 

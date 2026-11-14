@@ -1,0 +1,150 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "referral-core",
+      "classification": "pure-contract",
+      "reason": "Report stored qualification independently of payout state while keeping complete claim and fulfillment totals.",
+      "files": {
+        "packages/referral-core/src/libs/InMemoryReferralStore.ts": "effd7d2f2f173225b10dfcb3a131ce18e3cc5b6cfbc49bf65fd3912dd31cfa8d",
+        "packages/referral-core/src/libs/ReferralService.ts": "0490a66c8460b1f78ecff2988810a199b4137317c94c4b28cb7d07df0f038f95",
+        "packages/referral-core/src/libs/ReferralStore.ts": "b959fbe2eeda5b6c20fe86e69fc5f1610e28391cdaf5044292e2ae0176ced3bb"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The service uses store totals and requires no host APIs, connections, or lifecycle hooks.",
+          "providers": ["ReferralStore", "InMemoryReferralStore"],
+          "constraints": [
+            "The store counts matching claims, stored qualifications, and fulfilled states in one read."
+          ],
+          "references": [
+            "packages/referral-core/src/libs/InMemoryReferralStore.ts",
+            "packages/referral-core/src/libs/ReferralService.ts",
+            "packages/referral-core/src/libs/ReferralStore.ts",
+            "packages/referral-drizzle/src/tests/PostgresReferralStore.postgres.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The service uses store totals and requires no host APIs, connections, or lifecycle hooks.",
+          "providers": ["ReferralStore", "InMemoryReferralStore"],
+          "constraints": [
+            "The store counts matching claims, stored qualifications, and fulfilled states in one read."
+          ],
+          "references": [
+            "packages/referral-core/src/libs/InMemoryReferralStore.ts",
+            "packages/referral-core/src/libs/ReferralService.ts",
+            "packages/referral-core/src/libs/ReferralStore.ts",
+            "packages/referral-drizzle/src/tests/PostgresReferralStore.postgres.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The service uses store totals and requires no host APIs, connections, or lifecycle hooks.",
+          "providers": ["ReferralStore", "InMemoryReferralStore"],
+          "constraints": [
+            "The store counts matching claims, stored qualifications, and fulfilled states in one read."
+          ],
+          "references": [
+            "packages/referral-core/src/libs/InMemoryReferralStore.ts",
+            "packages/referral-core/src/libs/ReferralService.ts",
+            "packages/referral-core/src/libs/ReferralStore.ts",
+            "packages/referral-drizzle/src/tests/PostgresReferralStore.postgres.spec.ts"
+          ]
+        }
+      }
+    },
+    {
+      "package": "referral-drizzle",
+      "classification": "durable-provider",
+      "reason": "Read complete funnel totals from the existing attribution JSON document and state in a single PostgreSQL statement.",
+      "files": {
+        "packages/referral-drizzle/src/libs/PostgresReferralStore.ts": "88bc22ff51a823cc724926fabc2cc9d77cf7ba91a4de4b99dea73b7b1c4bd6e6"
+      },
+      "catalogRuntimes": ["node", "lambda"],
+      "profiles": {
+        "kubernetes": {
+          "result": "unverified",
+          "reason": "The Node provider uses its existing schema and connection boundary. Local PostgreSQL conformance covers the query.",
+          "providers": ["@croco/referral-drizzle"],
+          "constraints": [
+            "Requires the existing referral schema and a Node PostgreSQL connection pool."
+          ],
+          "references": [
+            "packages/referral-drizzle/src/libs/PostgresReferralStore.ts",
+            "packages/referral-core/src/libs/ReferralStore.ts",
+            "packages/referral-drizzle/src/tests/PostgresReferralStore.postgres.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "conditional",
+          "reason": "The aggregate uses the existing Lambda-compatible PostgreSQL provider and adds no connection or lifecycle requirements.",
+          "providers": ["@croco/referral-drizzle"],
+          "constraints": [
+            "Supply the existing referral schema and a bounded connection pool, and await the query before the invocation returns."
+          ],
+          "references": [
+            "packages/referral-drizzle/src/libs/PostgresReferralStore.ts",
+            "packages/referral-core/src/libs/ReferralStore.ts",
+            "packages/referral-drizzle/src/tests/PostgresReferralStore.postgres.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "unsupported",
+          "host": "workers",
+          "reason": "The provider has no catalog claim for the Worker isolate.",
+          "providers": ["@croco/referral-drizzle"],
+          "constraints": ["The provider requires its existing Node PostgreSQL executor."],
+          "references": [
+            "packages/referral-drizzle/src/libs/PostgresReferralStore.ts",
+            "packages/referral-core/src/libs/ReferralStore.ts",
+            "packages/referral-drizzle/src/tests/PostgresReferralStore.postgres.spec.ts"
+          ]
+        }
+      }
+    },
+    {
+      "package": "problems-core",
+      "classification": "pure-contract",
+      "reason": "Regenerate the existing referral persistence Problem source location.",
+      "files": {
+        "packages/problems-core/src/generated/problem-code-registry.ts": "40cad699bad93164809bb645d9f6421b26055e9c4d58056e2b43f9cf362df533"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The generated source location has no host capabilities, storage, or lifecycle requirements.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "docs/problem-code-registry.json"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The generated source location has no host capabilities, storage, or lifecycle requirements.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "docs/problem-code-registry.json"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The generated source location has no host capabilities, storage, or lifecycle requirements.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "docs/problem-code-registry.json"
+          ]
+        }
+      }
+    }
+  ]
+}
