@@ -346,6 +346,13 @@ export class QStashScheduler {
     const map = new Map<string, CronTriggerMetadata>();
 
     for (const trigger of triggers) {
+      if (typeof trigger.methodName === "symbol") {
+        throw ProblemFactory.badRequest(
+          "triggers-qstash/unsupported-cron-method-key",
+          `QStash cron ${trigger.target.constructor.name}.${String(trigger.methodName)} requires a string method key.`,
+        );
+      }
+
       const scheduleId = this.generateScheduleId(trigger);
 
       if (map.has(scheduleId)) {
