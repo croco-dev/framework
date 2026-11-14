@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export type CrocoProblemRegistry = {
   readonly version: "croco.problem-code-registry.v1";
-  readonly problemCount: 1184;
+  readonly problemCount: 1185;
   readonly problems: readonly [
     {
       readonly code: "ACCESS_DENIED";
@@ -31495,7 +31495,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/triggers-qstash/src/libs/QStashScheduler.ts";
-          readonly line: 352;
+          readonly line: 359;
           readonly column: 15;
           readonly kind: "problem-factory";
         },
@@ -31579,7 +31579,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/triggers-qstash/src/libs/QStashScheduler.ts";
-          readonly line: 621;
+          readonly line: 628;
           readonly column: 9;
           readonly kind: "problem-factory";
         },
@@ -31609,6 +31609,34 @@ export type CrocoProblemRegistry = {
           readonly file: "packages/triggers-qstash/src/libs/QStashTriggerHandler.ts";
           readonly line: 258;
           readonly column: 13;
+          readonly kind: "problem-factory";
+        },
+      ];
+    },
+    {
+      readonly code: "triggers-qstash/unsupported-cron-method-key";
+      readonly category: "BadRequest";
+      readonly status: 400;
+      readonly title: "Bad Request";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#triggers-qstash-unsupported-cron-method-key";
+      readonly recovery: {
+        readonly cause: "The caller sent malformed input or unsupported request options.";
+        readonly userAction: "Correct the request input and retry after validation passes.";
+        readonly operatorAction: "Inspect validation details and request logs; do not retry unchanged input.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/triggers-qstash/src/libs/QStashScheduler.ts";
+          readonly line: 350;
+          readonly column: 15;
           readonly kind: "problem-factory";
         },
       ];
@@ -33466,7 +33494,7 @@ export type CrocoProblemRegistry = {
 
 export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 1184,
+  problemCount: 1185,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -68719,7 +68747,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/triggers-qstash/src/libs/QStashScheduler.ts",
-          line: 352,
+          line: 359,
           column: 15,
           kind: "problem-factory",
         },
@@ -68814,7 +68842,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/triggers-qstash/src/libs/QStashScheduler.ts",
-          line: 621,
+          line: 628,
           column: 9,
           kind: "problem-factory",
         },
@@ -68849,6 +68877,38 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
           file: "packages/triggers-qstash/src/libs/QStashTriggerHandler.ts",
           line: 258,
           column: 13,
+          kind: "problem-factory",
+        },
+      ],
+    },
+    {
+      code: "triggers-qstash/unsupported-cron-method-key",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#triggers-qstash-unsupported-cron-method-key",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/triggers-qstash/src/libs/QStashScheduler.ts",
+          line: 350,
+          column: 15,
           kind: "problem-factory",
         },
       ],

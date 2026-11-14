@@ -1,6 +1,7 @@
 import { MetadataStorage } from "@croco/framework-context";
+import { Problem } from "@croco/problems-core";
 import type { CronTriggerMetadata } from "@croco/triggers-core";
-import { triggerRegistry } from "@croco/triggers-core";
+import { Cron, triggerRegistry } from "@croco/triggers-core";
 import type { Client } from "@upstash/qstash";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { QStashScheduler } from "../libs/QStashScheduler";
@@ -25,6 +26,47 @@ describe("QStashScheduler", () => {
     MetadataStorage.clear();
     vi.restoreAllMocks();
   });
+
+  it.each(["dry-run", "apply", "apply-with-orphan-cleanup"] as const)(
+    "rejects a symbol cron method before contacting QStash in %s",
+    async (mode) => {
+      const nightly = Symbol("nightly");
+      class ScheduledJobs {
+        @Cron("*/5 * * * *")
+        async run(): Promise<void> {}
+
+        @Cron("0 3 * * *", { name: "billing:nightly" })
+        async [nightly](): Promise<void> {}
+      }
+
+      expect(triggerRegistry.getTriggers(ScheduledJobs.prototype).has(nightly)).toBe(true);
+
+      const list = vi
+        .fn()
+        .mockResolvedValue([
+          ownedSchedule("croco-trigger:ScheduledJobs:billing:nightly:Symbol(nightly)", "0 2 * * *"),
+          ownedSchedule("croco-trigger:OldJob:run:run", "* * * * *"),
+        ]);
+      const create = vi.fn().mockResolvedValue({});
+      const deleteSchedule = vi.fn().mockResolvedValue(undefined);
+      const scheduler = new QStashScheduler({
+        client: { schedules: { list, create, delete: deleteSchedule } } as unknown as Client,
+        webhookUrl: "https://api.example.com/webhooks/qstash",
+      });
+
+      const outcome = await scheduler.sync({ mode }).catch((error: unknown) => error);
+
+      expect(outcome).toBeInstanceOf(Problem);
+      expect(outcome).toMatchObject({
+        code: "triggers-qstash/unsupported-cron-method-key",
+        status: 400,
+        detail: expect.stringContaining("ScheduledJobs.Symbol(nightly)"),
+      });
+      expect(list).not.toHaveBeenCalled();
+      expect(create).not.toHaveBeenCalled();
+      expect(deleteSchedule).not.toHaveBeenCalled();
+    },
+  );
 
   it("목록 조회 실패 시 동기화를 중단하고 create/delete를 호출하지 않아야 한다", async () => {
     class ListFailureJob {

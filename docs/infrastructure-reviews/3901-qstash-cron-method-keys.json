@@ -1,0 +1,96 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "triggers-qstash",
+      "classification": "pure-contract",
+      "reason": "Reject symbol-keyed cron methods before QStash schedule discovery in all sync modes.",
+      "files": {
+        "packages/triggers-qstash/src/libs/QStashScheduler.ts": "4a2baf7ca6324297709ccebab463745b574b33cd28f14011330178ce4f52b4e6"
+      },
+      "catalogRuntimes": ["node", "lambda"],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The scheduler validates the JavaScript method key before any provider calls. The check requires no Node host capability, storage or lifecycle behavior.",
+          "providers": ["@croco/triggers-qstash/QStashScheduler"],
+          "constraints": [
+            "Provider interactions use test doubles. No live QStash or deployed host verification was performed."
+          ],
+          "references": [
+            "packages/triggers-qstash/src/libs/QStashScheduler.ts",
+            "packages/triggers-qstash/src/tests/QStashScheduler.spec.ts",
+            "packages/triggers-qstash/README.md"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The same preflight check runs before any provider calls. It requires no Lambda invocation or storage behavior.",
+          "providers": ["@croco/triggers-qstash/QStashScheduler"],
+          "constraints": [
+            "Provider interactions use test doubles. No live QStash or deployed host verification was performed."
+          ],
+          "references": [
+            "packages/triggers-qstash/src/libs/QStashScheduler.ts",
+            "packages/triggers-qstash/src/tests/QStashScheduler.spec.ts",
+            "packages/triggers-qstash/README.md"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The check uses only local JavaScript metadata. It adds no Workers or Node Container integration.",
+          "providers": ["@croco/triggers-qstash/QStashScheduler"],
+          "constraints": [
+            "Provider interactions use test doubles. No live QStash or deployed host verification was performed."
+          ],
+          "references": [
+            "packages/triggers-qstash/src/libs/QStashScheduler.ts",
+            "packages/triggers-qstash/src/tests/QStashScheduler.spec.ts",
+            "packages/triggers-qstash/README.md"
+          ]
+        }
+      }
+    },
+    {
+      "package": "problems-core",
+      "classification": "pure-contract",
+      "reason": "Register the QStash configuration Problem and refresh the source locations of existing scheduler Problems.",
+      "files": {
+        "packages/problems-core/src/generated/problem-code-registry.ts": "ce548ba64bd7b070a63e15cc1202126c1b61f9a02452e9f85ddac4a9b39d1c10"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Generated Problem metadata requires no host capability, storage or lifecycle behavior.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "scripts/problem-registry.mts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Generated Problem metadata requires no host capability, storage or lifecycle behavior.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "scripts/problem-registry.mts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Generated Problem metadata requires no host capability, storage or lifecycle behavior.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "scripts/problem-registry.mts"
+          ]
+        }
+      }
+    }
+  ]
+}

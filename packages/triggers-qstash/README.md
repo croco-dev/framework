@@ -86,6 +86,12 @@ and an `AbortSignal`. Existing zero-argument targets remain valid because JavaSc
 
 ## Failure Modes
 
+- QStash cron methods require string keys. Every sync mode rejects symbol-keyed cron declarations,
+  including disabled ones, with `triggers-qstash/unsupported-cron-method-key` before contacting
+  QStash. Rename or remove the symbol-keyed declaration. If it already has a remote schedule,
+  preview orphan deletions with `dry-run` and review the listed IDs before using
+  `apply-with-orphan-cleanup`. Reconcile malformed IDs or schedules without the expected ownership
+  label in QStash.
 - Schedule discovery uses the exact `${schedulePrefix}:` namespace. Adjacent prefixes such as
   `app-prod` are never owned by a scheduler configured with `app`.
 - New schedules carry a versioned QStash ownership label. Discovery accepts the current plural
