@@ -26,7 +26,11 @@ import type { RouteMetadata } from "@croco/protocols-rest";
 import ts from "typescript";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
-import { generateClientFiles, generateClientFilesFromContractGraph } from "../libs/generate";
+import {
+  checkClientFilesFromContractGraph,
+  generateClientFiles,
+  generateClientFilesFromContractGraph,
+} from "../libs/generate";
 import { restFormIssueCases } from "../../../../test-fixtures/restFormIssueCases";
 
 let outDir: string;
@@ -162,6 +166,44 @@ describe("rpc-codegen round trip", () => {
     fs.rmSync(outDir, { recursive: true, force: true });
     fs.rmSync(moduleDir, { recursive: true, force: true });
   });
+
+  it.each(["get-user", "2fa", "_2fa", "__proto__"])(
+    "rejects unsafe RPC method name %s before replacing a generated client",
+    (methodName) => {
+      @Controller("/users")
+      class UserController {
+        @Get("/profile")
+        getProfile() {}
+      }
+
+      @Controller("/users")
+      class QuotedController {
+        @Get("/profile")
+        [methodName]() {}
+      }
+
+      generateClientFilesFromContractGraph(buildContractGraph([UserController]), outDir);
+      const readOutputs = () =>
+        fs.readdirSync(outDir).map((file) => [file, fs.readFileSync(path.join(outDir, file))]);
+      const previousOutputs = readOutputs();
+
+      const graph = buildContractGraph([QuotedController]);
+      expect(graph.diagnostics).toEqual([]);
+      expect(graph.routes).toHaveLength(1);
+      for (const action of [
+        generateClientFilesFromContractGraph,
+        checkClientFilesFromContractGraph,
+      ]) {
+        expect(() => action(graph, outDir)).toThrow(
+          expect.objectContaining({
+            code: "rpc-codegen/invalid-contract",
+            detail: expect.stringContaining(`QuotedController.${methodName} (/users/profile)`),
+          }),
+        );
+        expect(readOutputs()).toEqual(previousOutputs);
+      }
+    },
+  );
 
   it.each([
     z.object({ term: z.string() }),
