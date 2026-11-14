@@ -15,7 +15,7 @@
           "reason": "The Kubernetes Node Host does not decide whether Mission evidence is within its acceptance window.",
           "providers": [],
           "constraints": [
-            "MissionService uses the existing server clock and pinned definition inside the existing store transaction. This change adds no host capability or storage requirement."
+            "MissionService compares the server acceptance timestamp sampled before verification with the pinned definition during the existing store transaction. This change adds no host capability or storage requirement."
           ],
           "references": [
             "packages/gamification-core/src/libs/MissionService.ts",
@@ -28,7 +28,7 @@
           "reason": "The Lambda invocation lifecycle does not decide whether Mission evidence is within its acceptance window.",
           "providers": [],
           "constraints": [
-            "MissionService uses the existing server clock and pinned definition inside the existing store transaction. This change adds no host capability or storage requirement."
+            "MissionService compares the server acceptance timestamp sampled before verification with the pinned definition during the existing store transaction. This change adds no host capability or storage requirement."
           ],
           "references": [
             "packages/gamification-core/src/libs/MissionService.ts",
@@ -41,7 +41,7 @@
           "reason": "The Workers and Node Container Hosts do not decide whether Mission evidence is within its acceptance window.",
           "providers": [],
           "constraints": [
-            "MissionService uses the existing server clock and pinned definition inside the existing store transaction. This change adds no host capability or storage requirement."
+            "MissionService compares the server acceptance timestamp sampled before verification with the pinned definition during the existing store transaction. This change adds no host capability or storage requirement."
           ],
           "references": [
             "packages/gamification-core/src/libs/MissionService.ts",
