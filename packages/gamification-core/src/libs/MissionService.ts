@@ -25,6 +25,15 @@ import type {
   MissionServiceOptions,
 } from "./types";
 
+function isAcceptanceOpen(
+  instant: string,
+  endDate: string,
+  definition: MissionDefinition,
+): boolean {
+  const deadline = missionDateStart(endDate, definition.timezone) + definition.lateAcceptanceMs;
+  return missionInstant(instant) < deadline;
+}
+
 export class MissionService {
   constructor(private readonly options: MissionServiceOptions) {}
   private now(): string {
@@ -228,11 +237,10 @@ export class MissionService {
       }
       if (missionPeriod(pinned, activityDate).periodKey !== command.key.periodKey)
         throw new MissionInvalidProblem("Evidence belongs to another period");
-      const end = missionDateStart(instance.endDate, pinned.timezone);
       const closed = instance.state === "closed";
       if (closed && (!evidence.reversalOf || pinned.closedCorrection === "reject"))
         throw new MissionConflictProblem("Period is closed");
-      if (!evidence.reversalOf && missionInstant(acceptedAt) > end + pinned.lateAcceptanceMs)
+      if (!evidence.reversalOf && !isAcceptanceOpen(acceptedAt, instance.endDate, pinned))
         throw new MissionConflictProblem("Evidence acceptance deadline passed");
       const receipt = {
         ...evidence,
@@ -308,11 +316,7 @@ export class MissionService {
       const aggregate = current ?? this.aggregate(command, definition);
       const instance = aggregate.instances[command.key.periodKey];
       if (!instance) throw new MissionInvalidProblem("Missing aggregate period");
-      if (
-        missionInstant(now) <
-        missionDateStart(instance.endDate, aggregate.definition.timezone) +
-          aggregate.definition.lateAcceptanceMs
-      )
+      if (isAcceptanceOpen(now, instance.endDate, aggregate.definition))
         throw new MissionConflictProblem("Acceptance window is still open");
       instance.closedAt ??= now;
       instance.state = "closed";

@@ -310,6 +310,35 @@ describe("MissionService", () => {
     expect(corrected.progress.instance.progress).toBe(0);
     expect(corrected.progress.instance.state).toBe("closed");
   });
+  it.each([
+    [0, "2026-03-09T03:59:59.999Z", "2026-03-09T04:00:00.000Z"],
+    [3600000, "2026-03-09T04:59:59.999Z", "2026-03-09T05:00:00.000Z"],
+  ])(
+    "uses an exclusive acceptance deadline with %i ms of lateness across DST",
+    async (lateAcceptanceMs, before, deadline) => {
+      const { service, setNow } = await fixture({ lateAcceptanceMs, target: 2 });
+      const original = evidence("before-deadline");
+      setNow(before);
+      await expect(service.closePeriod(command)).rejects.toBeInstanceOf(MissionConflictProblem);
+      const accepted = await service.ingestEvidence({ ...command, evidence: original });
+      expect(accepted.progress.instance.progress).toBe(1);
+
+      setNow(deadline);
+      await expect(
+        service.ingestEvidence({ ...command, evidence: evidence("at-deadline") }),
+      ).rejects.toBeInstanceOf(MissionConflictProblem);
+      const closed = await service.closePeriod(command);
+      expect(closed.instance).toMatchObject({ state: "closed", progress: 1 });
+      expect(closed.instance.completion).toBeUndefined();
+      await expect(
+        service.ingestEvidence({ ...command, evidence: original }),
+      ).resolves.toMatchObject({
+        duplicate: true,
+        receipt: accepted.receipt,
+        completionCreated: false,
+      });
+    },
+  );
   it.each(["reject", "record-only"] as const)(
     "applies explicit %s closed correction policy",
     async (policy) => {
