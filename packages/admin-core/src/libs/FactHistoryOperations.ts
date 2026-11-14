@@ -1,4 +1,8 @@
-import { canonicalFactValue, FactHistoryProblem } from "@croco/analytics-core";
+import {
+  canonicalFactValue,
+  compareFactHistoryTimestamps,
+  FactHistoryProblem,
+} from "@croco/analytics-core";
 import type { FactHistoryService } from "@croco/analytics-core";
 import {
   FactHistoryInputProblem,
@@ -19,6 +23,10 @@ export function createFactHistoryOperations(
   return {
     async compare(request) {
       validateFactHistoryComparison(request);
+      const latestKnownAt =
+        compareFactHistoryTimestamps(request.knownAt, request.compareKnownAt) >= 0
+          ? request.knownAt
+          : request.compareKnownAt;
       try {
         const revision = await service.getRevision(request);
         const [before, after, rows] = await Promise.all([
@@ -30,9 +38,7 @@ export function createFactHistoryOperations(
           }),
           service.readHistory({
             ...request,
-            knownAt: new Date(
-              Math.max(Date.parse(request.knownAt), Date.parse(request.compareKnownAt)),
-            ).toISOString(),
+            knownAt: latestKnownAt,
             limit: 1000,
           }),
         ]);

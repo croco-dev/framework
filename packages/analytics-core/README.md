@@ -229,7 +229,10 @@ const result = await facts.readFactsAt({
 ```
 
 `effectiveAt` selects the half-open `[validFrom, validTo)` interval. `knownAt`
-excludes rows received later, using the service-assigned `recordedAt`. Omitted
+excludes rows received later, using the service-assigned `recordedAt`. Fact timestamps require
+a timezone (`Z` or `±HH:MM`). Effective-time comparisons preserve fractional seconds from
+the stored projection. `knownAt` accepts up to six fractional-second digits to match PostgreSQL
+receipt precision. Greater cutoff precision fails with `analytics/fact-history/invalid-input`. Omitted
 `knownAt` is frozen once per query. Missing history returns `unknown`; incompatible
 active values return `conflict` unless an explicit correction or configured source
 priority resolves them. Storage and authorization errors propagate. The service

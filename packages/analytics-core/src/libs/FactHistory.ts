@@ -177,15 +177,56 @@ function requireText(value: unknown, name: string): asserts value is string {
   if (typeof value !== "string" || value.trim().length === 0)
     throw new FactHistoryProblem("invalid-input", `${name} is required`);
 }
-function timestamp(value: string): number {
-  if (
-    typeof value !== "string" ||
-    !/(Z|[+-]\d{2}:\d{2})$/.test(value) ||
-    !Number.isFinite(Date.parse(value))
-  ) {
+type FactTimestamp = { readonly milliseconds: number; readonly subMillisecond: string };
+
+function withoutTimestampComments(value: string): string {
+  if (!value.includes("(")) return value;
+  let depth = 0;
+  let timestamp = "";
+  for (const part of value.split(/([()])/)) {
+    if (part === "(") {
+      if (depth === 0) timestamp += " ";
+      depth++;
+    } else if (part === ")") {
+      depth--;
+    } else if (depth === 0) {
+      timestamp += part;
+    }
+  }
+  return timestamp;
+}
+
+function parseTimestamp(
+  value: string,
+  precision: "exact" | "microseconds" = "exact",
+): FactTimestamp {
+  const milliseconds = typeof value === "string" ? Date.parse(value) : NaN;
+  if (!Number.isFinite(milliseconds) || !/(Z|[+-]\d{2}:\d{2})$/.test(value)) {
     throw new FactHistoryProblem("invalid-input", "Fact timestamps must include a valid timezone");
   }
-  return Date.parse(value);
+  const time = withoutTimestampComments(value);
+  const fraction = /:\s*\d+\.(\d+)/.exec(time)?.[1] ?? "";
+  if (precision === "microseconds" && fraction.length > 6) {
+    throw new FactHistoryProblem(
+      "invalid-input",
+      "Fact timestamps support up to microsecond precision",
+    );
+  }
+  // Date.parse includes three digits. Keep the rest as a decimal suffix so older stored rows retain their precision.
+  let fractionEnd = fraction.length;
+  while (fractionEnd > 3 && fraction[fractionEnd - 1] === "0") fractionEnd--;
+  return { milliseconds, subMillisecond: fraction.slice(3, fractionEnd) };
+}
+
+function compareTimestamps(left: FactTimestamp, right: FactTimestamp): number {
+  if (left.milliseconds !== right.milliseconds) return left.milliseconds - right.milliseconds;
+  if (left.subMillisecond === right.subMillisecond) return 0;
+  return left.subMillisecond < right.subMillisecond ? -1 : 1;
+}
+
+/** Compare Fact History instants without rounding their fractional seconds. */
+export function compareFactHistoryTimestamps(left: string, right: string): number {
+  return compareTimestamps(parseTimestamp(left), parseTimestamp(right));
 }
 export function validateFactScope(scope: FactScope): void {
   requireText(scope.app, "app");
@@ -209,8 +250,8 @@ export function evaluateFactsAt(
   query: ReadFactsAtInput & { readonly knownAt: string },
   definition: FactDefinition,
 ): FactReadResult {
-  const effective = timestamp(query.effectiveAt);
-  const known = timestamp(query.knownAt);
+  const effective = parseTimestamp(query.effectiveAt);
+  const known = parseTimestamp(query.knownAt, "microseconds");
   const visible = rows.filter(
     (row) =>
       factScopeKey(row.scope) === factScopeKey(query.scope) &&
@@ -218,12 +259,12 @@ export function evaluateFactsAt(
       row.definitionId === query.definitionId &&
       row.definitionVersion === query.definitionVersion &&
       row.materializationRevision === query.materializationRevision &&
-      timestamp(row.recordedAt) <= known,
+      compareTimestamps(parseTimestamp(row.recordedAt), known) <= 0,
   );
   const candidates = visible.filter(
     (row) =>
-      timestamp(row.validFrom) <= effective &&
-      (row.validTo === undefined || effective < timestamp(row.validTo)),
+      compareTimestamps(parseTimestamp(row.validFrom), effective) <= 0 &&
+      (row.validTo === undefined || compareTimestamps(effective, parseTimestamp(row.validTo)) < 0),
   );
   const superseded = new Set(candidates.flatMap((row) => (row.supersedes ? [row.supersedes] : [])));
   let active = candidates.filter((row) => !superseded.has(row.id));
@@ -320,9 +361,12 @@ export class FactHistoryService {
       }
       if (!schemaValid)
         throw new FactHistoryProblem("invalid-value", "Fact value failed its definition schema");
-      if (row.validTo !== undefined && timestamp(row.validTo) <= timestamp(row.validFrom))
+      const validFrom = parseTimestamp(row.validFrom);
+      if (
+        row.validTo !== undefined &&
+        compareTimestamps(parseTimestamp(row.validTo), validFrom) <= 0
+      )
         throw new FactHistoryProblem("invalid-input", "validTo must follow validFrom");
-      timestamp(row.validFrom);
       if (Boolean(row.supersedes) !== Boolean(input.correction))
         throw new FactHistoryProblem(
           "invalid-input",
@@ -360,20 +404,23 @@ export class FactHistoryService {
     if (!Number.isSafeInteger(input.limit) || input.limit < 1 || input.limit > 1000)
       throw new FactHistoryProblem("invalid-input", "History limit must be 1 to 1000");
     const knownAt = input.knownAt ?? this.clock().toISOString();
-    timestamp(knownAt);
+    const cutoff = parseTimestamp(knownAt, "microseconds");
     await this.policy.authorize({
       action: "read",
       scope: input.scope,
       subject: input.subject,
       definitionId: input.definitionId,
     });
-    const rows = await this.store.readHistory({ ...input, knownAt });
+    const storeCutoff = new Date(cutoff.milliseconds)
+      .toISOString()
+      .replace(/Z$/, `${cutoff.subMillisecond}Z`);
+    const rows = await this.store.readHistory({ ...input, knownAt: storeCutoff });
     if (rows.length > input.limit)
       throw new FactHistoryProblem("history-limit", "History exceeds the bounded query limit");
     return rows;
   }
   async readFactsAt(input: ReadFactsAtInput): Promise<FactReadResult> {
-    timestamp(input.effectiveAt);
+    parseTimestamp(input.effectiveAt);
     const knownAt = input.knownAt ?? this.clock().toISOString();
     const rows = await this.loadHistory({ ...input, knownAt, limit: 1000 });
     const result = evaluateFactsAt(

@@ -134,6 +134,90 @@ describe("FactHistory", () => {
       ).status,
     ).toBe("unknown");
   });
+  it("keeps facts unknown until their exact effective and recorded instants", () => {
+    const rows = [
+      row({ validFrom: "2026-09-25T09:00:00.000900Z", recordedAt: "2026-09-25T12:00:00.000400Z" }),
+    ];
+    expect(
+      evaluateFactsAt(rows, query({ effectiveAt: "2026-09-25T09:00:00.000100Z" }), definition)
+        .status,
+    ).toBe("unknown");
+    expect(
+      evaluateFactsAt(rows, query({ knownAt: "2026-09-25T12:00:00.000399Z" }), definition).status,
+    ).toBe("unknown");
+    expect(
+      evaluateFactsAt(
+        rows,
+        query({
+          effectiveAt: "2026-09-25T18:00:00.000900+09:00",
+          knownAt: "2026-09-25T12:00:00.000400Z",
+        }),
+        definition,
+      ).status,
+    ).toBe("known");
+  });
+  it("orders microseconds on both sides of the Unix epoch", () => {
+    const rows = [
+      row({ validFrom: "1969-12-31T23:59:59.999999Z", validTo: "1970-01-01T00:00:00Z" }),
+    ];
+    expect(
+      evaluateFactsAt(rows, query({ effectiveAt: "1969-12-31T23:59:59.999998Z" }), definition)
+        .status,
+    ).toBe("unknown");
+    expect(
+      evaluateFactsAt(rows, query({ effectiveAt: "1970-01-01T08:59:59.999999+09:00" }), definition)
+        .status,
+    ).toBe("known");
+    expect(
+      evaluateFactsAt(rows, query({ effectiveAt: "1970-01-01T00:00:00Z" }), definition).status,
+    ).toBe("unknown");
+  });
+  it.each([
+    "2026-09-25T12:00:00.0000001Z",
+    "2026-09-25 12:00:00.0000001 GMT+00:00",
+    "2026-09-25 12:00:00.0000001 (UTC) Z",
+  ])("rejects sub-microsecond receipt cutoffs before accessing storage (%s)", async (knownAt) => {
+    const persistence = store();
+    const service = new FactHistoryService(persistence, [definition], {
+      authorize: () => undefined,
+      mask: (value) => value,
+    });
+    const problem = {
+      code: "analytics/fact-history/invalid-input",
+      message: expect.stringContaining("microsecond"),
+    };
+    await expect(service.readFactsAt(query({ knownAt }))).rejects.toMatchObject(problem);
+    await expect(service.readHistory({ ...query({ knownAt }), limit: 1 })).rejects.toMatchObject(
+      problem,
+    );
+    expect(persistence.readHistory).not.toHaveBeenCalled();
+  });
+
+  it("retains sub-microsecond interval bounds for a previously stored fact", () => {
+    const rows = [
+      row({
+        validFrom: "2026-09-25 09:00:00.0009001 GMT+00:00",
+        validTo: "2026-09-25T09:00:00.0010001Z",
+      }),
+    ];
+    expect(
+      evaluateFactsAt(rows, query({ effectiveAt: "2026-09-25T09:00:00.000900Z" }), definition)
+        .status,
+    ).toBe("unknown");
+    expect(
+      evaluateFactsAt(rows, query({ effectiveAt: "2026-09-25T09:00:00.001Z" }), definition).status,
+    ).toBe("known");
+  });
+  it("retains a nonzero fractional digit after a long run of zeros", () => {
+    const validFrom = `2026-09-25T09:00:00.${"0".repeat(60_000)}1Z`;
+    const rows = [row({ validFrom })];
+    expect(evaluateFactsAt(rows, query({ effectiveAt: time(9) }), definition).status).toBe(
+      "unknown",
+    );
+    expect(evaluateFactsAt(rows, query({ effectiveAt: validFrom }), definition).status).toBe(
+      "known",
+    );
+  });
   it("reports contradictions, explicit source precedence, and corrections at known cutoff", () => {
     const rows = [
       row(),

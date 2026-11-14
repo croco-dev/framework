@@ -6340,6 +6340,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "compareFactHistoryTimestamps",
+              "exportKind": "named",
+              "source": "./libs/FactHistory",
+              "declarationKind": "function"
+            },
+            {
               "name": "defineProductEvent",
               "exportKind": "named",
               "source": "./libs/ProductEvent",

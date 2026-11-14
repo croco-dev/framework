@@ -107,6 +107,69 @@ describe("Fact history operations", () => {
     expect(() => validateFactHistoryComparison({ ...request, limit: 101 })).toThrow();
     expect(() => validateFactHistoryComparison({ ...request, knownAt: "invalid" })).toThrow();
   });
+  it("includes exact-cutoff provenance in comparison history and preserves inherited correction bounds", async () => {
+    const persistence = memoryStore();
+    const recordedAt = "2026-09-25T12:00:00.000400Z";
+    const validTo = "2026-09-25T12:00:00.0000001Z";
+    const initial = await persistence.appendFacts(
+      {
+        scope,
+        source: "verification",
+        sourceEventId: "legacy-event",
+        sourceFingerprint: "hash",
+        rows: [
+          {
+            subject,
+            definitionId: "verified",
+            definitionVersion: "1",
+            projectionId: "verified",
+            projectionRowKey: "verified",
+            materializationRevision: "1",
+            value: true,
+            validFrom: request.effectiveAt,
+            validTo,
+          },
+        ],
+      },
+      recordedAt,
+    );
+    const service = new FactHistoryService(
+      persistence,
+      [{ id: "verified", version: "1", validate: () => true }],
+      { authorize: () => undefined, mask: (row) => row },
+      () => new Date("2026-09-25T13:00:00.000Z"),
+    );
+    const operations = createFactHistoryOperations(service, "operator");
+    const rowId = initial.rows[0].id;
+    expect(
+      await operations.compare({
+        ...request,
+        knownAt: "2026-09-25T12:00:00.000250Z",
+        compareKnownAt: "2026-09-25T12:00:00.000450Z",
+      }),
+    ).toMatchObject({
+      kind: "ready",
+      snapshot: {
+        before: { status: "unknown" },
+        after: { status: "known", provenance: [rowId] },
+        rows: [{ id: rowId }],
+      },
+    });
+    await operations.correct({
+      ...request,
+      rowId,
+      value: false,
+      validFrom: request.compareEffectiveAt,
+      reason: "Fix verification",
+      source: "manual",
+      actor: "operator",
+      expectedRevision: initial.revision,
+      idempotencyKey: "legacy-correction",
+    });
+    expect(
+      await service.readHistory({ ...request, knownAt: "2026-09-25T13:00:00.001Z" }),
+    ).toContainEqual(expect.objectContaining({ supersedes: rowId, validTo }));
+  });
   it("rejects a comparison when the scope revision changes during its reads", async () => {
     const persistence = memoryStore();
     persistence.getRevision = vi.fn().mockResolvedValueOnce(1).mockResolvedValueOnce(2);
