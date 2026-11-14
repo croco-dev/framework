@@ -1,0 +1,87 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "rpc-codegen",
+      "classification": "pure-contract",
+      "reason": "RPC client generation rejects method names that cannot be emitted safely as TypeScript declarations and object members before writing artifacts.",
+      "files": {
+        "packages/rpc-codegen/src/libs/generate.ts": "8c984065b651f091275485667d84803ee7fff8b2fb18e05d7903d5e08adc719f"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Method-name validation runs during RPC client generation and needs no host capabilities, storage, or lifecycle hooks.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/rpc-codegen/src/libs/generate.ts",
+            "packages/rpc-codegen/src/tests/round-trip.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Method-name validation runs during RPC client generation and needs no host capabilities, storage, or lifecycle hooks.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/rpc-codegen/src/libs/generate.ts",
+            "packages/rpc-codegen/src/tests/round-trip.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Method-name validation runs during RPC client generation and needs no host capabilities, storage, or lifecycle hooks.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/rpc-codegen/src/libs/generate.ts",
+            "packages/rpc-codegen/src/tests/round-trip.spec.ts"
+          ]
+        }
+      }
+    },
+    {
+      "package": "problems-core",
+      "classification": "pure-contract",
+      "reason": "Generated Problem source locations follow the RPC generator while existing codes and recovery semantics stay the same.",
+      "files": {
+        "packages/problems-core/src/generated/problem-code-registry.ts": "d68ff79bd2c1f1313baeed65a72f4e4e1e9108a1f4b8c12de46da02933cdacee"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The registry refreshes source locations and requires no host capabilities, storage, or lifecycle hooks.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "docs/problem-code-registry.json"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The registry refreshes source locations and requires no host capabilities, storage, or lifecycle hooks.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "docs/problem-code-registry.json"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The registry refreshes source locations and requires no host capabilities, storage, or lifecycle hooks.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "docs/problem-code-registry.json"
+          ]
+        }
+      }
+    }
+  ]
+}
