@@ -1,0 +1,132 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "analytics-core",
+      "classification": "pure-contract",
+      "reason": "Fact History compares full effective timestamps and validates known-time cutoffs at the receipt precision supported by PostgreSQL.",
+      "files": {
+        "packages/analytics-core/src/index.ts": "77eacae5f61e376dae8a8dc9f364f4ee256abfe745be34ed806a2d7ae1e158fb",
+        "packages/analytics-core/src/libs/FactHistory.ts": "1818e84904239d9b8fb9612090cd30135f40d8280440ee673e425d0b3ae2f190"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Timestamp validation and comparison run in memory without a Kubernetes or Node Host dependency.",
+          "providers": [],
+          "constraints": [
+            "The existing PostgreSQL adapter consumes the same timestamp strings and requires no schema migration."
+          ],
+          "references": [
+            "packages/analytics-core/src/libs/FactHistory.ts",
+            "packages/analytics-drizzle/src/tests/DrizzleFactHistoryStore.postgres.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Timestamp validation and comparison use no AWS Lambda resources or invocation lifecycle hooks.",
+          "providers": [],
+          "constraints": [
+            "Store configuration and connection lifecycle stay with the application."
+          ],
+          "references": ["packages/analytics-core/src/libs/FactHistory.ts"]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Timestamp validation and comparison use no Workers bindings, persistent storage or Node Container lifecycle hooks.",
+          "providers": [],
+          "constraints": [
+            "This review records the comparison logic and makes no provider support claim."
+          ],
+          "references": ["packages/analytics-core/src/libs/FactHistory.ts"]
+        }
+      }
+    },
+    {
+      "package": "analytics-drizzle",
+      "classification": "durable-provider",
+      "reason": "History reads use the receipt instant and precision of the PostgreSQL column that enforces the cutoff.",
+      "files": {
+        "packages/analytics-drizzle/src/libs/DrizzleFactHistoryStore.ts": "ace09cf5afc10fe0e6bb585821c1d83c1fd15b7a90ae4efd5a92cc8297967686"
+      },
+      "catalogRuntimes": ["node", "lambda"],
+      "profiles": {
+        "kubernetes": {
+          "result": "conditional",
+          "reason": "Reuse the existing Node PostgreSQL store with an application-supplied pool.",
+          "providers": ["@croco/analytics-drizzle"],
+          "constraints": [
+            "The application owns connection pooling and the existing Fact History tables."
+          ],
+          "references": [
+            "packages/analytics-drizzle/src/libs/DrizzleFactHistoryStore.ts",
+            "packages/analytics-drizzle/src/tests/DrizzleFactHistoryStore.postgres.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "conditional",
+          "reason": "Reuse the existing PostgreSQL adapter with an application-supplied connection.",
+          "providers": ["@croco/analytics-drizzle"],
+          "constraints": [
+            "The application owns connection lifecycle within the invocation and must apply the existing Fact History migration ahead of traffic."
+          ],
+          "references": [
+            "packages/analytics-drizzle/src/libs/DrizzleFactHistoryStore.ts",
+            "packages/analytics-drizzle/src/tests/DrizzleFactHistoryStore.postgres.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "unsupported",
+          "reason": "The catalog declares Node and Lambda for the existing node-postgres adapter.",
+          "providers": ["@croco/analytics-drizzle"],
+          "constraints": [
+            "This change does not add a Workers provider or a Node Container Profile."
+          ],
+          "references": [
+            "packages/analytics-drizzle/src/libs/DrizzleFactHistoryStore.ts",
+            "packages/analytics-drizzle/src/tests/DrizzleFactHistoryStore.postgres.spec.ts"
+          ]
+        }
+      }
+    },
+    {
+      "package": "admin-core",
+      "classification": "pure-contract",
+      "reason": "Fact History comparisons preserve the original known-time cutoff when collecting source rows.",
+      "files": {
+        "packages/admin-core/src/libs/FactHistoryOperations.ts": "abe5c6257ae22141cb8966de4f7021639383a9c344e581a7edc6e56a4a7e252e"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Cutoff selection is in-memory and has no Kubernetes Node Host capability, storage, or lifecycle requirement.",
+          "providers": [],
+          "constraints": [
+            "The existing Fact History service remains responsible for authorization and storage."
+          ],
+          "references": ["packages/admin-core/src/libs/FactHistoryOperations.ts"]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Cutoff selection is in-memory and has no Lambda Host capability, storage, or lifecycle requirement.",
+          "providers": [],
+          "constraints": [
+            "The existing Fact History service remains responsible for authorization and storage."
+          ],
+          "references": ["packages/admin-core/src/libs/FactHistoryOperations.ts"]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Cutoff selection is in-memory and has no Workers or Node Container capability, storage, or lifecycle requirement.",
+          "providers": [],
+          "constraints": [
+            "The existing Fact History service remains responsible for authorization and storage."
+          ],
+          "references": ["packages/admin-core/src/libs/FactHistoryOperations.ts"]
+        }
+      }
+    }
+  ]
+}

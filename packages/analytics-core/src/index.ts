@@ -98,6 +98,7 @@ export type {
 export {
   FactHistoryProblem,
   FactHistoryService,
+  compareFactHistoryTimestamps,
   canonicalFactValue,
   evaluateFactsAt,
   factProjectionKey,

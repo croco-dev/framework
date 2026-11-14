@@ -1,6 +1,7 @@
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { FactHistoryService } from "@croco/analytics-core";
 import type { AppendFactsInput, FactHistoryQuery } from "@croco/analytics-core";
 import { DrizzleFactHistoryStore, createFactHistory } from "../index";
 
@@ -72,6 +73,96 @@ describe.skipIf(!connectionString)("PostgreSQL fact history", () => {
     expect((await pool.query("SELECT count(*) FROM analytics_fact_history")).rows[0].count).toBe(
       "3",
     );
+  });
+
+  it("reads a fact inside a sub-millisecond interval at the PostgreSQL known-time cutoff", async () => {
+    const service = new FactHistoryService(
+      store,
+      [{ id: "plan", version: "1", validate: (value) => typeof value === "string" }],
+      { authorize: () => undefined, mask: (value) => value },
+      () => new Date(recordedAt),
+    );
+    const [plan] = batch().rows;
+    await service.appendFacts({
+      ...batch(),
+      rows: [
+        {
+          ...plan,
+          validFrom: "2026-09-25T11:00:00.000900Z",
+          validTo: "2026-09-25T11:00:00.000950Z",
+        },
+      ],
+    });
+
+    const knownAt = "2026-09-25T21:00:00.000000+09:00";
+    const effectiveAt = "2026-09-25T20:00:00.000900+09:00";
+    expect(await service.readHistory({ ...query, knownAt: "2026-09-25T11:59:59.999999Z" })).toEqual(
+      [],
+    );
+    expect(await service.readHistory({ ...query, knownAt })).toHaveLength(1);
+    expect(await service.readFactsAt({ ...query, knownAt, effectiveAt })).toMatchObject({
+      status: "known",
+      value: "active",
+    });
+    expect(
+      await service.readFactsAt({ ...query, knownAt, effectiveAt: "2026-09-25T11:00:00.000950Z" }),
+    ).toMatchObject({ status: "unknown" });
+  });
+
+  it("uses the stored PostgreSQL receipt instant for history and point reads", async () => {
+    await store.appendFacts(batch(), "2026-09-25T12:00:00.0004004Z");
+    const service = new FactHistoryService(
+      store,
+      [{ id: "plan", version: "1", validate: () => true }],
+      { authorize: () => undefined, mask: (value) => value },
+    );
+    const before = { ...query, knownAt: "2026-09-25T12:00:00.000399Z" };
+    const at = { ...query, knownAt: "2026-09-25 21:00:00.000400 GMT+09:00" };
+    const effectiveAt = "2026-09-25T11:00:00Z";
+    expect(await service.readHistory(before)).toEqual([]);
+    expect(await service.readFactsAt({ ...before, effectiveAt })).toMatchObject({
+      status: "unknown",
+    });
+    expect(await service.readHistory(at)).toMatchObject([
+      { recordedAt: "2026-09-25T12:00:00.000400Z" },
+    ]);
+    expect(
+      await service.readHistory({ ...query, knownAt: "2026-09-26T11:59:00.000400+23:59" }),
+    ).toHaveLength(1);
+    expect(await service.readFactsAt({ ...at, effectiveAt })).toMatchObject({
+      status: "known",
+      value: "active",
+    });
+  });
+
+  it.each([
+    ["0000-01-01T12:00:00.000001Z", "0000-01-01T12:00:00.000000Z"],
+    ["+250000-01-01T12:00:00.000001Z", "+250000-01-01T12:00:00.000000Z"],
+  ])("retains an exact PostgreSQL receipt at expanded ISO year %s", async (recordedAt, before) => {
+    await store.appendFacts(batch(), recordedAt);
+    const service = new FactHistoryService(
+      store,
+      [{ id: "plan", version: "1", validate: () => true }],
+      { authorize: () => undefined, mask: (value) => value },
+    );
+    expect(await service.readHistory({ ...query, knownAt: before })).toEqual([]);
+    expect(await service.readHistory({ ...query, knownAt: recordedAt })).toMatchObject([
+      { recordedAt },
+    ]);
+    expect(
+      await service.readFactsAt({
+        ...query,
+        knownAt: recordedAt,
+        effectiveAt: "2026-09-25T11:00:00Z",
+      }),
+    ).toMatchObject({ status: "known" });
+  });
+
+  it("reads a stored PostgreSQL receipt whose offset spelling is not a core timestamp", async () => {
+    await store.appendFacts(batch(), "2026-09-25T12:00:00.000400+0000");
+    expect(
+      await store.readHistory({ ...query, knownAt: "2026-09-25T12:00:00.000400Z" }),
+    ).toMatchObject([{ recordedAt: "2026-09-25T12:00:00.000400Z" }]);
   });
 
   it("rejects source and projection collisions but retains distinct source events", async () => {

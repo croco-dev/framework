@@ -143,7 +143,7 @@ export class DrizzleFactHistoryStore implements FactHistoryStore {
           (id,scope_key,source,source_event_id,projection_key,subject_key,definition_id,definition_version,
           materialization_revision,valid_from,recorded_at,row_data)
           VALUES(${row.id},${scope},${input.source},${input.sourceEventId},${factProjectionKey(row)},${factSubjectKey(row.subject)},
-          ${row.definitionId},${row.definitionVersion},${row.materializationRevision},${row.validFrom},${recordedAt},${JSON.stringify(row)}::jsonb)`);
+          ${row.definitionId},${row.definitionVersion},${row.materializationRevision},${postgresTimestamp(row.validFrom)},${postgresTimestamp(recordedAt)},${JSON.stringify(row)}::jsonb)`);
           rows.push(row);
         }
         await tx.execute(
@@ -163,14 +163,25 @@ export class DrizzleFactHistoryStore implements FactHistoryStore {
       .transaction(async (tx) => {
         await lockScope(tx, scope);
         await assertLive(tx, scope, factSubjectKey(input.subject));
-        const result =
-          await tx.execute(sql`SELECT row_data FROM analytics_fact_history WHERE scope_key=${scope}
+        const result = await tx.execute(sql`SELECT row_data,
+        CASE WHEN isfinite(recorded_at) THEN
+          to_char(recorded_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z "BC')
+        END AS receipt_timestamp
+        FROM analytics_fact_history WHERE scope_key=${scope}
         AND subject_key=${factSubjectKey(input.subject)} AND definition_id=${input.definitionId}
         AND definition_version=${input.definitionVersion} AND materialization_revision=${input.materializationRevision}
-        AND recorded_at <= ${input.knownAt}::timestamptz ORDER BY recorded_at,id LIMIT ${input.limit + 1}`);
+        AND recorded_at <= ${postgresTimestamp(input.knownAt)}::timestamptz ORDER BY recorded_at,id LIMIT ${input.limit + 1}`);
         if (result.rows.length > input.limit)
           throw new FactHistoryProblem("history-limit", "History exceeds the requested bound");
-        return result.rows.map((row) => row.row_data as FactRow);
+        return result.rows.map((row) => {
+          const fact = row.row_data as FactRow;
+          if (typeof row.receipt_timestamp !== "string") return fact;
+          const recordedAt = receiptTimestamp(row.receipt_timestamp);
+          // Service writes use three fractional digits. Preserve that spelling when the column agrees.
+          if (recordedAt.endsWith("000Z") && `${recordedAt.slice(0, -4)}Z` === fact.recordedAt)
+            return fact;
+          return { ...fact, recordedAt };
+        });
       })
       .catch(persistenceFailure);
   }
@@ -201,6 +212,29 @@ export class DrizzleFactHistoryStore implements FactHistoryStore {
       .catch(persistenceFailure);
   }
 }
+
+function receiptTimestamp(value: string): string {
+  const separator = value.indexOf("-");
+  const year = Number(value.slice(0, separator));
+  const era = value.slice(-2);
+  const isoYear = era === "BC" ? 1 - year : year;
+  const digits = Math.abs(isoYear).toString();
+  const prefix = isoYear < 0 ? "-" : isoYear > 9999 ? "+" : "";
+  return prefix + digits.padStart(prefix ? 6 : 4, "0") + value.slice(separator, -3);
+}
+
+function postgresTimestamp(value: string): string {
+  // PostgreSQL uses unsigned years and an explicit era rather than ISO's signed six-digit years.
+  const expanded =
+    /^([+-]\d{6}|0000)(-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:\d{2}))$/.exec(
+      value,
+    );
+  if (!expanded) return value;
+  const year = Number(expanded[1]);
+  const pgYear = (year <= 0 ? 1 - year : year).toString().padStart(4, "0");
+  return `${pgYear}${expanded[2].replace("T", " ")}${year <= 0 ? " BC" : ""}`;
+}
+
 function normalizeProjection(row: FactProjection): FactProjection {
   const { validTo, supersedes, ...required } = row;
   return {
