@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "esbuild-plugin",
+      "classification": "pure-contract",
+      "reason": "The DI compiler accepts the existing GraphQLResolver constructor argument as an object type reference while preserving static scope option validation and generated resolver registration.",
+      "files": {
+        "packages/esbuild-plugin/src/libs/DiCompiler.ts": "460e7d5c5336d3167880bc6dd2588c3a50022cc55b43bfeda57241e08c87f448"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "GraphQL object type references are distinguished from scope options during TypeScript graph generation. This requires no capability, storage, or lifecycle change in the deployed Node host.",
+          "providers": [],
+          "constraints": [
+            "Build-time DI graph generation only; runtime support claims are unchanged."
+          ],
+          "references": [
+            "packages/esbuild-plugin/src/libs/DiCompiler.ts",
+            "packages/protocols-graphql/src/libs/decorators/GraphQLResolver.ts",
+            "packages/esbuild-plugin/src/tests/DiCompiler.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "GraphQL object type references are distinguished from scope options during TypeScript graph generation. This requires no capability, storage, or lifecycle change in the deployed Lambda host.",
+          "providers": [],
+          "constraints": [
+            "Build-time DI graph generation only; runtime support claims are unchanged."
+          ],
+          "references": [
+            "packages/esbuild-plugin/src/libs/DiCompiler.ts",
+            "packages/protocols-graphql/src/libs/decorators/GraphQLResolver.ts",
+            "packages/esbuild-plugin/src/tests/DiCompiler.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "GraphQL object type references are distinguished from scope options during TypeScript graph generation. This requires no capability, storage, or lifecycle change in the deployed Workers or Node Container host.",
+          "providers": [],
+          "constraints": [
+            "Build-time DI graph generation only; runtime support claims are unchanged."
+          ],
+          "references": [
+            "packages/esbuild-plugin/src/libs/DiCompiler.ts",
+            "packages/protocols-graphql/src/libs/decorators/GraphQLResolver.ts",
+            "packages/esbuild-plugin/src/tests/DiCompiler.spec.ts"
+          ]
+        }
+      }
+    }
+  ]
+}

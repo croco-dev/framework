@@ -1272,6 +1272,12 @@ function getDeclaredScope(
     }
     const [options] = decorator.expression.arguments;
     if (!options || (name !== "Component" && ts.isStringLiteral(options))) continue;
+    if (
+      name === "GraphQLResolver" &&
+      checker.getTypeAtLocation(options).getConstructSignatures().length > 0
+    ) {
+      continue;
+    }
     const fail = (): never => {
       throw new DiCompilerError([
         createDiagnostic(

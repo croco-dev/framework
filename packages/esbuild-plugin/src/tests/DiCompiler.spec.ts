@@ -1,6 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { execFileSync } from "node:child_process";
+import { createRequire } from "node:module";
 import * as esbuild from "esbuild";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
@@ -632,9 +633,10 @@ describe("compileDiGraph", () => {
       "src/Resolvers.ts": `
         import { Component } from "@croco/framework-context";
         import { GraphQLResolver } from "@croco/protocols-graphql";
-        @Component({ scope: "request" }) @GraphQLResolver()
+        class User {}
+        @Component({ scope: "request" }) @GraphQLResolver(User)
         export class ComponentFirst {}
-        @GraphQLResolver() @Component({ scope: "request" })
+        @GraphQLResolver(User) @Component({ scope: "request" })
         export class ResolverFirst {}
       `,
     });
@@ -651,6 +653,97 @@ describe("compileDiGraph", () => {
     ]);
     expect(result.code.match(/kind: "graphql-resolver"/g)).toHaveLength(2);
   });
+
+  it("compiles GraphQL object type references without treating them as scope options", async () => {
+    writeProject({
+      "src/User.ts": 'export class User { id = "user-37"; }',
+      "src/Resolvers.ts": `
+        import { GraphQLResolver } from "@croco/protocols-graphql";
+        import { User as UserType } from "./User";
+        import * as Types from "./User";
+        export class LocalUser { static readonly scope = "request"; }
+        @GraphQLResolver(LocalUser) export class LocalResolver {}
+        @GraphQLResolver(UserType) export class UserResolver {}
+        @GraphQLResolver(Types.User) export class NamespacedResolver {}
+        @GraphQLResolver() export class PlainResolver {}
+        @GraphQLResolver({ scope: "request" }) export class RequestResolver {}
+      `,
+    });
+    const result = compileDiGraph({ baseDir: TEMP_DIR });
+    expect(
+      result.manifest.providers.map(({ exportName, stereotype, scope }) => ({
+        exportName,
+        stereotype,
+        scope,
+      })),
+    ).toEqual([
+      { exportName: "LocalResolver", stereotype: "GraphQLResolver", scope: "singleton" },
+      { exportName: "NamespacedResolver", stereotype: "GraphQLResolver", scope: "singleton" },
+      { exportName: "PlainResolver", stereotype: "GraphQLResolver", scope: "singleton" },
+      { exportName: "RequestResolver", stereotype: "GraphQLResolver", scope: "request" },
+      { exportName: "UserResolver", stereotype: "GraphQLResolver", scope: "singleton" },
+    ]);
+    writeDiGraph(result);
+    const graphqlRequire = createRequire(
+      path.resolve(__dirname, "../../../protocols-graphql/package.json"),
+    );
+    const entry = path.join(TEMP_DIR, "runtime.ts");
+    fs.writeFileSync(
+      entry,
+      `
+      import { strict as assert } from "node:assert";
+      import { Container } from "@croco/framework-context";
+      import { getMetadataStorage } from ${JSON.stringify(graphqlRequire.resolve("type-graphql"))};
+      import { generatedDiGraph } from "./.croco/di.generated";
+      import { User } from "./src/User";
+      import { LocalUser, LocalResolver, UserResolver, NamespacedResolver, PlainResolver } from "./src/Resolvers";
+      const scope = Container.createScope();
+      scope.run(() => {
+        Container.installGeneratedGraph(generatedDiGraph);
+        for (const [resolver, objectType] of [
+          [LocalResolver, LocalUser], [UserResolver, User], [NamespacedResolver, User],
+        ]) {
+          assert.ok(Container.get(resolver) instanceof resolver);
+          assert.equal(Container.get(resolver), Container.get(resolver));
+          const metadata = getMetadataStorage().resolverClasses.find(({ target }) => target === resolver);
+          assert.equal(metadata?.getObjectType(), objectType);
+        }
+        assert.ok(Container.get(PlainResolver) instanceof PlainResolver);
+      });
+      scope.dispose();
+    `,
+    );
+    const bundle = path.join(TEMP_DIR, "runtime.cjs");
+    await esbuild.build({
+      entryPoints: [entry],
+      outfile: bundle,
+      bundle: true,
+      platform: "node",
+      tsconfig: path.join(TEMP_DIR, "tsconfig.json"),
+    });
+    execFileSync(process.execPath, [bundle], { cwd: TEMP_DIR, stdio: "pipe" });
+  }, 30_000);
+
+  it.each(['{ scope: "invalid" }', "options", "{ ...options }", "() => User", "42"])(
+    "rejects invalid GraphQL resolver scope options (%s)",
+    (options) => {
+      writeProject({
+        "src/Resolver.ts": `
+          import { GraphQLResolver } from "@croco/protocols-graphql";
+          class User {}
+          const options = { scope: "request" };
+          @GraphQLResolver(${options}) export class UserResolver {}
+        `,
+      });
+      expect(() => compileDiGraph({ baseDir: TEMP_DIR })).toThrowError(
+        expect.objectContaining({
+          diagnostics: [
+            expect.objectContaining({ code: "CROCO_DI_COMPILE_002", file: "src/Resolver.ts" }),
+          ],
+        }),
+      );
+    },
+  );
 
   it.each([
     '@Controller("/conflict") @GraphQLResolver()',
