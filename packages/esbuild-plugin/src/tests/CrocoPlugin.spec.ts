@@ -161,6 +161,43 @@ describe("crocoPlugin", () => {
     });
   });
 
+  it("fails the server build before writing a graph that would omit an overloaded constructor's injection", async () => {
+    const { entry, component } = createProject();
+    fs.writeFileSync(
+      component,
+      [
+        'import { Component, Inject } from "@croco/framework-context";',
+        "@Component() export class Dependency {}",
+        "@Component() export class Service {",
+        "  constructor();",
+        "  constructor(@Inject(() => Dependency) readonly dependency?: Dependency) {}",
+        "}",
+      ].join("\n"),
+    );
+
+    await expect(
+      esbuild.build({
+        absWorkingDir: tempDir,
+        entryPoints: [entry],
+        platform: "node",
+        bundle: true,
+        outfile: "dist/server.cjs",
+        logLevel: "silent",
+        external: ["@croco/framework-context", "@croco/framework-module", "reflect-metadata"],
+        plugins: [crocoPlugin()],
+      }),
+    ).rejects.toMatchObject({
+      errors: [
+        {
+          text: expect.stringContaining("CROCO_DI_COMPILE_002: Constructor overloads"),
+          location: { file: "src/Service.ts", line: 4, column: 2 },
+        },
+      ],
+    });
+    expect(fs.existsSync(path.join(tempDir, ".croco"))).toBe(false);
+    expect(fs.existsSync(path.join(tempDir, "dist", "server.cjs"))).toBe(false);
+  });
+
   it("bundles a sibling DI graph with local, parent, and neighboring component imports", async () => {
     const { entry } = createProject();
     const componentSource = fs.readFileSync(path.join(tempDir, "src", "Service.ts"), "utf8");
