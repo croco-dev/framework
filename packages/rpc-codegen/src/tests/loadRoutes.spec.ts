@@ -6,6 +6,7 @@ import * as path from "node:path";
 import { pathToFileURL } from "node:url";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type * as Zod from "zod";
+import { generateClientFilesFromContractGraph } from "../libs/generate";
 import { loadContractGraph, loadRoutes } from "../libs/loadRoutes";
 
 let tempRoot: string;
@@ -301,6 +302,38 @@ schema.parse({ id: 'user-1' });`,
           recoveryAction: expect.any(String),
         }),
       );
+    },
+    LOAD_ROUTES_TIMEOUT_MS,
+  );
+
+  it(
+    "generates the client when a barrel re-exports a scanned controller",
+    async () => {
+      fs.writeFileSync(path.join(tempRoot, "package.json"), '{"type":"module"}');
+      fs.writeFileSync(
+        path.join(tempRoot, "tsconfig.json"),
+        JSON.stringify({ compilerOptions: { module: "NodeNext", experimentalDecorators: true } }),
+      );
+      fs.writeFileSync(path.join(sourceDir, "UsersController.ts"), getMixedControllerSource());
+      fs.writeFileSync(
+        path.join(sourceDir, "index.ts"),
+        'export { UsersController as PublicUsersController } from "./UsersController.js";\n',
+      );
+
+      const graph = await loadContractGraph(path.join(sourceDir, "*.ts"));
+      const files = generateClientFilesFromContractGraph(graph, path.join(tempRoot, "client"));
+
+      const clientPath = path.join(tempRoot, "client", "users.ts");
+      expect(files).toContain(clientPath);
+      expect(fs.readFileSync(clientPath, "utf-8")).toContain(
+        "routeId: 'UsersController.listUsers'",
+      );
+      expect(graph.routes).toHaveLength(1);
+      expect(graph.routes[0]).toMatchObject({
+        routeId: "UsersController.listUsers",
+        httpMethod: "GET",
+        path: "/users",
+      });
     },
     LOAD_ROUTES_TIMEOUT_MS,
   );

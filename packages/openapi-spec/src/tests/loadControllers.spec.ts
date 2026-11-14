@@ -340,6 +340,30 @@ schema.parse({ id: 'user-1' });`,
   );
 
   it(
+    "emits one OpenAPI operation when a barrel re-exports a scanned controller",
+    async () => {
+      fs.writeFileSync(path.join(tempRoot, "package.json"), '{"type":"module"}');
+      fs.writeFileSync(
+        path.join(tempRoot, "tsconfig.json"),
+        JSON.stringify({ compilerOptions: { module: "NodeNext", experimentalDecorators: true } }),
+      );
+      fs.writeFileSync(path.join(sourceDir, "UsersController.ts"), getMixedControllerSource());
+      fs.writeFileSync(
+        path.join(sourceDir, "index.ts"),
+        'export { UsersController as PublicUsersController } from "./UsersController.js";\n',
+      );
+
+      const controllers = await loadControllers(path.join(sourceDir, "*.ts"));
+      const spec = emitOpenAPI(controllers);
+
+      expect(controllers).toHaveLength(1);
+      expect(Object.keys(spec.paths ?? {})).toEqual(["/users"]);
+      expect(spec.paths?.["/users"]?.get?.operationId).toBe("UsersController_listUsers");
+    },
+    LOAD_CONTROLLER_TIMEOUT_MS,
+  );
+
+  it(
     "keeps emitted decorator source locations scoped to each source file",
     async () => {
       const firstDir = path.join(sourceDir, "first");

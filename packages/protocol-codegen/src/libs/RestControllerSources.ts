@@ -1,10 +1,10 @@
 import "reflect-metadata";
 import * as path from "node:path";
 import type { Problem } from "@croco/problems-core";
-import { discoverControllerConstructors } from "@croco/protocols-core";
+import { discoverControllerConstructors, isControllerConstructor } from "@croco/protocols-core";
 import type { Constructor, RouteContractSourceLocation } from "@croco/protocols-core";
 import { Node, ts } from "ts-morph";
-import type { Decorator, Diagnostic, SourceFile } from "ts-morph";
+import type { ClassDeclaration, Decorator, Diagnostic, SourceFile } from "ts-morph";
 import { createControllerProject, getCommonSourceDirectory } from "./ControllerProject";
 import type { ControllerModule } from "./ControllerProject";
 
@@ -111,28 +111,89 @@ export async function loadRestControllerSources(
     controllerProject.emit();
 
     const modules: RestControllerSourceModule[] = [];
-    const controllers: Constructor[] = [];
+    const controllers = new Set<Constructor>();
+    const exportedLocations = new Map<Constructor, ControllerSourceLocations | undefined>();
 
     for (const sourceFile of sourceFiles) {
       const moduleExports = await controllerProject.importModule(sourceFile);
       const moduleControllers = discoverControllerConstructors(moduleExports);
       const sourceFileLocations = sourceLocations.get(sourceFile.getFilePath());
 
-      for (const controller of moduleControllers) {
-        applyControllerSourceLocations(controller, sourceFileLocations?.get(controller.name));
+      if (moduleControllers.length > 0) {
+        collectExportedControllerLocations(
+          sourceFile,
+          moduleExports,
+          sourceLocations,
+          exportedLocations,
+        );
       }
 
+      for (const controller of moduleControllers) {
+        controllers.add(controller);
+        // A re-export can share a name with an unrelated class in the barrel.
+        applyControllerSourceLocations(
+          controller,
+          exportedLocations.has(controller)
+            ? exportedLocations.get(controller)
+            : sourceFileLocations?.get(controller.name),
+        );
+      }
       modules.push({ moduleExports, controllers: moduleControllers });
-      controllers.push(...moduleControllers);
     }
 
-    if (controllers.length === 0) {
+    if (controllers.size === 0) {
       throw options.problems.noControllersFound(controllerPatterns);
     }
 
-    return { controllers, modules };
+    return { controllers: [...controllers], modules };
   } finally {
     controllerProject.dispose();
+  }
+}
+
+function collectExportedControllerLocations(
+  sourceFile: SourceFile,
+  moduleExports: ControllerModule,
+  sourceLocations: ReadonlyMap<string, SourceFileControllerSourceLocations>,
+  exportedLocations: Map<Constructor, ControllerSourceLocations | undefined>,
+): void {
+  for (const [name, declarations] of sourceFile.getExportedDeclarations()) {
+    const exported = moduleExports[name];
+    if (!isControllerConstructor(exported) || exportedLocations.has(exported)) continue;
+
+    const declaration = declarations.map(resolveControllerClassDeclaration).find(Boolean);
+    if (!declaration) continue;
+    const className = declaration.getName();
+    const locations = sourceLocations.get(declaration.getSourceFile().getFilePath());
+    exportedLocations.set(exported, className ? locations?.get(className) : undefined);
+  }
+}
+
+function resolveControllerClassDeclaration(declaration: Node): ClassDeclaration | undefined {
+  const visited = new Set<Node>();
+  let current: Node | undefined = declaration;
+  while (current && !visited.has(current)) {
+    visited.add(current);
+    if (Node.isClassDeclaration(current)) return current;
+    if (
+      Node.isParenthesizedExpression(current) ||
+      Node.isAsExpression(current) ||
+      Node.isSatisfiesExpression(current) ||
+      Node.isTypeAssertion(current) ||
+      Node.isNonNullExpression(current)
+    ) {
+      current = current.getExpression();
+    } else if (Node.isIdentifier(current)) {
+      const symbol = current.getSymbol();
+      current = (symbol?.getAliasedSymbol() ?? symbol)?.getValueDeclaration();
+    } else if (
+      Node.isVariableDeclaration(current) &&
+      current.getVariableStatement()?.getDeclarationKind() === "const"
+    ) {
+      current = current.getInitializer();
+    } else {
+      return undefined;
+    }
   }
 }
 
