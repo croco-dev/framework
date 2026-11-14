@@ -4,10 +4,10 @@ import type {
   ListBenefitIntentsFilter,
   ListReferralLinksFilter,
   ReferralAttribution,
-  ReferralAttributionState,
   ReferralAuditEntry,
   ReferralBenefitIntent,
   ReferralBenefitIntentStatus,
+  ReferralFunnelCounts,
   ReferralLink,
   ReferralProgramDefinition,
   ReferralSubject,
@@ -156,11 +156,11 @@ export interface ReferralStore {
   getLinkByTokenHash(tokenHash: string): Promise<ReferralLink | null>;
   getAttribution(attributionId: string): Promise<ReferralAttribution | null>;
   getBenefitIntent(intentId: string): Promise<ReferralBenefitIntent | null>;
-  /** Counts all attributions by state for the program and, when supplied, the family. */
-  countAttributionsByState(
+  /** Counts all matching claims, stored qualifications, and fulfilled states in one read. Held rows are excluded. */
+  countFunnelAttributions(
     programId: string,
     familyId?: string,
-  ): Promise<Partial<Record<ReferralAttributionState, number>>>;
+  ): Promise<Pick<ReferralFunnelCounts, "claims" | "qualified" | "fulfilled">>;
   listAttributions(filter: ListAttributionsFilter): Promise<readonly ReferralAttribution[]>;
   listBenefitIntents(filter: ListBenefitIntentsFilter): Promise<readonly ReferralBenefitIntent[]>;
 }

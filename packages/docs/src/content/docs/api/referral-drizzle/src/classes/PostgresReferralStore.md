@@ -29,32 +29,6 @@ PostgreSQL adapter for a Drizzle node-postgres execute/transaction boundary.
 
 ## Methods
 
-### countAttributionsByState()
-
-> **countAttributionsByState**(`programId`, `familyId?`): `Promise`\<`Partial`\<`Record`\<[`ReferralAttributionState`](/api/referral-core/src/type-aliases/referralattributionstate/), `number`\>\>\>
-
-Counts all attributions by state for the program and, when supplied, the family.
-
-#### Parameters
-
-##### programId
-
-`string`
-
-##### familyId?
-
-`string`
-
-#### Returns
-
-`Promise`\<`Partial`\<`Record`\<[`ReferralAttributionState`](/api/referral-core/src/type-aliases/referralattributionstate/), `number`\>\>\>
-
-#### Implementation of
-
-[`ReferralStore`](/api/referral-core/src/interfaces/referralstore/).[`countAttributionsByState`](/api/referral-core/src/interfaces/referralstore/#countattributionsbystate)
-
----
-
 ### countClicksForProgram()
 
 > **countClicksForProgram**(`programId`): `Promise`\<`number`\>
@@ -68,6 +42,32 @@ Counts all attributions by state for the program and, when supplied, the family.
 #### Returns
 
 `Promise`\<`number`\>
+
+---
+
+### countFunnelAttributions()
+
+> **countFunnelAttributions**(`programId`, `familyId?`): `Promise`\<`Pick`\<[`ReferralFunnelCounts`](/api/referral-core/src/type-aliases/referralfunnelcounts/), `"claims"` \| `"qualified"` \| `"fulfilled"`\>\>
+
+Counts all matching claims, stored qualifications, and fulfilled states in one read. Held rows are excluded.
+
+#### Parameters
+
+##### programId
+
+`string`
+
+##### familyId?
+
+`string`
+
+#### Returns
+
+`Promise`\<`Pick`\<[`ReferralFunnelCounts`](/api/referral-core/src/type-aliases/referralfunnelcounts/), `"claims"` \| `"qualified"` \| `"fulfilled"`\>\>
+
+#### Implementation of
+
+[`ReferralStore`](/api/referral-core/src/interfaces/referralstore/).[`countFunnelAttributions`](/api/referral-core/src/interfaces/referralstore/#countfunnelattributions)
 
 ---
 

@@ -1032,20 +1032,42 @@ describe("ReferralService", () => {
     expect(funnel.clicks).not.toBe(funnel.fulfilled);
   });
 
-  it("uses only known attribution states from a custom store", async () => {
-    class CustomStore extends InMemoryReferralStore {
-      override async countAttributionsByState() {
-        return { claimed: 1003, qualified: 2, fulfilled: undefined, total: 1005 };
-      }
-    }
-    const { service } = serviceWith({ store: new CustomStore() });
-    await expect(service.funnelCounts({ programId: "referral-welcome" })).resolves.toEqual({
-      clicks: 0,
-      claims: 1005,
-      signups: 2,
-      qualified: 2,
-      fulfilled: 0,
+  it("retains signup and qualification after an unknown payout and operator rejection", async () => {
+    const { service } = serviceWith({
+      store: new InMemoryReferralStore(),
+      fulfillment: {
+        fulfill: async () => ({ outcome: "unknown", reason: "response lost" }),
+        check: async () => null,
+      },
     });
+    const program = programInput();
+    await service.registerProgram(program);
+    const { token } = await service.createReferralLink({
+      programId: program.id,
+      referrer: referrer(),
+    });
+    const { attribution } = await service.claimAttribution({ token, recipient: recipient() });
+    const attributionId = attribution.id;
+    const expected = { clicks: 0, claims: 1, signups: 1, qualified: 1, fulfilled: 0 };
+
+    const qualified = await service.qualifyAttribution({ attributionId, recipient: recipient() });
+    expect(qualified.state).toBe("benefits-pending");
+    await expect(service.funnelCounts({ programId: program.id })).resolves.toEqual(expected);
+
+    const uncertain = await service.fulfillBenefits({ attributionId });
+    expect(uncertain.state).toBe("indeterminate");
+    expect(uncertain.qualification).toEqual(qualified.qualification);
+    await expect(service.funnelCounts({ programId: program.id })).resolves.toEqual(expected);
+
+    const rejected = await service.resolveIndeterminateBenefits({
+      attributionId,
+      decision: "rejected",
+      actorId: "operator-1",
+      reason: "verified no payout occurred",
+    });
+    expect(rejected.state).toBe("rejected");
+    expect(rejected.qualification).toEqual(qualified.qualification);
+    await expect(service.funnelCounts({ programId: program.id })).resolves.toEqual(expected);
   });
 
   it("cancels a pending side and returns a granted side with explicit policy", async () => {
@@ -1068,6 +1090,13 @@ describe("ReferralService", () => {
       policy: "voluntary-decline",
     });
     expect(canceled.state).toBe("benefits-partial");
+    await expect(service.funnelCounts({ programId: "referral-welcome" })).resolves.toEqual({
+      clicks: 0,
+      claims: 1,
+      signups: 1,
+      qualified: 1,
+      fulfilled: 0,
+    });
     const intents = await service.listBenefitIntents({ attributionId: claimed.attribution.id });
     expect(intents.find((intent) => intent.side === "recipient")?.status).toBe("canceled");
     const fulfilled = await service.fulfillBenefits({ attributionId: claimed.attribution.id });
@@ -1084,6 +1113,13 @@ describe("ReferralService", () => {
       attributionId: claimed.attribution.id,
     });
     expect(afterReturn.find((intent) => intent.side === "referrer")?.status).toBe("returned");
+    await expect(service.funnelCounts({ programId: "referral-welcome" })).resolves.toEqual({
+      clicks: 0,
+      claims: 1,
+      signups: 1,
+      qualified: 1,
+      fulfilled: 1,
+    });
   });
 
   it("rejects benefit return when fulfillment has no reverse support", async () => {

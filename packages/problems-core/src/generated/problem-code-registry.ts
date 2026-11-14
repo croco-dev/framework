@@ -26973,7 +26973,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/referral-drizzle/src/libs/PostgresReferralStore.ts";
-          readonly line: 46;
+          readonly line: 47;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -63582,7 +63582,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/referral-drizzle/src/libs/PostgresReferralStore.ts",
-          line: 46,
+          line: 47,
           column: 1,
           kind: "problem-class",
         },
