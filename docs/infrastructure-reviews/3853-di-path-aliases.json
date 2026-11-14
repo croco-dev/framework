@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "esbuild-plugin",
+      "classification": "pure-contract",
+      "reason": "The DI compiler uses the identity of scanned providers when a TypeScript import alias resolves to their declarations. This happens during graph generation and uses the existing factory and registration contract.",
+      "files": {
+        "packages/esbuild-plugin/src/libs/DiCompiler.ts": "126b3ad64f2c1639905c62782340801aeeffd4b6418b4afdaaa7abd0527a6bae"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "TypeScript resolves provider aliases at build time. Alias resolution has no capability, storage, or lifecycle requirements for the deployed Node host.",
+          "providers": [],
+          "constraints": ["Build-time DI graph generation."],
+          "references": [
+            "packages/esbuild-plugin/src/libs/DiCompiler.ts",
+            "packages/esbuild-plugin/src/tests/DiCompiler.spec.ts",
+            "docs/architecture/compile-time-di.md"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "TypeScript resolves provider aliases at build time. Alias resolution has no capability, storage, or lifecycle requirements for the Lambda invocation host.",
+          "providers": [],
+          "constraints": ["Build-time DI graph generation."],
+          "references": [
+            "packages/esbuild-plugin/src/libs/DiCompiler.ts",
+            "packages/esbuild-plugin/src/tests/DiCompiler.spec.ts",
+            "docs/architecture/compile-time-di.md"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "TypeScript resolves provider aliases at build time. Alias resolution has no capability, storage, or lifecycle requirements for Workers or Node Container hosts.",
+          "providers": [],
+          "constraints": ["Build-time DI graph generation."],
+          "references": [
+            "packages/esbuild-plugin/src/libs/DiCompiler.ts",
+            "packages/esbuild-plugin/src/tests/DiCompiler.spec.ts",
+            "docs/architecture/compile-time-di.md"
+          ]
+        }
+      }
+    }
+  ]
+}
