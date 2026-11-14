@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "events-tx",
+      "classification": "pure-contract",
+      "reason": "The outbox adapter forwards the relay signal to the existing EventBus publish options so a waiting delivery can be cancelled.",
+      "files": {
+        "packages/events-tx/src/libs/TransactionalEvents.ts": "9e4c84a574c0d82a374478ed24ae4622cd70eecf76714db3d2d67c63ed3ca6b6"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The Kubernetes Node Host is outside the publish callback. The relay forwards an existing AbortSignal through the EventBus contract without requiring a host capability, storage change, or new shutdown hook.",
+          "providers": ["@croco/events-core", "@croco/events-inmemory"],
+          "constraints": [
+            "Cancellation of a pending delivery depends on the configured EventBus honoring the signal. The in-memory implementation cancels capacity waits and allows active handlers to finish."
+          ],
+          "references": [
+            "packages/events-tx/src/libs/TransactionalEvents.ts",
+            "packages/events-core/src/libs/interfaces/EventPublishing.ts",
+            "packages/events-inmemory/src/libs/InmemoryEventBus.ts",
+            "packages/events-tx/src/tests/TransactionalOutbox.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The Lambda Host is outside the publish callback. The relay forwards an existing AbortSignal through the EventBus contract without requiring a host capability, storage change, or new shutdown hook.",
+          "providers": ["@croco/events-core", "@croco/events-inmemory"],
+          "constraints": [
+            "Cancellation of a pending delivery depends on the configured EventBus honoring the signal. The in-memory implementation cancels capacity waits and allows active handlers to finish."
+          ],
+          "references": [
+            "packages/events-tx/src/libs/TransactionalEvents.ts",
+            "packages/events-core/src/libs/interfaces/EventPublishing.ts",
+            "packages/events-inmemory/src/libs/InmemoryEventBus.ts",
+            "packages/events-tx/src/tests/TransactionalOutbox.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The Cloudflare Workers or Node Container Host is outside the publish callback. The relay forwards an existing AbortSignal through the EventBus contract without requiring a host capability, storage change, or new shutdown hook.",
+          "providers": ["@croco/events-core", "@croco/events-inmemory"],
+          "constraints": [
+            "Cancellation of a pending delivery depends on the configured EventBus honoring the signal. The in-memory implementation cancels capacity waits and allows active handlers to finish."
+          ],
+          "references": [
+            "packages/events-tx/src/libs/TransactionalEvents.ts",
+            "packages/events-core/src/libs/interfaces/EventPublishing.ts",
+            "packages/events-inmemory/src/libs/InmemoryEventBus.ts",
+            "packages/events-tx/src/tests/TransactionalOutbox.spec.ts"
+          ]
+        }
+      }
+    }
+  ]
+}

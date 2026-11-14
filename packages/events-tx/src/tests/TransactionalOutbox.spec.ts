@@ -6,6 +6,7 @@ import {
   EventRegistry,
   type EventSubscription,
 } from "@croco/events-core";
+import { InMemoryEventBus } from "@croco/events-inmemory";
 import {
   createIdempotencyCoordinator,
   deriveIdempotencyKey,
@@ -2061,6 +2062,83 @@ describe("TransactionalInboxConsumer", () => {
 });
 
 describe("createEventBusOutboxPublisher", () => {
+  it("cancels publication waiting for a bus slot while allowing an active delivery to finish", async () => {
+    const fixture = createOutboxFixture();
+    const bus = new InMemoryEventBus({ maxConcurrency: 1 });
+    const serializer = new DefaultEventSerializer(
+      new EventRegistry().register(AccountCreditedEvent),
+    );
+    const publish = createEventBusOutboxPublisher(bus, serializer);
+    const firstStarted = createDeferred<void>();
+    const releaseFirst = createDeferred<void>();
+    const secondPublishing = createDeferred<void>();
+    const handled: string[] = [];
+    class CreditHandler {
+      async handle(event: DomainEvent): Promise<void> {
+        const { accountId } = event as AccountCreditedEvent;
+        handled.push(accountId);
+        if (accountId === "acct-1") {
+          firstStarted.resolve(undefined);
+          await releaseFirst.promise;
+        }
+      }
+    }
+    bus.subscribe({
+      eventName: AccountCreditedEvent.eventName,
+      handlerClass: CreditHandler,
+      handler: new CreditHandler(),
+    });
+    const relay = new TransactionalOutboxRelay({
+      store: fixture.store,
+      now: fixture.clock.now,
+      publish: (message, signal) => {
+        const publication = publish(message, signal);
+        if (message.aggregateId === "acct-2") {
+          secondPublishing.resolve(undefined);
+        }
+        return publication;
+      },
+    });
+
+    const first = await appendMessage(fixture);
+    const second = await appendMessage(fixture, {
+      aggregateId: "acct-2",
+      idempotencyKey: "credit-acct-2",
+    });
+    const firstBatch = relay.publishBatch({ limit: 1 });
+    await firstStarted.promise;
+    const secondBatch = relay.publishBatch({ limit: 1 });
+    await secondPublishing.promise;
+
+    const draining = relay.drain();
+    releaseFirst.resolve(undefined);
+    const [firstResult, secondResult, drainResult] = await Promise.all([
+      firstBatch,
+      secondBatch,
+      draining,
+    ]);
+
+    expect(handled).toEqual(["acct-1"]);
+    expect(firstResult).toMatchObject({
+      status: "cancelled",
+      published: 1,
+      results: [{ status: "published", message: { id: first.id } }],
+    });
+    expect(secondResult).toMatchObject({
+      status: "cancelled",
+      published: 0,
+      scheduledRetry: 1,
+      results: [
+        {
+          status: "scheduled_retry",
+          message: { id: second.id, status: "retrying" },
+          error: { message: "Backpressure wait aborted" },
+        },
+      ],
+    });
+    expect(drainResult).toEqual({ status: "drained", activeBatches: 2, pendingBatches: 0 });
+  });
+
   it("publishes deserialized outbox messages to an EventBus", async () => {
     const fixture = createOutboxFixture();
     const message = await appendMessage(fixture);

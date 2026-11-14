@@ -58,7 +58,9 @@ If the ownership read fails, the batch rejects with that error after attempting 
 
 Completion updates are guarded by the claimed attempt number; if another relay already completed or superseded the claim, the batch result reports `stale_claim` without overwriting the newer state.
 
-Publish callbacks receive an optional `AbortSignal`. `stop()` prevents new batches and cancels active callbacks, while `drain(signal)` waits for active batches and reports whether the supplied shutdown boundary expired. Claims whose publication never started are released immediately as `retrying` without consuming an attempt.
+Publish callbacks receive an optional `AbortSignal`. `stop()` prevents new batches and signals active callbacks, while `drain(signal)` waits for active batches and reports whether the supplied shutdown boundary expired. Claims whose publication never started are released immediately as `retrying` without consuming an attempt.
+
+`createEventBusOutboxPublisher` forwards the signal to the configured EventBus. With the in-memory bus, cancellation interrupts a publish waiting for capacity and allows an already running handler to finish. A rejected publish follows the relay's normal failure policy, including retry while attempts remain.
 
 `TransactionalOutboxRelay` structurally implements the framework-context shutdown hook, so hosts can register it without adding a dependency from framework-context back to events-tx:
 
