@@ -1,6 +1,7 @@
 import { compareStrings } from "../../../../tooling/compareStrings.mjs";
 import * as fs from "node:fs";
 import * as path from "node:path";
+import ts from "typescript";
 import {
   createFrontendActionManifest,
   mergeFrontendActionManifests,
@@ -221,6 +222,18 @@ function emitClientFiles(
   options: GenerateClientOptions,
 ): readonly GeneratedClientFile[] {
   assertGeneratedClientRoutes(routes);
+  for (const route of routes) {
+    // The emitter uses the raw member name and a PascalCase declaration stem.
+    if (
+      !isTypeScriptIdentifierName(route.methodName) ||
+      !isJavaScriptIdentifier(getResultTypeName(route)) ||
+      route.methodName === "__proto__"
+    ) {
+      throw new RpcCodegenContractProblem(
+        `Cannot generate RPC client for route ${formatRoute(route)}. Rename the method to a name such as getUser that can be used in generated TypeScript declarations and object members.`,
+      );
+    }
+  }
 
   if (options.frontendActionManifestInputs && !options.frontendActionManifestPath) {
     throw new RpcCodegenContractProblem(
@@ -4149,6 +4162,21 @@ function formatObjectKey(key: string): string {
 
 function isJavaScriptIdentifier(value: string): boolean {
   return /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(value);
+}
+
+function isTypeScriptIdentifierName(value: string): boolean {
+  const target = ts.ScriptTarget.ESNext;
+  const first = value.codePointAt(0);
+  if (first === undefined || !ts.isIdentifierStart(first, target)) {
+    return false;
+  }
+
+  return Array.from(value)
+    .slice(1)
+    .every((character) => {
+      const codePoint = character.codePointAt(0);
+      return codePoint !== undefined && ts.isIdentifierPart(codePoint, target);
+    });
 }
 
 function hasPathParams(route: GeneratedClientRoute): boolean {

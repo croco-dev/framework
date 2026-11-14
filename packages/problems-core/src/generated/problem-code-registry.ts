@@ -27589,7 +27589,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/rpc-codegen/src/libs/generate.ts";
-          readonly line: 117;
+          readonly line: 118;
           readonly column: 5;
           readonly kind: "problem-constructor";
         },
@@ -27645,7 +27645,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/rpc-codegen/src/libs/generate.ts";
-          readonly line: 2091;
+          readonly line: 2104;
           readonly column: 38;
           readonly kind: "problem-metadata";
         },
@@ -27673,7 +27673,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/rpc-codegen/src/libs/generate.ts";
-          readonly line: 2086;
+          readonly line: 2099;
           readonly column: 37;
           readonly kind: "problem-metadata";
         },
@@ -27701,7 +27701,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/rpc-codegen/src/libs/generate.ts";
-          readonly line: 2081;
+          readonly line: 2094;
           readonly column: 37;
           readonly kind: "problem-metadata";
         },
@@ -27729,7 +27729,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/rpc-codegen/src/libs/generate.ts";
-          readonly line: 123;
+          readonly line: 124;
           readonly column: 5;
           readonly kind: "problem-constructor";
         },
@@ -64306,7 +64306,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/rpc-codegen/src/libs/generate.ts",
-          line: 117,
+          line: 118,
           column: 5,
           kind: "problem-constructor",
         },
@@ -64368,7 +64368,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/rpc-codegen/src/libs/generate.ts",
-          line: 2091,
+          line: 2104,
           column: 38,
           kind: "problem-metadata",
         },
@@ -64398,7 +64398,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/rpc-codegen/src/libs/generate.ts",
-          line: 2086,
+          line: 2099,
           column: 37,
           kind: "problem-metadata",
         },
@@ -64430,7 +64430,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/rpc-codegen/src/libs/generate.ts",
-          line: 2081,
+          line: 2094,
           column: 37,
           kind: "problem-metadata",
         },
@@ -64460,7 +64460,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/rpc-codegen/src/libs/generate.ts",
-          line: 123,
+          line: 124,
           column: 5,
           kind: "problem-constructor",
         },
