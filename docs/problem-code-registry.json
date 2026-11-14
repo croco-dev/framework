@@ -1,6 +1,6 @@
 {
   "version": "croco.problem-code-registry.v1",
-  "problemCount": 1184,
+  "problemCount": 1185,
   "problems": [
     {
       "code": "ACCESS_DENIED",
@@ -33658,7 +33658,7 @@
       "sources": [
         {
           "file": "packages/triggers-qstash/src/libs/QStashScheduler.ts",
-          "line": 352,
+          "line": 359,
           "column": 15,
           "kind": "problem-factory"
         }
@@ -33748,7 +33748,7 @@
       "sources": [
         {
           "file": "packages/triggers-qstash/src/libs/QStashScheduler.ts",
-          "line": 621,
+          "line": 628,
           "column": 9,
           "kind": "problem-factory"
         }
@@ -33780,6 +33780,36 @@
           "file": "packages/triggers-qstash/src/libs/QStashTriggerHandler.ts",
           "line": 258,
           "column": 13,
+          "kind": "problem-factory"
+        }
+      ]
+    },
+    {
+      "code": "triggers-qstash/unsupported-cron-method-key",
+      "category": "BadRequest",
+      "status": 400,
+      "title": "Bad Request",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#triggers-qstash-unsupported-cron-method-key",
+      "recovery": {
+        "cause": "The caller sent malformed input or unsupported request options.",
+        "userAction": "Correct the request input and retry after validation passes.",
+        "operatorAction": "Inspect validation details and request logs; do not retry unchanged input.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "public",
+        "telemetry": {
+          "eventName": "croco.problem.info",
+          "severity": "info",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/triggers-qstash/src/libs/QStashScheduler.ts",
+          "line": 350,
+          "column": 15,
           "kind": "problem-factory"
         }
       ]

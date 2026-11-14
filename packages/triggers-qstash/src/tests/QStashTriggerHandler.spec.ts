@@ -307,7 +307,7 @@ describe("QStashTriggerHandler", () => {
       expect(create).not.toHaveBeenCalled();
     });
 
-    it.each(["payload-job", " ", ""])(
+    it.each(["payload-job", "billing:nightly", " ", ""])(
       "dispatches scheduler name %j unchanged through the Lambda response boundary",
       async (name) => {
         const execute = vi.fn().mockResolvedValue("handled");
@@ -329,7 +329,14 @@ describe("QStashTriggerHandler", () => {
           webhookUrl: "https://example.com/webhooks/qstash",
         });
         expect((await scheduler.sync()).created).toBe(1);
+        const scheduleId = `croco-trigger:PayloadJob:${name}:execute`;
+        expect(create).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ scheduleId }));
         const body: string = create.mock.calls[0]?.[0].body;
+        expect(JSON.parse(body)).toMatchObject({
+          scheduleId,
+          triggerName: name,
+          methodName: "execute",
+        });
         const deliveryIdentityVerifier = vi.fn().mockResolvedValue(true);
         const { manager } = createIdempotentExecutionManager();
         const handler = QStashTriggerHandlerBase.createLambdaHandler({
