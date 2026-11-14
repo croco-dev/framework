@@ -271,15 +271,22 @@ export function compileDiGraph(options: DiCompilerOptions = {}): DiCompilerResul
   });
   const program = ts.createProgram([...files, ...referenceFiles], compilerOptions);
   const checker = program.getTypeChecker();
+  const scannedSources = files
+    .map((fileName) => program.getSourceFile(fileName))
+    .filter((sourceFile) => sourceFile !== undefined);
+  const localSources = new Set(
+    scannedSources.filter((sourceFile) => !program.isSourceFileFromExternalLibrary(sourceFile)),
+  );
+  const configuredTokens = new Set(
+    [...(options.bindings ?? []), ...(options.moduleProviders ?? [])].map(({ token }) =>
+      createReferenceTokenId(baseDir, token, options.packageName),
+    ),
+  );
   const diagnostics: DiCompilerDiagnostic[] = [];
   const imports = new Map<string, string>();
   const providers: ProviderAnalysis[] = [];
 
-  for (const fileName of files) {
-    const sourceFile = program.getSourceFile(fileName);
-    if (!sourceFile) {
-      continue;
-    }
+  for (const sourceFile of scannedSources) {
     for (const diagnostic of program.getSyntacticDiagnostics(sourceFile)) {
       const position =
         diagnostic.start === undefined
@@ -326,8 +333,10 @@ export function compileDiGraph(options: DiCompilerOptions = {}): DiCompilerResul
         baseDir,
         checker,
         classDeclaration: statement,
+        configuredTokens,
         diagnostics,
         imports,
+        localSources,
         packageName: options.packageName,
         sourceFile,
       });
@@ -1028,15 +1037,22 @@ function packageDescriptorError(
   ]);
 }
 
-function analyzeDependencies(input: {
+type DependencyReferenceContext = {
   readonly baseDir: string;
   readonly checker: ts.TypeChecker;
-  readonly classDeclaration: ts.ClassDeclaration;
-  readonly diagnostics: DiCompilerDiagnostic[];
-  readonly imports: Map<string, string>;
-  readonly packageName?: string;
-  readonly sourceFile: ts.SourceFile;
-}): DependencyAnalysis[] {
+  readonly configuredTokens: ReadonlySet<string>;
+  readonly localSources: ReadonlySet<ts.SourceFile>;
+};
+
+function analyzeDependencies(
+  input: DependencyReferenceContext & {
+    readonly classDeclaration: ts.ClassDeclaration;
+    readonly diagnostics: DiCompilerDiagnostic[];
+    readonly imports: Map<string, string>;
+    readonly packageName?: string;
+    readonly sourceFile: ts.SourceFile;
+  },
+): DependencyAnalysis[] {
   if (
     input.classDeclaration.heritageClauses?.some(
       (clause) => clause.token === ts.SyntaxKind.ExtendsKeyword,
@@ -1075,8 +1091,8 @@ function analyzeDependencies(input: {
       const [argument] = injection.call.arguments;
       const tokenExpression = argument ? unwrapLazyReference(argument) : undefined;
       const reference = tokenExpression
-        ? resolveExpressionReference(tokenExpression, input.checker)
-        : resolveParameterTypeReference(parameter, input.checker);
+        ? resolveExpressionReference(tokenExpression, input)
+        : resolveParameterTypeReference(parameter, input);
       if (!reference) {
         input.diagnostics.push(
           createDiagnostic(
@@ -1106,7 +1122,7 @@ function analyzeDependencies(input: {
       continue;
     }
 
-    const typeReference = resolveParameterTypeReference(parameter, input.checker);
+    const typeReference = resolveParameterTypeReference(parameter, input);
     if (!typeReference) {
       input.diagnostics.push(
         createDiagnostic(
@@ -1138,8 +1154,8 @@ function analyzeDependencies(input: {
     const [argument] = injection.call.arguments;
     const tokenExpression = argument ? unwrapLazyReference(argument) : undefined;
     const reference = tokenExpression
-      ? resolveExpressionReference(tokenExpression, input.checker)
-      : resolvePropertyTypeReference(property, input.checker);
+      ? resolveExpressionReference(tokenExpression, input)
+      : resolvePropertyTypeReference(property, input);
     if (!reference || !property.name || !ts.isIdentifier(property.name)) {
       input.diagnostics.push(
         createDiagnostic(
@@ -1298,11 +1314,12 @@ function getDeclaredScope(
 
 function resolveParameterTypeReference(
   parameter: ts.ParameterDeclaration,
-  checker: ts.TypeChecker,
+  context: DependencyReferenceContext,
 ): ResolvedImportReference | undefined {
   if (!parameter.type || !ts.isTypeReferenceNode(parameter.type)) {
     return undefined;
   }
+  const { checker } = context;
   const locationSymbol = checker.getSymbolAtLocation(parameter.type.typeName);
   const type = checker.getTypeAtLocation(parameter.type);
   const symbol = locationSymbol ?? type.aliasSymbol ?? type.getSymbol();
@@ -1311,35 +1328,39 @@ function resolveParameterTypeReference(
   if (!symbol || !resolved?.declarations?.some(ts.isClassDeclaration)) {
     return undefined;
   }
-  return resolveSymbolReference(symbol, parameter.type.typeName, checker);
+  return resolveSymbolReference(symbol, parameter.type.typeName, context);
 }
 
 function resolvePropertyTypeReference(
   property: ts.PropertyDeclaration,
-  checker: ts.TypeChecker,
+  context: DependencyReferenceContext,
 ): ResolvedImportReference | undefined {
   if (!property.type || !ts.isTypeReferenceNode(property.type)) {
     return undefined;
   }
+  const { checker } = context;
   const locationSymbol = checker.getSymbolAtLocation(property.type.typeName);
   const type = checker.getTypeAtLocation(property.type);
   const symbol = locationSymbol ?? type.aliasSymbol ?? type.getSymbol();
-  return symbol ? resolveSymbolReference(symbol, property.type.typeName, checker) : undefined;
+  return symbol ? resolveSymbolReference(symbol, property.type.typeName, context) : undefined;
 }
 
 function resolveExpressionReference(
   expression: ts.Expression,
-  checker: ts.TypeChecker,
+  context: DependencyReferenceContext,
+  memberPath: readonly string[] = [],
 ): ResolvedImportReference | undefined {
   if (ts.isIdentifier(expression)) {
-    const symbol = checker.getSymbolAtLocation(expression);
-    return symbol ? resolveSymbolReference(symbol, expression, checker) : undefined;
+    const symbol = context.checker.getSymbolAtLocation(expression);
+    const reference =
+      symbol && resolveSymbolReference(symbol, expression, context, memberPath.length === 0);
+    return reference && memberPath.length ? { ...reference, memberPath } : reference;
   }
   if (ts.isPropertyAccessExpression(expression)) {
-    const base = resolveExpressionReference(expression.expression, checker);
-    return base
-      ? { ...base, memberPath: [...(base.memberPath ?? []), expression.name.text] }
-      : undefined;
+    return resolveExpressionReference(expression.expression, context, [
+      expression.name.text,
+      ...memberPath,
+    ]);
   }
   return undefined;
 }
@@ -1347,53 +1368,51 @@ function resolveExpressionReference(
 function resolveSymbolReference(
   symbol: ts.Symbol,
   location: ts.Node,
-  checker: ts.TypeChecker,
+  { baseDir, checker, configuredTokens, localSources }: DependencyReferenceContext,
+  allowLocalAlias = true,
 ): ResolvedImportReference | undefined {
   const declaration = symbol.declarations?.[0];
-  if (declaration && ts.isImportSpecifier(declaration)) {
-    const importDeclaration = declaration.parent.parent.parent;
+  if (declaration && (ts.isImportSpecifier(declaration) || ts.isImportClause(declaration))) {
+    const namedImport = ts.isImportSpecifier(declaration) ? declaration : undefined;
+    const importDeclaration = namedImport ? namedImport.parent.parent.parent : declaration.parent;
     if (
       ts.isImportDeclaration(importDeclaration) &&
       ts.isStringLiteral(importDeclaration.moduleSpecifier)
     ) {
-      if (importDeclaration.moduleSpecifier.text.startsWith(".")) {
-        const resolved = checker.getAliasedSymbol(symbol);
-        const resolvedDeclaration = resolved.declarations?.[0];
-        if (resolvedDeclaration) {
-          return {
-            moduleSpecifier: resolvedDeclaration.getSourceFile().fileName,
-            exportName: ts.isClassDeclaration(resolvedDeclaration)
-              ? (getNamedClassExport(resolvedDeclaration, checker) ?? resolved.getName())
-              : resolved.getName(),
-          };
-        }
-      }
-      return {
-        moduleSpecifier: importDeclaration.moduleSpecifier.text,
-        exportName: declaration.propertyName?.text ?? declaration.name.text,
+      const specifier = importDeclaration.moduleSpecifier.text;
+      const imported = {
+        moduleSpecifier: specifier,
+        exportName: namedImport
+          ? (namedImport.propertyName?.text ?? namedImport.name.text)
+          : "default",
       };
-    }
-  }
-  if (declaration && ts.isImportClause(declaration)) {
-    const importDeclaration = declaration.parent;
-    if (
-      ts.isImportDeclaration(importDeclaration) &&
-      ts.isStringLiteral(importDeclaration.moduleSpecifier)
-    ) {
-      if (importDeclaration.moduleSpecifier.text.startsWith(".")) {
-        const resolved = checker.getAliasedSymbol(symbol);
-        const resolvedDeclaration = resolved.declarations?.[0];
-        if (resolvedDeclaration && ts.isClassDeclaration(resolvedDeclaration)) {
-          const exportName = getNamedClassExport(resolvedDeclaration, checker);
-          if (exportName !== undefined) {
-            return {
-              moduleSpecifier: resolvedDeclaration.getSourceFile().fileName,
-              exportName,
-            };
-          }
+      const isRelative = specifier.startsWith(".");
+      if (
+        !isRelative &&
+        (!allowLocalAlias || configuredTokens.has(createReferenceTokenId(baseDir, imported)))
+      ) {
+        return imported;
+      }
+      const target = checker.getAliasedSymbol(symbol);
+      const targetDeclaration = isRelative
+        ? target.declarations?.[0]
+        : target.declarations?.find(ts.isClassDeclaration);
+      if (targetDeclaration) {
+        const source = targetDeclaration.getSourceFile();
+        const isClass = ts.isClassDeclaration(targetDeclaration);
+        if (
+          isRelative ||
+          (isClass &&
+            localSources.has(source) &&
+            getStereotype(targetDeclaration, checker, baseDir))
+        ) {
+          const classExport = isClass ? getNamedClassExport(targetDeclaration, checker) : undefined;
+          const exportName =
+            classExport ?? (isRelative && namedImport ? target.getName() : undefined);
+          if (exportName !== undefined) return { moduleSpecifier: source.fileName, exportName };
         }
       }
-      return { moduleSpecifier: importDeclaration.moduleSpecifier.text, exportName: "default" };
+      return imported;
     }
   }
   const resolved = symbol.flags & ts.SymbolFlags.Alias ? checker.getAliasedSymbol(symbol) : symbol;

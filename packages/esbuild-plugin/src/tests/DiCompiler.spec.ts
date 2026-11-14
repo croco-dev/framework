@@ -985,6 +985,143 @@ export class Conflict {}`,
     ).toBe("app:src/Dependency#Dependency");
   });
 
+  it("uses the same provider and factory for tsconfig paths and relative imports", async () => {
+    const results = ["./barrel", "@app/barrel", "@app/barrel"].map((specifier, index) => {
+      const baseDir = path.join(TEMP_DIR, `app-${index}`);
+      writeProjectAt(baseDir, {
+        "src/Service.ts": `
+          import { Component } from "@croco/framework-context";
+          export interface Service { value: number; }
+          @Component() export class Service { value = 37; }
+        `,
+        "src/barrel.ts": 'export { Service as PublicService } from "./Service";',
+        "src/Consumer.ts": `
+          import { Component, Inject } from "@croco/framework-context";
+          import { PublicService as Service } from "${specifier}";
+          @Component() export class Consumer {
+            constructor(readonly inferred: Service, @Inject(Service) readonly explicit: Service) {}
+          }
+        `,
+      });
+      const configFile = path.join(baseDir, "tsconfig.json");
+      const config = JSON.parse(fs.readFileSync(configFile, "utf8")) as {
+        compilerOptions: { paths: Record<string, string[]> };
+      };
+      config.compilerOptions.paths["@app/*"] = [path.join(baseDir, "src/*")];
+      fs.writeFileSync(configFile, JSON.stringify(config));
+      return compileDiGraph({ baseDir, graphId: "path-alias-fixture" });
+    });
+
+    const [relative, aliased, relocated] = results;
+    expect(
+      aliased.manifest.providers
+        .find(({ exportName }) => exportName === "Consumer")
+        ?.dependencies.map(({ tokenId, reason }) => ({ tokenId, reason })),
+    ).toEqual([
+      { tokenId: "app:src/Service#Service", reason: "constructor-type" },
+      { tokenId: "app:src/Service#Service", reason: "explicit-token" },
+    ]);
+    expect(
+      relative.manifest.providers
+        .find(({ exportName }) => exportName === "Consumer")
+        ?.dependencies.map(({ tokenId }) => tokenId),
+    ).toEqual(["app:src/Service#Service", "app:src/Service#Service"]);
+    expect(relocated.manifest).toEqual(aliased.manifest);
+    expect(relocated.code).toBe(aliased.code);
+
+    const baseDir = path.join(TEMP_DIR, "app-1");
+    expect(() =>
+      compileDiGraph({
+        baseDir,
+        modules: [
+          { id: "library", providers: ["app:src/Service#Service"] },
+          { id: "app", providers: ["app:src/Consumer#Consumer"], imports: ["library"] },
+        ],
+      }),
+    ).toThrow("private provider");
+
+    writeDiGraph(aliased);
+    const entry = path.join(baseDir, "runtime.ts");
+    fs.writeFileSync(
+      entry,
+      `
+      import { strict as assert } from "node:assert";
+      import { Container } from "@croco/framework-context";
+      import { generatedDiGraph } from "./.croco/di.generated";
+      import { Consumer } from "./src/Consumer";
+      import { Service } from "./src/Service";
+      const scope = Container.createScope();
+      scope.run(() => {
+        Container.installGeneratedGraph(generatedDiGraph);
+        const consumer = Container.get(Consumer);
+        const service = Container.get(Service);
+        assert.equal(service.value, 37);
+        assert.equal(consumer.inferred, service);
+        assert.equal(consumer.explicit, service);
+      });
+      scope.dispose();
+    `,
+    );
+    const bundle = path.join(baseDir, "runtime.cjs");
+    await esbuild.build({
+      entryPoints: [entry],
+      outfile: bundle,
+      bundle: true,
+      platform: "node",
+      tsconfig: path.join(baseDir, "tsconfig.json"),
+    });
+    execFileSync(process.execPath, [bundle], { cwd: baseDir, stdio: "pipe" });
+  }, 30_000);
+
+  it("honors explicit bindings for tokens imported through tsconfig paths", () => {
+    writeProject({
+      "src/Service.ts": `
+        import { Component, Token } from "@croco/framework-context";
+        @Component() export class Service {}
+        @Component() export class Tokens {
+          static readonly SERVICE = new Token<Service>("static-service");
+        }
+        @Component() export class Replacement {}
+        export const SERVICE = new Token<Service>("service");
+        const staticService = Tokens.SERVICE;
+        export { staticService as "Tokens.SERVICE" };
+      `,
+      "src/Consumer.ts": `
+        import { Component, Inject } from "@croco/framework-context";
+        import { SERVICE, Service, Tokens } from "@app/service";
+        @Component() export class Consumer {
+          constructor(
+            @Inject(SERVICE) readonly value: Service,
+            readonly replacement: Service,
+            @Inject(Tokens.SERVICE) readonly fromStaticMember: Service,
+          ) {}
+        }
+      `,
+    });
+    const configFile = path.join(TEMP_DIR, "tsconfig.json");
+    const config = JSON.parse(fs.readFileSync(configFile, "utf8")) as {
+      compilerOptions: { paths: Record<string, string[]> };
+    };
+    config.compilerOptions.paths["@app/service"] = [path.join(TEMP_DIR, "src/Service.ts")];
+    fs.writeFileSync(configFile, JSON.stringify(config));
+    const result = compileDiGraph({
+      baseDir: TEMP_DIR,
+      bindings: ["SERVICE", "Service", "Tokens.SERVICE"].map((exportName) => ({
+        token: { moduleSpecifier: "@app/service", exportName },
+        useExisting: { moduleSpecifier: "./src/Service.ts", exportName: "Replacement" },
+      })),
+    });
+    expect(
+      result.manifest.providers
+        .find(({ exportName }) => exportName === "Consumer")
+        ?.dependencies.map(({ tokenId }) => tokenId),
+    ).toEqual([
+      "package:@app/service#SERVICE",
+      "package:@app/service#Service",
+      "package:@app/service#Tokens.SERVICE",
+    ]);
+  });
+
   it("preserves declared multi-binding order", () => {
     writeBindingFixture("InjectMany", "readonly Service[]");
     const options = {
