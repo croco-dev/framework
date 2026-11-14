@@ -1,13 +1,16 @@
 import { readFile, writeFile } from "node:fs/promises";
+import { posix } from "node:path";
 import { Node, Project, QuoteKind, SyntaxKind, VariableDeclarationKind } from "ts-morph";
 import type {
   ArrayLiteralExpression,
   CallExpression,
   Identifier,
+  ImportDeclaration,
   PropertyAssignment,
   SourceFile,
   VariableDeclaration,
 } from "ts-morph";
+import { generatedImportExtension } from "../generatedImportExtension.js";
 
 export type RegisterControllerOptions = {
   readonly entryPath: string;
@@ -31,7 +34,11 @@ export type RegisterControllerResult =
     };
 
 type UpdateResult = "updated" | "updated-idempotent" | "unsupported-pattern" | "not-found";
-type ImportUpdateResult = "updated" | "updated-idempotent" | "conflicting-binding";
+type ImportUpdateResult =
+  | "updated"
+  | "updated-idempotent"
+  | "specifier-updated"
+  | "conflicting-binding";
 
 export async function registerController(
   options: RegisterControllerOptions,
@@ -85,11 +92,17 @@ export async function registerController(
     return unsupportedResult(options, "Could not resolve the controller registration identifier.");
   }
 
+  const extension =
+    /^\.\.?\//.test(options.importPath) && !posix.extname(options.importPath)
+      ? generatedImportExtension(options.entryPath)
+      : "";
+  const importPath = options.importPath + extension;
   const importResult = reconcileImport(
     sourceFile,
-    options.importPath,
+    importPath,
     options.className,
     registeredIdentifier,
+    extension ? options.importPath : undefined,
   );
   if (importResult === "conflicting-binding") {
     return unsupportedResult(
@@ -99,9 +112,11 @@ export async function registerController(
   }
 
   const status =
-    finalResult === "updated" || importResult === "updated" ? "updated" : "updated-idempotent";
+    finalResult === "updated" || importResult !== "updated-idempotent"
+      ? "updated"
+      : "updated-idempotent";
 
-  if (status === "updated") {
+  if (finalResult === "updated" || importResult === "updated") {
     sourceFile.organizeImports();
   }
 
@@ -111,7 +126,7 @@ export async function registerController(
 
   return {
     status,
-    importPath: options.importPath,
+    importPath,
     className: options.className,
   };
 }
@@ -393,13 +408,13 @@ function reconcileImport(
   importPath: string,
   className: string,
   registeredIdentifier: Identifier,
+  legacyImportPath?: string,
 ): ImportUpdateResult {
-  const importDeclarations = sourceFile
-    .getImportDeclarations()
-    .filter((declaration) => declaration.getModuleSpecifierValue() === importPath);
+  const isControllerModule = (specifier: string) =>
+    specifier === importPath || specifier === legacyImportPath;
 
   let localImportCount = 0;
-  let hasExpectedImport = false;
+  let expectedImport: ImportDeclaration | undefined;
   for (const declaration of sourceFile.getImportDeclarations()) {
     if (declaration.getDefaultImport()?.getText() === className) {
       localImportCount += 1;
@@ -414,12 +429,14 @@ function reconcileImport(
       if (localName !== className) continue;
 
       localImportCount += 1;
-      hasExpectedImport =
-        hasExpectedImport ||
-        (!declaration.isTypeOnly() &&
-          !namedImport.isTypeOnly() &&
-          namedImport.getName() === className &&
-          declaration.getModuleSpecifierValue() === importPath);
+      if (
+        !declaration.isTypeOnly() &&
+        !namedImport.isTypeOnly() &&
+        namedImport.getName() === className &&
+        isControllerModule(declaration.getModuleSpecifierValue())
+      ) {
+        expectedImport = declaration;
+      }
     }
   }
 
@@ -432,18 +449,26 @@ function reconcileImport(
   );
 
   if (localImportCount > 0) {
-    return localImportCount === 1 && hasExpectedImport && !hasNonImportDeclaration
-      ? "updated-idempotent"
-      : "conflicting-binding";
+    if (localImportCount !== 1 || !expectedImport || hasNonImportDeclaration) {
+      return "conflicting-binding";
+    }
+    if (expectedImport.getModuleSpecifierValue() === importPath) return "updated-idempotent";
+    expectedImport.setModuleSpecifier(importPath);
+    return "specifier-updated";
   }
 
   if (hasNonImportDeclaration) {
     return "conflicting-binding";
   }
 
-  const importDeclaration = importDeclarations.find(
-    (declaration) => !declaration.isTypeOnly() && !declaration.getNamespaceImport(),
-  );
+  const importDeclaration = sourceFile
+    .getImportDeclarations()
+    .find(
+      (declaration) =>
+        isControllerModule(declaration.getModuleSpecifierValue()) &&
+        !declaration.isTypeOnly() &&
+        !declaration.getNamespaceImport(),
+    );
 
   if (!importDeclaration) {
     sourceFile.addImportDeclaration({
@@ -451,6 +476,9 @@ function reconcileImport(
       moduleSpecifier: importPath,
     });
   } else {
+    if (importDeclaration.getModuleSpecifierValue() !== importPath) {
+      importDeclaration.setModuleSpecifier(importPath);
+    }
     importDeclaration.addNamedImport(className);
   }
 

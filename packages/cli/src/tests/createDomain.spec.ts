@@ -2,6 +2,7 @@ import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
+import ts from "typescript";
 import { describe, expect, it } from "vitest";
 import { createCrocoCommandRuntime, runWithCrocoCommandRuntime } from "../libs/cliRuntime.js";
 import { runCreateDomain } from "../commands/createDomain.js";
@@ -107,6 +108,116 @@ describe("runCreateDomain", () => {
     );
     expect(entryContent).toContain("app.addControllers([UserController]);");
   });
+
+  it.each([
+    "standalone",
+    "referenced",
+    "nested entrypoint",
+    "root entrypoint",
+    "generated entrypoint",
+  ])(
+    "typechecks the generated domain and controller registration in a %s NodeNext ESM app",
+    async (project) => {
+      const cwd = await createWorkspace();
+      try {
+        const appDir = path.join(cwd, "apps", "api-server");
+        const manifestPath = path.join(appDir, "package.json");
+        const manifest = JSON.parse(await fs.readFile(manifestPath, "utf-8"));
+        await fs.writeFile(manifestPath, JSON.stringify({ ...manifest, type: "module" }));
+        const entryPath = path.join(appDir, "src", "index.ts");
+        const rootEntry = project === "root entrypoint";
+        const nestedEntry = project === "nested entrypoint";
+        const bootstrapPath = path.join(appDir, "src", "bootstrap", "index.ts");
+        if (rootEntry) {
+          await fs.writeFile(
+            path.join(appDir, "server.ts"),
+            'import "./src/index.js";\nexport { OrderRepository } from "./src/domains/order/index.js";\n',
+          );
+          const domainDir = path.join(appDir, "src", "domains", "order");
+          await fs.mkdir(domainDir, { recursive: true });
+          await fs.writeFile(path.join(domainDir, "index.ts"), "export const custom = true;");
+        } else if (nestedEntry) {
+          await fs.mkdir(path.dirname(bootstrapPath));
+          await fs.writeFile(
+            bootstrapPath,
+            'import "../index.js";\nexport * from "../domains/order/index.js";\n',
+          );
+        }
+        await fs.writeFile(
+          entryPath,
+          `import { createApp } from "@croco/transports-http";
+export const app = createApp({ controllers: [] });
+`,
+        );
+        const packageDir = fileURLToPath(new URL("../../../", import.meta.url));
+        const appConfigPath = path.join(
+          appDir,
+          project === "standalone" ? "tsconfig.json" : "tsconfig.app.json",
+        );
+        if (project !== "standalone") {
+          await fs.writeFile(
+            path.join(appDir, "tsconfig.json"),
+            JSON.stringify({
+              files: [],
+              references: [
+                ...(nestedEntry ? [{ path: "./tsconfig.test.json" }] : []),
+                { path: "./tsconfig.app.json" },
+              ],
+            }),
+          );
+        }
+        await fs.writeFile(
+          appConfigPath,
+          JSON.stringify({
+            compilerOptions: {
+              module: "NodeNext",
+              experimentalDecorators: true,
+              lib: ["ESNext"],
+              noEmit: true,
+              skipLibCheck: true,
+              strict: true,
+              types: [],
+              paths: {
+                "@croco/repository-core": [
+                  path.join(packageDir, "repository-core", "src", "libs", "Repository.ts"),
+                ],
+              },
+            },
+            ...(rootEntry
+              ? { files: ["server.ts"] }
+              : {
+                  include: [
+                    nestedEntry
+                      ? "src/bootstrap"
+                      : project === "generated entrypoint"
+                        ? "src/domains/*/index.ts"
+                        : "src",
+                  ],
+                }),
+            ...(project === "referenced" ? { exclude: ["src/domains/*/index.ts"] } : {}),
+          }),
+        );
+        const bundlerConfigPath = path.join(appDir, "tsconfig.test.json");
+        if (nestedEntry) {
+          await fs.writeFile(
+            bundlerConfigPath,
+            JSON.stringify({
+              extends: "./tsconfig.app.json",
+              compilerOptions: { module: "ESNext", moduleResolution: "Bundler" },
+              include: ["src"],
+            }),
+          );
+        }
+
+        const result = await runCreateDomain("Order", { cwd, overwrite: rootEntry });
+
+        expect(result?.registration?.status).toBe("updated");
+        expectToTypecheck(appConfigPath);
+      } finally {
+        await fs.rm(cwd, { recursive: true, force: true });
+      }
+    },
+  );
 
   it("should create files without registering the controller", async () => {
     const cwd = await createWorkspace();
@@ -261,6 +372,49 @@ app.listen({ port: 3000 });
     expect(appSource).not.toContain("InvoiceController");
   });
 });
+
+function expectToTypecheck(configPath: string): void {
+  const parsed = ts.getParsedCommandLineOfConfigFile(
+    configPath,
+    {},
+    {
+      ...ts.sys,
+      onUnRecoverableConfigFileDiagnostic: (diagnostic) => {
+        throw new Error(ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n"));
+      },
+    },
+  );
+  if (!parsed) throw new Error(`Cannot read fixture config ${configPath}.`);
+  // This fixture checks application-relative resolution; generated dependency contracts have their own tests.
+  const packageTypes = path.join(path.dirname(configPath), "fixture-packages.d.ts");
+  const declarations = `
+declare module "@croco/framework-context" {
+  export function Component(): ClassDecorator;
+}
+declare module "@croco/protocols-rest" {
+  export function Controller(path: string): ClassDecorator;
+  export function Ctx(): ParameterDecorator;
+  export function Get(path: string): MethodDecorator;
+  export function Post(path: string): MethodDecorator;
+  export function Put(path: string): MethodDecorator;
+  export function Delete(path: string): MethodDecorator;
+}
+declare module "@croco/transports-http" {
+  export type CrocoHttpContext = unknown;
+  export function createApp(config: { controllers: unknown[] }): unknown;
+}
+`;
+  const host = ts.createCompilerHost(parsed.options);
+  host.readFile = (name) => (name === packageTypes ? declarations : ts.sys.readFile(name));
+  const program = ts.createProgram([...parsed.fileNames, packageTypes], parsed.options, host);
+  const diagnostics = [...parsed.errors, ...ts.getPreEmitDiagnostics(program)];
+  expect(
+    diagnostics.map(({ code, messageText }) => ({
+      code,
+      message: ts.flattenDiagnosticMessageText(messageText, "\n"),
+    })),
+  ).toEqual([]);
+}
 
 async function createWorkspace(options: { apiServerManifest?: string } = {}): Promise<string> {
   const cwd = await fs.mkdtemp(path.join(os.tmpdir(), "croco-cli-domain-"));

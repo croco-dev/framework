@@ -8,6 +8,7 @@ import type { WriteResult } from "../libs/fileWriter.js";
 import { write as fileWriterWrite } from "../libs/fileWriter.js";
 import { getCrocoCommandRuntime, logWriteResult } from "../libs/cliRuntime.js";
 import { assertGeneratedImportDependencies } from "../libs/generatedImportContract.js";
+import { generatedImportExtension } from "../libs/generatedImportExtension.js";
 import { normalize, validate } from "../libs/naming.js";
 import { detect } from "../libs/workspace.js";
 import { GLOBAL_OPTIONS } from "./options.js";
@@ -57,15 +58,12 @@ export async function runCreateDomain(
     return null;
   }
 
-  const barrelPath = join(
-    workspace.root,
-    workspace.apiServerDir,
-    "src",
-    "domains",
-    kebab,
-    "index.ts",
-  );
+  const apiServerSrc = join(workspace.root, workspace.apiServerDir, "src");
+  const barrelPath = join(apiServerSrc, "domains", kebab, "index.ts");
   const domainDir = dirname(barrelPath);
+  const repositoryPath = join(domainDir, `${className}Repository.ts`);
+  // A configured entry can reach the new repository through the new domain barrel.
+  const domainSources = new Map([[barrelPath, barrelTemplate(className, ".js")]]);
   const generatedSources = [
     {
       path: join(domainDir, `${className}Controller.ts`),
@@ -76,8 +74,11 @@ export async function runCreateDomain(
       content: serviceTemplate(className),
     },
     {
-      path: join(domainDir, `${className}Repository.ts`),
-      content: repositoryTemplate(className),
+      path: repositoryPath,
+      content: repositoryTemplate(
+        className,
+        generatedImportExtension(repositoryPath, domainSources, overwrite, apiServerSrc),
+      ),
     },
     {
       path: join(domainDir, `${className}Entity.ts`),
@@ -85,7 +86,10 @@ export async function runCreateDomain(
     },
     {
       path: barrelPath,
-      content: barrelTemplate(className),
+      content: barrelTemplate(
+        className,
+        generatedImportExtension(barrelPath, undefined, overwrite, apiServerSrc),
+      ),
     },
   ];
 
@@ -104,7 +108,6 @@ export async function runCreateDomain(
     ),
   );
 
-  const apiServerSrc = join(workspace.root, workspace.apiServerDir, "src");
   const registration = register
     ? await registerController({
         ...resolveControllerRegistrationTarget(apiServerSrc),
@@ -200,9 +203,9 @@ export class ${className}Service {
 `;
 }
 
-function repositoryTemplate(className: string): string {
+function repositoryTemplate(className: string, extension: string): string {
   return `import type { KeyedRepositoryResult, Repository } from "@croco/repository-core";
-import type { ${className}Entity } from "./${className}Entity";
+import type { ${className}Entity } from "./${className}Entity${extension}";
 
 export class ${className}Repository implements Repository<${className}Entity, string> {
   async findById(id: string): Promise<${className}Entity | null> {
@@ -237,11 +240,11 @@ function entityTemplate(className: string): string {
 `;
 }
 
-function barrelTemplate(className: string): string {
-  return `export { ${className}Controller } from "./${className}Controller";
-export { ${className}Service } from "./${className}Service";
-export { ${className}Repository } from "./${className}Repository";
-export { ${className}Entity } from "./${className}Entity";
+function barrelTemplate(className: string, extension: string): string {
+  return `export { ${className}Controller } from "./${className}Controller${extension}";
+export { ${className}Service } from "./${className}Service${extension}";
+export { ${className}Repository } from "./${className}Repository${extension}";
+export { ${className}Entity } from "./${className}Entity${extension}";
 `;
 }
 

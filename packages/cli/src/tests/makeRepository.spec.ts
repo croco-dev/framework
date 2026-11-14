@@ -132,6 +132,93 @@ describe("generateRepository", () => {
     await expectGeneratedFixtureToTypecheck(tsconfigPath);
   });
 
+  it.each([
+    "NodeNext ESM",
+    "NodeNext CommonJS",
+    "Bundler ESM",
+    "NodeNext solution ESM",
+    "NodeNext solution entrypoint ESM",
+  ])("should generate a typecheckable repository in a %s app", async (mode) => {
+    const cwd = await createWorkspace();
+    try {
+      const appDir = path.join(cwd, "apps", "api-server");
+      const packageType = mode === "NodeNext CommonJS" ? "commonjs" : "module";
+      const isBundler = mode === "Bundler ESM";
+      const isSolution = mode.startsWith("NodeNext solution");
+      const hasExplicitEntry = mode === "NodeNext solution entrypoint ESM";
+      await fs.writeFile(
+        path.join(appDir, "package.json"),
+        JSON.stringify({
+          type: packageType,
+          dependencies: { "@croco/repository-core": "workspace:*" },
+        }),
+      );
+      await fs.writeFile(
+        path.join(cwd, "tsconfig.base.json"),
+        JSON.stringify({
+          compilerOptions: {
+            module: isBundler ? "ESNext" : "NodeNext",
+            ...(isBundler ? { moduleResolution: "Bundler" } : {}),
+            paths: {
+              "@croco/repository-core": [
+                path.join(REPO_ROOT, "packages/repository-core/src/libs/Repository.ts"),
+              ],
+            },
+            skipLibCheck: true,
+            strict: true,
+          },
+        }),
+      );
+      const tsconfigPath = path.join(appDir, "tsconfig.json");
+      const appConfig = JSON.stringify({
+        extends: "../../tsconfig.base.json",
+        ...(hasExplicitEntry ? { files: ["server.ts"] } : { include: ["src"] }),
+      });
+      if (isSolution) {
+        await fs.writeFile(
+          tsconfigPath,
+          JSON.stringify({
+            files: [],
+            references: [{ path: "./tsconfig.tools.json" }, { path: "./tsconfig.app.json" }],
+          }),
+        );
+        await fs.writeFile(
+          path.join(appDir, "tsconfig.tools.json"),
+          '{"compilerOptions":{"module":"ESNext","moduleResolution":"Bundler"},"include":["tools"]}',
+        );
+        await fs.writeFile(path.join(appDir, "tsconfig.app.json"), appConfig);
+      } else {
+        await fs.writeFile(tsconfigPath, appConfig);
+      }
+
+      await generateEntity("Order", { cwd });
+      if (hasExplicitEntry) {
+        await fs.writeFile(path.join(appDir, "src", "index.ts"), "export {};\n");
+        await fs.writeFile(path.join(appDir, "server.ts"), 'import "./src/index.js";\n');
+      }
+      const result = await generateRepository("Order", { cwd });
+      if (hasExplicitEntry) {
+        await fs.writeFile(
+          path.join(appDir, "src", "index.ts"),
+          'export { OrderRepository } from "./repositories/OrderRepository.js";\n',
+        );
+      }
+
+      expect(result?.status).toBe("created");
+      await expectGeneratedFixtureToTypecheck(
+        isSolution ? path.join(appDir, "tsconfig.app.json") : tsconfigPath,
+      );
+      const extension = packageType === "module" && !isBundler ? ".js" : "";
+      const repository = await fs.readFile(
+        path.join(appDir, "src", "repositories", "OrderRepository.ts"),
+        "utf-8",
+      );
+      expect(repository).toContain(`from "../entities/OrderEntity${extension}";`);
+    } finally {
+      await fs.rm(cwd, { recursive: true, force: true });
+    }
+  });
+
   it("should reject missing generated import dependencies before writing files", async () => {
     const cwd = await createWorkspace({ apiServerManifest: "{}" });
     const filePath = path.join(
@@ -147,6 +234,58 @@ describe("generateRepository", () => {
       "Missing dependencies in apps/api-server/package.json for generated imports: @croco/repository-core.",
     );
     await expect(fs.access(filePath)).rejects.toThrow();
+  });
+
+  it("preserves a Bundler directory import when a separate tools project uses NodeNext", async () => {
+    const cwd = await createWorkspace({
+      apiServerManifest:
+        '{"type":"module","dependencies":{"@croco/repository-core":"workspace:*"}}',
+    });
+    try {
+      const appDir = path.join(cwd, "apps", "api-server");
+      const entityDir = path.join(appDir, "src", "entities", "OrderEntity");
+      await fs.mkdir(entityDir, { recursive: true });
+      await fs.writeFile(path.join(entityDir, "index.ts"), "export class OrderEntity {}");
+      await fs.writeFile(path.join(appDir, "vite.config.ts"), 'import "./src/config.js";');
+      await fs.writeFile(path.join(appDir, "src", "config.ts"), "export {};");
+      await fs.writeFile(
+        path.join(appDir, "src", "index.ts"),
+        'export { OrderRepository } from "./repositories/OrderRepository";',
+      );
+      await fs.writeFile(
+        path.join(appDir, "tsconfig.json"),
+        JSON.stringify({
+          compilerOptions: { module: "NodeNext" },
+          files: [],
+          references: [{ path: "./tsconfig.tools.json" }, { path: "./tsconfig.app.json" }],
+        }),
+      );
+      await fs.writeFile(
+        path.join(appDir, "tsconfig.tools.json"),
+        '{"compilerOptions":{"module":"NodeNext"},"files":["vite.config.ts"]}',
+      );
+      const appConfigPath = path.join(appDir, "tsconfig.app.json");
+      await fs.writeFile(
+        appConfigPath,
+        JSON.stringify({
+          compilerOptions: {
+            module: "ESNext",
+            moduleResolution: "Bundler",
+            paths: {
+              "@croco/repository-core": [
+                path.join(REPO_ROOT, "packages/repository-core/src/libs/Repository.ts"),
+              ],
+            },
+          },
+          files: ["src/index.ts"],
+        }),
+      );
+
+      expect((await generateRepository("Order", { cwd }))?.status).toBe("created");
+      await expectGeneratedFixtureToTypecheck(appConfigPath);
+    } finally {
+      await fs.rm(cwd, { recursive: true, force: true });
+    }
   });
 
   it("should not write files in dry-run mode", async () => {

@@ -1205,7 +1205,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/createDomain.ts",
-      "line": 144,
+      "line": 147,
       "column": 67,
       "code": "TS2379",
       "message": "Argument of type '{ dryRun: boolean; overwrite: boolean; cwd: string | undefined; register: boolean; }' is not assignable to parameter of type 'RunCreateDomainOptions' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -2693,7 +2693,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/makeRepository.ts",
-      "line": 108,
+      "line": 104,
       "column": 70,
       "code": "TS2379",
       "message": "Argument of type '{ dryRun: boolean; overwrite: boolean; cwd: string | undefined; }' is not assignable to parameter of type 'GenerateRepositoryOptions' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
