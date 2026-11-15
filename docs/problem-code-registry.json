@@ -29538,7 +29538,7 @@
       "sources": [
         {
           "file": "packages/rpc-codegen/src/libs/generate.ts",
-          "line": 2104,
+          "line": 2110,
           "column": 38,
           "kind": "problem-metadata"
         }
@@ -29568,7 +29568,7 @@
       "sources": [
         {
           "file": "packages/rpc-codegen/src/libs/generate.ts",
-          "line": 2099,
+          "line": 2105,
           "column": 37,
           "kind": "problem-metadata"
         }
@@ -29598,7 +29598,7 @@
       "sources": [
         {
           "file": "packages/rpc-codegen/src/libs/generate.ts",
-          "line": 2094,
+          "line": 2100,
           "column": 37,
           "kind": "problem-metadata"
         }

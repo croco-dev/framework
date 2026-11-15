@@ -1820,7 +1820,7 @@ void user; void order; void result;
       expect(content).toContain("export const userKeys = {");
       expect(content).toContain("all: () => ['user'] as const,");
       expect(content).toContain(
-        "list: (input: ListInput) => [...userKeys.all(), 'list', serializeRpcQueryKeyInput(input)] as const,",
+        "list: (input: ListInput) => [...userKeys.all(), 'list', serializeRpcQueryKeyInput(input, true)] as const,",
       );
       expect(content).toContain(
         "create: (input: CreateInput) => [...userKeys.all(), 'create', serializeRpcQueryKeyInput(input)] as const,",
@@ -1969,10 +1969,150 @@ void createInvalidationRouteId;
       const blue = { query: { filter: JSON.parse('{"__proto__":"blue"}') } };
       expect(JSON.stringify(keys.list(red))).not.toBe(JSON.stringify(keys.list(blue)));
       expect(serialize({ b: undefined, a: ["red", undefined, "blue"] })).toEqual({
-        a: ["red", "blue"],
+        a: ["red", null, "blue"],
       });
       expect(serialize({ b: 2, a: 1 })).toEqual(serialize({ a: 1, b: 2 }));
     },
+  );
+
+  it.each(["inline", "frontend-problems"] as const)(
+    "preserves JSON array positions and query omission with the %s runtime",
+    async (problemRuntime) => {
+      const values = z.array(z.string().nullable().optional());
+      const body = z.object({ values, query: values.optional() });
+      const query = z.object({ tags: values, absent: z.string().optional() });
+      const base: RouteIR = {
+        controllerName: "UserController",
+        methodName: "search",
+        httpMethod: "POST",
+        path: "/users/search",
+        params: [],
+        routeContract: null,
+        inputSchema: null,
+        inputSchemas: {
+          ...EMPTY_INPUT_SCHEMAS,
+          body: body as unknown as RouteIR["inputSchemas"]["body"],
+        },
+        outputSchema: null,
+        domain: null,
+      };
+      const routes: RouteIR[] = [
+        base,
+        {
+          ...base,
+          methodName: "mixed",
+          inputSchemas: {
+            ...base.inputSchemas,
+            query: query as unknown as RouteIR["inputSchemas"]["query"],
+          },
+        },
+        {
+          ...base,
+          methodName: "list",
+          httpMethod: "GET",
+          path: "/users",
+          inputSchemas: {
+            ...EMPTY_INPUT_SCHEMAS,
+            query: query as unknown as RouteIR["inputSchemas"]["query"],
+            headers: z.object({
+              authorization: z.string(),
+            }) as unknown as RouteIR["inputSchemas"]["headers"],
+          },
+        },
+      ];
+      generateClientFiles(routes, tempDir, { problemRuntime, reactQuery: true });
+      expect(
+        checkGeneratedClientFiles(routes, tempDir, { problemRuntime, reactQuery: true }),
+      ).toEqual([]);
+      assertGeneratedReactQueryClientTypechecks(
+        fs.readFileSync(path.join(tempDir, "user.ts"), "utf8"),
+      );
+      const requests: { url: string; init: RequestInit }[] = [];
+      const transportError = new Error("Stop after capturing the serialized request");
+      const rpcModule = loadGeneratedRpcModule(async (url, init) => {
+        requests.push({ url, init });
+        throw transportError;
+      });
+      const output = ts.transpileModule(fs.readFileSync(path.join(tempDir, "user.ts"), "utf8"), {
+        compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
+      }).outputText;
+      const context = {
+        exports: {} as Record<string, unknown>,
+        URLSearchParams,
+        require: (specifier: string) => {
+          expect(["./rpc.js", "@tanstack/react-query"]).toContain(specifier);
+          return specifier === "./rpc.js" ? rpcModule : {};
+        },
+      };
+      vm.runInNewContext(output, context);
+      const keys = context.exports.userKeys as Record<
+        string,
+        (input: unknown, cacheScope?: unknown) => readonly unknown[]
+      >;
+      const client = context.exports.userClient as Record<
+        string,
+        (input: unknown) => Promise<unknown>
+      >;
+      const queries = context.exports.userQueries as Record<
+        string,
+        (input: unknown, cacheScope?: unknown) => { queryKey: readonly unknown[] }
+      >;
+      const sparse: (string | undefined)[] = [];
+      sparse[1] = "x";
+      const customIterator = [undefined, "x"];
+      Object.defineProperty(customIterator, Symbol.iterator, {
+        value: function* () {
+          yield "x";
+        },
+      });
+      const cases = [
+        { values: [undefined, "x"], expected: [null, "x"] },
+        { values: ["x"], expected: ["x"] },
+        { values: ["x", undefined], expected: ["x", null] },
+        { values: sparse, expected: [null, "x"] },
+        { values: customIterator, expected: [null, "x"] },
+      ];
+      const bodyKeys: string[] = [];
+      const scopeKeys: string[] = [];
+      for (const { values: inputValues, expected } of cases) {
+        const input = { values: inputValues, query: inputValues, absent: undefined };
+        const expectedBody = { values: expected, query: expected };
+        const before = JSON.stringify(input);
+        const key = keys.search(input);
+        expect(JSON.parse(JSON.stringify(key))).toEqual(["user", "search", expectedBody]);
+        await expect(client.search(input)).rejects.toBe(transportError);
+        expect(requests.at(-1)?.init.body).toBe(JSON.stringify(expectedBody));
+        expect(JSON.stringify(input)).toBe(before);
+        bodyKeys.push(JSON.stringify(key));
+
+        const listInput = { query: { tags: ["x"] }, headers: { authorization: "private" } };
+        const scope = { query: { tags: inputValues } };
+        const scopeKey = keys.list(listInput, scope);
+        expect(JSON.parse(JSON.stringify(scopeKey.at(-1)))).toEqual({ query: { tags: expected } });
+        expect(queries.list(listInput, scope).queryKey).toEqual(scopeKey);
+        scopeKeys.push(JSON.stringify(scopeKey));
+        expect(JSON.parse(JSON.stringify(keys.list(listInput, inputValues).at(-1)))).toEqual(
+          expected,
+        );
+        expect(keys.search({ values: inputValues })).toEqual(keys.search({ values: expected }));
+
+        const withOmissions = { tags: inputValues, absent: undefined };
+        const mixedInput = { body: input, query: withOmissions };
+        expect(keys.mixed(mixedInput)).toEqual(keys.mixed({ body: input, query: { tags: ["x"] } }));
+        expect(JSON.parse(JSON.stringify(keys.mixed(mixedInput)))).toEqual([
+          "user",
+          "mixed",
+          { body: expectedBody, query: { tags: ["x"] } },
+        ]);
+        const omittedList = { ...listInput, query: withOmissions };
+        expect(keys.list(omittedList)).toEqual(keys.list(listInput));
+        await expect(client.list(omittedList)).rejects.toBe(transportError);
+        expect(requests.at(-1)?.url).toBe("/users?tags=x");
+      }
+      expect(new Set(bodyKeys).size).toBe(3);
+      expect(new Set(scopeKeys).size).toBe(3);
+    },
+    GENERATED_CLIENT_TYPECHECK_TIMEOUT_MS,
   );
 
   it("should serialize query key inputs deterministically and reject unsupported values", () => {
@@ -2021,13 +2161,13 @@ void createInvalidationRouteId;
     expect(serialized).toEqual({
       headers: { "x-request-id": "abc" },
       path: { id: "42" },
-      query: { active: false, page: 2, tags: ["vip", "new"] },
+      query: { active: false, page: 2, tags: ["vip", null, "new"] },
     });
     expect(Object.keys(serializedRecord)).toEqual(["headers", "path", "query"]);
     expect(Object.keys(serializedQuery)).toEqual(["active", "page", "tags"]);
     expect(serialized).toEqual(
       serializeRpcQueryKeyInput({
-        query: { tags: ["vip", "new"], page: 2, active: false },
+        query: { tags: ["vip", null, "new"], page: 2, active: false },
         path: { id: "42" },
         headers: { "x-request-id": "abc" },
       }),

@@ -149,12 +149,12 @@ export const adminContractRoutes = [
 ] as const;
 export const adminKeys = {
   all: () => ['admin'] as const,
-  snapshot: (input: SnapshotInput) => [...adminKeys.all(), 'snapshot', serializeRpcQueryKeyInput(input)] as const,
-  listUsers: (input: ListUsersInput) => [...adminKeys.all(), 'listUsers', serializeRpcQueryKeyInput(input)] as const,
-  getUser: (input: GetUserInput) => [...adminKeys.all(), 'getUser', serializeRpcQueryKeyInput(input)] as const,
+  snapshot: (input: SnapshotInput) => [...adminKeys.all(), 'snapshot', serializeRpcQueryKeyInput(input, true)] as const,
+  listUsers: (input: ListUsersInput) => [...adminKeys.all(), 'listUsers', serializeRpcQueryKeyInput(input, true)] as const,
+  getUser: (input: GetUserInput) => [...adminKeys.all(), 'getUser', serializeRpcQueryKeyInput(input, true)] as const,
   createUser: (input: CreateUserInput) => [...adminKeys.all(), 'createUser', serializeRpcQueryKeyInput(input)] as const,
-  listOperations: (input: ListOperationsInput) => [...adminKeys.all(), 'listOperations', serializeRpcQueryKeyInput(input)] as const,
-  creditOperations: (input: CreditOperationsInput) => [...adminKeys.all(), 'creditOperations', serializeRpcQueryKeyInput(input)] as const,
+  listOperations: (input: ListOperationsInput) => [...adminKeys.all(), 'listOperations', serializeRpcQueryKeyInput(input, true)] as const,
+  creditOperations: (input: CreditOperationsInput) => [...adminKeys.all(), 'creditOperations', serializeRpcQueryKeyInput(input, true)] as const,
   executeCreditOperation: (input: ExecuteCreditOperationInput) => [...adminKeys.all(), 'executeCreditOperation', serializeRpcQueryKeyInput(input)] as const,
 };
 export const adminInvalidationManifest = {

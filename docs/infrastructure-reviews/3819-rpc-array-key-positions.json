@@ -1,0 +1,144 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "rpc-codegen",
+      "classification": "pure-contract",
+      "reason": "Preserve JSON body and cache scope array positions, including undefined and sparse slots, while applying omission only to declared request query arrays.",
+      "files": {
+        "packages/rpc-codegen/src/libs/generate.ts": "7a232fe7ab61f9366ab158677a1ed37c7f57fd4579fff1573f555bc7b6e57ab3"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Request key normalization is a synchronous JavaScript data transformation. It requires no host capabilities, storage, provider, or lifecycle integration and makes no deployed infrastructure support claim.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/rpc-codegen/src/libs/generate.ts",
+            "packages/rpc-codegen/src/tests/codegen.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Request key normalization is a synchronous JavaScript data transformation. It requires no host capabilities, storage, provider, or lifecycle integration and makes no deployed infrastructure support claim.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/rpc-codegen/src/libs/generate.ts",
+            "packages/rpc-codegen/src/tests/codegen.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Request key normalization is a synchronous JavaScript data transformation. It requires no host capabilities, storage, provider, or lifecycle integration and makes no deployed infrastructure support claim.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/rpc-codegen/src/libs/generate.ts",
+            "packages/rpc-codegen/src/tests/codegen.spec.ts"
+          ]
+        }
+      }
+    },
+    {
+      "package": "create-croco-app",
+      "classification": "pure-contract",
+      "reason": "Preserve JSON body and cache scope array positions, including undefined and sparse slots, while applying omission only to declared request query arrays.",
+      "files": {
+        "packages/create-croco-app/templates/admin-console/libs/shared/provider-rpc/src/admin.ts.hbs": "5157f04e096c3c56017bcad474318239cdb539b1475169937c7e58794f743b16",
+        "packages/create-croco-app/templates/admin-console/libs/shared/provider-rpc/src/rpc.ts.hbs": "44c9f27bb3faad7019b58aa85de36f69a460996df166c17e8b70585aaaac50d7",
+        "packages/create-croco-app/templates/saas-node-postgres-contracts/libs/shared/provider-rpc/src/jobs.ts.hbs": "47f19cc09f11172d25910b4edc86b508d22305d0ab46da8282ce03f568dd6086",
+        "packages/create-croco-app/templates/saas-node-postgres-contracts/libs/shared/provider-rpc/src/rpc.ts.hbs": "3f8b21bdd7c25bd48e44cf7b76613cde41c19f0a4257a33d47681f5234e8a4d0",
+        "packages/create-croco-app/templates/spa-be-split/libs/shared/provider-rpc/src/rpc.ts.hbs": "44c9f27bb3faad7019b58aa85de36f69a460996df166c17e8b70585aaaac50d7"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Request key normalization is a synchronous JavaScript data transformation. It requires no host capabilities, storage, provider, or lifecycle integration and makes no deployed infrastructure support claim.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/create-croco-app/templates/admin-console/libs/shared/provider-rpc/src/admin.ts.hbs",
+            "packages/create-croco-app/templates/admin-console/libs/shared/provider-rpc/src/rpc.ts.hbs",
+            "packages/create-croco-app/templates/saas-node-postgres-contracts/libs/shared/provider-rpc/src/jobs.ts.hbs",
+            "packages/create-croco-app/templates/saas-node-postgres-contracts/libs/shared/provider-rpc/src/rpc.ts.hbs",
+            "packages/create-croco-app/templates/spa-be-split/libs/shared/provider-rpc/src/rpc.ts.hbs",
+            "packages/create-croco-app/src/tests/QueryKeyTemplates.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Request key normalization is a synchronous JavaScript data transformation. It requires no host capabilities, storage, provider, or lifecycle integration and makes no deployed infrastructure support claim.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/create-croco-app/templates/admin-console/libs/shared/provider-rpc/src/admin.ts.hbs",
+            "packages/create-croco-app/templates/admin-console/libs/shared/provider-rpc/src/rpc.ts.hbs",
+            "packages/create-croco-app/templates/saas-node-postgres-contracts/libs/shared/provider-rpc/src/jobs.ts.hbs",
+            "packages/create-croco-app/templates/saas-node-postgres-contracts/libs/shared/provider-rpc/src/rpc.ts.hbs",
+            "packages/create-croco-app/templates/spa-be-split/libs/shared/provider-rpc/src/rpc.ts.hbs",
+            "packages/create-croco-app/src/tests/QueryKeyTemplates.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Request key normalization is a synchronous JavaScript data transformation. It requires no host capabilities, storage, provider, or lifecycle integration and makes no deployed infrastructure support claim.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/create-croco-app/templates/admin-console/libs/shared/provider-rpc/src/admin.ts.hbs",
+            "packages/create-croco-app/templates/admin-console/libs/shared/provider-rpc/src/rpc.ts.hbs",
+            "packages/create-croco-app/templates/saas-node-postgres-contracts/libs/shared/provider-rpc/src/jobs.ts.hbs",
+            "packages/create-croco-app/templates/saas-node-postgres-contracts/libs/shared/provider-rpc/src/rpc.ts.hbs",
+            "packages/create-croco-app/templates/spa-be-split/libs/shared/provider-rpc/src/rpc.ts.hbs",
+            "packages/create-croco-app/src/tests/QueryKeyTemplates.spec.ts"
+          ]
+        }
+      }
+    },
+    {
+      "package": "problems-core",
+      "classification": "pure-contract",
+      "reason": "Refresh generated Problem source locations after the RPC generator line shifts; Problem codes, categories and runtime handling remain unchanged.",
+      "files": {
+        "packages/problems-core/src/generated/problem-code-registry.ts": "86f15aea001ccf6db5d9b13a5d70a7e98ddf18b58ed085b4f4c129e1896a7848"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Generated source-location metadata has no host capability, provider, storage or lifecycle dependency. Runtime compatibility is unchanged.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "docs/problem-code-registry.json"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Generated source-location metadata has no host capability, provider, storage or lifecycle dependency. Runtime compatibility is unchanged.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "docs/problem-code-registry.json"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Generated source-location metadata has no host capability, provider, storage or lifecycle dependency. Runtime compatibility is unchanged.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "docs/problem-code-registry.json"
+          ]
+        }
+      }
+    }
+  ]
+}

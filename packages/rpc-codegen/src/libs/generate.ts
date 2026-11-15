@@ -810,7 +810,9 @@ function generateQueryKeys(domainRoutes: DomainRoutes): string {
       const inputExpression = getQueryKeyInputExpression(route);
 
       if (inputExpression) {
-        keyParts.push(`serializeRpcQueryKeyInput(${inputExpression})`);
+        keyParts.push(
+          `serializeRpcQueryKeyInput(${inputExpression}${route.inputSchemas.query ? ", true" : ""})`,
+        );
       }
 
       if (hasReactQueryCacheScope(route)) {
@@ -1749,7 +1751,15 @@ export function assertExhaustiveProblem(problem: never): never {
   throw new Error(\`Unhandled RPC Problem variant\${suffix}\`);
 }
 
-export function serializeRpcQueryKeyInput(value: unknown): RpcQueryKeyValue {
+export function serializeRpcQueryKeyInput(value: unknown, hasQueryInput = false): RpcQueryKeyValue {
+  if (hasQueryInput && isRpcQueryKeyRecord(value) && isRpcQueryKeyRecord(value.query)) {
+    const query = Object.fromEntries(Object.entries(value.query).map(([key, item]) => [
+      key,
+      Array.isArray(item) ? item.filter((entry) => entry !== undefined) : item,
+    ]));
+    return serializeRpcQueryKeyValue({ ...value, query }, 'input') ?? null;
+  }
+
   return serializeRpcQueryKeyValue(value, 'input') ?? null;
 }
 
@@ -1771,11 +1781,7 @@ function serializeRpcQueryKeyValue(value: unknown, path: string): RpcQueryKeyVal
   }
 
   if (Array.isArray(value)) {
-    return value.flatMap((item, index) => {
-      const result = serializeRpcQueryKeyValue(item, \`\${path}[\${index}]\`);
-
-      return result === undefined ? [] : [result];
-    });
+    return Array.from({ length: value.length }, (_, index) => serializeRpcQueryKeyValue(value[index], \`\${path}[\${index}]\`) ?? null);
   }
 
   if (isRpcQueryKeyRecord(value)) {
@@ -2762,7 +2768,15 @@ export class RpcQueryKeyInputError extends Problem {
   }
 }
 
-export function serializeRpcQueryKeyInput(value: unknown): RpcQueryKeyValue {
+export function serializeRpcQueryKeyInput(value: unknown, hasQueryInput = false): RpcQueryKeyValue {
+  if (hasQueryInput && isRpcQueryKeyRecord(value) && isRpcQueryKeyRecord(value.query)) {
+    const query = Object.fromEntries(Object.entries(value.query).map(([key, item]) => [
+      key,
+      Array.isArray(item) ? item.filter((entry) => entry !== undefined) : item,
+    ]));
+    return serializeRpcQueryKeyValue({ ...value, query }, 'input') ?? null;
+  }
+
   return serializeRpcQueryKeyValue(value, 'input') ?? null;
 }
 
@@ -2784,11 +2798,7 @@ function serializeRpcQueryKeyValue(value: unknown, path: string): RpcQueryKeyVal
   }
 
   if (Array.isArray(value)) {
-    return value.flatMap((item, index) => {
-      const result = serializeRpcQueryKeyValue(item, \`\${path}[\${index}]\`);
-
-      return result === undefined ? [] : [result];
-    });
+    return Array.from({ length: value.length }, (_, index) => serializeRpcQueryKeyValue(value[index], \`\${path}[\${index}]\`) ?? null);
   }
 
   if (isRpcQueryKeyRecord(value)) {
