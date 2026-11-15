@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "audit-drizzle",
+      "classification": "durable-provider",
+      "reason": "Custom table property keys are resolved from the configured Drizzle column identities for both writes and reads; foreign and duplicate mappings fail before database access. No table schema or JSON encoding changes.",
+      "files": {
+        "packages/audit-drizzle/src/libs/DrizzleAuditLogRepository.ts": "852d879c4f88cf4395b53cf2abd75c5b53ed4aa17414600ce9f242a1f883a090"
+      },
+      "catalogRuntimes": ["node", "lambda"],
+      "profiles": {
+        "kubernetes": {
+          "result": "conditional",
+          "reason": "Reuse the existing Node Drizzle repository with the configured SQLite or PostgreSQL table and column objects.",
+          "providers": ["@croco/audit-drizzle", "@croco/tx-drizzle"],
+          "constraints": [
+            "The application owns database connections, table creation and transaction lifecycle; local database tests do not certify a Kubernetes deployment."
+          ],
+          "references": [
+            "packages/audit-drizzle/src/libs/DrizzleAuditLogRepository.ts",
+            "packages/audit-drizzle/src/tests/DrizzleAuditLogRepository.spec.ts",
+            "packages/audit-drizzle/src/tests/DrizzleAuditLogRepository.postgres.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "conditional",
+          "reason": "The same column mapping is used with the existing Lambda-compatible Drizzle database client.",
+          "providers": ["@croco/audit-drizzle", "@croco/tx-drizzle"],
+          "constraints": [
+            "The application must supply a supported database client and bound connection/transaction lifetime to the invocation; no AWS deployment is verified."
+          ],
+          "references": [
+            "packages/audit-drizzle/src/libs/DrizzleAuditLogRepository.ts",
+            "packages/audit-drizzle/src/libs/schema.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "unsupported",
+          "reason": "The existing audit-drizzle catalog declares Node and Lambda, without a Workers provider.",
+          "providers": ["@croco/audit-drizzle"],
+          "constraints": [
+            "This change adds no Workers binding or Node Container deployment profile."
+          ],
+          "references": [
+            "packages/audit-drizzle/src/libs/DrizzleAuditLogRepository.ts",
+            "docs/package-catalog.json"
+          ]
+        }
+      }
+    }
+  ]
+}
