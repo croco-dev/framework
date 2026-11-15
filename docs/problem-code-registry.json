@@ -1,6 +1,6 @@
 {
   "version": "croco.problem-code-registry.v1",
-  "problemCount": 1185,
+  "problemCount": 1186,
   "problems": [
     {
       "code": "ACCESS_DENIED",
@@ -8978,8 +8978,38 @@
       "sources": [
         {
           "file": "packages/audit-drizzle/src/libs/DrizzleAuditLogRepository.ts",
-          "line": 133,
+          "line": 165,
           "column": 13,
+          "kind": "problem-factory"
+        }
+      ]
+    },
+    {
+      "code": "audit/invalid-column-mapping",
+      "category": "BadRequest",
+      "status": 400,
+      "title": "Bad Request",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#audit-invalid-column-mapping",
+      "recovery": {
+        "cause": "The caller sent malformed input or unsupported request options.",
+        "userAction": "Correct the request input and retry after validation passes.",
+        "operatorAction": "Inspect validation details and request logs; do not retry unchanged input.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "public",
+        "telemetry": {
+          "eventName": "croco.problem.info",
+          "severity": "info",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/audit-drizzle/src/libs/DrizzleAuditLogRepository.ts",
+          "line": 120,
+          "column": 17,
           "kind": "problem-factory"
         }
       ]

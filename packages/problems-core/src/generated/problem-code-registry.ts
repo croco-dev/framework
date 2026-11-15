@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export type CrocoProblemRegistry = {
   readonly version: "croco.problem-code-registry.v1";
-  readonly problemCount: 1185;
+  readonly problemCount: 1186;
   readonly problems: readonly [
     {
       readonly code: "ACCESS_DENIED";
@@ -8399,8 +8399,36 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/audit-drizzle/src/libs/DrizzleAuditLogRepository.ts";
-          readonly line: 133;
+          readonly line: 165;
           readonly column: 13;
+          readonly kind: "problem-factory";
+        },
+      ];
+    },
+    {
+      readonly code: "audit/invalid-column-mapping";
+      readonly category: "BadRequest";
+      readonly status: 400;
+      readonly title: "Bad Request";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#audit-invalid-column-mapping";
+      readonly recovery: {
+        readonly cause: "The caller sent malformed input or unsupported request options.";
+        readonly userAction: "Correct the request input and retry after validation passes.";
+        readonly operatorAction: "Inspect validation details and request logs; do not retry unchanged input.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/audit-drizzle/src/libs/DrizzleAuditLogRepository.ts";
+          readonly line: 120;
+          readonly column: 17;
           readonly kind: "problem-factory";
         },
       ];
@@ -33494,7 +33522,7 @@ export type CrocoProblemRegistry = {
 
 export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 1185,
+  problemCount: 1186,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -42837,8 +42865,39 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/audit-drizzle/src/libs/DrizzleAuditLogRepository.ts",
-          line: 133,
+          line: 165,
           column: 13,
+          kind: "problem-factory",
+        },
+      ],
+    },
+    {
+      code: "audit/invalid-column-mapping",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#audit-invalid-column-mapping",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/audit-drizzle/src/libs/DrizzleAuditLogRepository.ts",
+          line: 120,
+          column: 17,
           kind: "problem-factory",
         },
       ],
