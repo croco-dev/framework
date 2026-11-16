@@ -47,6 +47,8 @@ type StoredHealthSignal = Omit<HealthSignal, "collectedAt"> & {
  */
 @Component()
 export class DrizzleHealthScoreStore extends HealthScoreStore {
+  override readonly transitionVersionOrdering = "ascending-decimal";
+
   /**
    * Drizzle 클라이언트와 트랜잭션 매니저를 받아 저장소를 초기화합니다.
    */
@@ -198,7 +200,7 @@ export class DrizzleHealthScoreStore extends HealthScoreStore {
           lte(tenantHealthScores.calculatedAt, endDate),
         ),
       )
-      .orderBy(desc(tenantHealthScores.calculatedAt));
+      .orderBy(desc(tenantHealthScores.calculatedAt), desc(tenantHealthScores.transitionSequence));
     return (results as TenantHealthScoreRow[]).map((row) => this.mapToTenantHealthScore(row));
   }
 

@@ -86,7 +86,7 @@ COMMIT;
 - `markEventIntentPublished(eventId)`, 성공적으로 발행한 의도를 완료 처리합니다.
 - `findLatest(tenantId)`, 최신 건강 점수를 조회합니다.
 - `findHistory(tenantId, limit)`, 최근 점수 이력을 조회합니다.
-- `findHistoryByPeriod(tenantId, period, startDate, endDate)`, 기간별 이력을 조회합니다.
+- `findHistoryByPeriod(tenantId, period, startDate, endDate)`, 기간별 이력을 조회합니다. 점수 시각이 최신인 항목부터 반환하며, 같은 시각에는 전이 순번이 큰 항목이 먼저 나옵니다.
 
 `saveTransition`이 호출자 트랜잭션에 참여하면 결과에 `eventPublicationDeferred: true`가 포함됩니다.
 이때 이벤트 의도는 커밋 전 외부로 발행하지 않으며, 호출자 커밋 후 `publishPendingEvents` 또는 outbox worker가

@@ -25,6 +25,9 @@ export abstract class SignalProvider {
 
 export abstract class HealthScoreStore {
   static readonly token = new Token<HealthScoreStore>("HealthScoreStore");
+  /** Opts in when period history versions are positive decimal commit sequences per tenant. */
+  declare readonly transitionVersionOrdering?: "ascending-decimal";
+
   /**
    * Persists one optimistic transition and assigns its CAS version to `score`.
    * A version assigned inside a caller-owned transaction is provisional until that transaction
