@@ -822,6 +822,41 @@ describe.skipIf(!realResourcesEnabled)("Redis metering composition", () => {
     await expect(connection.client.zcard(`usage2:${tenantId}:${meterId}:2024-01`)).resolves.toBe(2);
   });
 
+  it.each(["non-quota", "quota"] as const)(
+    "refreshes cached untracked quota after a %s tracked write",
+    async (write) => {
+      assert.isDefined(connection);
+      const storage = new RedisUsageStorage(createRedisClient(connection));
+      const usageRecord = createUsageRecord("tracked-after-reservation");
+      const { tenantId, meterId, value, idempotencyKey } = usageRecord;
+      const options = {
+        tenantId,
+        meterId,
+        value,
+        quota: value,
+        allowOverQuota: false,
+        usageRecord,
+      };
+      await expect(storage.isIdempotent(tenantId, meterId, idempotencyKey, 60)).resolves.toBe(true);
+      await expect(storage.checkAndRecordWithinQuota(options)).resolves.toEqual({
+        exceeded: false,
+        newUsage: 0,
+      });
+      await connection.client.del(`idem2:record:${tenantId}:${meterId}:${idempotencyKey}`);
+      if (write === "non-quota") {
+        await storage.record(usageRecord, 1);
+      } else {
+        await expect(
+          storage.checkAndRecordWithinQuota({ ...options, writeGeneration: 1, resuming: true }),
+        ).resolves.toEqual({ exceeded: false, newUsage: value, recorded: true });
+      }
+      await expect(storage.checkAndRecordWithinQuota(options)).resolves.toEqual({
+        exceeded: false,
+        newUsage: value,
+      });
+    },
+  );
+
   it.each(["quota:0:0:5", "quota:1:0:5:id.%GG:1", "quota:1:0:5:id.%ED%A0%80:1"])(
     "rejects malformed Redis marker %s before writing",
     async (marker) => {

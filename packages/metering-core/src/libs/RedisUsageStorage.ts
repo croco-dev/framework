@@ -463,6 +463,21 @@ return { exceeded and 1 or 0, newUsage, shouldRecord and 1 or 0 }
     }
   }
 
+  private async runUsageWrite<T>(
+    dedupeKey: string,
+    writeGeneration: number | undefined,
+    command: () => Promise<T>,
+  ): Promise<T> {
+    try {
+      return await this.runRedisOperation("EVAL", command);
+    } finally {
+      if (writeGeneration !== undefined) {
+        // Redis can commit a tracked write even if its response never arrives.
+        this.recordedRecordKeys.delete(dedupeKey);
+      }
+    }
+  }
+
   async record(usage: UsageRecord, writeGeneration?: number): Promise<void> {
     validateUsageValue(usage.value);
 
@@ -475,7 +490,7 @@ return { exceeded and 1 or 0, newUsage, shouldRecord and 1 or 0 }
     const member = this.serializeUsageMember(usage);
     const score = usage.timestamp.getTime();
 
-    await this.runRedisOperation("EVAL", () =>
+    await this.runUsageWrite(dedupeKey, writeGeneration, () =>
       this.redis.eval<[number]>(
         RedisUsageStorage.RECORD_USAGE_SCRIPT,
         [key, dedupeKey],
@@ -615,19 +630,22 @@ return { exceeded and 1 or 0, newUsage, shouldRecord and 1 or 0 }
       return recordedResult;
     }
 
-    const [exceeded, newUsage, recorded] = await this.runRedisOperation("EVAL", () =>
-      this.redis.eval<[number, number, number]>(
-        RedisUsageStorage.CHECK_AND_RECORD_WITHIN_QUOTA_SCRIPT,
-        [key, dedupeKey],
-        [
-          options.quota,
-          options.value,
-          score,
-          member,
-          options.allowOverQuota ? 1 : 0,
-          ...trackedWrite,
-        ],
-      ),
+    const [exceeded, newUsage, recorded] = await this.runUsageWrite(
+      dedupeKey,
+      options.writeGeneration,
+      () =>
+        this.redis.eval<[number, number, number]>(
+          RedisUsageStorage.CHECK_AND_RECORD_WITHIN_QUOTA_SCRIPT,
+          [key, dedupeKey],
+          [
+            options.quota,
+            options.value,
+            score,
+            member,
+            options.allowOverQuota ? 1 : 0,
+            ...trackedWrite,
+          ],
+        ),
     );
 
     if (options.writeGeneration === undefined) {
