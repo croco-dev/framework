@@ -1019,7 +1019,65 @@ describe("generated provider removal", () => {
     },
   );
 
-  it("releases an explicitly removed baseline when its last request ends before commit", async () => {
+  it.each([
+    ["registered token", "commit"],
+    ["registered token", "rollback"],
+    ["generated token", "commit"],
+    ["generated token", "rollback"],
+    ["generated graph", "commit"],
+    ["generated graph", "rollback"],
+  ] as const)("keeps a removed %s alive until %s", async (binding, outcome) => {
+    const scope = Container.createScope();
+    const SERVICE = new Token<object>("removed-baseline");
+    const TEMPORARY = new Token<object>("temporary-provider");
+    const disposed: string[] = [];
+    const failure = new Error("remove before rollback");
+    let disposedBeforeSettlement: readonly string[] = [];
+
+    const installAndResolve = (token: Token<object>, label: string) => {
+      const factory = () => ({ destroy: () => disposed.push(label) });
+      if (binding === "registered token") {
+        Container.set(token, factory());
+      } else {
+        Container.installGeneratedGraph(graph(label, [singleton(token, `app:${label}`, factory)]));
+      }
+      return Container.get(token);
+    };
+    const remove = (token: Token<object>, graphId: string) => {
+      if (binding === "generated graph") Container.removeGeneratedGraph(graphId);
+      else Container.remove(token);
+    };
+
+    try {
+      const baseline = scope.run(() => installAndResolve(SERVICE, "baseline"));
+      const attempt = scope.runWithRollback(async () => {
+        remove(SERVICE, "baseline");
+        expect(Container.has(SERVICE)).toBe(false);
+
+        installAndResolve(TEMPORARY, "temporary");
+        remove(TEMPORARY, "temporary");
+        disposedBeforeSettlement = [...disposed];
+        if (outcome === "rollback") throw failure;
+      });
+
+      if (outcome === "rollback") {
+        await expect(attempt).rejects.toBe(failure);
+        expect(scope.run(() => Container.get(SERVICE))).toBe(baseline);
+        expect(disposed).toEqual(["temporary"]);
+      } else {
+        await attempt;
+        expect(scope.run(() => Container.has(SERVICE))).toBe(false);
+        expect(disposed).toEqual(["temporary", "baseline"]);
+      }
+      expect(disposedBeforeSettlement).toEqual(["temporary"]);
+      expect(scope.run(() => Container.has(TEMPORARY))).toBe(false);
+    } finally {
+      scope.dispose();
+    }
+    expect(disposed).toEqual(["temporary", "baseline"]);
+  });
+
+  it("retains a removed baseline when its last request ends before commit", async () => {
     const scope = Container.createScope();
     const SERVICE = new Token<object>("explicit-baseline");
     const TRANSIENT = new Token<object>("explicit-baseline-transient");
@@ -1044,9 +1102,10 @@ describe("generated provider removal", () => {
           Container.remove(SERVICE);
           expect(disposed).toBe(0);
         });
-        expect(disposed).toBe(1);
+        expect(disposed).toBe(0);
       });
       expect(scope.run(() => Container.has(SERVICE))).toBe(false);
+      expect(disposed).toBe(1);
     } finally {
       scope.dispose();
     }

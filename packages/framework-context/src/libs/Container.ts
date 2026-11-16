@@ -130,8 +130,8 @@ const containerScopeStorage = new AsyncLocalStorage<ContainerScopeState>();
 type ContainerScopeRollbackTransaction = {
   readonly retainedValues: ReadonlySet<unknown>;
   readonly state: ContainerScopeState;
-  readonly replacedValues: Set<unknown>;
-  disposeReplacedValues?: () => void;
+  readonly retiredValues: Set<unknown>;
+  disposeRetiredValues?: () => void;
   active: boolean;
 };
 const containerScopeRollbackStorage = new AsyncLocalStorage<ContainerScopeRollbackTransaction>();
@@ -433,7 +433,7 @@ export class ContainerScope implements AsyncDisposable {
         retainedValues,
         state: this.state,
         active: true,
-        replacedValues: new Set(),
+        retiredValues: new Set(),
       };
       this.state.rollbackTransaction = transaction;
       let result: T;
@@ -448,7 +448,7 @@ export class ContainerScope implements AsyncDisposable {
         containerScopeStorage.run(this.state, () =>
           withCleanupBatch((disposedValues) => {
             try {
-              transaction.disposeReplacedValues?.();
+              transaction.disposeRetiredValues?.();
             } catch (cleanupError) {
               const cause = cleanupError instanceof Problem ? cleanupError.cause : undefined;
               const failures: readonly unknown[] =
@@ -463,7 +463,7 @@ export class ContainerScope implements AsyncDisposable {
           }),
         );
         delete this.state.rollbackTransaction;
-        transaction.replacedValues.clear();
+        transaction.retiredValues.clear();
         if (cleanupFailures.length > 0) {
           throw ProblemFactory.internalServerError(
             "framework-context/container-scope-rollback-failed",
@@ -480,9 +480,9 @@ export class ContainerScope implements AsyncDisposable {
       }
       delete this.state.rollbackTransaction;
       try {
-        transaction.disposeReplacedValues?.();
+        transaction.disposeRetiredValues?.();
       } finally {
-        transaction.replacedValues.clear();
+        transaction.retiredValues.clear();
       }
       return result;
     } finally {
@@ -630,7 +630,7 @@ export class Container {
     Container.getLazyProviders().delete(token);
     Container.setValidated(false);
     if (previous && previous.value !== instance) {
-      Container.retireReplacedInstances([previous.value]);
+      Container.retireInstances([previous.value], "all");
     }
     return instance;
   }
@@ -744,7 +744,7 @@ export class Container {
     }
     Container.clearTokenIdentity(token);
     Container.setValidated(false);
-    Container.disposeUnownedInstances([...removedValues, ...retiredSingletons]);
+    Container.retireInstances([...removedValues, ...retiredSingletons], "baseline");
   }
 
   /**
@@ -931,7 +931,7 @@ export class Container {
     graphs.set(graph.graphId, graph);
     const retiredSingletons = Container.rebuildGeneratedProviders(graphs);
     Container.setValidated(false);
-    Container.retireReplacedInstances(retiredSingletons);
+    Container.retireInstances(retiredSingletons, "all");
   }
 
   static removeGeneratedGraph(graphId: string): void {
@@ -941,7 +941,7 @@ export class Container {
     }
     const retiredSingletons = Container.rebuildGeneratedProviders(graphs);
     Container.setValidated(false);
-    Container.disposeUnownedInstances(retiredSingletons);
+    Container.retireInstances(retiredSingletons, "baseline");
   }
 
   static getGeneratedProviderTokens(kind: GeneratedProviderKind): readonly Constructor[] {
@@ -1578,19 +1578,33 @@ export class Container {
     for (const [key, value] of source) target.set(key, value);
   }
 
-  private static retireReplacedInstances(instances: readonly unknown[]): void {
+  private static retireInstances(
+    instances: readonly unknown[],
+    deferDuringRollback: "all" | "baseline",
+  ): void {
     if (instances.length === 0) return;
     const scope = Container.getScopeState();
     const transaction = scope?.rollbackTransaction;
-    if (scope && transaction?.active) {
-      for (const instance of instances) transaction.replacedValues.add(instance);
-      transaction.disposeReplacedValues ??= () =>
-        containerScopeStorage.run(scope, () =>
-          Container.disposeUnownedInstances([...transaction.replacedValues]),
-        );
+    if (!scope || !transaction?.active) {
+      Container.disposeUnownedInstances(instances);
       return;
     }
-    Container.disposeUnownedInstances(instances);
+
+    const immediate: unknown[] = [];
+    for (const instance of instances) {
+      if (deferDuringRollback === "all" || transaction.retainedValues.has(instance)) {
+        transaction.retiredValues.add(instance);
+      } else {
+        immediate.push(instance);
+      }
+    }
+    if (transaction.retiredValues.size > 0) {
+      transaction.disposeRetiredValues ??= () =>
+        containerScopeStorage.run(scope, () =>
+          Container.disposeUnownedInstances([...transaction.retiredValues]),
+        );
+    }
+    Container.disposeUnownedInstances(immediate);
   }
 
   private static disposeUnownedInstances(instances: readonly unknown[]): void {
@@ -1622,7 +1636,7 @@ export class Container {
     const release = () => {
       // Request cleanup can outlive its application; business resolution still rejects disposed scopes.
       const transaction = scope?.rollbackTransaction;
-      if (transaction?.retainedValues.has(instance) && transaction.replacedValues.has(instance)) {
+      if (transaction?.retainedValues.has(instance) && transaction.retiredValues.has(instance)) {
         return;
       }
       withCleanupBatch((disposedValues) => disposeUnownedInstance(instance, disposedValues));
@@ -2811,7 +2825,7 @@ function disposeUnownedInstance(
   if (disposedValues.has(instance) || hasInstanceOwner(instance, excludedRuntime)) return;
   disposedValues.add(instance);
   for (const runtime of RuntimeContainerBackend.instances) {
-    containerScopeStates.get(runtime)?.rollbackTransaction?.replacedValues.delete(instance);
+    containerScopeStates.get(runtime)?.rollbackTransaction?.retiredValues.delete(instance);
   }
   if (cleanup) cleanup();
   else destroyGeneratedInstance(instance);
@@ -2828,7 +2842,7 @@ function hasInstanceOwner(instance: unknown, excludedRuntime?: RuntimeContainerI
     const transaction = scope?.rollbackTransaction;
     if (
       transaction?.retainedValues.has(instance) &&
-      (!transaction.active || transaction.replacedValues.has(instance))
+      (!transaction.active || transaction.retiredValues.has(instance))
     )
       return true;
     // Failed-attempt bindings will be replaced by the snapshot; they cannot retain retiring values.
