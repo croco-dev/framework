@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "meta-vite",
+      "classification": "protocol-render",
+      "reason": "SSR pages with and without deferred regions use one absolute deadline and request cancellation checks. The Lambda buffered limit covers the complete HTML without deferred regions, and ISR waiters coalesce a replacement fill when the previous owner disconnects.",
+      "files": {
+        "packages/meta-vite/src/libs/render/renderServer.ts": "05fc1149bd893a3a5eaed104304bf70b74ff96e40bb12ee0e8e087bccaa59cea",
+        "packages/meta-vite/src/libs/render/shellStream.ts": "64494275a1182b648d93ad599ae6f5dd6323ff1d104b50dfc0ec7b26c155d1cf",
+        "packages/meta-vite/src/libs/isr/isrMiddleware.ts": "46ccc97aa114ba6a8f2ac2e8a6ddf9daa7bf3d8a90a34530eeb0d63e9224217a"
+      },
+      "catalogRuntimes": ["node", "lambda", "cloudflare-workers", "browser"],
+      "profiles": {
+        "kubernetes": {
+          "result": "unverified",
+          "reason": "The Node fetch adapter forwards the request signal to the existing renderer. Local HTTP tests exercise the adapter but do not establish Kubernetes deployment behavior.",
+          "providers": ["@croco/meta-vite/createNodeHandler"],
+          "constraints": [
+            "Client disconnect detection depends on the HTTP server forwarding it as a request abort.",
+            "The Lambda proxy response size limit does not apply to this host."
+          ],
+          "references": [
+            "packages/meta-vite/src/libs/providers/node.ts",
+            "packages/meta-vite/src/tests/real-http-stream.spec.ts",
+            "packages/meta-vite/src/tests/isr-middleware.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "unverified",
+          "reason": "The API Gateway adapter still buffers the existing React SSR response. A local API Gateway v2 event fixture verifies UTF-8 byte limits and response formatting; no Lambda invocation was run.",
+          "providers": ["@croco/meta-vite/createLambdaHandler"],
+          "constraints": [
+            "The full UTF-8 HTML must fit within the configured limit before proxy response conversion.",
+            "This check does not preempt synchronous rendering or bound its memory."
+          ],
+          "references": [
+            "packages/meta-vite/src/libs/providers/lambda.ts",
+            "packages/meta-vite/src/tests/render-server.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "unverified",
+          "host": "workers",
+          "reason": "The Workers fetch adapter still passes the request directly to the shared renderer. This change has no new storage or host capability; a Workers isolate was not exercised.",
+          "providers": ["@croco/meta-vite/createCloudflareHandler"],
+          "constraints": [
+            "Uses the request signal and Web timer APIs; production Workers clocks do not measure synchronous CPU time between I/O events.",
+            "No Node Container or Lambda proxy behavior is claimed for Workers."
+          ],
+          "references": [
+            "packages/meta-vite/src/libs/providers/cloudflare.ts",
+            "packages/meta-vite/src/libs/render/shellStream.ts"
+          ]
+        }
+      }
+    }
+  ]
+}

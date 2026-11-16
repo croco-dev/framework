@@ -1,7 +1,9 @@
+import { createElement } from "react";
 import { InMemoryCacheStore } from "@croco/cache-core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AbstractCacheStoreAdapter } from "../libs/isr/adapters/abstractAdapter";
 import { createIsrMiddleware } from "../libs/isr/isrMiddleware";
+import { RenderServer } from "../libs/render/renderServer";
 
 describe("createIsrMiddleware", () => {
   let cache!: InMemoryCacheStore<Response>;
@@ -134,6 +136,235 @@ describe("createIsrMiddleware", () => {
 
     await expect((await first).text()).resolves.toBe("render-1");
     await expect((await second).text()).resolves.toBe("render-2");
+  });
+
+  it.each(["memory store", "adapter"] as const)(
+    "keeps live ISR waiters on one replacement fill after the owner disconnects (%s)",
+    async (backend) => {
+      const url = "https://example.com/product";
+      const controller = new AbortController();
+      let signalStarted!: () => void;
+      const firstStarted = new Promise<void>((resolve) => {
+        signalStarted = resolve;
+      });
+      const componentLoader = vi.fn(async () => {
+        if (componentLoader.mock.calls.length === 1) {
+          signalStarted();
+          await new Promise<void>(() => {});
+        }
+        return { default: () => createElement("main", null, "Current product") };
+      });
+      const server = new RenderServer([{ path: "/product", mode: "isr", componentLoader }]);
+      const middleware = createIsrMiddleware({
+        cache: backend === "adapter" ? new TestAdapter() : cache,
+        ttlMs: 60_000,
+        render: async (request) => {
+          const response = await server.handle(request, { platform: "node" });
+          if (response.status === 503) response.headers.set("Cache-Control", "private, no-store");
+          return response;
+        },
+      });
+
+      const first = middleware(new Request(url, { signal: controller.signal }));
+      await firstStarted;
+      const waiter = middleware(new Request(url));
+      const otherWaiter = middleware(new Request(url));
+      // The live request joins the existing fill before its owner disconnects.
+      await Promise.resolve();
+      expect(componentLoader).toHaveBeenCalledOnce();
+      controller.abort();
+
+      const [cancelled, live, other] = await Promise.all([first, waiter, otherWaiter]);
+      expect(cancelled.status).toBe(503);
+      expect(live.status).toBe(200);
+      expect(other.status).toBe(200);
+      await expect(live.text()).resolves.toContain("<main>Current product</main>");
+      await expect(other.text()).resolves.toContain("<main>Current product</main>");
+      expect(componentLoader).toHaveBeenCalledTimes(2);
+
+      const cached = await middleware(new Request(url));
+      expect(cached.status).toBe(200);
+      await expect(cached.text()).resolves.toContain("<main>Current product</main>");
+      expect(componentLoader).toHaveBeenCalledTimes(2);
+    },
+  );
+
+  it("checks the signal again before a waiter actually owns the replacement fill", async () => {
+    const start = createLatch();
+    const replacementLookups = createLatch();
+    const releaseLookups: Array<() => void> = [];
+    let holdLookups = false;
+    const adapter = new TestAdapter();
+    const get = adapter._get.bind(adapter);
+    vi.spyOn(adapter, "_get").mockImplementation(async (key) => {
+      if (holdLookups) {
+        await new Promise<void>((resolve) => {
+          releaseLookups.push(resolve);
+          if (releaseLookups.length === 2) replacementLookups.release();
+        });
+      }
+      return get(key);
+    });
+    const owner = new AbortController();
+    const abandoned = new AbortController();
+    const render = vi.fn(async (request: Request) => {
+      const client = request.headers.get("x-client");
+      if (client === "owner") {
+        start.release();
+        await new Promise<void>((resolve) =>
+          request.signal.addEventListener("abort", () => resolve(), { once: true }),
+        );
+        return new Response("owner-only recovery", { status: 503, headers: { Vary: "x-client" } });
+      }
+      return new Response(client);
+    });
+    const middleware = createIsrMiddleware({ cache: adapter, ttlMs: 60_000, render });
+    const request = (client: string, signal?: AbortSignal) =>
+      new Request("https://example.com/product", {
+        headers: { "x-client": client },
+        ...(signal ? { signal } : {}),
+      });
+    const first = middleware(request("owner", owner.signal));
+    await start.promise;
+    const next = middleware(request("abandoned", abandoned.signal));
+    const live = middleware(request("live"));
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    holdLookups = true;
+    owner.abort();
+    await replacementLookups.promise;
+    holdLookups = false;
+    abandoned.abort();
+    resolveRender(releaseLookups, 0);
+    let cancelled: Response;
+    try {
+      cancelled = await next;
+    } finally {
+      resolveRender(releaseLookups, 1);
+    }
+    expect(cancelled.status).toBe(503);
+    await expect(cancelled.text()).resolves.not.toContain("owner-only recovery");
+    await expect((await first).text()).resolves.toBe("owner-only recovery");
+    await expect((await live).text()).resolves.toBe("live");
+    expect(render).toHaveBeenCalledTimes(2);
+  });
+
+  it("never clones a cancelled owner's private 503 into a cancelled waiter's result", async () => {
+    const ready = createLatch();
+    const finish = createLatch();
+    const owner = new AbortController();
+    const waiter = new AbortController();
+    const middleware = createIsrMiddleware({
+      cache,
+      ttlMs: 60_000,
+      render: async () => {
+        ready.release();
+        await finish.promise;
+        return new Response("owner-only recovery", {
+          status: 503,
+          headers: { Vary: "x-client", "x-owner-context": "private" },
+        });
+      },
+    });
+    const url = "https://example.com/product";
+    const first = middleware(new Request(url, { signal: owner.signal }));
+    await ready.promise;
+    const next = middleware(new Request(url, { signal: waiter.signal }));
+    await Promise.resolve();
+    waiter.abort();
+    owner.abort();
+    finish.release();
+
+    expect((await first).headers.get("x-owner-context")).toBe("private");
+    const result = await next;
+    expect(result.status).toBe(503);
+    expect(result.headers.has("x-owner-context")).toBe(false);
+    await expect(result.text()).resolves.not.toContain("owner-only recovery");
+  });
+
+  it.each([
+    "cacheable response",
+    "vary response",
+    "live vary response",
+    "another disconnect",
+    "private response",
+    "late success from a disconnected replacement",
+  ] as const)("refuses to reuse the ISR replacement response after %s", async (ending) => {
+    const started = createLatch();
+    const firstReleased = createLatch();
+    const replacementStarted = createLatch();
+    const replacementReleased = createLatch();
+    const owner = new AbortController();
+    const replacement = new AbortController();
+    const waiter = new AbortController();
+    const render = vi.fn(async (request: Request) => {
+      const client = request.headers.get("x-client");
+      if (client === "owner") {
+        started.release();
+        await firstReleased.promise;
+        return new Response(null, { status: 503 });
+      }
+      if (client === "replacement") {
+        replacementStarted.release();
+        await replacementReleased.promise;
+        if (ending === "another disconnect") return new Response(null, { status: 503 });
+        if (ending === "private response") {
+          return new Response("replacement-only content", {
+            headers: { "Cache-Control": "private, no-store", "Set-Cookie": "session=fixture" },
+          });
+        }
+        const headers =
+          ending === "vary response" || ending === "live vary response"
+            ? { Vary: "x-client" }
+            : undefined;
+        return new Response("fresh", { headers });
+      }
+      return new Response("new render");
+    });
+    const middleware = createIsrMiddleware({ cache, ttlMs: 60_000, render });
+    const request = (client: string, signal: AbortSignal) =>
+      new Request("https://example.com/product", { signal, headers: { "x-client": client } });
+    const first = middleware(request("owner", owner.signal));
+    await started.promise;
+    const second = middleware(request("replacement", replacement.signal));
+    const other = middleware(request("waiter", waiter.signal));
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    owner.abort();
+    firstReleased.release();
+    await replacementStarted.promise;
+    const late =
+      ending === "private response"
+        ? middleware(request("late", new AbortController().signal))
+        : undefined;
+    if (late) await new Promise<void>((resolve) => setImmediate(resolve));
+    const cancelledReplacement =
+      ending === "another disconnect" || ending === "late success from a disconnected replacement";
+    if (cancelledReplacement) replacement.abort();
+    else if (ending !== "private response" && ending !== "live vary response") waiter.abort();
+    replacementReleased.release();
+
+    expect((await first).status).toBe(503);
+    const replacementResponse = await second;
+    expect(replacementResponse.status).toBe(cancelledReplacement ? 503 : 200);
+    const waiterResponse = await other;
+    expect(waiterResponse.status).toBe(503);
+    expect(waiterResponse.headers.get("cache-control")).toBe("no-store");
+    await expect(waiterResponse.text()).resolves.toBe("");
+    if (ending === "private response") {
+      expect(replacementResponse.headers.get("set-cookie")).toBe("session=fixture");
+      await expect(replacementResponse.text()).resolves.toBe("replacement-only content");
+      expect(waiterResponse.headers.has("set-cookie")).toBe(false);
+      const lateResponse = await late;
+      expect(lateResponse?.status).toBe(503);
+      expect(lateResponse?.headers.get("cache-control")).toBe("no-store");
+      expect(lateResponse?.headers.has("set-cookie")).toBe(false);
+      expect(await lateResponse?.text()).toBe("");
+    }
+    expect(render).toHaveBeenCalledTimes(2);
+    if (ending === "late success from a disconnected replacement") {
+      const fresh = await middleware(request("fresh", new AbortController().signal));
+      await expect(fresh.text()).resolves.toBe("new render");
+      expect(render).toHaveBeenCalledTimes(3);
+    }
   });
 
   it.each([false, true])(
@@ -515,6 +746,14 @@ function resolveRender(renderResolvers: ReadonlyArray<() => void>, index: number
   }
 
   resolve();
+}
+
+function createLatch() {
+  let release!: () => void;
+  const promise = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  return { promise, release };
 }
 
 class TestAdapter extends AbstractCacheStoreAdapter {

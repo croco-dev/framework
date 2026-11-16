@@ -34,7 +34,9 @@ import {
   ShellStreamAbortedError,
   ShellStreamMaxBufferedBytesError,
   applyShellStreamHeaders,
+  createShellRenderLifetime,
   resolveShellStreamPolicy,
+  toShellAbortError,
 } from "./shellStream";
 import type { ShellStreamPolicy } from "./shellStream";
 import type { RuntimeContext } from "./types";
@@ -89,7 +91,6 @@ export class RenderServer {
       return this.handleRsc(route, request, context);
     }
 
-    const startedAt = Date.now();
     const streamOptions = route.stream ?? {};
     const policy = resolveShellStreamPolicy(context?.platform, {
       signal: request.signal,
@@ -97,43 +98,54 @@ export class RenderServer {
       regionTimeoutMs: streamOptions.regionTimeoutMs ?? SHELL_STREAM_DEFAULT_REGION_TIMEOUT_MS,
       maxBufferedBytes: streamOptions.maxBufferedBytes ?? SHELL_STREAM_DEFAULT_MAX_BUFFERED_BYTES,
     });
+    const deadlineAt = performance.now() + policy.deadlineMs;
 
-    const shellDecision = await this.resolveShellSafely(route, request, context, policy);
+    const shellDecision = await this.resolveShellSafely(route, request, context, deadlineAt);
     if (shellDecision && shellDecision.kind !== "render") {
-      return this.createShellDecisionResponse(shellDecision);
+      const response = this.createShellDecisionResponse(shellDecision);
+      if (request.signal.aborted || performance.now() >= deadlineAt) {
+        return this.createShellDecisionResponse({ kind: "failed", status: 503 });
+      }
+      return response;
+    }
+    if (route.regions?.length) {
+      return this.handleShellStream(route, request, context, policy, deadlineAt);
     }
 
-    if (!route.regions || route.regions.length === 0) {
-      return this.handleBuffered(route, request, context);
+    const lifetime = createShellRenderLifetime(request.signal, deadlineAt);
+    try {
+      const response = await this.renderBuffered(route, request, context, policy, lifetime);
+      lifetime.check();
+      return response;
+    } catch (error) {
+      lifetime.abortIfExpired();
+      if (lifetime.controller.signal.aborted) {
+        return this.createHtmlResponse("<h1>Service Unavailable</h1>", 503, FALLBACK_HEAD_500);
+      }
+      return this.logAndCreateSafeErrorResponse(error, route.path);
+    } finally {
+      lifetime.dispose();
     }
-
-    // One overall deadline budget shared by shell resolution and rendering:
-    // subtract the elapsed shell-resolution time (clamped at zero) so a slow
-    // resolveShell cannot double the nominal deadline.
-    const elapsedMs = Date.now() - startedAt;
-    const remainingPolicy: ShellStreamPolicy = {
-      ...policy,
-      deadlineMs: Math.max(0, policy.deadlineMs - elapsedMs),
-    };
-
-    return this.handleShellStream(route, request, context, remainingPolicy);
   }
 
-  private async handleBuffered(
+  private async renderBuffered(
     route: RenderRouteIR,
     request: Request,
     context: RuntimeContext | undefined,
+    policy: ShellStreamPolicy,
+    lifetime: ReturnType<typeof createShellRenderLifetime>,
   ): Promise<Response> {
-    try {
-      const module = await route.componentLoader();
-      const props = this.createComponentProps(request, context);
-      const html = renderToString(createElement(module.default, props));
-      const headMetadata = route.head?.();
-
-      return this.createHtmlResponse(html, 200, headMetadata);
-    } catch (error) {
-      return this.logAndCreateSafeErrorResponse(error, route.path);
+    const module = await lifetime.run(() => route.componentLoader());
+    lifetime.check();
+    const props = this.createComponentProps(request, context);
+    const html = renderToString(createElement(module.default, props));
+    lifetime.check();
+    const shell = createSsrHtmlShell(route.head?.(), html);
+    const body = policy.delivery === "buffered" ? new TextEncoder().encode(shell) : shell;
+    if (typeof body !== "string" && body.byteLength > policy.maxBufferedBytes) {
+      throw new ShellStreamMaxBufferedBytesError(policy.maxBufferedBytes);
     }
+    return new Response(body, { status: 200, headers: new Headers(HTML_HEADERS) });
   }
 
   private async handleShellStream(
@@ -141,83 +153,25 @@ export class RenderServer {
     request: Request,
     context: RuntimeContext | undefined,
     policy: ShellStreamPolicy,
+    deadlineAt: number,
   ): Promise<Response> {
     const streamOptions = route.stream ?? {};
 
-    const controller = new AbortController();
+    const lifetime = createShellRenderLifetime(request.signal, deadlineAt);
+    const { controller } = lifetime;
     const reactStreams: Array<ReadableStream<Uint8Array>> = [];
-    const timers: Array<ReturnType<typeof setTimeout>> = [];
-    const forwardRequestAbort = () => {
-      controller.abort(
-        request.signal.reason instanceof Error
-          ? request.signal.reason
-          : new ShellStreamAbortedError(request.signal.reason ?? "Client disconnected"),
-      );
-    };
-    if (request.signal.aborted) {
-      forwardRequestAbort();
-    } else {
-      request.signal.addEventListener("abort", forwardRequestAbort, { once: true });
-    }
-    timers.push(
-      setTimeout(
-        () => controller.abort(new ShellStreamAbortedError("SSR render deadline exceeded")),
-        policy.deadlineMs,
-      ),
-    );
 
     const teardown = () => {
       controller.abort(new ShellStreamAbortedError("SSR render teardown"));
       for (const reactStream of reactStreams) {
         void reactStream.cancel(new ShellStreamAbortedError("SSR render teardown")).catch(() => {});
       }
-      request.signal.removeEventListener("abort", forwardRequestAbort);
-      for (const timer of timers) {
-        clearTimeout(timer);
-      }
+      lifetime.dispose();
     };
 
     try {
-      // Hard deadline on the loader phase too: a hanging componentLoader
-      // must not hold the request past the deadline even if it ignores
-      // `signal`. The linked controller still cancels cooperative loaders.
-      // On expiry the race throws the linked abort error, which the catch
-      // below funnels into the same 503 pre-commit path.
-      const deadline = new Promise<never>((_, reject) => {
-        if (controller.signal.aborted) {
-          reject(toShellAbortError(controller.signal.reason));
-        } else {
-          controller.signal.addEventListener(
-            "abort",
-            () => reject(toShellAbortError(controller.signal.reason)),
-            { once: true },
-          );
-        }
-      });
-      let module: Awaited<ReturnType<RenderRouteIR["componentLoader"]>>;
-      module = await Promise.race([route.componentLoader(), deadline]);
-      if (controller.signal.aborted) {
-        const counts = await createDeferredRegionStore(
-          route.regions ?? [],
-          controller.signal,
-          policy.regionTimeoutMs,
-          { request, ...(context ? { context } : {}) },
-        ).settle();
-        streamOptions.onSettle?.({
-          delivery: policy.delivery,
-          platform: context?.platform ?? "unknown",
-          shellCommitted: false,
-          regionsSettled: counts.settled,
-          regionsFailed: counts.failed,
-          regionsCancelled: counts.cancelled,
-          bytes: 0,
-          timedOut: this.timedOutFor(controller.signal.reason, request.signal.aborted),
-          clientAborted: request.signal.aborted,
-          abortReason: this.toAbortReason(controller.signal.reason, request.signal.aborted),
-        });
-        teardown();
-        return this.createHtmlResponse("<h1>Service Unavailable</h1>", 503, FALLBACK_HEAD_500);
-      }
+      const module = await lifetime.run(() => route.componentLoader());
+      lifetime.check();
       const store = createDeferredRegionStore(
         route.regions ?? [],
         controller.signal,
@@ -336,12 +290,13 @@ export class RenderServer {
       // controller itself, so a post-teardown check would misclassify any
       // render error as a client abort. Non-abort Error reasons from a
       // client disconnect still map to client-abort/503 via toAbortReason.
+      lifetime.abortIfExpired();
       const wasAborted = controller.signal.aborted;
       teardown();
       if (error instanceof ShellStreamAbortedError || wasAborted || request.signal.aborted) {
-        // Pre-commit deadline/client-abort during the loader phase: same
-        // 503 path as the post-loader abort check above.
-        const abortReason = this.toAbortReason(error, request.signal.aborted);
+        // The shell has not committed, so deadline and client abort return 503.
+        const reason = wasAborted ? controller.signal.reason : error;
+        const abortReason = this.toAbortReason(reason, request.signal.aborted);
         const counts = await createDeferredRegionStore(
           route.regions ?? [],
           controller.signal,
@@ -407,63 +362,32 @@ export class RenderServer {
     route: RenderRouteIR,
     request: Request,
     context: RuntimeContext | undefined,
-    policy: ShellStreamPolicy,
+    deadlineAt: number,
   ): Promise<ShellDecision | undefined> {
     if (!route.resolveShell) {
       return undefined;
     }
 
-    // Linked controller: request abort OR shell deadline cancels the loader.
-    // The deadline also races the loader promise so a loader that ignores
-    // `signal` still settles at the deadline (hard timeout, not only
-    // cooperative cancellation).
-    const linked = new AbortController();
-    const forwardRequestAbort = () => {
-      linked.abort(
-        request.signal.reason instanceof Error
-          ? request.signal.reason
-          : new ShellStreamAbortedError(request.signal.reason ?? "Client disconnected"),
-      );
-    };
-    if (request.signal.aborted) {
-      forwardRequestAbort();
-    } else {
-      request.signal.addEventListener("abort", forwardRequestAbort, { once: true });
-    }
-    const timer = setTimeout(
-      () => linked.abort(new ShellStreamAbortedError("SSR shell resolution deadline exceeded")),
-      policy.deadlineMs,
-    );
-    const onDeadline = () =>
-      linked.signal.reason instanceof Error
-        ? linked.signal.reason
-        : new ShellStreamAbortedError("SSR shell resolution deadline exceeded");
-    const deadline = new Promise<never>((_, reject) => {
-      if (linked.signal.aborted) {
-        reject(onDeadline());
-      } else {
-        linked.signal.addEventListener("abort", () => reject(onDeadline()), { once: true });
-      }
-    });
+    const lifetime = createShellRenderLifetime(request.signal, deadlineAt);
 
     try {
-      const decision = await Promise.race([
-        route.resolveShell({
+      const resolveShell = route.resolveShell.bind(route);
+      return await lifetime.run(() =>
+        resolveShell({
           request,
           ...(context ? { context } : {}),
-          signal: linked.signal,
+          signal: lifetime.controller.signal,
         }),
-        deadline,
-      ]);
-      return decision;
+      );
     } catch (error) {
+      lifetime.abortIfExpired();
       // Classify first: a client disconnect forwards the raw request reason
       // (not always ShellStreamAbortedError), and it must bypass the 500
       // failure report as a 503. Only genuine loader failures are reported
       // and mapped to 500.
       if (
         error instanceof ShellStreamAbortedError ||
-        linked.signal.aborted ||
+        lifetime.controller.signal.aborted ||
         request.signal.aborted
       ) {
         return { kind: "failed", status: 503 };
@@ -471,8 +395,7 @@ export class RenderServer {
       reportShellFailure("SSR shell resolution failed", { route: route.path, error }, route.path);
       return { kind: "failed", status: 500 };
     } finally {
-      clearTimeout(timer);
-      request.signal.removeEventListener("abort", forwardRequestAbort);
+      lifetime.dispose();
     }
   }
 
@@ -860,7 +783,8 @@ export class RenderServer {
   private createHtmlResponse(body: string, status: number, headMetadata?: HeadMetadata): Response {
     const shell = createSsrHtmlShell(headMetadata, body);
 
-    return new Response(shell, { status, headers: HTML_HEADERS });
+    // Node's HTTP adapter can add Content-Length to response headers.
+    return new Response(shell, { status, headers: new Headers(HTML_HEADERS) });
   }
 
   private createRscErrorResponse(error: unknown, routePath: string): Response {
@@ -1128,10 +1052,6 @@ async function defaultRscFlightEncoder(
 function reportBestEffortStreamTeardown(): void {
   // Best-effort teardown runs after the settle summary is preserved above.
   // No additional logging sink exists here; the summary carries the evidence.
-}
-
-function toShellAbortError(reason: unknown): Error {
-  return reason instanceof Error ? reason : new ShellStreamAbortedError(reason);
 }
 
 function reportShellFailure(message: string, detail: unknown, routePath: string): void {
