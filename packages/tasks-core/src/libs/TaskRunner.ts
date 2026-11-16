@@ -257,7 +257,7 @@ export class TaskRunner {
         task.target !== taskIdentifier.target ||
         task.methodName !== taskIdentifier.methodName ||
         task.metadata.target !== taskIdentifier.target ||
-        String(task.metadata.methodName) !== taskIdentifier.methodName
+        task.metadata.methodName !== taskIdentifier.methodName
       ) {
         throw new InvalidTaskReferenceProblem(
           taskIdentifier.name,

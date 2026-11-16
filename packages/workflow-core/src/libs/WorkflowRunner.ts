@@ -584,7 +584,7 @@ export class WorkflowRunner {
       }
 
       const target = task.target as { readonly prototype?: object };
-      const prototype = target.prototype as Record<string, unknown> | undefined;
+      const prototype = target.prototype as Record<string | symbol, unknown> | undefined;
       const handler = prototype?.[task.methodName];
       if (typeof handler !== "function") {
         throw new WorkflowDefinitionProblem(

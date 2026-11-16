@@ -178,6 +178,28 @@ describe("TaskRunner", () => {
     expect(mockExecutionManager.complete).toHaveBeenCalledWith("exec-123", "processed: test");
   });
 
+  it("executes a named task using the original symbol method key", async () => {
+    const methodKey = Symbol("job");
+
+    class SymbolTaskHandler {
+      @Task({ name: "symbol-task" })
+      async [methodKey](payload: { value: number }): Promise<number> {
+        return payload.value * 3;
+      }
+
+      async ["Symbol(job)"](): Promise<number> {
+        return -1;
+      }
+    }
+
+    Container.set(SymbolTaskHandler, new SymbolTaskHandler());
+    registry.collectFromMetadata();
+    const runner = new TaskRunner(mockExecutionManager, registry);
+
+    await expect(runner.execute("symbol-task", { value: 7 })).resolves.toBe(21);
+    expect(mockExecutionManager.complete).toHaveBeenCalledWith("exec-123", 21);
+  });
+
   it("requires an explicit resolver for class targets even when globally registered", async () => {
     const runner = new TaskRunnerBase(mockExecutionManager, registry);
     await expect(runner.execute("test-task", { data: "test" })).rejects.toThrow(

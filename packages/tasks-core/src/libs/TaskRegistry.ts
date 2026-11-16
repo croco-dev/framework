@@ -6,7 +6,7 @@ import type { TaskMetadata } from "./types";
 export type RegisteredTask = {
   name: string;
   target: object;
-  methodName: string;
+  methodName: string | symbol;
   metadata: TaskMetadata;
 };
 
@@ -35,7 +35,12 @@ export class TaskRegistry {
     return registry;
   }
 
-  register(name: string, target: object, methodName: string, metadata: TaskMetadata): void {
+  register(
+    name: string,
+    target: object,
+    methodName: string | symbol,
+    metadata: TaskMetadata,
+  ): void {
     this.registerTask({ name, target, methodName, metadata });
   }
 
@@ -73,7 +78,7 @@ export class TaskRegistry {
 
   private collect(metadataEntries: TaskMetadata[]): void {
     for (const metadata of metadataEntries) {
-      this.register(metadata.name, metadata.target, String(metadata.methodName), metadata);
+      this.register(metadata.name, metadata.target, metadata.methodName, metadata);
     }
   }
 
@@ -84,14 +89,14 @@ export class TaskRegistry {
   private static isSameRegistration(
     existingTask: RegisteredTask,
     target: object,
-    methodName: string,
+    methodName: string | symbol,
     metadata: TaskMetadata,
   ): boolean {
     return (
       existingTask.target === target &&
       existingTask.methodName === methodName &&
       existingTask.metadata.target === metadata.target &&
-      String(existingTask.metadata.methodName) === String(metadata.methodName) &&
+      existingTask.metadata.methodName === metadata.methodName &&
       TaskRegistry.isSameOptions(existingTask.metadata.options, metadata.options)
     );
   }

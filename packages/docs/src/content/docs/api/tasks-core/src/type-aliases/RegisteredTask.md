@@ -17,7 +17,7 @@ title: "RegisteredTask"
 
 ### methodName
 
-> **methodName**: `string`
+> **methodName**: `string` \| `symbol`
 
 ---
 

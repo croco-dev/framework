@@ -829,6 +829,31 @@ describe("workflow-core", () => {
     ).rejects.toMatchObject({ code: "tasks-core/task-runner-di-failure" });
   });
 
+  it("runs a workflow reference with a named symbol-keyed task", async () => {
+    const stepMethod = Symbol("calculate");
+    const workflow = { name: "symbol-workflow", steps: ["symbol-task"] };
+
+    @Component()
+    class WorkflowTasks {
+      @Task({ name: "symbol-task" })
+      [stepMethod](payload: { value: number }): number {
+        return payload.value * 2;
+      }
+    }
+
+    @Component()
+    class Workflows {
+      @Workflow(workflow)
+      run() {}
+    }
+
+    instances.set(WorkflowTasks, new WorkflowTasks());
+    const runner = createWorkflowRunner(manager, WorkflowRegistry.fromMetadata());
+
+    const result = await runner.execute(workflow, { value: 21 });
+    expect(result.steps).toEqual([{ step: "symbol-task", task: "symbol-task", result: 42 }]);
+  });
+
   it("collects workflow definitions with cron and webhook trigger metadata", () => {
     @Component()
     class BillingTasks {

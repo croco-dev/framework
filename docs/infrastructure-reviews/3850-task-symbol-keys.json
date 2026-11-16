@@ -1,0 +1,79 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "tasks-core",
+      "classification": "pure-contract",
+      "reason": "The task registry and runner preserve the original JavaScript property key when comparing and invoking decorated handlers.",
+      "files": {
+        "packages/tasks-core/src/libs/TaskRegistry.ts": "4963c2fecdc2714e93c606328f22dfcb996b5d03b87d26e5817ec81a8f1ab378",
+        "packages/tasks-core/src/libs/TaskRunner.ts": "3ce138b53f67a7e10956fa9f21c57942e42ac7d062a1712e3e577e7ad05a143f"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Handler lookup uses in-process property keys and needs no Node Host capability, storage, or lifecycle hook.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/tasks-core/src/libs/TaskRegistry.ts",
+            "packages/tasks-core/src/tests/TaskRunner.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Handler lookup occurs inside the runner and needs no Lambda Host capability, storage, or invocation lifecycle hook.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/tasks-core/src/libs/TaskRegistry.ts",
+            "packages/tasks-core/src/tests/TaskRunner.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Property key identity uses JavaScript language semantics and needs no Workers binding, storage, or lifecycle hook.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/tasks-core/src/libs/TaskRegistry.ts",
+            "packages/tasks-core/src/tests/TaskRunner.spec.ts"
+          ]
+        }
+      }
+    },
+    {
+      "package": "workflow-core",
+      "classification": "pure-contract",
+      "reason": "Workflow contract validation accepts the same in-process property keys as the task registry.",
+      "files": {
+        "packages/workflow-core/src/libs/WorkflowRunner.ts": "e49cfcce5dd51eedce71d95fa4beabd49ea2e9f6199602887fff052829819896"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Prototype lookup requires no Node Host capability, storage, or lifecycle hook.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/workflow-core/src/tests/WorkflowCore.spec.ts"]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Prototype lookup requires no Lambda Host capability, storage, or invocation lifecycle hook.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/workflow-core/src/tests/WorkflowCore.spec.ts"]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Prototype lookup requires no Workers binding, storage, or lifecycle hook.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/workflow-core/src/tests/WorkflowCore.spec.ts"]
+        }
+      }
+    }
+  ]
+}
