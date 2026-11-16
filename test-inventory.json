@@ -5322,6 +5322,12 @@
       "owner": "@croco/research-core"
     },
     {
+      "path": "packages/research-core/src/tests/SurveyManager.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/research-core"
+    },
+    {
       "path": "packages/research-core/src/tests/SurveyValidation.spec.ts",
       "lane": "fast",
       "qualifiers": [],

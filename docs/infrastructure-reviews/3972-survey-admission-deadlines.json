@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "research-core",
+      "classification": "pure-contract",
+      "reason": "Check the survey period, invitation expiry, and response retention using the server clock after asynchronous reads, before admitting a survey mutation.",
+      "files": {
+        "packages/research-core/src/libs/SurveyManager.ts": "395db5398ee88896e47e5d07dc9506f298291d0ae9c323851ca6d93621ecc786"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The deadline decision uses the existing clock and survey transaction contract. It requires no Node Host capability or Kubernetes lifecycle hook.",
+          "providers": [],
+          "constraints": [
+            "SurveyStore must serialize each scope and roll back a failed transaction."
+          ],
+          "references": [
+            "packages/research-core/src/libs/types.ts",
+            "packages/research-core/src/libs/SurveyManager.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The deadline decision runs inside the existing survey transaction. It requires no Lambda invocation metadata or lifecycle hook.",
+          "providers": [],
+          "constraints": [
+            "SurveyStore must serialize each scope and roll back a failed transaction."
+          ],
+          "references": [
+            "packages/research-core/src/libs/types.ts",
+            "packages/research-core/src/libs/SurveyManager.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The deadline decision needs no Workers API, binding, or background execution. The deployed storage adapter determines runtime compatibility.",
+          "providers": [],
+          "constraints": [
+            "SurveyStore must serialize each scope and roll back a failed transaction."
+          ],
+          "references": [
+            "packages/research-core/src/libs/types.ts",
+            "packages/research-core/src/libs/SurveyManager.ts"
+          ]
+        }
+      }
+    }
+  ]
+}

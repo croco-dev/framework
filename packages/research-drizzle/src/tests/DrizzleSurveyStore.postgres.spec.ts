@@ -59,12 +59,12 @@ describe.skipIf(!url)("PostgreSQL micro surveys", () => {
   let manager: SurveyManager;
   let competitor: SurveyManager;
   let now = new Date("2026-10-13T00:00:00Z");
-  const create = (pool: Pool) =>
+  const create = (pool: Pool, everyone = async () => true) =>
     new SurveyManager(
       new DrizzleSurveyStore(drizzle(pool)),
       authority,
       surveyTokenCodec,
-      { everyone: async () => true },
+      { everyone },
       ["report.saved"],
       () => now,
     );
@@ -103,6 +103,23 @@ describe.skipIf(!url)("PostgreSQL micro surveys", () => {
     return value!;
   };
   const tokenInput = (token: string) => ({ ...admin, actor: subject.id, token });
+  it("leaves the exposed invitation and its related records intact when targeting reaches expiry", async () => {
+    const invitation = await invite();
+    const input = tokenInput(invitation.token);
+    await manager.expose(input);
+    const relatedRecords = () =>
+      first.query("select kind, id, payload from research_records order by kind, id");
+    const before = await relatedRecords();
+    const slow = create(second, async () => {
+      now = new Date("2026-10-14T00:00:00Z");
+      return true;
+    });
+
+    await expect(
+      slow.submitResponse({ ...input, answers: { result: "useful" }, idempotencyKey: "expired" }),
+    ).rejects.toBeInstanceOf(SurveyExpiredProblem);
+    expect((await relatedRecords()).rows).toEqual(before.rows);
+  });
   it("claims one response across two connections, conflicts on altered retry and retains revisions after restart", async () => {
     const i = await invite();
     await manager.expose(tokenInput(i.token));
