@@ -25,6 +25,18 @@ title: "InMemoryHealthScoreStore"
 
 ## Properties
 
+### transitionVersionOrdering
+
+> `readonly` **transitionVersionOrdering**: `"ascending-decimal"` = `"ascending-decimal"`
+
+Opts in when period history versions are positive decimal commit sequences per tenant.
+
+#### Overrides
+
+[`HealthScoreStore`](/api/customer-health-core/src/classes/healthscorestore/).[`transitionVersionOrdering`](/api/customer-health-core/src/classes/healthscorestore/#transitionversionordering)
+
+---
+
 ### token
 
 > `readonly` `static` **token**: [`Token`](/api/framework-context/src/classes/token/)\<[`HealthScoreStore`](/api/customer-health-core/src/classes/healthscorestore/)\>

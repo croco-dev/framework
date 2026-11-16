@@ -119,14 +119,18 @@ export class CustomerHealthService {
       return null;
     }
 
-    const sorted = history.sort((a, b) => a.calculatedAt.getTime() - b.calculatedAt.getTime());
-    const oldest = sorted[0];
-    const newest = sorted[sorted.length - 1];
+    const sorted = [...history].sort((a, b) => a.calculatedAt.getTime() - b.calculatedAt.getTime());
+    const hasOrderedVersions = this.store.transitionVersionOrdering === "ascending-decimal";
+    const oldest = getTrendEndpoint(sorted, sorted[0], "oldest", hasOrderedVersions);
+    const newest = getTrendEndpoint(
+      sorted,
+      sorted[sorted.length - 1],
+      "newest",
+      hasOrderedVersions,
+    );
+    if (oldest === undefined || newest === undefined) return null;
 
-    const changePercentage =
-      oldest.overallScore === 0
-        ? newest.overallScore * 100
-        : ((newest.overallScore - oldest.overallScore) / oldest.overallScore) * 100;
+    const changePercentage = oldest === 0 ? newest * 100 : ((newest - oldest) / oldest) * 100;
 
     let trend: HealthTrend;
     if (changePercentage >= 5) {
@@ -186,6 +190,40 @@ export class CustomerHealthService {
     score.previousScore = previous.overallScore;
     score.trend = this.calculator.determineTrend(score.overallScore, previous.overallScore);
   }
+}
+
+function getTrendEndpoint(
+  history: readonly TenantHealthScore[],
+  boundary: TenantHealthScore,
+  direction: "oldest" | "newest",
+  hasOrderedVersions: boolean,
+): number | undefined {
+  const timestamp = boundary.calculatedAt.getTime();
+  const tied = history.filter((score) => score.calculatedAt.getTime() === timestamp);
+  if (tied.every((score) => score.overallScore === boundary.overallScore)) {
+    return boundary.overallScore;
+  }
+
+  // A legacy or opaque CAS token cannot determine the order of differing scores.
+  if (!hasOrderedVersions) return undefined;
+  const scoresBySequence = new Map<bigint, number>();
+  let endpointSequence: bigint | undefined;
+  for (const { transitionVersion, overallScore } of tied) {
+    if (transitionVersion === undefined || !/^0*[1-9][0-9]*$/.test(transitionVersion))
+      return undefined;
+
+    const sequence = BigInt(transitionVersion);
+    const previousScore = scoresBySequence.get(sequence);
+    if (previousScore !== undefined && previousScore !== overallScore) return undefined;
+    scoresBySequence.set(sequence, overallScore);
+    if (
+      endpointSequence === undefined ||
+      (direction === "oldest" ? sequence < endpointSequence : sequence > endpointSequence)
+    ) {
+      endpointSequence = sequence;
+    }
+  }
+  return endpointSequence === undefined ? undefined : scoresBySequence.get(endpointSequence);
 }
 
 function waitForTransitionPersistenceRetry(attempt: number): Promise<void> {

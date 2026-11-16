@@ -1,0 +1,110 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "customer-health-core",
+      "classification": "pure-contract",
+      "reason": "Resolve same-timestamp health scores when the store declares ordered transition versions. Return no trend when history cannot identify an endpoint.",
+      "files": {
+        "packages/customer-health-core/src/libs/CustomerHealthService.ts": "325c6a575685a08373776f8d00659cb14ab07eaa15618e5b61ee7abad25940e5",
+        "packages/customer-health-core/src/libs/InMemoryHealthScoreStore.ts": "06111d571e6252d784aac2b9fe4e42de35934cc533c88c8421c7b8ba6701c302",
+        "packages/customer-health-core/src/libs/interfaces.ts": "95fc1ab958720d82f89a734120f6c874b5c562e1a958c9fd8056ebbf3aa53213"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Trend endpoint selection and in-memory history ordering use timestamps and committed sequence values in memory.",
+          "providers": [],
+          "constraints": [
+            "Requires no host capability, external storage connection or application lifecycle hook."
+          ],
+          "references": [
+            "packages/customer-health-core/src/libs/CustomerHealthService.ts",
+            "packages/customer-health-core/src/libs/InMemoryHealthScoreStore.ts",
+            "packages/customer-health-core/src/tests/CustomerHealthService.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Trend endpoint selection and in-memory history ordering use timestamps and committed sequence values in memory.",
+          "providers": [],
+          "constraints": [
+            "Requires no host capability, external storage connection or application lifecycle hook."
+          ],
+          "references": [
+            "packages/customer-health-core/src/libs/CustomerHealthService.ts",
+            "packages/customer-health-core/src/libs/InMemoryHealthScoreStore.ts",
+            "packages/customer-health-core/src/tests/CustomerHealthService.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Trend endpoint selection and in-memory history ordering use timestamps and committed sequence values in memory.",
+          "providers": [],
+          "constraints": [
+            "Requires no host capability, external storage connection or application lifecycle hook."
+          ],
+          "references": [
+            "packages/customer-health-core/src/libs/CustomerHealthService.ts",
+            "packages/customer-health-core/src/libs/InMemoryHealthScoreStore.ts",
+            "packages/customer-health-core/src/tests/CustomerHealthService.spec.ts"
+          ]
+        }
+      }
+    },
+    {
+      "package": "customer-health-drizzle",
+      "classification": "durable-provider",
+      "reason": "Order tied PostgreSQL timestamps by the existing bigint transition sequence.",
+      "files": {
+        "packages/customer-health-drizzle/src/libs/DrizzleHealthScoreStore.ts": "9e63593b0625608536f24461e46941f2e7b9ec179f0c41372bd8f8274b33949f"
+      },
+      "catalogRuntimes": ["node", "lambda"],
+      "profiles": {
+        "kubernetes": {
+          "result": "conditional",
+          "reason": "The existing Node provider orders rows in PostgreSQL through the application-supplied Drizzle connection.",
+          "providers": ["@croco/customer-health-drizzle"],
+          "constraints": [
+            "Requires PostgreSQL and an application-owned connection lifecycle.",
+            "Local PostgreSQL verifies query ordering."
+          ],
+          "references": [
+            "packages/customer-health-drizzle/src/libs/DrizzleHealthScoreStore.ts",
+            "packages/customer-health-drizzle/src/libs/schema.ts",
+            "packages/customer-health-drizzle/src/tests/DrizzleHealthScoreStorePostgres.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "conditional",
+          "reason": "The query uses the same PostgreSQL provider on Lambda when the application supplies a suitable connection.",
+          "providers": ["@croco/customer-health-drizzle"],
+          "constraints": [
+            "Requires a PostgreSQL connection and database work bounded by the invocation lifecycle.",
+            "Query evidence comes from local PostgreSQL."
+          ],
+          "references": [
+            "packages/customer-health-drizzle/src/libs/DrizzleHealthScoreStore.ts",
+            "packages/customer-health-drizzle/src/libs/schema.ts",
+            "packages/customer-health-drizzle/src/tests/DrizzleHealthScoreStorePostgres.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "unsupported",
+          "reason": "The catalog has no Workers support claim for this PostgreSQL provider.",
+          "providers": ["@croco/customer-health-drizzle"],
+          "constraints": [
+            "A Workers-compatible database connection and provider lifecycle require separate verification."
+          ],
+          "references": [
+            "packages/customer-health-drizzle/src/libs/DrizzleHealthScoreStore.ts",
+            "packages/customer-health-drizzle/src/libs/schema.ts",
+            "packages/customer-health-drizzle/src/tests/DrizzleHealthScoreStorePostgres.spec.ts"
+          ],
+          "host": "workers"
+        }
+      }
+    }
+  ]
+}

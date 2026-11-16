@@ -22,6 +22,14 @@ title: "HealthScoreStore"
 
 ## Properties
 
+### transitionVersionOrdering?
+
+> `readonly` `optional` **transitionVersionOrdering?**: `"ascending-decimal"`
+
+Opts in when period history versions are positive decimal commit sequences per tenant.
+
+---
+
 ### token
 
 > `readonly` `static` **token**: [`Token`](/api/framework-context/src/classes/token/)\<`HealthScoreStore`\>

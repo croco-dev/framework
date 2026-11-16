@@ -9,6 +9,8 @@ import { HealthEventIntentConflictProblem } from "./problems/HealthProblems";
 
 @Component()
 export class InMemoryHealthScoreStore extends HealthScoreStore {
+  override readonly transitionVersionOrdering = "ascending-decimal";
+
   private readonly store = new Map<string, TenantHealthScore[]>();
   private readonly eventIntents = new Map<string, HealthTransitionEventIntent>();
   private transitionSequence = 0;
@@ -84,9 +86,14 @@ export class InMemoryHealthScoreStore extends HealthScoreStore {
     endDate: Date,
   ): Promise<TenantHealthScore[]> {
     const history = this.store.get(tenantId) ?? [];
-    return history
-      .filter((score) => score.calculatedAt >= startDate && score.calculatedAt <= endDate)
-      .map(cloneTenantHealthScore);
+    return (
+      history
+        .filter((score) => score.calculatedAt >= startDate && score.calculatedAt <= endDate)
+        // Equal timestamps retain reverse commit order in the stable sort.
+        .reverse()
+        .sort((a, b) => b.calculatedAt.getTime() - a.calculatedAt.getTime())
+        .map(cloneTenantHealthScore)
+    );
   }
 }
 

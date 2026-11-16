@@ -925,6 +925,26 @@ describe("CustomerHealthService.getTrend day window", () => {
     }
   }
 
+  function serviceForHistory(
+    rows: TenantHealthScore[],
+    transitionVersionOrdering?: HealthScoreStore["transitionVersionOrdering"],
+  ): CustomerHealthService {
+    const historyStore: HealthScoreStore = {
+      transitionVersionOrdering,
+      saveTransition: vi.fn(),
+      listPendingEventIntents: vi.fn(),
+      markEventIntentPublished: vi.fn(),
+      findLatest: vi.fn(),
+      findHistory: vi.fn(),
+      findHistoryByPeriod: vi.fn().mockResolvedValue(rows),
+    };
+    return new CustomerHealthService(
+      new MockSignalProvider(),
+      historyStore,
+      new HealthScoreCalculator(),
+    );
+  }
+
   it("compares scores across the requested days for hourly scoring", async () => {
     await commitScores([
       [90, 20 * DAY],
@@ -979,10 +999,7 @@ describe("CustomerHealthService.getTrend day window", () => {
       [70, DAY],
       [45, 0],
     ]);
-    const findByPeriod = store.findHistoryByPeriod.bind(store);
-    vi.spyOn(store, "findHistoryByPeriod").mockImplementation(async (...args) =>
-      (await findByPeriod(...args)).reverse(),
-    );
+    vi.spyOn(store, "findHistoryByPeriod");
     expect(await service.getTrend("tenant-1", 30)).toEqual({
       trend: "declining",
       changePercentage: -50,
@@ -993,6 +1010,93 @@ describe("CustomerHealthService.getTrend day window", () => {
       new Date(NOW.getTime() - 30 * DAY),
       NOW,
     );
+  });
+
+  it("uses committed transition order for equal timestamps in either read order", async () => {
+    await commitScores([
+      [50, 0],
+      [75, 0],
+      [100, 31 * DAY],
+    ]);
+    const period = await store.findHistoryByPeriod("tenant-1", "day", new Date(0), NOW);
+    expect(period.map((score) => score.transitionVersion)).toEqual(["2", "1", "3"]);
+    const expectedTrend = { trend: "improving", changePercentage: 50 };
+    expect(await service.getTrend("tenant-1", 30)).toEqual(expectedTrend);
+    expect(await service.getTrend("tenant-1", 32)).toEqual({
+      trend: "declining",
+      changePercentage: -25,
+    });
+
+    const history = await store.findHistoryByPeriod("tenant-1", "day", NOW, NOW);
+    vi.spyOn(store, "findHistoryByPeriod").mockResolvedValue([...history].reverse());
+    expect(await service.getTrend("tenant-1", 30)).toEqual(expectedTrend);
+  });
+
+  it.each([undefined, "opaque", "1"])(
+    "returns no trend when different scores share an endpoint without distinct ordered versions (%s)",
+    async (transitionVersion) => {
+      await commitScores([
+        [50, DAY],
+        [75, DAY],
+        [90, 0],
+      ]);
+      const history = await store.findHistoryByPeriod("tenant-1", "day", new Date(0), NOW);
+      const ambiguous = history.map((score) =>
+        score.overallScore === 75 ? { ...score, transitionVersion } : score,
+      );
+      const readHistory = vi.spyOn(store, "findHistoryByPeriod");
+      for (const rows of [ambiguous, [...ambiguous].reverse()]) {
+        readHistory.mockResolvedValue(rows);
+        expect(await service.getTrend("tenant-1", 30)).toBeNull();
+      }
+    },
+  );
+
+  it("does not infer order from decimal CAS tokens in a custom store", async () => {
+    await commitScores([
+      [50, 0],
+      [75, 0],
+    ]);
+    const history = await store.findHistoryByPeriod("tenant-1", "day", NOW, NOW);
+    const rows = history.map((score) => ({
+      ...score,
+      transitionVersion: score.overallScore === 50 ? "900" : "100",
+    }));
+    const legacyService = serviceForHistory(rows);
+    expect(await legacyService.getTrend("tenant-1", 30)).toBeNull();
+  });
+
+  it("orders zero-padded versions from a store that declares decimal transition order", async () => {
+    await commitScores([
+      [50, 0],
+      [75, 0],
+    ]);
+    const history = await store.findHistoryByPeriod("tenant-1", "day", NOW, NOW);
+    const rows = history.map((score) => ({
+      ...score,
+      transitionVersion: score.overallScore === 50 ? "0001" : "002",
+    }));
+    const customService = serviceForHistory(rows, "ascending-decimal");
+    expect(await customService.getTrend("tenant-1", 30)).toEqual({
+      trend: "improving",
+      changePercentage: 50,
+    });
+  });
+
+  it("compares unambiguous scores from stores that do not expose ordered versions", async () => {
+    await commitScores([
+      [50, DAY],
+      [50, DAY],
+      [80, 0],
+    ]);
+    const history = await store.findHistoryByPeriod("tenant-1", "day", new Date(0), NOW);
+    const legacyService = serviceForHistory(
+      history.map((score) => ({ ...score, transitionVersion: undefined })),
+    );
+    expect(await legacyService.getTrend("tenant-1", 30)).toEqual({
+      trend: "improving",
+      changePercentage: 60,
+    });
   });
 
   it.each([

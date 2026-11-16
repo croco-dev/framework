@@ -134,8 +134,16 @@ pending 상태로 남깁니다. 호출자 커밋 후 `publishPendingEvents` 또�
 ### 추세 분석
 
 `getTrend(tenantId, days)`의 `days`는 레코드 개수가 아닌 기간입니다. 현재 시각에서 `days × 24시간` 전부터
-현재 시각까지(양 끝 포함)의 가장 오래된 점수와 최신 점수를 비교하며, 구간 안의 점수가 2건 미만이면
+현재 시각까지(양 끝 포함)의 가장 오래된 점수와 최신 점수를 비교합니다. 시각이 같으면 저장소가
+`transitionVersionOrdering: "ascending-decimal"`을 선언한 경우에만 `transitionVersion`을 저장 순번으로
+사용합니다. 구간 안의 점수가 2건 미만이거나, 비교할 시각에 서로 다른 점수가 있고 저장 순서를 알 수 없으면
 `null`을 반환합니다.
+
+기본 InMemory 저장소의 기간별 이력은 점수 시각이 최신인 항목부터 반환하며, 같은 시각에는 마지막으로 저장한 항목이
+먼저 나옵니다.
+
+커스텀 저장소는 기간별 이력의 `transitionVersion`이 테넌트별로 증가하는 양의 10진 정수 순번인 경우
+`transitionVersionOrdering`을 선언할 수 있습니다.
 
 ```typescript
 import type { TrendPeriod, HealthTrendAnalysis } from "@croco/customer-health-core";

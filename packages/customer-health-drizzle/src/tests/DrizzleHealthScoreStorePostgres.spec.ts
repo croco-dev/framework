@@ -133,6 +133,48 @@ describe.skipIf(connectionString.length === 0)(
       });
     });
 
+    it("orders scores from the same millisecond by their full PostgreSQL transition sequence", async () => {
+      await pool.query(
+        "ALTER SEQUENCE tenant_health_scores_transition_sequence_seq RESTART WITH 9999999999999999",
+      );
+      const calculatedAt = "2026-09-22T00:00:00.000Z";
+      const first = createScore("tenant-trend", 50, "critical", calculatedAt);
+      const second = createScore("tenant-trend", 75, "at_risk", calculatedAt);
+      const backdated = createScore("tenant-trend", 90, "healthy", "2026-09-20T00:00:00.000Z");
+      await expect(store.saveTransition(first, null, [])).resolves.toEqual({ committed: true });
+      await expect(store.saveTransition(second, first, [])).resolves.toEqual({ committed: true });
+      await expect(store.saveTransition(backdated, second, [])).resolves.toEqual({
+        committed: true,
+      });
+
+      const history = await store.findHistoryByPeriod(
+        first.tenantId,
+        "day",
+        backdated.calculatedAt,
+        second.calculatedAt,
+      );
+      expect(history.map(({ transitionVersion }) => transitionVersion)).toEqual([
+        "10000000000000000",
+        "9999999999999999",
+        "10000000000000001",
+      ]);
+
+      vi.useFakeTimers({ now: first.calculatedAt, toFake: ["Date"] });
+      try {
+        const service = new CustomerHealthService(
+          createSignalRegistry(90),
+          store,
+          new HealthScoreCalculator(),
+        );
+        await expect(service.getTrend(first.tenantId, 1)).resolves.toEqual({
+          trend: "improving",
+          changePercentage: 50,
+        });
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
     it("holds the tenant advisory lock on the ambient transaction connection", async () => {
       const score = createScore("tenant-lock");
 

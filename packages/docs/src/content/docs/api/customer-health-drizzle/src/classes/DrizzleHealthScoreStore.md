@@ -39,6 +39,18 @@ Drizzle 클라이언트와 트랜잭션 매니저를 받아 저장소를 초기�
 
 ## Properties
 
+### transitionVersionOrdering
+
+> `readonly` **transitionVersionOrdering**: `"ascending-decimal"` = `"ascending-decimal"`
+
+Opts in when period history versions are positive decimal commit sequences per tenant.
+
+#### Overrides
+
+[`HealthScoreStore`](/api/customer-health-core/src/classes/healthscorestore/).[`transitionVersionOrdering`](/api/customer-health-core/src/classes/healthscorestore/#transitionversionordering)
+
+---
+
 ### token
 
 > `readonly` `static` **token**: [`Token`](/api/framework-context/src/classes/token/)\<[`HealthScoreStore`](/api/customer-health-core/src/classes/healthscorestore/)\>
