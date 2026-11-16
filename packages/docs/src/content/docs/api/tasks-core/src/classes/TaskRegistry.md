@@ -99,7 +99,7 @@ title: "TaskRegistry"
 
 ##### methodName
 
-`string`
+`string` \| `symbol`
 
 ##### metadata
 

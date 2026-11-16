@@ -89,6 +89,21 @@ describe("TaskRegistry", () => {
     expect(task).toBeUndefined();
   });
 
+  it("rejects different symbol methods with the same description and task name", () => {
+    const firstMethod = Symbol("job");
+    const secondMethod = Symbol("job");
+
+    class SymbolTaskHandler {
+      @Task({ name: "duplicate-symbol-task" })
+      async [firstMethod](): Promise<void> {}
+
+      @Task({ name: "duplicate-symbol-task" })
+      async [secondMethod](): Promise<void> {}
+    }
+
+    expect(() => TaskRegistry.fromMetadata()).toThrow(DuplicateTaskRegistrationProblem);
+  });
+
   it("should return all registered tasks", () => {
     class Handler1 {
       async task1(): Promise<void> {}
