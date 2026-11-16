@@ -27,7 +27,28 @@ describe("RPC query key templates", () => {
         },
       };
       runInNewContext(output, context);
-      const serialize = context.exports.serializeRpcQueryKeyInput as (input: unknown) => unknown;
+      const serialize = context.exports.serializeRpcQueryKeyInput as (
+        input: unknown,
+        hasQueryInput?: boolean,
+      ) => unknown;
+      const sparse: (string | undefined)[] = [];
+      sparse[1] = "x";
+      const customIterator = [undefined, "x"];
+      Object.defineProperty(customIterator, Symbol.iterator, {
+        value: function* () {
+          yield "x";
+        },
+      });
+      for (const values of [[undefined, "x"], ["x", undefined], sparse, customIterator]) {
+        const input = { query: { tags: values }, absent: undefined };
+        expect(JSON.parse(JSON.stringify(serialize(input)))).toEqual(
+          JSON.parse(JSON.stringify(input)),
+        );
+        expect(serialize(input, true)).toEqual({ query: { tags: ["x"] } });
+        expect(JSON.stringify(serialize({ values }))).not.toBe(
+          JSON.stringify(serialize({ values: ["x"] })),
+        );
+      }
       const red = JSON.parse('{"__proto__":"red","constructor":{"prototype":true}}') as unknown;
       const blue = JSON.parse('{"__proto__":{"shade":"blue"}}') as unknown;
       const serializedRed = serialize({ filter: [red] });

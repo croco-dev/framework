@@ -170,6 +170,12 @@ different route, so the request is rejected before `fetch` runs. Throwing method
 and `param`. `*Result` methods resolve the same error as `{ ok: false, kind: "external", error }`,
 and both variants record an external-failure telemetry event.
 
+Generated key factories preserve JSON body and `cacheScope` array positions: `undefined` elements
+and sparse slots become `null`, matching JSON array serialization. Object properties whose values
+are `undefined` are omitted. Only declared request query arrays omit `undefined` elements, matching
+the repeated query values sent over HTTP. Regenerate clients when upgrading the generator so the
+key factories and their runtime support use the same normalization.
+
 Generated query arrays are serialized as repeated query keys. Generated header arrays accept
 readonly arrays and serialize them as comma-separated header values, matching Croco HTTP runtime
 validation and OpenAPI parameter serialization.

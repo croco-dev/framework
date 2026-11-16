@@ -87,7 +87,7 @@ describe("rpc-codegen e2e", () => {
       "export function buildCreateUserFormPayload(values: CreateUserFormValues): CreateUserSubmitPayload",
     );
     expect(content).toContain(
-      "getUser: (input: GetUserInput, cacheScope?: unknown) => [...testKeys.all(), 'getUser', serializeRpcQueryKeyInput({ path: input.path, query: input.query }), serializeRpcQueryKeyInput(cacheScope)] as const,",
+      "getUser: (input: GetUserInput, cacheScope?: unknown) => [...testKeys.all(), 'getUser', serializeRpcQueryKeyInput({ path: input.path, query: input.query }, true), serializeRpcQueryKeyInput(cacheScope)] as const,",
     );
     expect(content).toContain(
       "createUser: { route: testContractRoutes[1], invalidates: [testKeys.all()] },",
