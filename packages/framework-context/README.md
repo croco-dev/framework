@@ -54,12 +54,13 @@ destructor, so an earlier destructor can retain a later value by registering it 
 Replacing a registered value with `Container.set()` also releases its previous value after the last owner
 is gone. Within `runWithRollback`, replacement cleanup waits for commit; rollback preserves the original
 binding and cleans intermediate replacements once. Graph replacements use the same transaction boundary.
-Rollback retains baseline ownership through cleanup
-callbacks, drains resources created by destructor reentry, and restores its binding snapshot after those
-callbacks finish. Explicit removal can destroy resources immediately;
-rollback does not undo that cleanup.
-Requests may end before or after rollback: an early request release preserves a replaced baseline until
-the transaction settles, and rollback preserves values still owned by an active request. Nested synchronous
+Removing a token or graph detaches its bindings immediately. Instances from the pre-attempt snapshot
+stay alive until the removal commits or rollback restores their bindings. Explicit removal still
+releases unowned instances created during the attempt immediately.
+Rollback retains baseline ownership through cleanup callbacks, drains resources created by destructor
+reentry, and restores its binding snapshot after those callbacks finish.
+Requests may end before or after rollback: an early request release preserves a removed or replaced
+baseline until the transaction settles, and rollback preserves values still owned by an active request. Nested synchronous
 cleanup shares attempt tracking so a destructor that ends a request does not release its value twice.
 
 Graph validation completes before removal changes registrations. A validation failure leaves existing
@@ -67,7 +68,7 @@ bindings and instances intact. After removal or replacement commits, cleanup att
 once, including when another destructor throws. Failures use `framework-context/container-provider-cleanup-failed`
 with `retryable: false`, `cleanupFailureCount`, and a native `AggregateError` cause retaining every original
 failure. Release any external resources left open and repair destructors; retrying the registration operation
-does not retry failed cleanup. A commit-time replacement cleanup failure leaves the committed bindings in place.
+does not retry failed cleanup. A commit-time cleanup failure leaves the committed bindings in place.
 Graph replacement uses the same validation-before-commit and cleanup-after-commit boundary.
 
 These automatic ownership guarantees apply to the `Container`/`ContainerScope` APIs. Low-level

@@ -648,7 +648,14 @@ describe("ApplicationRuntime", () => {
   it("compensates failed startup, clears scope state, and permits a clean retry", async () => {
     const leakedToken = new Token<string>("startup-leak");
     const providerToken = new Token<string>("module-provider");
-    const seedToken = new Token<string>("startup-seed");
+    let seedDisposals = 0;
+    const seed = {
+      read: () => (seedDisposals === 0 ? "preserved" : "closed"),
+      destroy: () => {
+        seedDisposals += 1;
+      },
+    };
+    const seedToken = new Token<typeof seed>("startup-seed");
     let attempts = 0;
     let shutdowns = 0;
     let failedContext: ModuleContext | undefined;
@@ -662,8 +669,10 @@ describe("ApplicationRuntime", () => {
             failedContext ??= context;
             FrameworkContainer.set(leakedToken, `attempt-${attempts}`);
             if (attempts === 1) {
+              FrameworkContainer.remove(seedToken);
               throw new Error("startup failed");
             }
+            expect(FrameworkContainer.get(seedToken).read()).toBe("preserved");
           },
           shutdown: () => {
             shutdowns += 1;
@@ -671,10 +680,10 @@ describe("ApplicationRuntime", () => {
         },
       ],
     });
-    runtime.run(() => FrameworkContainer.set(seedToken, "preserved"));
+    runtime.run(() => FrameworkContainer.set(seedToken, seed));
 
     await expect(runtime.initialize()).rejects.toBeInstanceOf(ModuleLifecycleProblem);
-    expect(runtime.get(seedToken)).toBe("preserved");
+    expect(runtime.get(seedToken).read()).toBe("preserved");
     expect(runtime.has(leakedToken)).toBe(false);
     expect(runtime.has(providerToken)).toBe(false);
     expect(() => failedContext?.get(providerToken)).toThrow(ModuleRuntimeStaleContextProblem);
@@ -687,6 +696,7 @@ describe("ApplicationRuntime", () => {
 
     await runtime.dispose();
     expect(shutdowns).toBe(2);
+    expect(seedDisposals).toBe(1);
   });
 
   it("shares one rollback boundary across concurrent initialization callers", async () => {

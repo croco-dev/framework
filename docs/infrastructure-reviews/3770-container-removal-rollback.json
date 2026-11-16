@@ -1,0 +1,102 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "framework-context",
+      "classification": "pure-contract",
+      "reason": "Retain removed snapshot providers until a scoped transaction settles so failed startup restores usable registrations.",
+      "files": {
+        "packages/framework-context/src/libs/Container.ts": "4867d49d5d5ebef052cd5ba094a2b0cac67ea6d63d1c68d22e36f90b936225ec"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The change only affects the lifetime of in-process DI registrations and instances.",
+          "providers": ["@croco/framework-context/Container"],
+          "constraints": [
+            "Cleanup follows existing application scope and instance ownership, without a host, storage, transport, or deployment lifecycle dependency."
+          ],
+          "references": [
+            "packages/framework-context/src/libs/Container.ts",
+            "packages/framework-context/src/tests/GeneratedProviderRemoval.spec.ts",
+            "packages/framework-module/src/tests/ApplicationRuntime.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The change only affects the lifetime of in-process DI registrations and instances.",
+          "providers": ["@croco/framework-context/Container"],
+          "constraints": [
+            "Cleanup follows existing application scope and instance ownership, without a host, storage, transport, or deployment lifecycle dependency."
+          ],
+          "references": [
+            "packages/framework-context/src/libs/Container.ts",
+            "packages/framework-context/src/tests/GeneratedProviderRemoval.spec.ts",
+            "packages/framework-module/src/tests/ApplicationRuntime.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The change only affects the lifetime of in-process DI registrations and instances.",
+          "providers": ["@croco/framework-context/Container"],
+          "constraints": [
+            "Cleanup follows existing application scope and instance ownership, without a host, storage, transport, or deployment lifecycle dependency."
+          ],
+          "references": [
+            "packages/framework-context/src/libs/Container.ts",
+            "packages/framework-context/src/tests/GeneratedProviderRemoval.spec.ts",
+            "packages/framework-module/src/tests/ApplicationRuntime.spec.ts"
+          ]
+        }
+      }
+    },
+    {
+      "package": "problems-core",
+      "classification": "pure-contract",
+      "reason": "Refresh the source locations of the affected existing container diagnostics.",
+      "files": {
+        "packages/problems-core/src/generated/problem-code-registry.ts": "cffaa052923ec469108a7b6b96f9a1b05ab6edcc56592eac91c802cc3756453d"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Only generated source coordinates change.",
+          "providers": ["@croco/problems-core/ProblemCodeRegistry"],
+          "constraints": [
+            "Diagnostic source coordinates require no host capability, storage, or deployment lifecycle."
+          ],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "scripts/problem-registry.mts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Only generated source coordinates change.",
+          "providers": ["@croco/problems-core/ProblemCodeRegistry"],
+          "constraints": [
+            "Diagnostic source coordinates require no host capability, storage, or deployment lifecycle."
+          ],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "scripts/problem-registry.mts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Only generated source coordinates change.",
+          "providers": ["@croco/problems-core/ProblemCodeRegistry"],
+          "constraints": [
+            "Diagnostic source coordinates require no host capability, storage, or deployment lifecycle."
+          ],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "scripts/problem-registry.mts"
+          ]
+        }
+      }
+    }
+  ]
+}

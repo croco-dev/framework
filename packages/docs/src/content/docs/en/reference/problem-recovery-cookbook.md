@@ -11748,7 +11748,7 @@ Sources:
 
 Sources:
 
-- `packages/framework-context/src/libs/Container.ts:1609:13` (problem-factory)
+- `packages/framework-context/src/libs/Container.ts:1623:13` (problem-factory)
 
 <a id="framework-context-container-reset-failed"></a>
 
@@ -11982,7 +11982,7 @@ Sources:
 
 Sources:
 
-- `packages/framework-context/src/libs/Container.ts:1675:13` (problem-factory)
+- `packages/framework-context/src/libs/Container.ts:1689:13` (problem-factory)
 
 <a id="framework-context-on-shutdown-decorator-invalid"></a>
 
@@ -12144,7 +12144,7 @@ Sources:
 
 Sources:
 
-- `packages/framework-context/src/libs/Container.ts:2765:12` (problem-factory)
+- `packages/framework-context/src/libs/Container.ts:2779:12` (problem-factory)
 
 <a id="framework-context-runtime-inspector-invalid-configuration"></a>
 
