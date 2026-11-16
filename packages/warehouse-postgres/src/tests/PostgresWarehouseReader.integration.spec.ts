@@ -42,6 +42,27 @@ describe.skipIf(!enabled)("PostgreSQL reader transfer and cancellation", () => {
   });
   const reader = (pool: WarehousePostgresPool = readPool) =>
     new PostgresWarehouseReader(pool, descriptor, () => access, "a".repeat(32), cancellationPool);
+  const seedPublishedSnapshot = async (pool: Pool) => {
+    await installPostgresWarehouseSchema(pool);
+    await installPostgresFactSchema(pool, descriptor);
+    const scope = scopeKey(access.scope);
+    await pool.query("INSERT INTO warehouse_heads(scope_key,model_version) VALUES($1,$2)", [
+      scope,
+      descriptor.semanticHash,
+    ]);
+    await pool.query(
+      "INSERT INTO warehouse_candidates(id,scope_key,model_version,fence,state,data) VALUES('candidate',$1,$2,1,'published','{}')",
+      [scope, descriptor.semanticHash],
+    );
+    await pool.query(
+      "INSERT INTO warehouse_snapshots(id,scope_key,model_version,data) VALUES('snapshot',$1,$2,$3)",
+      [
+        scope,
+        descriptor.semanticHash,
+        { id: "snapshot", revision: 1, permissionEpoch: 0, privacyEpoch: 0 },
+      ],
+    );
+  };
   beforeAll(async () => {
     const started = await postgresResource({ id: "reader-limits", mode: "commit" }).start({
       register: () => undefined,
@@ -63,30 +84,12 @@ describe.skipIf(!enabled)("PostgreSQL reader transfer and cancellation", () => {
         write: { mode: "append", duplicate: "ignore-identical", conflict: "reject" },
       }),
     );
-    await installPostgresWarehouseSchema(connection.pool);
-    await installPostgresFactSchema(connection.pool, descriptor);
-    const scope = scopeKey(access.scope);
-    await connection.query("INSERT INTO warehouse_heads(scope_key,model_version) VALUES($1,$2)", [
-      scope,
-      descriptor.semanticHash,
-    ]);
-    await connection.query(
-      "INSERT INTO warehouse_candidates(id,scope_key,model_version,fence,state,data) VALUES('candidate',$1,$2,1,'published','{}')",
-      [scope, descriptor.semanticHash],
-    );
-    await connection.query(
-      "INSERT INTO warehouse_snapshots(id,scope_key,model_version,data) VALUES('snapshot',$1,$2,$3)",
-      [
-        scope,
-        descriptor.semanticHash,
-        { id: "snapshot", revision: 1, permissionEpoch: 0, privacyEpoch: 0 },
-      ],
-    );
+    await seedPublishedSnapshot(connection.pool);
     const table = quoteIdentifier(factTableName(descriptor));
     const col = (key: string) => quoteIdentifier(factColumnName(descriptor, key));
     await connection.query(
       `INSERT INTO ${table}(_scope,_identity,_candidate,_payload,_visible_from,${col("id")},${col("at")},${col("note")}) VALUES($1,'first','candidate','{}',1,'a','2026-09-27T00:00:00Z','small'),($1,'second','candidate','{}',1,'b','2026-09-27T00:00:00Z',repeat('x',8000000))`,
-      [scope],
+      [scopeKey(access.scope)],
     );
   }, 180000);
   afterAll(async () => {
@@ -120,6 +123,80 @@ describe.skipIf(!enabled)("PostgreSQL reader transfer and cancellation", () => {
     ).rejects.toThrow("WAREHOUSE_READ_BYTES");
     expect(Buffer.byteLength(JSON.stringify(pages[1]))).toBeLessThan(200);
     expect(pages[1]).toEqual([{ _bytes_exceeded: true, _has_more: false, _rows: [] }]);
+  });
+
+  it("paginates long hidden sort values with mixed directions and stable ties", async () => {
+    const table = quoteIdentifier(factTableName(descriptor));
+    const col = (key: string) => quoteIdentifier(factColumnName(descriptor, key));
+    // Just under the page ceiling after PostgreSQL JSON encoding, including escapes.
+    const long = '한"\\\u0001'.repeat(80_000);
+    await connection.query(
+      `INSERT INTO ${table}(_scope,_identity,_candidate,_payload,_visible_from,${col("id")},${col("at")},${col("note")})
+       VALUES ($1,'tie-z','candidate','{}',1,'long-b','2026-09-28',$2),
+              ($1,'long-a','candidate','{}',1,'long-a','2026-09-27',$2),
+              ($1,'tie-a','candidate','{}',1,'long-c','2026-09-28',$2),
+              ($1,'long-d','candidate','{}',1,'long-d','2026-09-29',$3),
+              ($1,'long-e','candidate','{}',1,'long-e','2026-09-29','c')`,
+      [scopeKey(access.scope), "a" + long, "b" + "x".repeat(7000)],
+    );
+    const warehouse = reader();
+    const options: WarehouseReadRequest = {
+      ...request(),
+      projection: ["id"],
+      filters: [
+        { column: "id", operator: "gt", value: "long-" },
+        { column: "id", operator: "lt", value: "long-f" },
+      ],
+      order: [
+        { column: "note", direction: "asc" },
+        { column: "at", direction: "desc" },
+      ],
+      maxBytes: 1_048_576,
+    };
+    let cursor: string | undefined;
+    for (const id of ["long-c", "long-b", "long-a", "long-d", "long-e"]) {
+      const page = await warehouse.read({ ...options, cursor });
+      expect(page.rows).toEqual([{ id }]);
+      if (id === "long-e") expect(page.nextCursor).toBeNull();
+      else expect(page.nextCursor).toEqual(expect.any(String));
+      cursor = page.nextCursor ?? undefined;
+    }
+  });
+
+  it("resumes a page when a LATIN1 sort value grows in UTF-8", async () => {
+    await connection.query(
+      "CREATE DATABASE reader_latin1 TEMPLATE template0 ENCODING 'LATIN1' LOCALE 'C'",
+    );
+    const url = new URL(connection.connectionString);
+    url.pathname = "/reader_latin1";
+    const pool = new Pool({ connectionString: url.toString(), max: 1 });
+    try {
+      await seedPublishedSnapshot(pool);
+      const table = quoteIdentifier(factTableName(descriptor));
+      const col = (key: string) => quoteIdentifier(factColumnName(descriptor, key));
+      await pool.query(
+        `INSERT INTO ${table}(_scope,_identity,_candidate,_payload,_visible_from,${col("id")},${col("at")},${col("note")})
+         VALUES ($1,'first','candidate','{}',1,'a','2026-09-27',$2),
+                ($1,'second','candidate','{}',1,'b','2026-09-27','b')`,
+        [scopeKey(access.scope), "a" + "é".repeat(600_000)],
+      );
+      const warehouse = reader(pool);
+      const options: WarehouseReadRequest = {
+        ...request(),
+        projection: ["id"],
+        // Four copies of the converted sort value would exceed the cursor limit.
+        order: Array.from({ length: 4 }, () => ({ column: "note", direction: "asc" })),
+        maxBytes: 1_048_576,
+      };
+      const first = await warehouse.read(options);
+      expect(first.rows).toEqual([{ id: "a" }]);
+      expect(first.nextCursor).toEqual(expect.any(String));
+      const second = await warehouse.read({ ...options, cursor: first.nextCursor ?? undefined });
+      expect(second.rows).toEqual([{ id: "b" }]);
+      expect(second.nextCursor).toBeNull();
+    } finally {
+      await pool.end();
+    }
   });
 
   it("destroys the running PostgreSQL connection on abort without touching a reused backend", async () => {

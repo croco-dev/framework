@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "warehouse-postgres",
+      "classification": "durable-provider",
+      "reason": "Allow long keyset values in encrypted continuations for existing pinned PostgreSQL reads without a schema or lifecycle change.",
+      "files": {
+        "packages/warehouse-postgres/src/facts/PostgresWarehouseReader.ts": "ccc063fd347bb8f811a68a792df0363e782cd9c452e4704496669fd66fe3baa2"
+      },
+      "catalogRuntimes": ["node", "lambda"],
+      "profiles": {
+        "kubernetes": {
+          "result": "unverified",
+          "reason": "The Node PostgreSQL provider uses its existing pool and snapshot transaction. The native PostgreSQL test does not exercise a Kubernetes deployment.",
+          "providers": ["@croco/warehouse-postgres/facts"],
+          "constraints": ["Body and gateway limits must accommodate any long cursor round trip."],
+          "references": [
+            "packages/warehouse-postgres/src/facts/PostgresWarehouseReader.ts",
+            "packages/warehouse-postgres/README.md",
+            "packages/presentation-preset/runtime-profiles.json",
+            "packages/warehouse-postgres/src/tests/PostgresWarehouseReader.integration.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "conditional",
+          "reason": "The existing Lambda-compatible PostgreSQL client uses the same cursor path; the application owns invocation and connection lifetimes.",
+          "providers": ["@croco/warehouse-postgres/facts"],
+          "constraints": [
+            "Complete the read within the invocation and size the request and response bodies for long cursors.",
+            "No deployed Lambda execution is claimed."
+          ],
+          "references": [
+            "packages/warehouse-postgres/src/facts/PostgresWarehouseReader.ts",
+            "packages/warehouse-postgres/README.md",
+            "packages/presentation-preset/runtime-profiles.json"
+          ]
+        },
+        "cloudflare": {
+          "result": "unsupported",
+          "reason": "This change reuses the existing Node crypto and PostgreSQL provider and adds no Workers or Node Container execution path.",
+          "providers": ["@croco/warehouse-postgres/facts"],
+          "constraints": ["No Cloudflare deployment is claimed."],
+          "references": [
+            "packages/warehouse-postgres/src/facts/PostgresWarehouseReader.ts",
+            "packages/warehouse-postgres/README.md",
+            "packages/presentation-preset/runtime-profiles.json"
+          ]
+        }
+      }
+    }
+  ]
+}

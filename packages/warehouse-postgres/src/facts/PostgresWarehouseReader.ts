@@ -25,15 +25,53 @@ import type {
   WarehousePostgresPool,
 } from "./client";
 
-type Cursor = {
+type CursorKey = {
+  readonly values: readonly (string | boolean)[];
+  readonly identity: string;
+};
+
+type CursorContext = {
   readonly snapshotId: string;
   readonly queryHash: string;
   readonly scope: string;
   readonly permissionEpoch: number;
   readonly privacyEpoch: number;
-  readonly values: readonly (string | boolean)[];
-  readonly identity: string;
 };
+
+type LegacyCursor = CursorContext & CursorKey;
+type ExtendedCursor = { readonly snapshotId: string; readonly contextHash: string } & CursorKey;
+
+const MAX_PAGE_BYTES = 1_048_576;
+const LEGACY_CURSOR_LIMIT = 8192;
+const EXTENDED_CURSOR_PREFIX = "v2.";
+const EXTENDED_CURSOR_AAD = Buffer.from(EXTENDED_CURSOR_PREFIX);
+const CURSOR_NONCE_BYTES = 12;
+const CURSOR_TAG_BYTES = 16;
+const CURSOR_CRYPTO_BYTES = CURSOR_NONCE_BYTES + CURSOR_TAG_BYTES;
+// SQL counts the JSON keys in the server encoding. Allow for conversion to UTF-8
+// (up to four bytes per source byte), plus 1 KiB for the compact cursor envelope.
+const EXTENDED_CURSOR_LIMIT = encodedCursorLength(MAX_PAGE_BYTES * 4 + 1024);
+
+function encodedCursorLength(jsonBytes: number): number {
+  return Math.ceil(((jsonBytes + CURSOR_CRYPTO_BYTES) * 4) / 3);
+}
+
+function cursorContextHash(context: Omit<CursorContext, "snapshotId">): string {
+  return createHash("sha256")
+    .update(
+      JSON.stringify([
+        context.queryHash,
+        context.scope,
+        context.permissionEpoch,
+        context.privacyEpoch,
+      ]),
+    )
+    .digest("hex");
+}
+
+function cursorColumns(order: readonly WarehouseOrder[]): string[] {
+  return [...new Set(order.map((item) => item.column))];
+}
 
 type SnapshotRow = { readonly data: WarehouseSnapshot; readonly expires_at: Date | string | null };
 type HeadRow = { readonly permission_epoch: string; readonly privacy_epoch: string };
@@ -183,7 +221,7 @@ export class PostgresWarehouseReader implements WarehouseReader {
       request.maxRows > 1000 ||
       !Number.isSafeInteger(request.maxBytes) ||
       request.maxBytes < 1 ||
-      request.maxBytes > 1_048_576 ||
+      request.maxBytes > MAX_PAGE_BYTES ||
       !Number.isSafeInteger(request.timeoutMs) ||
       request.timeoutMs < 1 ||
       request.timeoutMs > 30_000 ||
@@ -231,17 +269,19 @@ export class PostgresWarehouseReader implements WarehouseReader {
     const queryHash = createHash("sha256")
       .update(JSON.stringify([selected, request.filters, order]))
       .digest("hex");
-    const cursor = request.cursor ? this.parseCursor(request.cursor) : null;
-    if (
-      cursor &&
-      (cursor.snapshotId !== request.snapshotId ||
-        cursor.queryHash !== queryHash ||
-        cursor.scope !== scope ||
-        cursor.permissionEpoch !== access.permissionEpoch ||
-        cursor.privacyEpoch !== access.privacyEpoch ||
-        cursor.values.length !== order.length)
-    )
-      throw new WarehouseContractError("WAREHOUSE_CURSOR_STALE");
+    const cursor = request.cursor
+      ? this.parseCursor(
+          request.cursor,
+          {
+            snapshotId: request.snapshotId,
+            queryHash,
+            scope,
+            permissionEpoch: access.permissionEpoch,
+            privacyEpoch: access.privacyEpoch,
+          },
+          order,
+        )
+      : null;
 
     return this.withSnapshot(request, access, (db, snapshot) =>
       this.fetchPage(db, request, access, snapshot, selected, order, cursor, queryHash, scope),
@@ -419,7 +459,7 @@ export class PostgresWarehouseReader implements WarehouseReader {
     snapshot: WarehouseSnapshot,
     selected: readonly string[],
     order: readonly WarehouseOrder[],
-    cursor: Cursor | null,
+    cursor: CursorKey | null,
     queryHash: string,
     scope: string,
   ): Promise<WarehousePage> {
@@ -451,18 +491,26 @@ export class PostgresWarehouseReader implements WarehouseReader {
       }
     }
     if (cursor) {
+      const bindings = new Map<string, string>();
+      const orderedValues = order.map(({ column }, index) => {
+        const existing = bindings.get(column);
+        if (existing) return existing;
+        const param = value(cursor.values[index]);
+        bindings.set(column, param);
+        return param;
+      });
       const branches: string[] = [];
       for (let index = 0; index < order.length; index++) {
         const equals = order
           .slice(0, index)
-          .map((item, prior) => `${native(item.column)}=${value(cursor.values[prior])}`);
+          .map((item, prior) => `${native(item.column)}=${orderedValues[prior]}`);
         const item = order[index];
         branches.push(
-          `(${[...equals, `${native(item.column)} ${item.direction === "asc" ? ">" : "<"} ${value(cursor.values[index])}`].join(" AND ")})`,
+          `(${[...equals, `${native(item.column)} ${item.direction === "asc" ? ">" : "<"} ${orderedValues[index]}`].join(" AND ")})`,
         );
       }
       const finalEquals = order.map(
-        (item, index) => `${native(item.column)}=${value(cursor.values[index])}`,
+        (item, index) => `${native(item.column)}=${orderedValues[index]}`,
       );
       branches.push(`(${[...finalEquals, `f._identity>${value(cursor.identity)}`].join(" AND ")})`);
       where.push(`(${branches.join(" OR ")})`);
@@ -511,20 +559,23 @@ export class PostgresWarehouseReader implements WarehouseReader {
     const last = rows.at(-1);
     const nextCursor =
       page._has_more && last
-        ? this.signCursor({
-            snapshotId: snapshot.id,
-            queryHash,
-            scope,
-            permissionEpoch: access.permissionEpoch,
-            privacyEpoch: access.privacyEpoch,
-            values: order.map((item) => {
-              const entry = last[alias(item.column)];
-              if (typeof entry !== "string" && typeof entry !== "boolean")
-                throw new WarehouseContractError("WAREHOUSE_CURSOR_VALUE");
-              return entry;
-            }),
-            identity: last._identity,
-          })
+        ? this.signCursor(
+            {
+              snapshotId: snapshot.id,
+              queryHash,
+              scope,
+              permissionEpoch: access.permissionEpoch,
+              privacyEpoch: access.privacyEpoch,
+              values: order.map((item) => {
+                const entry = last[alias(item.column)];
+                if (typeof entry !== "string" && typeof entry !== "boolean")
+                  throw new WarehouseContractError("WAREHOUSE_CURSOR_VALUE");
+                return entry;
+              }),
+              identity: last._identity,
+            },
+            order,
+          )
         : null;
     return {
       snapshotId: snapshot.id,
@@ -561,26 +612,55 @@ export class PostgresWarehouseReader implements WarehouseReader {
     return type.type === "boolean" ? column : `${column}::text`;
   }
 
-  private signCursor(cursor: Cursor): string {
-    const nonce = randomBytes(12);
+  private signCursor(cursor: LegacyCursor, order: readonly WarehouseOrder[]): string {
+    let payload = JSON.stringify(cursor);
+    const extended = encodedCursorLength(Buffer.byteLength(payload)) > LEGACY_CURSOR_LIMIT;
+    if (extended) {
+      const unique = new Map(order.map(({ column }, index) => [column, cursor.values[index]]));
+      payload = JSON.stringify({
+        snapshotId: cursor.snapshotId,
+        contextHash: cursorContextHash(cursor),
+        identity: cursor.identity,
+        values: [...unique.values()],
+      } satisfies ExtendedCursor);
+      if (encodedCursorLength(Buffer.byteLength(payload)) > EXTENDED_CURSOR_LIMIT)
+        throw new WarehouseContractError("WAREHOUSE_CURSOR_LIMIT");
+    }
+    const nonce = randomBytes(CURSOR_NONCE_BYTES);
     const cipher = createCipheriv("aes-256-gcm", this.cursorKey, nonce);
-    const body = Buffer.concat([cipher.update(JSON.stringify(cursor), "utf8"), cipher.final()]);
+    if (extended) cipher.setAAD(EXTENDED_CURSOR_AAD);
+    const body = Buffer.concat([cipher.update(payload, "utf8"), cipher.final()]);
     const encoded = Buffer.concat([nonce, cipher.getAuthTag(), body]).toString("base64url");
-    if (encoded.length > 8192) throw new WarehouseContractError("WAREHOUSE_CURSOR_LIMIT");
-    return encoded;
+    return extended ? EXTENDED_CURSOR_PREFIX + encoded : encoded;
   }
 
-  private parseCursor(encoded: string): Cursor {
-    if (typeof encoded !== "string" || encoded.length > 8192)
+  private parseCursor(
+    encoded: string,
+    context: CursorContext,
+    order: readonly WarehouseOrder[],
+  ): CursorKey {
+    if (typeof encoded !== "string") throw new WarehouseContractError("WAREHOUSE_INVALID_CURSOR");
+    const extended = encoded.startsWith(EXTENDED_CURSOR_PREFIX);
+    const prefixLength = extended ? EXTENDED_CURSOR_PREFIX.length : 0;
+    if (encoded.length - prefixLength > (extended ? EXTENDED_CURSOR_LIMIT : LEGACY_CURSOR_LIMIT))
       throw new WarehouseContractError("WAREHOUSE_INVALID_CURSOR");
     let decoded: unknown;
     try {
-      const bytes = Buffer.from(encoded, "base64url");
-      if (bytes.length < 29) throw new WarehouseContractError("WAREHOUSE_INVALID_CURSOR");
-      const decipher = createDecipheriv("aes-256-gcm", this.cursorKey, bytes.subarray(0, 12));
-      decipher.setAuthTag(bytes.subarray(12, 28));
+      const bytes = Buffer.from(encoded.slice(prefixLength), "base64url");
+      if (bytes.length <= CURSOR_CRYPTO_BYTES)
+        throw new WarehouseContractError("WAREHOUSE_INVALID_CURSOR");
+      const decipher = createDecipheriv(
+        "aes-256-gcm",
+        this.cursorKey,
+        bytes.subarray(0, CURSOR_NONCE_BYTES),
+      );
+      if (extended) decipher.setAAD(EXTENDED_CURSOR_AAD);
+      decipher.setAuthTag(bytes.subarray(CURSOR_NONCE_BYTES, CURSOR_CRYPTO_BYTES));
       decoded = JSON.parse(
-        Buffer.concat([decipher.update(bytes.subarray(28)), decipher.final()]).toString("utf8"),
+        Buffer.concat([
+          decipher.update(bytes.subarray(CURSOR_CRYPTO_BYTES)),
+          decipher.final(),
+        ]).toString("utf8"),
       );
     } catch {
       throw new WarehouseContractError("WAREHOUSE_INVALID_CURSOR");
@@ -588,17 +668,46 @@ export class PostgresWarehouseReader implements WarehouseReader {
     if (
       !decoded ||
       typeof decoded !== "object" ||
-      !("snapshotId" in decoded) ||
-      !("queryHash" in decoded) ||
-      !("scope" in decoded) ||
       !("values" in decoded) ||
       !Array.isArray(decoded.values) ||
+      !decoded.values.every(
+        (entry: unknown) => typeof entry === "string" || typeof entry === "boolean",
+      ) ||
       !("identity" in decoded) ||
-      !("permissionEpoch" in decoded) ||
-      !("privacyEpoch" in decoded)
+      typeof decoded.identity !== "string"
     )
       throw new WarehouseContractError("WAREHOUSE_INVALID_CURSOR");
-    return decoded as Cursor;
+    const key: CursorKey = { identity: decoded.identity, values: decoded.values };
+    if (extended) {
+      const columns = cursorColumns(order);
+      if (
+        !("snapshotId" in decoded) ||
+        decoded.snapshotId !== context.snapshotId ||
+        !("contextHash" in decoded) ||
+        decoded.contextHash !== cursorContextHash(context) ||
+        key.values.length !== columns.length
+      )
+        throw new WarehouseContractError("WAREHOUSE_CURSOR_STALE");
+      return {
+        identity: key.identity,
+        values: order.map(({ column }) => key.values[columns.indexOf(column)]),
+      };
+    }
+    if (
+      !("snapshotId" in decoded) ||
+      decoded.snapshotId !== context.snapshotId ||
+      !("queryHash" in decoded) ||
+      decoded.queryHash !== context.queryHash ||
+      !("scope" in decoded) ||
+      decoded.scope !== context.scope ||
+      !("permissionEpoch" in decoded) ||
+      decoded.permissionEpoch !== context.permissionEpoch ||
+      !("privacyEpoch" in decoded) ||
+      decoded.privacyEpoch !== context.privacyEpoch ||
+      key.values.length !== order.length
+    )
+      throw new WarehouseContractError("WAREHOUSE_CURSOR_STALE");
+    return key;
   }
 }
 

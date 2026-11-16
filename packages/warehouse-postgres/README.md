@@ -113,6 +113,16 @@ Readers pin a snapshot ID and use an encrypted keyset cursor for later pages; an
 that snapshot. Changed permission/privacy epochs or expired snapshots fail explicitly. The reader
 limits rows, bytes, time, and concurrent requests and cancels PostgreSQL work on client abort.
 
+Keep cursors opaque and reuse them with the same snapshot, projection, filters and sort order. The
+reader still accepts original-format cursors and issues them when the original encoding fits
+within 8,192 characters. Otherwise it issues a versioned cursor capped at 5,593,811 characters,
+including its prefix. The ceiling accounts for conversion from the PostgreSQL server encoding to UTF-8.
+Oversized input is rejected before decoding or opening a database connection. If you pass
+cursors through HTTP, use a request body with room for the whole token; URL and header limits can
+be much smaller. Older readers cannot resume a versioned cursor. Upgrade all readers that share a
+cursor secret before routing such continuations between instances, or restart pagination after
+rolling back to an older reader.
+
 Each semantic model generation gets one ordinary typed PostgreSQL table with `BIGINT`, exact
 `NUMERIC`, `DATE`, `TIMESTAMPTZ`, `BOOLEAN`, and `TEXT` columns. No TimescaleDB extension is needed.
 Old row versions remain available while snapshots referencing their revisions are retained.
