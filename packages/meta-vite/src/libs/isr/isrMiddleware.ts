@@ -4,7 +4,10 @@ const CACHEABLE_METHODS = new Set(["GET", "HEAD"]);
 const BYPASS_HEADERS = ["authorization", "cookie", "range", "if-range"] as const;
 
 class NonCacheableResponseError extends Error {
-  constructor(readonly response: Response) {
+  constructor(
+    readonly response: Response,
+    readonly fillKind: "ordinary" | "cancelled" | "replacement",
+  ) {
     super("Response is not cacheable");
   }
 }
@@ -17,51 +20,81 @@ export function createIsrMiddleware(options: IsrMiddlewareOptions): IsrMiddlewar
       return render(request);
     }
 
+    // A host can initialize its disconnect listener when the signal is first read.
+    const { signal } = request;
     const cacheKey = `${request.method}:${request.url}`;
-    let ownNonCacheableResponse: NonCacheableResponseError | undefined;
-    try {
-      const response = await cache.getOrSet(
-        cacheKey,
-        async () => {
-          const rendered = await render(request);
+    let replacingCancelledFill = false;
+    for (;;) {
+      let ownNonCacheableResponse: NonCacheableResponseError | undefined;
+      try {
+        const response = await cache.getOrSet(
+          cacheKey,
+          async () => {
+            // The adapter may await a backing store before starting this fill.
+            const rendered =
+              replacingCancelledFill && signal.aborted
+                ? createCancelledFillResponse()
+                : await render(request);
 
-          if (!isCacheableResponse(rendered)) {
-            ownNonCacheableResponse = new NonCacheableResponseError(rendered);
-            throw ownNonCacheableResponse;
-          }
+            if ((replacingCancelledFill && signal.aborted) || !isCacheableResponse(rendered)) {
+              let kind: NonCacheableResponseError["fillKind"] = "ordinary";
+              if (replacingCancelledFill) kind = "replacement";
+              else if (signal.aborted && rendered.status === 503) kind = "cancelled";
+              ownNonCacheableResponse = new NonCacheableResponseError(rendered, kind);
+              throw ownNonCacheableResponse;
+            }
 
-          return rendered.clone();
-        },
-        { ttlMs },
-      );
+            return rendered.clone();
+          },
+          { ttlMs },
+        );
 
-      if (response === undefined) {
-        throw new Error("CacheStore returned no ISR response");
-      }
+        if (response === undefined) {
+          throw new Error("CacheStore returned no ISR response");
+        }
+        if (replacingCancelledFill) {
+          return !signal.aborted && isCacheableResponse(response)
+            ? response.clone()
+            : createCancelledFillResponse();
+        }
 
-      // Older writers may have persisted a response this middleware cannot reuse.
-      // The store only exposes getOrSet here, so bypass that entry until it expires.
-      if (isPartialResponse(response) || hasVary(response) || requiresFreshResponse(response)) {
-        return render(request);
-      }
-
-      return response.clone();
-    } catch (error) {
-      if (error instanceof NonCacheableResponseError) {
-        // A failed first fill is shared with waiters. Vary and no-cache responses
-        // cannot satisfy those other calls, even if a caller reused the Request object.
-        if (
-          error !== ownNonCacheableResponse &&
-          (hasVary(error.response) || requiresFreshResponse(error.response))
-        ) {
+        // Older writers may have persisted a response this middleware cannot reuse.
+        // The store only exposes getOrSet here, so bypass that entry until it expires.
+        if (isPartialResponse(response) || hasVary(response) || requiresFreshResponse(response)) {
           return render(request);
+        }
+
+        return response.clone();
+      } catch (error) {
+        if (!(error instanceof NonCacheableResponseError)) throw error;
+        if (replacingCancelledFill || error.fillKind === "replacement") {
+          return !signal.aborted && error === ownNonCacheableResponse
+            ? error.response.clone()
+            : createCancelledFillResponse();
+        }
+        if (error !== ownNonCacheableResponse) {
+          if (error.fillKind === "cancelled") {
+            // Allow one replacement fill without repeatedly querying the cache
+            // when several owners disconnect in succession.
+            if (!signal.aborted) {
+              replacingCancelledFill = true;
+              continue;
+            }
+            return createCancelledFillResponse();
+          } else if (hasVary(error.response) || requiresFreshResponse(error.response)) {
+            // Vary and no-cache responses may be specific to the original request.
+            return render(request);
+          }
         }
         return error.response.clone();
       }
-
-      throw error;
     }
   };
+}
+
+function createCancelledFillResponse(): Response {
+  // A fill owner's response may contain request-specific headers or content.
+  return new Response(null, { status: 503, headers: { "Cache-Control": "no-store" } });
 }
 
 function isCacheableRequest(request: Request): boolean {

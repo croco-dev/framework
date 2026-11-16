@@ -1,6 +1,9 @@
 import { inspect } from "node:util";
 import { createElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { createLambdaHandler } from "../libs/providers/lambda";
+import { createNodeHandler } from "../libs/providers/node";
+import { createMetaFetchHandler } from "../libs/render/composeHandler";
 import { RenderServer } from "../libs/render/renderServer";
 import type { CrocoApiHandlerResult } from "../libs/render/types";
 import { defineRoute } from "../libs/routes/defineRoute";
@@ -33,6 +36,16 @@ function createRoute(
   };
 }
 
+function createGate<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (reason: unknown) => void;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, resolve, reject };
+}
+
 async function runApiFirst(
   result: CrocoApiHandlerResult,
   server: RenderServer,
@@ -53,6 +66,297 @@ describe("RenderServer", () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+  });
+
+  it.each(["omitted", "empty"] as const)(
+    "uses the remaining deadline for an SSR loader with %s regions",
+    async (regions) => {
+      vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date", "performance"] });
+      const shell = createGate<{ kind: "render" }>();
+      const module = createGate<Awaited<ReturnType<RenderRouteIR["componentLoader"]>>>();
+      const render = vi.fn(() => createElement("main", null, "Late private content"));
+      const componentLoader = vi.fn(() => module.promise);
+      const server = new RenderServer([
+        {
+          path: "/deadline",
+          mode: "ssr",
+          ...(regions === "empty" ? { regions: [] } : {}),
+          resolveShell: () => shell.promise,
+          componentLoader,
+          stream: { deadlineMs: 100 },
+        },
+      ]);
+
+      try {
+        const response = server.handle(new Request("https://example.com/deadline"));
+        const settled = vi.fn();
+        void response.then(settled);
+        await vi.advanceTimersByTimeAsync(70);
+        shell.resolve({ kind: "render" });
+        await vi.advanceTimersByTimeAsync(0);
+        expect(componentLoader).toHaveBeenCalledOnce();
+        await vi.advanceTimersByTimeAsync(29);
+        expect(settled).not.toHaveBeenCalled();
+        await vi.advanceTimersByTimeAsync(1);
+        expect(settled).toHaveBeenCalledOnce();
+        expect((await response).status).toBe(503);
+      } finally {
+        module.resolve({ default: render });
+        await vi.advanceTimersByTimeAsync(0);
+        vi.useRealTimers();
+      }
+      expect(render).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(["omitted", "empty"] as const)(
+    "does not start the shell or component loader for a cancelled request with %s regions",
+    async (regions) => {
+      const componentLoader = vi.fn(async () => ({
+        default: () => createElement("main", null, "Must not render"),
+      }));
+      const resolveShell = vi.fn(async () => ({ kind: "render" as const }));
+      const server = new RenderServer([
+        {
+          path: "/aborted",
+          mode: "ssr",
+          ...(regions === "empty" ? { regions: [], resolveShell } : {}),
+          componentLoader,
+        },
+      ]);
+      const request = new Request("https://example.com/aborted", {
+        signal: AbortSignal.abort(new Error("disconnected")),
+      });
+
+      expect((await server.handle(request)).status).toBe(503);
+      expect(resolveShell).not.toHaveBeenCalled();
+      expect(componentLoader).not.toHaveBeenCalled();
+    },
+  );
+
+  it("ends a pending component load on request abort and ignores its late failure", async () => {
+    const controller = new AbortController();
+    const module = createGate<Awaited<ReturnType<RenderRouteIR["componentLoader"]>>>();
+    const server = new RenderServer([
+      { path: "/cancel", mode: "ssr", componentLoader: () => module.promise },
+    ]);
+    const response = server.handle(
+      new Request("https://example.com/cancel", { signal: controller.signal }),
+      { platform: "node" },
+    );
+    const settled = vi.fn();
+    void response.then(settled);
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    controller.abort(new Error("socket closed"));
+    try {
+      await new Promise<void>((resolve) => setImmediate(resolve));
+      expect(settled).toHaveBeenCalledOnce();
+      expect((await response).status).toBe(503);
+    } finally {
+      module.reject(new Error("late component failure"));
+      await response;
+    }
+    expect(console.error).not.toHaveBeenCalled();
+  });
+
+  it.each(["shell", "loader", "head", "deferred-loader"] as const)(
+    "returns 503 when the %s phase fails after the deadline but before the timer fires",
+    async (phase) => {
+      let time = 0;
+      vi.spyOn(performance, "now").mockImplementation(() => time);
+      const failAfterDeadline = () => {
+        time = 101;
+        throw new Error("private failure after the render deadline");
+      };
+      const onSettle = vi.fn();
+      const server = new RenderServer([
+        {
+          path: "/expired-error",
+          mode: "ssr",
+          resolveShell: async () => (phase === "shell" ? failAfterDeadline() : { kind: "render" }),
+          componentLoader: async () =>
+            phase === "loader" || phase === "deferred-loader"
+              ? failAfterDeadline()
+              : { default: () => createElement("main", null, "Must not commit") },
+          head: () => (phase === "head" ? failAfterDeadline() : { title: "Product" }),
+          ...(phase === "deferred-loader"
+            ? { regions: [{ id: "details", loader: async () => "Region" }] }
+            : {}),
+          stream: { deadlineMs: 100, onSettle },
+        },
+      ]);
+
+      const response = await server.handle(new Request("https://example.com/expired-error"));
+      expect(response.status).toBe(503);
+      const html = await response.text();
+      expect(html).not.toContain("Must not commit");
+      expect(console.error).not.toHaveBeenCalled();
+      if (phase === "deferred-loader") {
+        expect(onSettle).toHaveBeenCalledExactlyOnceWith(
+          expect.objectContaining({
+            timedOut: true,
+            abortReason: "deadline",
+            shellCommitted: false,
+          }),
+        );
+      }
+    },
+  );
+
+  it.each(["cancellation", "deadline"] as const)(
+    "honors %s at the final buffered response handoff",
+    async (termination) => {
+      const controller = new AbortController();
+      let time = 0;
+      vi.spyOn(performance, "now").mockImplementation(() => time);
+      const server = new RenderServer([
+        {
+          ...createRoute("/handoff", () => createElement("main", null, "Must not commit")),
+          head: () => {
+            queueMicrotask(() => {
+              if (termination === "cancellation") controller.abort();
+              else time = 101;
+            });
+            return { title: "Product" };
+          },
+          stream: { deadlineMs: 100 },
+        },
+      ]);
+      const request = new Request("https://example.com/handoff", { signal: controller.signal });
+      const response = await server.handle(request);
+      expect(response.status).toBe(503);
+      await expect(response.text()).resolves.not.toContain("Must not commit");
+    },
+  );
+
+  it.each(["cancellation", "deadline"] as const)(
+    "honors %s before committing a terminal shell redirect",
+    async (termination) => {
+      const controller = new AbortController();
+      let time = 0;
+      vi.spyOn(performance, "now").mockImplementation(() => time);
+      const server = new RenderServer([
+        {
+          ...createRoute("/shell-handoff", () => createElement("main", null, "Must not render")),
+          resolveShell: async () => ({
+            kind: "redirect",
+            get location() {
+              if (termination === "cancellation") controller.abort();
+              else time = 101;
+              return "/another-page";
+            },
+          }),
+          stream: { deadlineMs: 100 },
+        },
+      ]);
+      const response = await server.handle(
+        new Request("https://example.com/shell-handoff", { signal: controller.signal }),
+      );
+      expect(response.status).toBe(503);
+      expect(response.headers.has("location")).toBe(false);
+    },
+  );
+
+  it("keeps a long Node SSR deadline open across the maximum timer interval", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "performance"] });
+    const maxTimerMs = 2 ** 31 - 1;
+    const module = createGate<Awaited<ReturnType<RenderRouteIR["componentLoader"]>>>();
+    const server = new RenderServer([
+      {
+        path: "/long-deadline",
+        mode: "ssr",
+        componentLoader: () => module.promise,
+        stream: { deadlineMs: maxTimerMs + 10 },
+      },
+    ]);
+    try {
+      const result = server.handle(new Request("https://example.com/long-deadline"), {
+        platform: "node",
+      });
+      const settled = vi.fn();
+      void result.then(settled);
+      await vi.advanceTimersByTimeAsync(maxTimerMs + 9);
+      expect(settled).not.toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(1);
+      expect(settled).toHaveBeenCalledOnce();
+      expect((await result).status).toBe(503);
+    } finally {
+      module.resolve({ default: () => createElement("main", null, "Late product") });
+      await vi.advanceTimersByTimeAsync(0);
+      vi.useRealTimers();
+    }
+  });
+
+  it("does not let a timer callback expire SSR before the elapsed deadline", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    let time = 0;
+    vi.spyOn(performance, "now").mockImplementation(() => time);
+    const module = createGate<Awaited<ReturnType<RenderRouteIR["componentLoader"]>>>();
+    const server = new RenderServer([
+      {
+        path: "/timer",
+        mode: "ssr",
+        componentLoader: () => module.promise,
+        stream: { deadlineMs: 10 },
+      },
+    ]);
+    try {
+      const result = server.handle(new Request("https://example.com/timer"), { platform: "node" });
+      const settled = vi.fn();
+      void result.then(settled);
+      await vi.advanceTimersByTimeAsync(0);
+      time = 9.5;
+      await vi.advanceTimersByTimeAsync(10);
+      expect(settled).not.toHaveBeenCalled();
+      time = 10;
+      await vi.advanceTimersByTimeAsync(1);
+      expect(settled).toHaveBeenCalledOnce();
+      expect((await result).status).toBe(503);
+    } finally {
+      module.resolve({ default: () => createElement("main", null, "Late page") });
+      await vi.advanceTimersByTimeAsync(0);
+      vi.useRealTimers();
+    }
+  });
+
+  it("enforces the Lambda byte limit on the full UTF-8 HTML at the adapter boundary", async () => {
+    const component = () => createElement("main", null, "漢".repeat(300));
+    const nodeRequest = new Request("https://example.com/product");
+    const lambdaEvent = { version: "2.0", rawPath: "/product" };
+    const createHandler = (maxBufferedBytes?: number) =>
+      createMetaFetchHandler({
+        pageHandler: new RenderServer([
+          {
+            ...createRoute("/product", component),
+            head: () => ({ title: "Product page" }),
+            stream: maxBufferedBytes === undefined ? {} : { maxBufferedBytes },
+          },
+        ]),
+      });
+    const rendered = await createNodeHandler(createHandler()).fetch(nodeRequest);
+    const html = await rendered.text();
+    const responseBytes = Buffer.byteLength(html, "utf8");
+    expect(html).toContain("<title>Product page</title>");
+    expect(html).toContain("<main>漢");
+    expect(html.length).toBeLessThan(responseBytes - 1);
+
+    const atLimit = await createLambdaHandler(createHandler(responseBytes))(lambdaEvent, {});
+    expect(atLimit.statusCode).toBe(200);
+    expect(atLimit.body).toBe(html);
+
+    const overLimit = createHandler(responseBytes - 1);
+    const rejected = await createLambdaHandler(overLimit)(lambdaEvent, {});
+    expect(rejected.statusCode).toBe(500);
+    expect(rejected.body).toBe(INTERNAL_SERVER_ERROR_HTML);
+    expect(console.error).toHaveBeenCalledWith(
+      "SSR rendering failed",
+      expect.objectContaining({
+        error: expect.objectContaining({ code: "meta-vite/shell-stream-max-buffered-bytes" }),
+      }),
+    );
+    const uncapped = await createNodeHandler(overLimit).fetch(nodeRequest);
+    expect(uncapped.status).toBe(200);
+    await expect(uncapped.text()).resolves.toBe(html);
   });
 
   it.each(["loader", "component", "head"] as const)(
