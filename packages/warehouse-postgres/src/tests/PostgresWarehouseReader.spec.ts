@@ -37,8 +37,8 @@ const request = (): WarehouseReadRequest => ({
   maxBytes: 1024,
   timeoutMs: 1000,
 });
-const reader = (pool: WarehousePostgresPool) =>
-  new PostgresWarehouseReader(pool, descriptor, () => access, "a".repeat(32), {
+const reader = (pool: WarehousePostgresPool, resolveAccess = () => access) =>
+  new PostgresWarehouseReader(pool, descriptor, resolveAccess, "a".repeat(32), {
     query: async <T>() => ({ rows: [] as T[] }),
     connect: async () => ({
       query: async <T>() => ({ rows: [] as T[] }),
@@ -88,7 +88,7 @@ function fixture(
       rows: (await query(sql, params)).rows as T[],
     }),
   };
-  const pool: WarehousePostgresPool = { query: connection.query, connect: async () => connection };
+  const pool = { query: connection.query, connect: vi.fn(async () => connection) };
   return { pool, connection, release, query, entered };
 }
 
@@ -106,7 +106,7 @@ describe("warehouse reader bounded lifetime", () => {
     ]);
     const warehouse = reader(test.pool);
     const first = await warehouse.read({ ...request(), maxRows: 2 });
-    expect(first.nextCursor).toEqual(expect.any(String));
+    expect(first.nextCursor).toMatch(/^[A-Za-z0-9_-]+$/);
     const second = await warehouse.read({ ...request(), cursor: first.nextCursor ?? undefined });
     expect(first.rows).toEqual([{ note: "first" }, { note: "second" }]);
     expect(second.rows).toEqual([{ note: "third" }]);
@@ -115,7 +115,6 @@ describe("warehouse reader bounded lifetime", () => {
     expect(pageCalls).toHaveLength(2);
     expect(pageCalls[1][1]).toEqual([
       ...(pageCalls[0][1]?.slice(0, 3) ?? []),
-      "id-2",
       "id-2",
       "two",
       1,
@@ -144,6 +143,97 @@ describe("warehouse reader bounded lifetime", () => {
       }),
     ).rejects.toThrow("WAREHOUSE_CURSOR_STALE");
     expect(test.query).not.toHaveBeenCalled();
+  });
+
+  it("accepts a cursor issued with the original unprefixed format", async () => {
+    // Fixed nonce and the reader fixture secret; the original payload anchors at id-2 / two.
+    const cursor =
+      "AAAAAAAAAAAAAAAArspyaKvegFO0yLxd0aO0M352T3zxlMGmMq5VZuJD-dJ5f4JYnGtZpG_8BzdyDSJKbpAJBhyT6-REWyrGVQIqoWTbS-T74vv5AnVmuv8W_h5HrWvJnMVGb3RpsPXFnmwih4pmLjjmWKyl9Z-g4xYzRhMN6AX3KToFHAgSAsA6TieqDsSVEAzrH3wx0b5aqN38HSaNSpJA4JFBvxdbXrpOZI0su_uYP3hBK82kQHHgY7WBnyCkLrWmn4TJisrgERZPr-WIwnpcT-acHHiBmZudoFHHgbZS0YqGsZHi4P5y1IKKZy0gM7GUcw";
+    const test = fixture(undefined, [
+      { _has_more: false, _rows: [{ _identity: "three", v_0: "third", v_1: "id-3" }] },
+    ]);
+    const warehouse = reader(test.pool);
+    await expect(warehouse.read({ ...request(), cursor: "v2." + cursor })).rejects.toThrow(
+      "WAREHOUSE_INVALID_CURSOR",
+    );
+    const page = await warehouse.read({ ...request(), cursor });
+    expect(page.rows).toEqual([{ note: "third" }]);
+    expect(test.query.mock.calls.find(([sql]) => sql.startsWith("WITH picked"))?.[1]).toEqual([
+      '["reader","test","one"]',
+      1,
+      descriptor.semanticHash,
+      "id-2",
+      "two",
+      1,
+      1024,
+      2,
+    ]);
+  });
+
+  it("reuses a long cursor with a smaller byte budget and rejects tampering or a different binding before I/O", async () => {
+    const sortValue = "x".repeat(7000);
+    const test = fixture(undefined, [
+      { _has_more: true, _rows: [{ _identity: "one", v_0: "row 1", v_1: sortValue }] },
+      { _has_more: false, _rows: [{ _identity: "two", v_0: "row 2", v_1: "short" }] },
+    ]);
+    let current = access;
+    const warehouse = reader(test.pool, () => current);
+    const options: WarehouseReadRequest = {
+      ...request(),
+      projection: ["id"],
+      order: [
+        { column: "note", direction: "desc" },
+        { column: "id", direction: "asc" },
+        { column: "note", direction: "desc" },
+      ],
+      maxBytes: 64 * 1024,
+    };
+    const first = await warehouse.read(options);
+    const cursor = first.nextCursor;
+    if (!cursor) throw new Error("expected a continuation cursor");
+    test.query.mockClear();
+    test.pool.connect.mockClear();
+    const tampered = cursor.slice(0, 3) + (cursor[3] === "A" ? "B" : "A") + cursor.slice(4);
+    await expect(warehouse.read({ ...options, cursor: tampered })).rejects.toThrow(
+      "WAREHOUSE_INVALID_CURSOR",
+    );
+    await expect(warehouse.read({ ...options, cursor: cursor.slice(3) })).rejects.toThrow(
+      "WAREHOUSE_INVALID_CURSOR",
+    );
+    for (const change of [
+      { snapshotId: "other" },
+      { projection: ["note"] },
+      { access: { ...access, permissionEpoch: 1 } },
+      { access: { ...access, privacyEpoch: 1 } },
+      { access: { ...access, scope: { ...access.scope, tenant: "two" } } },
+    ]) {
+      current = change.access ?? access;
+      await expect(warehouse.read({ ...options, ...change, cursor })).rejects.toThrow(
+        "WAREHOUSE_CURSOR_STALE",
+      );
+    }
+    current = access;
+    const unrelatedSnapshot = "\u0001".repeat(128 * 1024);
+    const serialize = vi.spyOn(JSON, "stringify");
+    try {
+      await expect(
+        warehouse.read({ ...options, snapshotId: unrelatedSnapshot, cursor }),
+      ).rejects.toThrow("WAREHOUSE_CURSOR_STALE");
+      expect(
+        serialize.mock.calls.some(
+          ([input]) => Array.isArray(input) && input.includes(unrelatedSnapshot),
+        ),
+      ).toBe(false);
+    } finally {
+      serialize.mockRestore();
+    }
+    expect(test.pool.connect).not.toHaveBeenCalled();
+    const next = await warehouse.read({ ...options, maxBytes: 1024, cursor });
+    expect(first.rows).toEqual([{ id: "row 1" }]);
+    expect(next.rows).toEqual([{ id: "row 2" }]);
+    expect(next.nextCursor).toBeNull();
+    const params = test.query.mock.calls.find(([sql]) => sql.startsWith("WITH picked"))?.[1];
+    expect(params?.slice(3)).toEqual([sortValue, "row 1", "one", 1, 1024, 2]);
   });
   it("times out pool acquisition and destroys a later acquired connection without issuing SQL", async () => {
     const test = fixture();
@@ -271,7 +361,7 @@ describe("warehouse reader bounded lifetime", () => {
     expect(test.release).toHaveBeenCalledExactlyOnceWith(true);
     expect(release).toHaveBeenCalledExactlyOnceWith(true);
   });
-  it("rejects oversized filter strings and cursors before acquiring a connection", async () => {
+  it("rejects oversized filter strings before acquiring a connection", async () => {
     const test = fixture();
     await expect(
       reader(test.pool).read({
@@ -279,9 +369,28 @@ describe("warehouse reader bounded lifetime", () => {
         filters: [{ column: "note", operator: "eq", value: "x".repeat(8193) }],
       }),
     ).rejects.toThrow("WAREHOUSE_READ_LIMIT");
-    await expect(
-      reader(test.pool).read({ ...request(), cursor: ".".repeat(8193) }),
-    ).rejects.toThrow("WAREHOUSE_INVALID_CURSOR");
-    expect(test.query).not.toHaveBeenCalled();
+    expect(test.pool.connect).not.toHaveBeenCalled();
+  });
+
+  it.each(
+    ["A".repeat(8193), "v2." + "A".repeat(5_593_809)].map((cursor) => ({
+      version: cursor.startsWith("v2.") ? "v2" : "legacy",
+      cursor,
+    })),
+  )("rejects an oversized $version cursor before decoding or connecting", async ({ cursor }) => {
+    const test = fixture();
+    const payload = cursor.startsWith("v2.") ? cursor.slice(3) : cursor;
+    const decode = vi.spyOn(Buffer, "from");
+    try {
+      await expect(reader(test.pool).read({ ...request(), cursor })).rejects.toThrow(
+        "WAREHOUSE_INVALID_CURSOR",
+      );
+      expect(decode.mock.calls.some(([input]) => input === payload || input === cursor)).toBe(
+        false,
+      );
+    } finally {
+      decode.mockRestore();
+    }
+    expect(test.pool.connect).not.toHaveBeenCalled();
   });
 });
