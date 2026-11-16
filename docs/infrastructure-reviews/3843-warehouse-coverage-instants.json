@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "warehouse-postgres",
+      "classification": "durable-provider",
+      "reason": "Compare source coverage with the candidate's partition bounds before PostgreSQL stores the sealed state. The comparison runs inside the existing catalog transaction and needs no schema change.",
+      "files": {
+        "packages/warehouse-postgres/src/facts/PostgresWarehouseCatalog.ts": "c56613bf613bb46d8926f671da2c764ffa8068fbd43a7d0c7bb879316a20531b"
+      },
+      "catalogRuntimes": ["node", "lambda"],
+      "profiles": {
+        "kubernetes": {
+          "result": "unverified",
+          "reason": "The Node PostgreSQL catalog uses the same transaction and pool. The local PostgreSQL test exercises catalog persistence on Node.",
+          "providers": ["@croco/warehouse-postgres/facts"],
+          "constraints": [
+            "The application owns the PostgreSQL pool and Pod shutdown. Kubernetes deployment was not exercised."
+          ],
+          "references": [
+            "packages/warehouse-postgres/README.md",
+            "packages/warehouse-postgres/src/tests/PostgresWarehouseFacts.integration.spec.ts",
+            "packages/presentation-preset/runtime-profiles.json"
+          ]
+        },
+        "aws-lambda": {
+          "result": "conditional",
+          "reason": "The existing Lambda-compatible PostgreSQL provider evaluates coverage inside the same catalog transaction.",
+          "providers": ["@croco/warehouse-postgres/facts"],
+          "constraints": [
+            "The caller must complete the transaction and manage the connection within the invocation. Deployed Lambda execution was not exercised."
+          ],
+          "references": [
+            "packages/warehouse-postgres/README.md",
+            "packages/warehouse-postgres/src/facts/PostgresWarehouseCatalog.ts",
+            "packages/presentation-preset/runtime-profiles.json"
+          ]
+        },
+        "cloudflare": {
+          "result": "unsupported",
+          "reason": "The catalog still uses Node crypto and the existing PostgreSQL client. Workers have no supported path for this provider.",
+          "providers": ["@croco/warehouse-postgres/facts"],
+          "constraints": ["A Node Container deployment remains unverified."],
+          "references": [
+            "packages/warehouse-postgres/README.md",
+            "packages/warehouse-postgres/src/facts/PostgresWarehouseCatalog.ts",
+            "packages/presentation-preset/runtime-profiles.json"
+          ]
+        }
+      }
+    }
+  ]
+}
