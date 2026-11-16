@@ -239,6 +239,55 @@ describe("MetricExpression", () => {
     expect(evaluateMetric(metric, [{ at: preciseWindow.to }], preciseWindow)).toEqual([
       { group: {}, value: "0" },
     ]);
+    expect(
+      evaluateMetric(
+        metric,
+        [{ at: "2024-02-29T00:15:00.123456789+00:30" }, { at: "2024-02-28T23:45:00.123456790Z" }],
+        {
+          from: "2024-02-28T23:45:00.123456789Z",
+          to: "2024-02-29T00:15:00.123456790+00:30",
+        },
+      ),
+    ).toEqual([{ group: {}, value: "1" }]);
+  });
+
+  it.each(["2026-02-30T00:00:00Z", "2026-02-29T00:15:00+00:30", "2026-02-28T24:00:00Z"])(
+    "rejects invalid calendar instant %s in event time and window boundaries",
+    (at) => {
+      const metric = defineMetric("daily_events", {
+        version: 1,
+        from: events,
+        measure: count(),
+        time: project(events, "at"),
+        bucket: dateBucket("day", "UTC"),
+        unit: "events",
+        population: "events",
+      });
+      expect(() => evaluateMetric(metric, [{ at }], window)).toThrowError(
+        expect.objectContaining({ code: "METRIC_INVALID_TIME" }),
+      );
+      expect(() => evaluateMetric(metric, [], { ...window, from: at })).toThrowError(
+        expect.objectContaining({ code: "METRIC_INVALID_WINDOW" }),
+      );
+    },
+  );
+
+  it("rejects an impossible calendar instant in an exact distinct dimension", () => {
+    const fact = {
+      ...events,
+      columns: { ...events.columns, observedAt: { type: "instant" } },
+    } as const;
+    const metric = defineMetric("distinct_observations", {
+      version: 1,
+      from: fact,
+      measure: exactDistinct(project(fact, "observedAt")),
+      time: project(fact, "at"),
+      unit: "observations",
+      population: "events",
+    });
+    expect(() =>
+      evaluateMetric(metric, [{ at: window.from, observedAt: "2026-02-30T00:00:00Z" }], window),
+    ).toThrowError(expect.objectContaining({ code: "METRIC_INVALID_INSTANT" }));
   });
 
   it("normalizes typed values before exact distinct comparison", () => {
@@ -403,6 +452,11 @@ describe("MetricExpression", () => {
     { column: { type: "decimal", scale: 2 }, value: "1.001", code: "METRIC_DECIMAL_SCALE" },
     { column: { type: "decimal", scale: 2 }, value: "1e2", code: "METRIC_INVALID_DECIMAL" },
     { column: { type: "instant" }, value: "invalid", code: "METRIC_INVALID_INSTANT" },
+    {
+      column: { type: "instant" },
+      value: "2026-02-30T00:00:00Z",
+      code: "METRIC_INVALID_INSTANT",
+    },
     {
       column: { type: "instant" },
       value: "2026-01-01T00:00:00.1234567890Z",

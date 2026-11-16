@@ -272,12 +272,16 @@ describe("warehouse declarations and codec", () => {
         value: "-9223372036854775809",
       }),
     ).toThrow("WAREHOUSE_INTEGER_OVERFLOW");
-    expect(() =>
-      validateRow(signed, { id: "a", at: "2024-02-29T23:59:59.12345Z", value: 0n }),
-    ).toThrow("WAREHOUSE_INVALID_INSTANT");
-    expect(() =>
-      validateRow(signed, { id: "a", at: "2025-02-29T23:59:60.123456Z", value: 0n }),
-    ).toThrow("WAREHOUSE_INVALID_INSTANT");
+    for (const at of [
+      "2024-02-29T23:59:59.12345Z",
+      "2024-02-29T23:59:59.123456+00:00",
+      "2024-02-29T23:59:60.123456Z",
+      "2025-02-29T23:59:59.123456Z",
+    ]) {
+      expect(() => validateRow(signed, { id: "a", at, value: 0n })).toThrow(
+        "WAREHOUSE_INVALID_INSTANT",
+      );
+    }
   });
 
   it("blocks scope and system-field spoofing without printing sensitive values", async () => {

@@ -56,6 +56,27 @@ function compile(metric = definition()) {
 }
 
 describe("native PostgreSQL metric compiler", () => {
+  it("binds a leap-day window one microsecond wide across UTC offsets", () => {
+    const preciseWindow = {
+      from: "2024-02-28T08:16:00.123456Z",
+      to: "2024-02-29T00:15:00.123457+15:59",
+    };
+    const result = compilePostgresMetric(fact, definition(), preciseWindow, "scope", 3, 10, 4096);
+    expect(result.params).toEqual(expect.arrayContaining([preciseWindow.from, preciseWindow.to]));
+
+    expect(() =>
+      compilePostgresMetric(
+        fact,
+        definition(),
+        { ...preciseWindow, to: "2024-02-29T00:15:00.1234571+15:59" },
+        "scope",
+        3,
+        10,
+        4096,
+      ),
+    ).toThrowError(expect.objectContaining({ code: "METRIC_INVALID_WINDOW" }));
+  });
+
   it("binds window, scope, revision and suppression and bounds the aggregate before transfer", () => {
     const result = compile();
     expect(result.sql).toContain("count(*)::text");

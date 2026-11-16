@@ -1,4 +1,5 @@
 import { assertContract, WarehouseContractError } from "./diagnostics";
+import { parseWarehouseInstant } from "./parseWarehouseInstant";
 import { canonicalJson, integer, isRecord } from "./primitives";
 import { assertFact } from "./schema";
 export { canonicalJson, isRecord } from "./primitives";
@@ -54,14 +55,9 @@ export function canonicalizeColumn(
     case "instant": {
       const precision = { second: 0, millisecond: 3, microsecond: 6 }[column.precision];
       assertContract(typeof value === "string", "WAREHOUSE_INVALID_INSTANT", path);
-      const match = /^(\d{4}-\d{2}-\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d+))?Z$/.exec(value);
+      const instant = parseWarehouseInstant(value);
       assertContract(
-        match &&
-          calendarDate(match[1]) &&
-          Number(match[2]) < 24 &&
-          Number(match[3]) < 60 &&
-          Number(match[4]) < 60 &&
-          (match[5]?.length ?? 0) === precision,
+        instant?.offset === "Z" && instant.fraction.length === precision,
         "WAREHOUSE_INVALID_INSTANT",
         path,
       );

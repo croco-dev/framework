@@ -1,6 +1,7 @@
 export { c } from "./libs/columns";
 export { defineFact, compileFact, serializeDescriptor, parseDescriptor } from "./libs/compiler";
 export { validateRow, canonicalPayload, encodeIdentity } from "./libs/codec";
+export { parseWarehouseInstant } from "./libs/parseWarehouseInstant";
 export { WarehouseContractError } from "./libs/diagnostics";
 export type {
   ColumnMetadata,

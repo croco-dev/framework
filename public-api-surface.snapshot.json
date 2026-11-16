@@ -47507,6 +47507,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "parseWarehouseInstant",
+              "exportKind": "named",
+              "source": "./libs/parseWarehouseInstant",
+              "declarationKind": "function"
+            },
+            {
               "name": "serializeDescriptor",
               "exportKind": "named",
               "source": "./libs/compiler",

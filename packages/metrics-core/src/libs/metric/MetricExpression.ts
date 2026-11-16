@@ -1,4 +1,5 @@
 import { Problem, ProblemCategory } from "@croco/problems-core";
+import { parseWarehouseInstant } from "@croco/warehouse-core";
 
 export type MetricColumn =
   | {
@@ -602,20 +603,13 @@ function validCalendarDate(value: string): boolean {
   return Number.isFinite(time.getTime()) && time.toISOString().startsWith(value);
 }
 
-function validInstant(value: string): boolean {
-  return (
-    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/.test(value) &&
-    Number.isFinite(new Date(value).getTime())
-  );
-}
-
 function instantNanoseconds(value: string, code: string): bigint {
-  requireCondition(validInstant(value), code);
-  const match = /^(.*T\d{2}:\d{2}:\d{2})(?:\.(\d{1,9}))?(Z|[+-]\d{2}:\d{2})$/.exec(value);
-  requireCondition(match, "METRIC_INVALID_INSTANT_PRECISION");
-  const seconds = Date.parse(`${match[1]}${match[3]}`);
-  requireCondition(Number.isFinite(seconds), code);
-  return BigInt(seconds) * BigInt(1_000_000) + BigInt((match[2] ?? "").padEnd(9, "0"));
+  const instant = parseWarehouseInstant(value);
+  requireCondition(instant, code);
+  requireCondition(instant.fraction.length <= 9, "METRIC_INVALID_INSTANT_PRECISION");
+  return (
+    BigInt(instant.epochSeconds) * BigInt(1_000_000_000) + BigInt(instant.fraction.padEnd(9, "0"))
+  );
 }
 
 function canonicalMetricScalar(value: unknown, column: MetricColumnRef): string | boolean {
