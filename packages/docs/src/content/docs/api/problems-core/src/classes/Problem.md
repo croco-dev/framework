@@ -387,6 +387,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`InvitationInvalidStatusProblem`](/api/invitation-core/src/classes/invitationinvalidstatusproblem/)
 - [`InvitationNotFoundProblem`](/api/invitation-core/src/classes/invitationnotfoundproblem/)
 - [`InvitationRateLimitExceededProblem`](/api/invitation-core/src/classes/invitationratelimitexceededproblem/)
+- [`InvitationRateLimitUnavailableProblem`](/api/invitation-core/src/classes/invitationratelimitunavailableproblem/)
 - [`PublicEmailDomainNotAllowedProblem`](/api/invitation-core/src/classes/publicemaildomainnotallowedproblem/)
 - [`InvitationTokenCipherProblem`](/api/invitation-drizzle/src/classes/invitationtokencipherproblem/)
 - [`DuplicateLifecycleRuleProblem`](/api/lifecycle-core/src/classes/duplicatelifecycleruleproblem/)

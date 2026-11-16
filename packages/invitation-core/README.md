@@ -62,6 +62,13 @@ await domainPolicyManager.tryAutoJoin("tenant-123", "user-3", "user@acme.com");
 
 - `InvitationManager`, 초대 생성, 수락, 거절, 취소, 재전송을 담당합니다.
 - `RateLimitedInvitationService`, 초대 rate limit과 batch invite를 제공합니다. 시간당·일간 한도는 현재 상태와 무관한 발급 건수를 기준으로 하므로 수락·취소·거절·만료로 복구되지 않습니다.
+
+이메일·링크·배치의 신규 초대는 저장소에서 tenant별 한도 확인과 생성을 함께 처리합니다. 저장 전에 실패하면 한도를 사용하지 않습니다. 저장이 끝난 뒤 알림이나 이벤트가 실패해도 발급 건수에는 포함되며, 만료 전 같은 idempotency key와 입력으로 재시도하면 추가 발급 없이 기존 초대의 처리를 이어갑니다. `checkRateLimit()`은 현재 사용량 조회용입니다.
+
+완료된 발급을 재시도하면 처음 발급한 토큰을 반환하고 취소·수락 등 현재 초대 상태를 유지합니다. 같은 키가 만료 후 새 초대에 연결되면 진행 중인 이전 요청은 원래 초대 ID에서만 알림·이벤트·활성화를 처리합니다.
+
+직접 구현한 `InvitationStore`로 이 서비스를 사용하려면 `createRateLimitedInvitation()`을 구현하세요. 알림·이벤트 claim 및 활성화에 `expectedInvitationId`가 전달되면 저장소의 변경 조건에 해당 ID를 포함하세요. 활성화는 현재 상태가 `creating`인 초대에만 적용합니다. 만료 판단에 저장소 시계를 사용한다면 `currentTime()`으로 같은 기준을 제공하세요. 원자적 발급 메서드가 없으면 신규 발급과 재시도에 `INVITATION_RATE_LIMIT_UNAVAILABLE`을 반환합니다.
+
 - `DomainPolicyManager`, 이메일 도메인 기반 자동 가입 정책을 관리합니다.
 - `InMemoryInvitationStore`, `InMemoryDomainPolicyStore`, 테스트용 저장소 구현체입니다.
 

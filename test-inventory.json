@@ -3660,6 +3660,12 @@
       "owner": "@croco/invitation-drizzle"
     },
     {
+      "path": "packages/invitation-drizzle/src/tests/DrizzleInvitationQuota.integration.spec.ts",
+      "lane": "integration",
+      "qualifiers": [],
+      "owner": "@croco/invitation-drizzle"
+    },
+    {
       "path": "packages/invitation-drizzle/src/tests/DrizzleInvitationStore.spec.ts",
       "lane": "fast",
       "qualifiers": [],

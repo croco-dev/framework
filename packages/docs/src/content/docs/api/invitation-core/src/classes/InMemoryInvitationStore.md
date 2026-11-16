@@ -29,7 +29,9 @@ title: "InMemoryInvitationStore"
 
 ### activateEmailInvitation()
 
-> **activateEmailInvitation**(`tenantId`, `idempotencyKey`): `Promise`\<[`EmailInvitationCreation`](/api/invitation-core/src/type-aliases/emailinvitationcreation/) \| `null`\>
+> **activateEmailInvitation**(`tenantId`, `idempotencyKey`, `expectedInvitationId?`): `Promise`\<[`EmailInvitationCreation`](/api/invitation-core/src/type-aliases/emailinvitationcreation/) \| `null`\>
+
+Activate only a creating invitation whose ID matches the supplied expectation. Preserve other statuses.
 
 #### Parameters
 
@@ -38,6 +40,10 @@ title: "InMemoryInvitationStore"
 `string`
 
 ##### idempotencyKey
+
+`string`
+
+##### expectedInvitationId?
 
 `string`
 
@@ -53,7 +59,9 @@ title: "InMemoryInvitationStore"
 
 ### claimEmailInvitationEvent()
 
-> **claimEmailInvitationEvent**(`tenantId`, `idempotencyKey`, `claimId`, `claimExpiresAt`): `Promise`\<[`EmailInvitationCreation`](/api/invitation-core/src/type-aliases/emailinvitationcreation/) \| `null`\>
+> **claimEmailInvitationEvent**(`tenantId`, `idempotencyKey`, `claimId`, `claimExpiresAt`, `expectedInvitationId?`): `Promise`\<[`EmailInvitationCreation`](/api/invitation-core/src/type-aliases/emailinvitationcreation/) \| `null`\>
+
+When given an invitation ID, claim only that creation.
 
 #### Parameters
 
@@ -72,6 +80,10 @@ title: "InMemoryInvitationStore"
 ##### claimExpiresAt
 
 `Date`
+
+##### expectedInvitationId?
+
+`string`
 
 #### Returns
 
@@ -85,7 +97,9 @@ title: "InMemoryInvitationStore"
 
 ### claimEmailInvitationNotification()
 
-> **claimEmailInvitationNotification**(`tenantId`, `idempotencyKey`, `claimId`, `claimExpiresAt`): `Promise`\<[`EmailInvitationCreation`](/api/invitation-core/src/type-aliases/emailinvitationcreation/) \| `null`\>
+> **claimEmailInvitationNotification**(`tenantId`, `idempotencyKey`, `claimId`, `claimExpiresAt`, `expectedInvitationId?`): `Promise`\<[`EmailInvitationCreation`](/api/invitation-core/src/type-aliases/emailinvitationcreation/) \| `null`\>
+
+When given an invitation ID, claim only that creation.
 
 #### Parameters
 
@@ -104,6 +118,10 @@ title: "InMemoryInvitationStore"
 ##### claimExpiresAt
 
 `Date`
+
+##### expectedInvitationId?
+
+`string`
 
 #### Returns
 
@@ -274,6 +292,55 @@ Count all invitations created at or after since for this tenant, regardless of s
 #### Overrides
 
 [`InvitationStore`](/api/invitation-core/src/classes/invitationstore/).[`createEmailInvitation`](/api/invitation-core/src/classes/invitationstore/#createemailinvitation)
+
+---
+
+### createRateLimitedInvitation()
+
+> **createRateLimitedInvitation**(`input`, `config`, `expiresInDays`): `Promise`\<[`EmailInvitationCreation`](/api/invitation-core/src/type-aliases/emailinvitationcreation/)\>
+
+Validate the fingerprint and replay an unexpired creation for the same tenant and key first.
+For a new creation, check both quota windows and reject any live pending invitation for the
+same normalized email. Check and persist atomically using the store's admission time
+for the quota cutoff, issuance timestamp and calendar-day lifetime.
+
+#### Parameters
+
+##### input
+
+[`EmailInvitationCreation`](/api/invitation-core/src/type-aliases/emailinvitationcreation/)
+
+##### config
+
+[`RateLimitConfig`](/api/invitation-core/src/type-aliases/ratelimitconfig/)
+
+##### expiresInDays
+
+`number`
+
+#### Returns
+
+`Promise`\<[`EmailInvitationCreation`](/api/invitation-core/src/type-aliases/emailinvitationcreation/)\>
+
+#### Overrides
+
+[`InvitationStore`](/api/invitation-core/src/classes/invitationstore/).[`createRateLimitedInvitation`](/api/invitation-core/src/classes/invitationstore/#createratelimitedinvitation)
+
+---
+
+### currentTime()?
+
+> `optional` **currentTime**(): `Promise`\<`Date`\>
+
+Clock used to compare this store's persisted timestamps.
+
+#### Returns
+
+`Promise`\<`Date`\>
+
+#### Inherited from
+
+[`InvitationStore`](/api/invitation-core/src/classes/invitationstore/).[`currentTime`](/api/invitation-core/src/classes/invitationstore/#currenttime)
 
 ---
 
@@ -506,3 +573,177 @@ Count all invitations created at or after since for this tenant, regardless of s
 #### Overrides
 
 [`InvitationStore`](/api/invitation-core/src/classes/invitationstore/).[`updateStatus`](/api/invitation-core/src/classes/invitationstore/#updatestatus)
+
+---
+
+### assertNoPendingInvitation()
+
+> `static` **assertNoPendingInvitation**(`invitation`, `now`): `void`
+
+#### Parameters
+
+##### invitation
+
+[`Invitation`](/api/invitation-core/src/type-aliases/invitation/) \| `null`
+
+##### now
+
+`number`
+
+#### Returns
+
+`void`
+
+#### Inherited from
+
+[`InvitationStore`](/api/invitation-core/src/classes/invitationstore/).[`assertNoPendingInvitation`](/api/invitation-core/src/classes/invitationstore/#assertnopendinginvitation)
+
+---
+
+### assertRateLimitConfig()
+
+> `static` **assertRateLimitConfig**(`config`): `void`
+
+#### Parameters
+
+##### config
+
+[`RateLimitConfig`](/api/invitation-core/src/type-aliases/ratelimitconfig/)
+
+#### Returns
+
+`void`
+
+#### Inherited from
+
+[`InvitationStore`](/api/invitation-core/src/classes/invitationstore/).[`assertRateLimitConfig`](/api/invitation-core/src/classes/invitationstore/#assertratelimitconfig)
+
+---
+
+### checkIssuanceRateLimit()
+
+> `static` **checkIssuanceRateLimit**(`store`, `tenantId`, `config`, `now?`): `Promise`\<`void`\>
+
+Inspect current usage without reserving capacity.
+
+#### Parameters
+
+##### store
+
+[`InvitationStore`](/api/invitation-core/src/classes/invitationstore/)
+
+##### tenantId
+
+`string`
+
+##### config
+
+[`RateLimitConfig`](/api/invitation-core/src/type-aliases/ratelimitconfig/)
+
+##### now?
+
+`number`
+
+#### Returns
+
+`Promise`\<`void`\>
+
+#### Inherited from
+
+[`InvitationStore`](/api/invitation-core/src/classes/invitationstore/).[`checkIssuanceRateLimit`](/api/invitation-core/src/classes/invitationstore/#checkissuanceratelimit)
+
+---
+
+### currentTimeMillis()
+
+> `static` **currentTimeMillis**(`store`): `Promise`\<`number`\>
+
+#### Parameters
+
+##### store
+
+[`InvitationStore`](/api/invitation-core/src/classes/invitationstore/)
+
+#### Returns
+
+`Promise`\<`number`\>
+
+#### Inherited from
+
+[`InvitationStore`](/api/invitation-core/src/classes/invitationstore/).[`currentTimeMillis`](/api/invitation-core/src/classes/invitationstore/#currenttimemillis)
+
+---
+
+### dateCreation()
+
+> `static` **dateCreation**(`input`, `issuedAt`, `expiresInDays`): [`EmailInvitationCreation`](/api/invitation-core/src/type-aliases/emailinvitationcreation/)
+
+#### Parameters
+
+##### input
+
+[`EmailInvitationCreation`](/api/invitation-core/src/type-aliases/emailinvitationcreation/)
+
+##### issuedAt
+
+`Date`
+
+##### expiresInDays
+
+`number`
+
+#### Returns
+
+[`EmailInvitationCreation`](/api/invitation-core/src/type-aliases/emailinvitationcreation/)
+
+#### Inherited from
+
+[`InvitationStore`](/api/invitation-core/src/classes/invitationstore/).[`dateCreation`](/api/invitation-core/src/classes/invitationstore/#datecreation)
+
+---
+
+### expiryDate()
+
+> `static` **expiryDate**(`issuedAt`, `expiresInDays`): `Date`
+
+#### Parameters
+
+##### issuedAt
+
+`Date`
+
+##### expiresInDays
+
+`number`
+
+#### Returns
+
+`Date`
+
+#### Inherited from
+
+[`InvitationStore`](/api/invitation-core/src/classes/invitationstore/).[`expiryDate`](/api/invitation-core/src/classes/invitationstore/#expirydate)
+
+---
+
+### issuanceWindows()
+
+> `static` **issuanceWindows**(`config`, `now`): `object`[]
+
+#### Parameters
+
+##### config
+
+[`RateLimitConfig`](/api/invitation-core/src/type-aliases/ratelimitconfig/)
+
+##### now
+
+`number`
+
+#### Returns
+
+`object`[]
+
+#### Inherited from
+
+[`InvitationStore`](/api/invitation-core/src/classes/invitationstore/).[`issuanceWindows`](/api/invitation-core/src/classes/invitationstore/#issuancewindows)

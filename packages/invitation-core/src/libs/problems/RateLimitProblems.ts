@@ -9,6 +9,21 @@ export class InvitationRateLimitExceededProblem extends Problem {
   }
 }
 
+export class InvitationRateLimitUnavailableProblem extends Problem {
+  readonly code = "INVITATION_RATE_LIMIT_UNAVAILABLE";
+  readonly category = ProblemCategory.InternalServerError;
+
+  constructor(
+    readonly reason:
+      | "unsupported-store"
+      | "read-committed-transaction-required"
+      | "database-clock-unavailable"
+      | "invalid-rate-limit-policy",
+  ) {
+    super("Invitation issuance quota is unavailable");
+  }
+}
+
 export class DuplicateInvitationProblem extends Problem {
   readonly code = "DUPLICATE_INVITATION";
   readonly category = ProblemCategory.Conflict;

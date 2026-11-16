@@ -17,9 +17,8 @@ import {
   InvitationDeclinedEvent,
   InvitationRevokedEvent,
 } from "./events/InvitationEvents";
-import type { InvitationStore } from "./InvitationStore";
+import { InvitationStore } from "./InvitationStore";
 import {
-  InvalidInvitationExpiryDurationProblem,
   InvitationAlreadyAcceptedProblem,
   InvitationCreationFailedProblem,
   InvitationEmailMismatchProblem,
@@ -27,8 +26,15 @@ import {
   InvitationInvalidStatusProblem,
   InvitationNotFoundProblem,
 } from "./problems/InvitationProblems";
+import { InvitationRateLimitUnavailableProblem } from "./problems/RateLimitProblems";
 import { generateToken, hashToken } from "./token";
-import type { EmailInvitationCreation, Invitation, InvitationType } from "./types";
+import type {
+  EmailInvitationCreation,
+  EmailInvitationCreationInput,
+  Invitation,
+  InvitationType,
+  RateLimitConfig,
+} from "./types";
 
 const DEFAULT_EMAIL_EXPIRES_IN_DAYS = 7;
 const DEFAULT_LINK_EXPIRES_IN_DAYS = 30;
@@ -69,12 +75,32 @@ export class InvitationManager {
     private readonly txManager: TxManager<unknown>,
   ) {}
 
-  async createEmailInvitation(input: CreateEmailInvitationInput): Promise<string> {
-    const expiry = this.resolveExpiry(input.expiresInDays, "email");
-    await this.deleteExpiredCreationIntentsSafely();
+  createEmailInvitation(input: CreateEmailInvitationInput): Promise<string> {
+    return this.issueEmailInvitation(input);
+  }
+
+  async createEmailInvitationWithRateLimit(
+    input: CreateEmailInvitationInput,
+    rateLimit: RateLimitConfig,
+  ): Promise<string> {
+    InvitationStore.assertRateLimitConfig(rateLimit);
+    return this.issueEmailInvitation(input, rateLimit);
+  }
+
+  private async issueEmailInvitation(
+    input: CreateEmailInvitationInput,
+    rateLimit?: RateLimitConfig,
+  ): Promise<string> {
+    const expiresInDays = input.expiresInDays ?? DEFAULT_EMAIL_EXPIRES_IN_DAYS;
+    const invitationId = randomUUID();
+    const expiry = await this.resolveExpiry(invitationId, expiresInDays, rateLimit !== undefined);
+    if (rateLimit === undefined) {
+      await this.deleteExpiredCreationIntentsSafely(expiry.createdAt);
+    }
     const email = this.normalizeEmail(input.email);
     const token = generateToken();
     const invitation = this.buildInvitation({
+      id: invitationId,
       tenantId: input.tenantId,
       inviterId: input.inviterId,
       email,
@@ -87,33 +113,38 @@ export class InvitationManager {
     const notificationIdempotencyKey = this.createInvitationNotificationIdempotencyKey(
       invitation,
       input.idempotencyKey,
+      rateLimit !== undefined,
     );
     let creation;
     try {
-      creation = await this.store.createEmailInvitation({
-        invitation,
-        token,
-        idempotencyKey: input.idempotencyKey,
-        requestFingerprint: hashToken(
-          JSON.stringify([
-            input.tenantId,
-            input.inviterId,
-            email,
-            input.role,
-            input.expiresInDays ?? DEFAULT_EMAIL_EXPIRES_IN_DAYS,
-          ]),
-        ),
-        notificationIdempotencyKey,
-        notificationStatus: "pending",
-        notificationClaimId: null,
-        notificationClaimExpiresAt: null,
-        eventStatus: "pending",
-        eventClaimId: null,
-        eventClaimExpiresAt: null,
-        eventId: event.eventId,
-        eventOccurredAt: event.timestamp,
-        createdAt: invitation.createdAt,
-      });
+      creation = await this.persistCreation(
+        {
+          invitation,
+          token,
+          idempotencyKey: input.idempotencyKey,
+          requestFingerprint: hashToken(
+            JSON.stringify([
+              input.tenantId,
+              input.inviterId,
+              email,
+              input.role,
+              input.expiresInDays ?? DEFAULT_EMAIL_EXPIRES_IN_DAYS,
+            ]),
+          ),
+          notificationIdempotencyKey,
+          notificationStatus: "pending",
+          notificationClaimId: null,
+          notificationClaimExpiresAt: null,
+          eventStatus: "pending",
+          eventClaimId: null,
+          eventClaimExpiresAt: null,
+          eventId: event.eventId,
+          eventOccurredAt: invitation.createdAt,
+          createdAt: invitation.createdAt,
+        },
+        rateLimit,
+        expiresInDays,
+      );
     } catch (error) {
       if (error instanceof Problem) {
         throw error;
@@ -124,16 +155,7 @@ export class InvitationManager {
     creation = await this.publishCreationEvent(creation);
 
     if (creation.notificationStatus !== "completed") {
-      const claimId = randomUUID();
-      const claimed = await this.store.claimEmailInvitationNotification(
-        creation.invitation.tenantId,
-        creation.idempotencyKey,
-        claimId,
-        new Date(Date.now() + CREATION_CLAIM_LEASE_MS),
-      );
-      if (!claimed) {
-        this.throwCreationPendingProblem(creation.invitation.id, "notification");
-      }
+      const { claimId, claimed } = await this.claimCreation("notification", creation);
       try {
         await this.sendInvitationNotification(
           claimed.invitation,
@@ -145,7 +167,10 @@ export class InvitationManager {
           claimed.idempotencyKey,
           claimId,
         );
-        if (!completed || completed.notificationStatus !== "completed") {
+        if (
+          completed?.invitation.id !== claimed.invitation.id ||
+          completed.notificationStatus !== "completed"
+        ) {
           this.throwCreationPendingProblem(claimed.invitation.id, "notification");
         }
         creation = completed;
@@ -155,28 +180,34 @@ export class InvitationManager {
       }
     }
 
-    try {
-      const activated = await this.store.activateEmailInvitation(
-        creation.invitation.tenantId,
-        creation.idempotencyKey,
-      );
-      if (!activated || activated.invitation.status !== "pending") {
-        this.throwCreationPendingProblem(creation.invitation.id, "persistence");
-      }
-      return activated.token;
-    } catch (error) {
-      if (error instanceof Problem) {
-        throw error;
-      }
-      this.throwCreationPendingProblem(creation.invitation.id, "persistence");
-    }
+    return this.activateCreation(creation, rateLimit !== undefined);
   }
 
-  async createLinkInvitation(input: CreateLinkInvitationInput): Promise<string> {
-    const expiry = this.resolveExpiry(input.expiresInDays, "link");
-    await this.deleteExpiredCreationIntentsSafely();
+  createLinkInvitation(input: CreateLinkInvitationInput): Promise<string> {
+    return this.issueLinkInvitation(input);
+  }
+
+  async createLinkInvitationWithRateLimit(
+    input: CreateLinkInvitationInput,
+    rateLimit: RateLimitConfig,
+  ): Promise<string> {
+    InvitationStore.assertRateLimitConfig(rateLimit);
+    return this.issueLinkInvitation(input, rateLimit);
+  }
+
+  private async issueLinkInvitation(
+    input: CreateLinkInvitationInput,
+    rateLimit?: RateLimitConfig,
+  ): Promise<string> {
+    const expiresInDays = input.expiresInDays ?? DEFAULT_LINK_EXPIRES_IN_DAYS;
+    const invitationId = randomUUID();
+    const expiry = await this.resolveExpiry(invitationId, expiresInDays, rateLimit !== undefined);
+    if (rateLimit === undefined) {
+      await this.deleteExpiredCreationIntentsSafely(expiry.createdAt);
+    }
     const token = generateToken();
     const invitation = this.buildInvitation({
+      id: invitationId,
       tenantId: input.tenantId,
       inviterId: input.inviterId,
       email: null,
@@ -188,31 +219,35 @@ export class InvitationManager {
     const event = this.createInvitationCreatedEvent(invitation);
     let creation;
     try {
-      creation = await this.store.createEmailInvitation({
-        invitation,
-        token,
-        idempotencyKey: input.idempotencyKey,
-        requestFingerprint: hashToken(
-          JSON.stringify([
-            input.tenantId,
-            input.inviterId,
-            input.role,
-            input.expiresInDays ?? DEFAULT_LINK_EXPIRES_IN_DAYS,
-            "link",
-            1,
-          ]),
-        ),
-        notificationIdempotencyKey: `link:${input.idempotencyKey}`,
-        notificationStatus: "completed",
-        notificationClaimId: null,
-        notificationClaimExpiresAt: null,
-        eventStatus: "pending",
-        eventClaimId: null,
-        eventClaimExpiresAt: null,
-        eventId: event.eventId,
-        eventOccurredAt: event.timestamp,
-        createdAt: invitation.createdAt,
-      });
+      creation = await this.persistCreation(
+        {
+          invitation,
+          token,
+          idempotencyKey: input.idempotencyKey,
+          requestFingerprint: hashToken(
+            JSON.stringify([
+              input.tenantId,
+              input.inviterId,
+              input.role,
+              input.expiresInDays ?? DEFAULT_LINK_EXPIRES_IN_DAYS,
+              "link",
+              1,
+            ]),
+          ),
+          notificationIdempotencyKey: `link:${input.idempotencyKey}`,
+          notificationStatus: "completed",
+          notificationClaimId: null,
+          notificationClaimExpiresAt: null,
+          eventStatus: "pending",
+          eventClaimId: null,
+          eventClaimExpiresAt: null,
+          eventId: event.eventId,
+          eventOccurredAt: invitation.createdAt,
+          createdAt: invitation.createdAt,
+        },
+        rateLimit,
+        expiresInDays,
+      );
     } catch (error) {
       if (error instanceof Problem) {
         throw error;
@@ -221,13 +256,26 @@ export class InvitationManager {
     }
 
     creation = await this.publishCreationEvent(creation);
+    return this.activateCreation(creation, rateLimit !== undefined);
+  }
 
+  private async activateCreation(
+    creation: EmailInvitationCreation,
+    allowTerminalReplay: boolean,
+  ): Promise<string> {
     try {
       const activated = await this.store.activateEmailInvitation(
         creation.invitation.tenantId,
         creation.idempotencyKey,
+        creation.invitation.id,
       );
-      if (!activated || activated.invitation.status !== "pending") {
+      if (
+        activated?.invitation.id !== creation.invitation.id ||
+        activated.invitation.status === "creating" ||
+        (!allowTerminalReplay && activated.invitation.status !== "pending") ||
+        activated.notificationStatus !== "completed" ||
+        activated.eventStatus !== "completed"
+      ) {
         this.throwCreationPendingProblem(creation.invitation.id, "persistence");
       }
       return activated.token;
@@ -239,11 +287,25 @@ export class InvitationManager {
     }
   }
 
+  private persistCreation(
+    input: EmailInvitationCreationInput,
+    rateLimit: RateLimitConfig | undefined,
+    expiresInDays: number,
+  ): Promise<EmailInvitationCreation> {
+    if (rateLimit === undefined) {
+      return this.store.createEmailInvitation(input);
+    }
+    if (!this.store.createRateLimitedInvitation) {
+      throw new InvitationRateLimitUnavailableProblem("unsupported-store");
+    }
+    return this.store.createRateLimitedInvitation(input, rateLimit, expiresInDays);
+  }
+
   async acceptInvitation(input: AcceptInvitationInput): Promise<TxRunOutcome<Invitation>> {
     const invitation = await this.getByTokenOrThrow(input.token);
     this.ensureAcceptableStatus(invitation, "accept");
 
-    if (this.isExpired(invitation)) {
+    if (await this.isExpired(invitation)) {
       const expired = await this.store.compareAndSetStatus(
         invitation.tenantId,
         invitation.id,
@@ -259,7 +321,7 @@ export class InvitationManager {
       }
       if (
         current.status === "expired" ||
-        (current.status === "pending" && this.isExpired(current))
+        (current.status === "pending" && (await this.isExpired(current)))
       ) {
         throw new InvitationExpiredProblem(current.id);
       }
@@ -290,7 +352,7 @@ export class InvitationManager {
 
         if (
           current.status === "expired" ||
-          (current.status === "pending" && this.isExpired(current))
+          (current.status === "pending" && (await this.isExpired(current)))
         ) {
           throw new InvitationExpiredProblem(current.id);
         }
@@ -325,7 +387,7 @@ export class InvitationManager {
 
   async declineInvitation(token: string): Promise<Invitation> {
     const invitation = await this.getByTokenOrThrow(token);
-    this.ensurePendingStatus(invitation, "decline");
+    await this.ensurePendingStatus(invitation, "decline");
 
     const declined = await this.store.compareAndSetStatus(
       invitation.tenantId,
@@ -377,7 +439,7 @@ export class InvitationManager {
       invitation.id,
       "pending",
       "revoked",
-      { revokedAt: new Date() },
+      { revokedAt: new Date(await InvitationStore.currentTimeMillis(this.store)) },
     );
     if (!revoked) {
       const current = await this.store.findById(invitation.id);
@@ -437,6 +499,7 @@ export class InvitationManager {
   }
 
   private buildInvitation(input: {
+    id: string;
     tenantId: string;
     inviterId: string;
     email: string | null;
@@ -447,7 +510,7 @@ export class InvitationManager {
     expiresAt: Date;
   }): Invitation {
     return {
-      id: randomUUID(),
+      id: input.id,
       tenantId: input.tenantId,
       inviterId: input.inviterId,
       email: input.email,
@@ -462,25 +525,24 @@ export class InvitationManager {
     };
   }
 
-  private resolveExpiry(
-    expiresInDays: number | undefined,
-    type: InvitationType,
-  ): { createdAt: Date; expiresAt: Date } {
-    const duration =
-      expiresInDays ??
-      (type === "email" ? DEFAULT_EMAIL_EXPIRES_IN_DAYS : DEFAULT_LINK_EXPIRES_IN_DAYS);
-
-    if (!Number.isSafeInteger(duration) || duration <= 0) {
-      throw new InvalidInvitationExpiryDurationProblem(duration);
+  private async resolveExpiry(
+    invitationId: string,
+    expiresInDays: number,
+    rateLimited: boolean,
+  ): Promise<{ createdAt: Date; expiresAt: Date }> {
+    const now = new Date();
+    const expiresAt = InvitationStore.expiryDate(now, expiresInDays);
+    if (rateLimited || !this.store.currentTime) {
+      return { createdAt: now, expiresAt };
     }
 
-    const createdAt = new Date();
-    const expiresAt = this.addDays(createdAt, duration);
-    if (!Number.isFinite(expiresAt.getTime())) {
-      throw new InvalidInvitationExpiryDurationProblem(duration);
+    let createdAt: Date;
+    try {
+      createdAt = await this.store.currentTime();
+    } catch {
+      this.throwCreationPendingProblem(invitationId, "persistence");
     }
-
-    return { createdAt, expiresAt };
+    return { createdAt, expiresAt: InvitationStore.expiryDate(createdAt, expiresInDays) };
   }
 
   private async getByTokenOrThrow(token: string): Promise<Invitation> {
@@ -504,18 +566,18 @@ export class InvitationManager {
     }
   }
 
-  private ensurePendingStatus(invitation: Invitation, operation: string): void {
+  private async ensurePendingStatus(invitation: Invitation, operation: string): Promise<void> {
     if (invitation.status !== "pending") {
       throw new InvitationInvalidStatusProblem(invitation.id, invitation.status, operation);
     }
 
-    if (this.isExpired(invitation)) {
+    if (await this.isExpired(invitation)) {
       throw new InvitationExpiredProblem(invitation.id);
     }
   }
 
-  private isExpired(invitation: Invitation): boolean {
-    return invitation.expiresAt.getTime() <= Date.now();
+  private async isExpired(invitation: Invitation): Promise<boolean> {
+    return invitation.expiresAt.getTime() <= (await InvitationStore.currentTimeMillis(this.store));
   }
 
   private normalizeEmail(email: string): string {
@@ -529,12 +591,6 @@ export class InvitationManager {
 
     const normalized = email.trim().toLowerCase();
     return normalized.length > 0 ? normalized : null;
-  }
-
-  private addDays(base: Date, days: number): Date {
-    const result = new Date(base);
-    result.setDate(result.getDate() + days);
-    return result;
   }
 
   private async sendInvitationNotification(
@@ -573,16 +629,17 @@ export class InvitationManager {
 
   private createInvitationNotificationIdempotencyKey(
     invitation: Invitation,
-    semanticKey: string,
+    idempotencyKey: string,
+    rateLimited: boolean,
   ): string {
     const email = invitation.email ?? "";
     return createNotificationIdempotencyKey({
       tenantId: invitation.tenantId,
       userId: email,
       channel: NotificationChannel.EMAIL,
-      topic: "invitation.created",
+      topic: rateLimited ? "invitation.created.rate-limited" : "invitation.created",
       recipient: email,
-      semanticKey,
+      semanticKey: rateLimited ? invitation.id : idempotencyKey,
     });
   }
 
@@ -655,16 +712,7 @@ export class InvitationManager {
       return creation;
     }
 
-    const claimId = randomUUID();
-    const claimed = await this.store.claimEmailInvitationEvent(
-      creation.invitation.tenantId,
-      creation.idempotencyKey,
-      claimId,
-      new Date(Date.now() + CREATION_CLAIM_LEASE_MS),
-    );
-    if (!claimed) {
-      this.throwCreationPendingProblem(creation.invitation.id, "event");
-    }
+    const { claimId, claimed } = await this.claimCreation("event", creation);
     try {
       const storedEvent = this.createInvitationCreatedEvent(claimed.invitation);
       const eventIdentity = storedEvent as unknown as {
@@ -679,7 +727,10 @@ export class InvitationManager {
         claimed.idempotencyKey,
         claimId,
       );
-      if (!completed || completed.eventStatus !== "completed") {
+      if (
+        completed?.invitation.id !== claimed.invitation.id ||
+        completed.eventStatus !== "completed"
+      ) {
         this.throwCreationPendingProblem(claimed.invitation.id, "event");
       }
       return completed;
@@ -689,9 +740,48 @@ export class InvitationManager {
     }
   }
 
-  private async deleteExpiredCreationIntentsSafely(): Promise<void> {
+  private async claimCreation(
+    phase: "notification" | "event",
+    creation: EmailInvitationCreation,
+  ): Promise<{ claimId: string; claimed: EmailInvitationCreation }> {
+    const { tenantId, id } = creation.invitation;
+    const { idempotencyKey } = creation;
+    const claimId = randomUUID();
     try {
-      await this.store.deleteExpiredEmailInvitationCreations(new Date());
+      const expiresAt = new Date(
+        (await InvitationStore.currentTimeMillis(this.store)) + CREATION_CLAIM_LEASE_MS,
+      );
+      const claimed =
+        phase === "notification"
+          ? await this.store.claimEmailInvitationNotification(
+              tenantId,
+              idempotencyKey,
+              claimId,
+              expiresAt,
+              id,
+            )
+          : await this.store.claimEmailInvitationEvent(
+              tenantId,
+              idempotencyKey,
+              claimId,
+              expiresAt,
+              id,
+            );
+      if (claimed?.invitation.id === id) {
+        return { claimId, claimed };
+      }
+      if (claimed) {
+        await this.releaseCreationClaimSafely(phase, claimed, claimId);
+      }
+    } catch {
+      this.throwCreationPendingProblem(id, phase);
+    }
+    this.throwCreationPendingProblem(id, phase);
+  }
+
+  private async deleteExpiredCreationIntentsSafely(now: Date): Promise<void> {
+    try {
+      await this.store.deleteExpiredEmailInvitationCreations(now);
     } catch {
       recordEvent("invitation.creation.cleanup_failed");
     }

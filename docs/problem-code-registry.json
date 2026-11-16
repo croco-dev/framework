@@ -1,6 +1,6 @@
 {
   "version": "croco.problem-code-registry.v1",
-  "problemCount": 1186,
+  "problemCount": 1187,
   "problems": [
     {
       "code": "ACCESS_DENIED",
@@ -1616,7 +1616,7 @@
       "sources": [
         {
           "file": "packages/invitation-core/src/libs/problems/RateLimitProblems.ts",
-          "line": 12,
+          "line": 27,
           "column": 1,
           "kind": "problem-class"
         }
@@ -2783,6 +2783,36 @@
         {
           "file": "packages/invitation-core/src/libs/problems/RateLimitProblems.ts",
           "line": 3,
+          "column": 1,
+          "kind": "problem-class"
+        }
+      ]
+    },
+    {
+      "code": "INVITATION_RATE_LIMIT_UNAVAILABLE",
+      "category": "InternalServerError",
+      "status": 500,
+      "title": "Internal Server Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#invitation-rate-limit-unavailable",
+      "recovery": {
+        "cause": "The invitation store could not atomically check the tenant quota and persist a creation.",
+        "userAction": "Ask the application operator to check the invitation store configuration.",
+        "operatorAction": "Implement atomic quota admission on custom stores. For Drizzle, use the PostgreSQL transaction adapter and call rate-limited creation outside an existing transaction.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "operator-only",
+        "telemetry": {
+          "eventName": "croco.problem.error",
+          "severity": "error",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/invitation-core/src/libs/problems/RateLimitProblems.ts",
+          "line": 12,
           "column": 1,
           "kind": "problem-class"
         }

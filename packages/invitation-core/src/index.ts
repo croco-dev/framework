@@ -100,6 +100,11 @@ export {
 } from "./libs/problems/RateLimitProblems";
 
 /**
+ * 저장소에서 초대 발급 한도를 적용할 수 없을 때 사용하는 Problem 타입입니다.
+ */
+export { InvitationRateLimitUnavailableProblem } from "./libs/problems/RateLimitProblems";
+
+/**
  * 초대 스팸 방지와 batch invite를 제공하는 상위 서비스입니다.
  */
 export { RateLimitedInvitationService } from "./libs/RateLimitedInvitationService";

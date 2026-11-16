@@ -3762,6 +3762,16 @@ const recoveryMetadataByCategory = {
 } as const satisfies Record<ProblemCategory, ProblemRecoveryMetadata>;
 
 const recoveryMetadataByCode = {
+  INVITATION_RATE_LIMIT_UNAVAILABLE: recovery({
+    cause:
+      "The invitation store could not atomically check the tenant quota and persist a creation.",
+    userAction: "Ask the application operator to check the invitation store configuration.",
+    operatorAction:
+      "Implement atomic quota admission on custom stores. For Drizzle, use the PostgreSQL transaction adapter and call rate-limited creation outside an existing transaction.",
+    retryability: "not-retryable",
+    redactionPolicy: "operator-only",
+    severity: "error",
+  }),
   "metering/invalid-stored-meter-metadata": recovery({
     cause: "A meter repository returned malformed or unsupported definition metadata.",
     userAction:

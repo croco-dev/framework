@@ -6,6 +6,7 @@ import type {
   EmailInvitationCreationInput,
   Invitation,
   InvitationStatus,
+  RateLimitConfig,
 } from "./types";
 
 const snapshotInvitation = (invitation: Invitation): Invitation => structuredClone(invitation);
@@ -30,7 +31,11 @@ export class InMemoryInvitationStore extends InvitationStore {
   }
 
   async findByTenantAndEmail(tenantId: string, email: string): Promise<Invitation | null> {
-    const now = Date.now();
+    const invitation = this.findInvitationByEmail(tenantId, email, Date.now());
+    return invitation ? snapshotInvitation(invitation) : null;
+  }
+
+  private findInvitationByEmail(tenantId: string, email: string, now: number): Invitation | null {
     const invitation = [...this.storage.values()]
       .filter((candidate) => candidate.tenantId === tenantId && candidate.email === email)
       .sort((left, right) => {
@@ -45,7 +50,7 @@ export class InMemoryInvitationStore extends InvitationStore {
         return createdAtOrder !== 0 ? createdAtOrder : right.id.localeCompare(left.id);
       })[0];
 
-    return invitation ? snapshotInvitation(invitation) : null;
+    return invitation ?? null;
   }
 
   async findAllByTenant(tenantId: string): Promise<Invitation[]> {
@@ -63,21 +68,60 @@ export class InMemoryInvitationStore extends InvitationStore {
   async createEmailInvitation(
     input: EmailInvitationCreationInput,
   ): Promise<EmailInvitationCreation> {
-    const scope = this.creationScope(input.invitation.tenantId, input.idempotencyKey);
-    const existing = this.emailCreations.get(scope);
+    return this.persistCreation(input);
+  }
 
-    if (existing) {
+  override async createRateLimitedInvitation(
+    input: EmailInvitationCreationInput,
+    config: RateLimitConfig,
+    expiresInDays: number,
+  ): Promise<EmailInvitationCreation> {
+    InvitationStore.assertRateLimitConfig(config);
+    return this.persistCreation(
+      InvitationStore.dateCreation(input, new Date(), expiresInDays),
+      config,
+    );
+  }
+
+  private persistCreation(
+    input: EmailInvitationCreationInput,
+    rateLimit?: RateLimitConfig,
+  ): EmailInvitationCreation {
+    const { tenantId, email } = input.invitation;
+    const scope = this.creationScope(tenantId, input.idempotencyKey);
+    const existing = this.emailCreations.get(scope);
+    const now = rateLimit ? input.createdAt.getTime() : Date.now();
+
+    const live = existing && existing.invitation.expiresAt.getTime() > now;
+    if (existing && (live || !rateLimit)) {
       if (existing.requestFingerprint !== input.requestFingerprint) {
         throw new InvitationIdempotencyConflictProblem(input.idempotencyKey);
       }
-      if (existing.invitation.expiresAt.getTime() > Date.now()) {
+      if (live) {
         return structuredClone(existing);
       }
+    }
+
+    if (rateLimit) {
+      for (const window of InvitationStore.issuanceWindows(rateLimit, now)) {
+        window.assertAvailable(this.countIssuedSince(tenantId, window.since));
+      }
+      if (email !== null) {
+        InvitationStore.assertNoPendingInvitation(
+          this.findInvitationByEmail(tenantId, email, now),
+          now,
+        );
+      }
+    }
+
+    const creation = structuredClone(input);
+    if (rateLimit) {
+      this.deleteExpiredCreations(now, tenantId);
+    } else if (existing) {
       this.expireInvitationIfPending(existing.invitation.id);
       this.emailCreations.delete(scope);
     }
 
-    const creation = structuredClone(input);
     this.storage.set(creation.invitation.id, creation.invitation);
     this.emailCreations.set(scope, creation);
     return structuredClone(creation);
@@ -96,6 +140,7 @@ export class InMemoryInvitationStore extends InvitationStore {
     idempotencyKey: string,
     claimId: string,
     claimExpiresAt: Date,
+    expectedInvitationId?: string,
   ): Promise<EmailInvitationCreation | null> {
     return this.claimCreationPhase(
       tenantId,
@@ -105,6 +150,7 @@ export class InMemoryInvitationStore extends InvitationStore {
       "notificationClaimExpiresAt",
       claimId,
       claimExpiresAt,
+      expectedInvitationId,
     );
   }
 
@@ -113,6 +159,7 @@ export class InMemoryInvitationStore extends InvitationStore {
     idempotencyKey: string,
     claimId: string,
     claimExpiresAt: Date,
+    expectedInvitationId?: string,
   ): Promise<EmailInvitationCreation | null> {
     return this.claimCreationPhase(
       tenantId,
@@ -122,6 +169,7 @@ export class InMemoryInvitationStore extends InvitationStore {
       "eventClaimExpiresAt",
       claimId,
       claimExpiresAt,
+      expectedInvitationId,
     );
   }
 
@@ -188,18 +236,29 @@ export class InMemoryInvitationStore extends InvitationStore {
   async activateEmailInvitation(
     tenantId: string,
     idempotencyKey: string,
+    expectedInvitationId?: string,
   ): Promise<EmailInvitationCreation | null> {
     const scope = this.creationScope(tenantId, idempotencyKey);
     const creation = this.emailCreations.get(scope);
     if (
       !creation ||
+      (expectedInvitationId !== undefined && creation.invitation.id !== expectedInvitationId)
+    ) {
+      return null;
+    }
+    const current = this.storage.get(creation.invitation.id);
+    if (!current) {
+      return null;
+    }
+    if (
+      current.status !== "creating" ||
       creation.notificationStatus !== "completed" ||
       creation.eventStatus !== "completed"
     ) {
-      return creation ? structuredClone(creation) : null;
+      return structuredClone({ ...creation, invitation: current });
     }
 
-    const invitation = { ...creation.invitation, status: "pending" as const };
+    const invitation = { ...current, status: "pending" as const };
     const updated = { ...creation, invitation };
     this.storage.set(invitation.id, invitation);
     this.emailCreations.set(scope, updated);
@@ -207,9 +266,16 @@ export class InMemoryInvitationStore extends InvitationStore {
   }
 
   async deleteExpiredEmailInvitationCreations(now: Date): Promise<number> {
+    return this.deleteExpiredCreations(now.getTime());
+  }
+
+  private deleteExpiredCreations(now: number, tenantId?: string): number {
     let deleted = 0;
     for (const [scope, creation] of this.emailCreations) {
-      if (creation.invitation.expiresAt.getTime() <= now.getTime()) {
+      if (
+        (tenantId === undefined || creation.invitation.tenantId === tenantId) &&
+        creation.invitation.expiresAt.getTime() <= now
+      ) {
         this.expireInvitationIfPending(creation.invitation.id);
         this.emailCreations.delete(scope);
         deleted += 1;
@@ -274,6 +340,10 @@ export class InMemoryInvitationStore extends InvitationStore {
   }
 
   async countIssuedByTenant(tenantId: string, since: Date): Promise<number> {
+    return this.countIssuedSince(tenantId, since);
+  }
+
+  private countIssuedSince(tenantId: string, since: Date): number {
     let count = 0;
 
     for (const invitation of this.storage.values()) {
@@ -309,12 +379,14 @@ export class InMemoryInvitationStore extends InvitationStore {
     expiryField: "notificationClaimExpiresAt" | "eventClaimExpiresAt",
     claimId: string,
     claimExpiresAt: Date,
+    expectedInvitationId?: string,
   ): EmailInvitationCreation | null {
     const scope = this.creationScope(tenantId, idempotencyKey);
     const creation = this.emailCreations.get(scope);
     const existingExpiry = creation?.[expiryField];
     if (
       !creation ||
+      (expectedInvitationId !== undefined && creation.invitation.id !== expectedInvitationId) ||
       creation[phase] === "completed" ||
       (creation[phase] === "processing" &&
         existingExpiry !== null &&

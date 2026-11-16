@@ -1,5 +1,6 @@
 import { Component, Inject, Token } from "@croco/framework-context";
 import {
+  DuplicateInvitationProblem,
   type EmailInvitationCreation,
   type EmailInvitationCreationInput,
   type Invitation,
@@ -7,7 +8,9 @@ import {
   InvitationIdempotencyConflictProblem,
   type InvitationStatus,
   type InvitationStatusTransitionMeta,
+  InvitationRateLimitUnavailableProblem,
   InvitationStore,
+  type RateLimitConfig,
 } from "@croco/invitation-core";
 // Runtime value required for constructor metadata.
 // oxlint-disable-next-line typescript/consistent-type-imports
@@ -23,6 +26,8 @@ import {
 import { invitationEmailCreationIntents, invitations } from "./schema";
 
 type DrizzleInvitationClient = DrizzleDb & NodePgDatabase<Record<string, never>>;
+
+const DATABASE_MILLISECONDS = sql`(extract(epoch from clock_timestamp()) * 1000)::double precision`;
 
 interface InvitationRow {
   id: string;
@@ -95,6 +100,10 @@ export class DrizzleInvitationStore extends InvitationStore {
           throw new InvitationTokenCipherProblem("configure", "missing");
         },
       } satisfies InvitationTokenCipher);
+  }
+
+  override async currentTime(): Promise<Date> {
+    return this.readDatabaseTime(this.txManager.getClient() ?? this.db);
   }
 
   /**
@@ -218,86 +227,164 @@ export class DrizzleInvitationStore extends InvitationStore {
   async createEmailInvitation(
     input: EmailInvitationCreationInput,
   ): Promise<EmailInvitationCreation> {
-    return this.txManager.run(async () => {
-      const client = this.txManager.getClient() ?? this.db;
-      const existing = await this.findEmailInvitationCreationWithClient(
+    return this.txManager.run(() =>
+      this.persistCreation(this.txManager.getClient() ?? this.db, input),
+    );
+  }
+
+  override async createRateLimitedInvitation(
+    input: EmailInvitationCreationInput,
+    config: RateLimitConfig,
+    expiresInDays: number,
+  ): Promise<EmailInvitationCreation> {
+    InvitationStore.assertRateLimitConfig(config);
+    if (this.txManager.isInTransaction()) {
+      throw new InvitationRateLimitUnavailableProblem("read-committed-transaction-required");
+    }
+    const { tenantId } = input.invitation;
+    const outcome = await this.txManager.runWithOutcome(
+      async () => {
+        const client = this.txManager.getClient();
+        if (!client || !("rollback" in client) || typeof client.rollback !== "function") {
+          throw new InvitationRateLimitUnavailableProblem("read-committed-transaction-required");
+        }
+        // Waiting and counting are separate statements so the count sees the preceding commit.
+        const lockScope = `croco:invitation-issuance:${tenantId}`;
+        await client.execute(sql`select pg_advisory_xact_lock(hashtextextended(${lockScope}, 0))`);
+        const { rows } = await client.execute<{ isolation: string; milliseconds: number }>(sql`
+          select current_setting('transaction_isolation') as isolation,
+            ${DATABASE_MILLISECONDS} as milliseconds
+        `);
+        const state = rows[0];
+        if (state?.isolation !== "read committed") {
+          throw new InvitationRateLimitUnavailableProblem("read-committed-transaction-required");
+        }
+        const issuedAt = this.databaseTime(state.milliseconds);
+        return this.persistCreation(
+          client,
+          InvitationStore.dateCreation(input, issuedAt, expiresInDays),
+          config,
+        );
+      },
+      { options: { isolationLevel: "read committed" } },
+    );
+    return outcome.value;
+  }
+
+  private async persistCreation(
+    client: DrizzleInvitationClient,
+    input: EmailInvitationCreationInput,
+    rateLimit?: RateLimitConfig,
+  ): Promise<EmailInvitationCreation> {
+    const { tenantId, email } = input.invitation;
+    const existing = await this.findEmailInvitationCreationWithClient(
+      client,
+      tenantId,
+      input.idempotencyKey,
+      undefined,
+      rateLimit === undefined ? undefined : input.createdAt,
+    );
+
+    const now =
+      existing && !rateLimit
+        ? (await this.readDatabaseTime(client)).getTime()
+        : input.createdAt.getTime();
+    const live = existing && existing.invitation.expiresAt.getTime() > now;
+    if (existing && (live || !rateLimit)) {
+      this.assertCreationFingerprint(existing, input);
+      if (live) {
+        return existing;
+      }
+    }
+
+    if (rateLimit) {
+      await InvitationStore.checkIssuanceRateLimit(this, tenantId, rateLimit, now);
+      if (email !== null) {
+        const duplicates = await client
+          .select({ id: invitations.id })
+          .from(invitations)
+          .where(
+            and(
+              eq(invitations.tenantId, tenantId),
+              eq(invitations.email, email),
+              eq(invitations.status, "pending"),
+              gt(invitations.expiresAt, input.createdAt),
+            ),
+          )
+          .limit(1);
+        if (duplicates.length !== 0) {
+          throw new DuplicateInvitationProblem(tenantId, email);
+        }
+      }
+      await this.deleteExpiredCreations(client, input.createdAt, tenantId);
+    } else if (existing) {
+      await client
+        .update(invitations)
+        .set({ status: "expired" })
+        .where(
+          and(
+            eq(invitations.id, existing.invitation.id),
+            eq(invitations.tenantId, existing.invitation.tenantId),
+            inArray(invitations.status, ["creating", "pending"]),
+          ),
+        );
+      await client
+        .delete(invitationEmailCreationIntents)
+        .where(
+          and(
+            eq(invitationEmailCreationIntents.tenantId, input.invitation.tenantId),
+            eq(invitationEmailCreationIntents.idempotencyKey, input.idempotencyKey),
+            eq(invitationEmailCreationIntents.invitationId, existing.invitation.id),
+          ),
+        );
+    }
+
+    const inserted = (await client
+      .insert(invitationEmailCreationIntents)
+      .values({
+        invitationId: input.invitation.id,
+        tenantId: input.invitation.tenantId,
+        idempotencyKey: input.idempotencyKey,
+        requestFingerprint: input.requestFingerprint,
+        tokenCiphertext: this.tokenCipher.encrypt(input.token, {
+          tenantId: input.invitation.tenantId,
+          invitationId: input.invitation.id,
+          idempotencyKey: input.idempotencyKey,
+        }),
+        notificationIdempotencyKey: input.notificationIdempotencyKey,
+        notificationStatus: input.notificationStatus,
+        notificationClaimId: input.notificationClaimId,
+        notificationClaimExpiresAt: input.notificationClaimExpiresAt,
+        eventStatus: input.eventStatus,
+        eventClaimId: input.eventClaimId,
+        eventClaimExpiresAt: input.eventClaimExpiresAt,
+        eventId: input.eventId,
+        eventOccurredAt: input.eventOccurredAt,
+        createdAt: input.createdAt,
+      })
+      .onConflictDoNothing({
+        target: [
+          invitationEmailCreationIntents.tenantId,
+          invitationEmailCreationIntents.idempotencyKey,
+        ],
+      })
+      .returning()) as EmailInvitationCreationRow[];
+
+    if (inserted.length === 0) {
+      const concurrent = await this.findEmailInvitationCreationWithClient(
         client,
         input.invitation.tenantId,
         input.idempotencyKey,
       );
-
-      if (existing) {
-        this.assertCreationFingerprint(existing, input);
-        if (existing.invitation.expiresAt.getTime() > Date.now()) {
-          return existing;
-        }
-        await client
-          .update(invitations)
-          .set({ status: "expired" })
-          .where(
-            and(
-              eq(invitations.id, existing.invitation.id),
-              eq(invitations.tenantId, existing.invitation.tenantId),
-              inArray(invitations.status, ["creating", "pending"]),
-            ),
-          );
-        await client
-          .delete(invitationEmailCreationIntents)
-          .where(
-            and(
-              eq(invitationEmailCreationIntents.tenantId, input.invitation.tenantId),
-              eq(invitationEmailCreationIntents.idempotencyKey, input.idempotencyKey),
-            ),
-          );
+      if (!concurrent) {
+        throw new InvitationIdempotencyConflictProblem(input.idempotencyKey);
       }
+      this.assertCreationFingerprint(concurrent, input);
+      return concurrent;
+    }
 
-      const inserted = (await client
-        .insert(invitationEmailCreationIntents)
-        .values({
-          invitationId: input.invitation.id,
-          tenantId: input.invitation.tenantId,
-          idempotencyKey: input.idempotencyKey,
-          requestFingerprint: input.requestFingerprint,
-          tokenCiphertext: this.tokenCipher.encrypt(input.token, {
-            tenantId: input.invitation.tenantId,
-            invitationId: input.invitation.id,
-            idempotencyKey: input.idempotencyKey,
-          }),
-          notificationIdempotencyKey: input.notificationIdempotencyKey,
-          notificationStatus: input.notificationStatus,
-          notificationClaimId: input.notificationClaimId,
-          notificationClaimExpiresAt: input.notificationClaimExpiresAt,
-          eventStatus: input.eventStatus,
-          eventClaimId: input.eventClaimId,
-          eventClaimExpiresAt: input.eventClaimExpiresAt,
-          eventId: input.eventId,
-          eventOccurredAt: input.eventOccurredAt,
-          createdAt: input.createdAt,
-        })
-        .onConflictDoNothing({
-          target: [
-            invitationEmailCreationIntents.tenantId,
-            invitationEmailCreationIntents.idempotencyKey,
-          ],
-        })
-        .returning()) as EmailInvitationCreationRow[];
-
-      if (inserted.length === 0) {
-        const concurrent = await this.findEmailInvitationCreationWithClient(
-          client,
-          input.invitation.tenantId,
-          input.idempotencyKey,
-        );
-        if (!concurrent) {
-          throw new InvitationIdempotencyConflictProblem(input.idempotencyKey);
-        }
-        this.assertCreationFingerprint(concurrent, input);
-        return concurrent;
-      }
-
-      await this.save(input.invitation);
-      return this.mapToEmailInvitationCreation(inserted[0], input.invitation);
-    });
+    await this.save(input.invitation);
+    return this.mapToEmailInvitationCreation(inserted[0], input.invitation);
   }
 
   async claimEmailInvitationNotification(
@@ -305,6 +392,7 @@ export class DrizzleInvitationStore extends InvitationStore {
     idempotencyKey: string,
     claimId: string,
     claimExpiresAt: Date,
+    expectedInvitationId?: string,
   ): Promise<EmailInvitationCreation | null> {
     return this.claimEmailInvitationCreationPhase(
       tenantId,
@@ -314,6 +402,7 @@ export class DrizzleInvitationStore extends InvitationStore {
       "notificationClaimExpiresAt",
       claimId,
       claimExpiresAt,
+      expectedInvitationId,
     );
   }
 
@@ -322,6 +411,7 @@ export class DrizzleInvitationStore extends InvitationStore {
     idempotencyKey: string,
     claimId: string,
     claimExpiresAt: Date,
+    expectedInvitationId?: string,
   ): Promise<EmailInvitationCreation | null> {
     return this.claimEmailInvitationCreationPhase(
       tenantId,
@@ -331,6 +421,7 @@ export class DrizzleInvitationStore extends InvitationStore {
       "eventClaimExpiresAt",
       claimId,
       claimExpiresAt,
+      expectedInvitationId,
     );
   }
 
@@ -397,6 +488,7 @@ export class DrizzleInvitationStore extends InvitationStore {
   async activateEmailInvitation(
     tenantId: string,
     idempotencyKey: string,
+    expectedInvitationId?: string,
   ): Promise<EmailInvitationCreation | null> {
     return this.txManager.run(async () => {
       const client = this.txManager.getClient() ?? this.db;
@@ -404,6 +496,7 @@ export class DrizzleInvitationStore extends InvitationStore {
         client,
         tenantId,
         idempotencyKey,
+        expectedInvitationId,
       );
       if (
         !creation ||
@@ -423,36 +516,49 @@ export class DrizzleInvitationStore extends InvitationStore {
             eq(invitations.status, "creating"),
           ),
         );
-      return this.findEmailInvitationCreationWithClient(client, tenantId, idempotencyKey);
+      return this.findEmailInvitationCreationWithClient(
+        client,
+        tenantId,
+        idempotencyKey,
+        expectedInvitationId,
+      );
     });
   }
 
   async deleteExpiredEmailInvitationCreations(now: Date): Promise<number> {
-    return this.txManager.run(async () => {
-      const client = this.txManager.getClient() ?? this.db;
-      const expiredInvitationIds = client
-        .select({ id: invitations.id })
-        .from(invitations)
-        .where(lte(invitations.expiresAt, now));
-      await client
-        .update(invitations)
-        .set({ status: "expired" })
-        .where(
-          and(
-            inArray(invitations.id, expiredInvitationIds),
-            inArray(invitations.status, ["creating", "pending"]),
-          ),
-        );
-      const deleted = (await client
-        .delete(invitationEmailCreationIntents)
-        .where(inArray(invitationEmailCreationIntents.invitationId, expiredInvitationIds))
-        .returning({
-          invitationId: invitationEmailCreationIntents.invitationId,
-        })) as Array<{
-        invitationId: string;
-      }>;
-      return deleted.length;
-    });
+    return this.txManager.run(() =>
+      this.deleteExpiredCreations(this.txManager.getClient() ?? this.db, now),
+    );
+  }
+
+  private async deleteExpiredCreations(
+    client: DrizzleInvitationClient,
+    cutoff: Date,
+    tenantId?: string,
+  ): Promise<number> {
+    const expiredInvitationIds = client
+      .select({ id: invitations.id })
+      .from(invitations)
+      .where(
+        and(
+          lte(invitations.expiresAt, cutoff),
+          tenantId === undefined ? undefined : eq(invitations.tenantId, tenantId),
+        ),
+      );
+    await client
+      .update(invitations)
+      .set({ status: "expired" })
+      .where(
+        and(
+          inArray(invitations.id, expiredInvitationIds),
+          inArray(invitations.status, ["creating", "pending"]),
+        ),
+      );
+    const deleted = await client
+      .delete(invitationEmailCreationIntents)
+      .where(inArray(invitationEmailCreationIntents.invitationId, expiredInvitationIds))
+      .returning({ invitationId: invitationEmailCreationIntents.invitationId });
+    return deleted.length;
   }
 
   async findEmailInvitationCreation(
@@ -629,6 +735,8 @@ export class DrizzleInvitationStore extends InvitationStore {
     client: DrizzleInvitationClient,
     tenantId: string,
     idempotencyKey: string,
+    expectedInvitationId?: string,
+    expiresAfter?: Date,
   ): Promise<EmailInvitationCreation | null> {
     const rows = (await client
       .select()
@@ -637,6 +745,9 @@ export class DrizzleInvitationStore extends InvitationStore {
         and(
           eq(invitationEmailCreationIntents.tenantId, tenantId),
           eq(invitationEmailCreationIntents.idempotencyKey, idempotencyKey),
+          expectedInvitationId === undefined
+            ? undefined
+            : eq(invitationEmailCreationIntents.invitationId, expectedInvitationId),
         ),
       )
       .limit(1)) as EmailInvitationCreationRow[];
@@ -646,7 +757,24 @@ export class DrizzleInvitationStore extends InvitationStore {
     }
 
     const invitation = await this.findById(row.invitationId);
-    return invitation ? this.mapToEmailInvitationCreation(row, invitation) : null;
+    if (!invitation || (expiresAfter && invitation.expiresAt <= expiresAfter)) {
+      return null;
+    }
+    return this.mapToEmailInvitationCreation(row, invitation);
+  }
+
+  private async readDatabaseTime(client: DrizzleInvitationClient): Promise<Date> {
+    const { rows } = await client.execute<{ milliseconds: number }>(
+      sql`select ${DATABASE_MILLISECONDS} as milliseconds`,
+    );
+    return this.databaseTime(rows[0]?.milliseconds);
+  }
+
+  private databaseTime(milliseconds: number | undefined): Date {
+    if (milliseconds === undefined || !Number.isFinite(milliseconds)) {
+      throw new InvitationRateLimitUnavailableProblem("database-clock-unavailable");
+    }
+    return new Date(milliseconds);
   }
 
   private async completeEmailInvitationCreationPhase(
@@ -696,6 +824,7 @@ export class DrizzleInvitationStore extends InvitationStore {
     expiryField: "notificationClaimExpiresAt" | "eventClaimExpiresAt",
     claimId: string,
     claimExpiresAt: Date,
+    expectedInvitationId?: string,
   ): Promise<EmailInvitationCreation | null> {
     const client = this.txManager.getClient() ?? this.db;
     const statusColumn = invitationEmailCreationIntents[phase];
@@ -711,11 +840,17 @@ export class DrizzleInvitationStore extends InvitationStore {
         and(
           eq(invitationEmailCreationIntents.tenantId, tenantId),
           eq(invitationEmailCreationIntents.idempotencyKey, idempotencyKey),
+          expectedInvitationId === undefined
+            ? undefined
+            : eq(invitationEmailCreationIntents.invitationId, expectedInvitationId),
           or(
             eq(statusColumn, "pending"),
             and(
               eq(statusColumn, "processing"),
-              or(isNull(expiryColumn), lte(expiryColumn, new Date())),
+              or(
+                isNull(expiryColumn),
+                lte(expiryColumn, sql`statement_timestamp() AT TIME ZONE 'UTC'`),
+              ),
             ),
           ),
         ),

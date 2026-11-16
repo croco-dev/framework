@@ -47,11 +47,12 @@
     "build": "tsup src/index.ts --format esm,cjs --minify --clean --dts",
     "dev": "tsup src/index.ts --format cjs,esm --dts --watch",
     "vitest": "vitest",
-    "test": "vitest run",
+    "test": "vitest run --exclude src/tests/DrizzleInvitationQuota.integration.spec.ts",
     "test:evidence": "pnpm run test --maxWorkers=1 --reporter=json --outputFile=.turbo/croco-test-evidence.json",
     "typecheck": "tsrs --noEmit",
     "lint": "oxlint .",
-    "docs:api:model": "node --experimental-strip-types ../docs/scripts/generate-package-api-model.mts"
+    "docs:api:model": "node --experimental-strip-types ../docs/scripts/generate-package-api-model.mts",
+    "test:integration": "CROCO_TEST_REAL_RESOURCES=1 vitest run src/tests/DrizzleInvitationQuota.integration.spec.ts"
   },
   "dependencies": {
     "@croco/framework-context": "workspace:*",
@@ -63,6 +64,9 @@
   },
   "devDependencies": {
     "@croco/testing": "workspace:*",
+    "@croco/testing-resources": "workspace:*",
+    "@types/pg": "8.20.0",
+    "pg": "8.22.0",
     "reflect-metadata": "^0.2.2",
     "tsup": "^8.4.0",
     "typescript": "^5.7.2",

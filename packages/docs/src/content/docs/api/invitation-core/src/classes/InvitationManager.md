@@ -73,6 +73,26 @@ title: "InvitationManager"
 
 ---
 
+### createEmailInvitationWithRateLimit()
+
+> **createEmailInvitationWithRateLimit**(`input`, `rateLimit`): `Promise`\<`string`\>
+
+#### Parameters
+
+##### input
+
+[`CreateEmailInvitationInput`](/api/invitation-core/src/type-aliases/createemailinvitationinput/)
+
+##### rateLimit
+
+[`RateLimitConfig`](/api/invitation-core/src/type-aliases/ratelimitconfig/)
+
+#### Returns
+
+`Promise`\<`string`\>
+
+---
+
 ### createLinkInvitation()
 
 > **createLinkInvitation**(`input`): `Promise`\<`string`\>
@@ -82,6 +102,26 @@ title: "InvitationManager"
 ##### input
 
 [`CreateLinkInvitationInput`](/api/invitation-core/src/type-aliases/createlinkinvitationinput/)
+
+#### Returns
+
+`Promise`\<`string`\>
+
+---
+
+### createLinkInvitationWithRateLimit()
+
+> **createLinkInvitationWithRateLimit**(`input`, `rateLimit`): `Promise`\<`string`\>
+
+#### Parameters
+
+##### input
+
+[`CreateLinkInvitationInput`](/api/invitation-core/src/type-aliases/createlinkinvitationinput/)
+
+##### rateLimit
+
+[`RateLimitConfig`](/api/invitation-core/src/type-aliases/ratelimitconfig/)
 
 #### Returns
 

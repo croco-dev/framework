@@ -1,99 +1,64 @@
 import { randomUUID } from "node:crypto";
 import { Component } from "@croco/framework-context";
-import type { MembershipRole } from "@croco/membership-core";
-import type { InvitationManager } from "./InvitationManager";
-import type { InvitationStore } from "./InvitationStore";
+import type {
+  CreateEmailInvitationInput,
+  CreateLinkInvitationInput,
+  InvitationManager,
+} from "./InvitationManager";
+import { InvitationStore } from "./InvitationStore";
 import { BatchSizeExceededProblem } from "./problems/BatchInviteProblems";
+import {
+  InvalidInvitationExpiryDurationProblem,
+  InvitationCreationFailedProblem,
+  InvitationIdempotencyConflictProblem,
+} from "./problems/InvitationProblems";
 import {
   DuplicateInvitationProblem,
   InvitationRateLimitExceededProblem,
+  InvitationRateLimitUnavailableProblem,
 } from "./problems/RateLimitProblems";
-import type { BatchInviteOptions, BatchInviteResult, Invitation, RateLimitConfig } from "./types";
+import type { BatchInviteOptions, BatchInviteResult, RateLimitConfig } from "./types";
 
-type CreateEmailInvitationInput = {
-  idempotencyKey: string;
-  tenantId: string;
-  inviterId: string;
-  email: string;
-  role: MembershipRole;
-  expiresInDays?: number;
+const DEFAULT_RATE_LIMIT: RateLimitConfig = {
+  maxInvitesPerHour: 100,
+  maxInvitesPerDay: 1000,
 };
 
-type CreateLinkInvitationInput = {
-  idempotencyKey: string;
-  tenantId: string;
-  inviterId: string;
-  role: MembershipRole;
-  expiresInDays?: number;
-};
+function batchErrorMessage(error: unknown): string {
+  if (error instanceof DuplicateInvitationProblem) {
+    return "Invitation already pending";
+  }
+  if (
+    error instanceof InvalidInvitationExpiryDurationProblem ||
+    error instanceof InvitationCreationFailedProblem ||
+    error instanceof InvitationIdempotencyConflictProblem ||
+    error instanceof InvitationRateLimitExceededProblem ||
+    error instanceof InvitationRateLimitUnavailableProblem
+  ) {
+    return error.message;
+  }
+  return "Invitation creation could not be confirmed";
+}
 
 @Component()
 export class RateLimitedInvitationService {
-  private readonly DEFAULT_CONFIG: RateLimitConfig = {
-    maxInvitesPerHour: 100,
-    maxInvitesPerDay: 1000,
-  };
-
   constructor(
     private readonly manager: InvitationManager,
     private readonly store: InvitationStore,
-    private readonly config: RateLimitConfig | undefined = undefined,
+    private readonly config: RateLimitConfig = DEFAULT_RATE_LIMIT,
   ) {}
 
+  /** Inspect current usage without reserving capacity. */
   async checkRateLimit(tenantId: string): Promise<void> {
-    const config = this.config ?? this.DEFAULT_CONFIG;
-
-    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
-    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-
-    const hourlyCount = await this.store.countIssuedByTenant(tenantId, oneHourAgo);
-    const dailyCount = await this.store.countIssuedByTenant(tenantId, oneDayAgo);
-
-    if (hourlyCount >= config.maxInvitesPerHour) {
-      throw new InvitationRateLimitExceededProblem(`${config.maxInvitesPerHour} per hour`);
-    }
-
-    if (dailyCount >= config.maxInvitesPerDay) {
-      throw new InvitationRateLimitExceededProblem(`${config.maxInvitesPerDay} per day`);
-    }
+    return InvitationStore.checkIssuanceRateLimit(this.store, tenantId, this.config);
   }
 
   async createEmailInvitationWithRateLimit(input: CreateEmailInvitationInput): Promise<string> {
-    const replay = await this.store.findEmailInvitationCreation(
-      input.tenantId,
-      input.idempotencyKey,
-    );
-    if (replay) {
-      return this.manager.createEmailInvitation(input);
-    }
-
-    await this.checkRateLimit(input.tenantId);
-
-    const normalizedEmail = input.email.trim().toLowerCase();
-    const existing = await this.store.findByTenantAndEmail(input.tenantId, normalizedEmail);
-
-    if (this.isActivePendingInvitation(existing)) {
-      throw new DuplicateInvitationProblem(input.tenantId, normalizedEmail);
-    }
-
-    return this.manager.createEmailInvitation({
-      ...input,
-      email: normalizedEmail,
-    });
+    return this.manager.createEmailInvitationWithRateLimit(input, this.config);
   }
 
   async createLinkInvitationWithRateLimit(input: CreateLinkInvitationInput): Promise<string> {
-    const replay = await this.store.findEmailInvitationCreation(
-      input.tenantId,
-      input.idempotencyKey,
-    );
-    if (replay) {
-      return this.manager.createLinkInvitation(input);
-    }
-
-    await this.checkRateLimit(input.tenantId);
-
-    return this.manager.createLinkInvitation(input);
+    return this.manager.createLinkInvitationWithRateLimit(input, this.config);
   }
 
   async batchInvite(
@@ -102,74 +67,30 @@ export class RateLimitedInvitationService {
     options: BatchInviteOptions = {},
   ): Promise<BatchInviteResult> {
     const maxBatchSize = options.maxBatchSize ?? 50;
-
     if (emails.length > maxBatchSize) {
       throw new BatchSizeExceededProblem(maxBatchSize);
     }
 
-    const result: BatchInviteResult = {
-      successful: [],
-      failed: [],
-    };
-
+    const result: BatchInviteResult = { successful: [], failed: [] };
     for (const email of emails) {
+      const normalizedEmail = email.trim().toLowerCase();
       try {
-        await this.checkRateLimit(tenantId);
-
-        const normalizedEmail = email.trim().toLowerCase();
-        const idempotencyKey = `${options.idempotencyKey ?? randomUUID()}:${normalizedEmail}`;
-        const replay = await this.store.findEmailInvitationCreation(tenantId, idempotencyKey);
-        if (replay) {
-          const token = await this.manager.createEmailInvitation({
-            idempotencyKey,
-            tenantId,
-            inviterId: "system",
-            email: normalizedEmail,
-            role: "member" as const,
-            expiresInDays: options.expiresInDays,
-          });
-          result.successful.push({ email: normalizedEmail, token });
-          continue;
-        }
-        const existing = await this.store.findByTenantAndEmail(tenantId, normalizedEmail);
-
-        if (this.isActivePendingInvitation(existing)) {
-          result.failed.push({
-            email: normalizedEmail,
-            error: "Invitation already pending",
-          });
-          continue;
-        }
-
-        const token = await this.manager.createEmailInvitation({
-          idempotencyKey,
+        const token = await this.createEmailInvitationWithRateLimit({
+          idempotencyKey: `${options.idempotencyKey ?? randomUUID()}:${normalizedEmail}`,
           tenantId,
           inviterId: "system",
           email: normalizedEmail,
-          role: "member" as const,
+          role: "member",
           expiresInDays: options.expiresInDays,
         });
-
-        result.successful.push({
-          email: normalizedEmail,
-          token,
-        });
+        result.successful.push({ email: normalizedEmail, token });
       } catch (error) {
         result.failed.push({
-          email: email.trim().toLowerCase(),
-          error: error instanceof Error ? error.message : "Unknown error",
+          email: normalizedEmail,
+          error: batchErrorMessage(error),
         });
       }
     }
-
     return result;
-  }
-
-  private isActivePendingInvitation(invitation: Invitation | null): boolean {
-    return (
-      invitation !== null &&
-      invitation.status === "pending" &&
-      invitation.expiresAt.getTime() > Date.now()
-    );
   }
 }
