@@ -4,7 +4,13 @@ import { RedisProblem } from "./problems/RedisProblem";
 import { buildMeteringRedisKey, encodeRedisKeySegment } from "./redisKey";
 import type { RedisClient } from "./RedisClient";
 import type { AggregationPeriod, UsageQueryOptions, UsageRecord } from "./types";
-import type { AtomicQuotaCheckOptions, AtomicQuotaCheckResult, UsageStorage } from "./UsageStorage";
+import type {
+  AtomicQuotaCheckOptions,
+  AtomicQuotaCheckResult,
+  UsageStorage,
+  UsageWriteReceipt,
+} from "./UsageStorage";
+import { MAX_USAGE_JSON_DEPTH, parseUsageJson, stableStringify } from "./usageJson";
 import { MAX_USAGE_VALUE } from "./usageValueLimits";
 import { validateUsageValue } from "./validateUsageValue";
 
@@ -22,158 +28,8 @@ type ReconciledUsageMember = {
   parsed: ParsedUsageMember;
   score?: number;
 };
-const MAX_USAGE_JSON_DEPTH = 1_000;
 
-function stableStringify(value: unknown): string {
-  return JSON.stringify(value, (_key, nestedValue: unknown) => {
-    if (nestedValue === null || typeof nestedValue !== "object" || Array.isArray(nestedValue)) {
-      return nestedValue;
-    }
-
-    const prototype = Object.getPrototypeOf(nestedValue);
-    if (prototype !== Object.prototype && prototype !== null) {
-      return nestedValue;
-    }
-
-    return Object.fromEntries(
-      Object.entries(nestedValue as Record<string, unknown>).sort(([left], [right]) =>
-        left < right ? -1 : left > right ? 1 : 0,
-      ),
-    );
-  });
-}
-
-function parseUsageJson(json: string, operation: "SERIALIZE" | "ZRANGEBYSCORE"): unknown {
-  // Validate original tokens: JSON.parse discards overwritten duplicate properties before a reviver runs.
-  let depth = 0;
-  for (let index = 0; index < json.length; index += 1) {
-    const character = json[index];
-    if (character === '"') {
-      const start = index;
-      index += 1;
-      while (index < json.length) {
-        if (json[index] === "\\") {
-          index += 2;
-        } else if (json[index] === '"') {
-          break;
-        } else {
-          index += 1;
-        }
-      }
-      const token: unknown = JSON.parse(json.slice(start, index + 1));
-      if (typeof token === "string") {
-        encodeURIComponent(token);
-      }
-    } else if (character === "{" || character === "[") {
-      depth += 1;
-      if (depth > MAX_USAGE_JSON_DEPTH) {
-        throw new RedisProblem(
-          operation,
-          `Usage JSON exceeds the maximum depth of ${MAX_USAGE_JSON_DEPTH}`,
-        );
-      }
-    } else if (character === "}" || character === "]") {
-      depth -= 1;
-    }
-  }
-  return JSON.parse(json);
-}
-
-/**
- * Redis 기반 UsageStorage 구현체
- *
- * @description
- * - Usage 데이터를 Redis Sorted Set에 저장
- * - Usage 기록과 idempotency marker를 단일 Redis Lua script로 처리
- */
-export class RedisUsageStorage implements UsageStorage {
-  readonly replayContract = "idempotent" as const;
-
-  private static readonly USAGE_KEY_NAMESPACE = "usage2";
-  private static readonly IDEM_KEY_NAMESPACE = "idem2";
-  private static readonly RECORD_IDEMPOTENCY_TTL_SECONDS = 86400;
-  private static readonly RECORD_IDEMPOTENCY_TTL_MILLISECONDS =
-    RedisUsageStorage.RECORD_IDEMPOTENCY_TTL_SECONDS * 1000;
-  private static readonly RECORD_IDEMPOTENCY_CACHE_MAX_ENTRIES = 10_000;
-  private static readonly RECORD_IDEMPOTENCY_CACHE_PRUNE_INTERVAL_MILLISECONDS = 60_000;
-  private static readonly MAX_BILLING_CYCLE_PARTITIONS = 1_200;
-  private static readonly MAX_PERIOD_PARTITIONS = 1_200;
-  private static readonly PARTITION_READ_CONCURRENCY = 16;
-  private static readonly RESET_SCAN_BATCH_SIZE = 500;
-  private static readonly RECORD_USAGE_SCRIPT = `
-local usageKey = KEYS[1]
-local dedupeKey = KEYS[2]
-local score = ARGV[1]
-local member = ARGV[2]
-local ttlSeconds = ARGV[3]
-
-if redis.call('EXISTS', dedupeKey) == 1 then
-  return { 0 }
-end
-
-redis.call('ZADD', usageKey, score, member)
-redis.call('SET', dedupeKey, '1', 'EX', ttlSeconds)
-
-return { 1 }
-`;
-  private static readonly SCAN_AND_DELETE_USAGE_KEYS_SCRIPT = `
-local cursor = ARGV[1]
-local pattern = ARGV[2]
-local count = tonumber(ARGV[3])
-local result = redis.call('SCAN', cursor, 'MATCH', pattern, 'COUNT', count)
-local nextCursor = result[1]
-local keys = result[2]
-
-if #keys > 0 then
-  redis.call('DEL', unpack(keys))
-end
-
-return { nextCursor, #keys }
-`;
-  // Redis remains the idempotency source of truth; this cache only short-circuits duplicate quota writes.
-  private readonly recordedRecordKeys = new Map<string, RecordedQuotaResult>();
-  private nextRecordIdempotencyCachePruneAt = 0;
-
-  private static readonly CHECK_AND_RECORD_WITHIN_QUOTA_SCRIPT = `
-local usageKey = KEYS[1]
-local dedupeKey = KEYS[2]
-local quota = tonumber(ARGV[1])
-local value = tonumber(ARGV[2])
-local score = tonumber(ARGV[3])
-local member = ARGV[4]
-local allowOverQuota = ARGV[5] == '1'
-local ttlSeconds = ${RedisUsageStorage.RECORD_IDEMPOTENCY_TTL_SECONDS}
-local maxSafeInteger = ${Number.MAX_SAFE_INTEGER}
-local recordedResult = redis.call('GET', dedupeKey)
-
-if recordedResult then
-  local recordedExceeded, wasRecorded, recordedUsage = string.match(recordedResult, '^quota:([01]):([01]):([1-9]%d*)$')
-  local recordedUsageNumber = recordedUsage and tonumber(recordedUsage) or nil
-  if recordedExceeded and wasRecorded and recordedUsageNumber then
-    if recordedUsageNumber < 0 or recordedUsageNumber % 1 ~= 0 or recordedUsageNumber > maxSafeInteger then
-      return redis.error_reply('Invalid stored quota result')
-    end
-    if recordedExceeded == '0' and wasRecorded == '0' then
-      return redis.error_reply('Invalid stored quota result')
-    end
-    if wasRecorded == '1' then
-      return { tonumber(recordedExceeded), recordedUsageNumber }
-    end
-  else
-    local legacyExceeded, legacyUsage = string.match(recordedResult, '^quota:([01]):([1-9]%d*)$')
-    local legacyUsageNumber = legacyUsage and tonumber(legacyUsage) or nil
-    if legacyExceeded and legacyUsageNumber then
-      if legacyUsageNumber < 0 or legacyUsageNumber % 1 ~= 0 or legacyUsageNumber > maxSafeInteger then
-        return redis.error_reply('Invalid stored quota result')
-      end
-      return { tonumber(legacyExceeded), legacyUsageNumber }
-    end
-    if recordedResult ~= '1' then
-      return redis.error_reply('Invalid stored quota result')
-    end
-  end
-end
-
+const LUA_URI_COMPONENT_DECODER = `
 -- URI components never contain raw colons, so extra fields are ambiguous legacy data.
 local function decodeComponent(component)
   if string.find(string.gsub(component, '%%[%x][%x]', ''), '%%') then
@@ -219,6 +75,203 @@ local function decodeComponent(component)
     end
   end
   return decoded
+end
+`;
+
+function trackedWriteArguments(
+  operationId: string,
+  writeGeneration?: number,
+): Array<string | number> {
+  if (writeGeneration === undefined) {
+    return [];
+  }
+  if (!Number.isSafeInteger(writeGeneration) || writeGeneration < 1) {
+    throw new RedisProblem("EVAL", "Usage write generation must be a positive safe integer");
+  }
+  return [`id.${encodeURIComponent(operationId)}`, writeGeneration];
+}
+
+/**
+ * Redis 기반 UsageStorage 구현체
+ *
+ * @description
+ * - Usage 데이터를 Redis Sorted Set에 저장
+ * - Usage 기록과 idempotency marker를 단일 Redis Lua script로 처리
+ */
+export class RedisUsageStorage implements UsageStorage {
+  readonly replayContract = "idempotent" as const;
+
+  private static readonly USAGE_KEY_NAMESPACE = "usage2";
+  private static readonly IDEM_KEY_NAMESPACE = "idem2";
+  private static readonly RECORD_IDEMPOTENCY_TTL_SECONDS = 86400;
+  private static readonly RECORD_IDEMPOTENCY_TTL_MILLISECONDS =
+    RedisUsageStorage.RECORD_IDEMPOTENCY_TTL_SECONDS * 1000;
+  private static readonly RECORD_IDEMPOTENCY_CACHE_MAX_ENTRIES = 10_000;
+  private static readonly RECORD_IDEMPOTENCY_CACHE_PRUNE_INTERVAL_MILLISECONDS = 60_000;
+  private static readonly MAX_BILLING_CYCLE_PARTITIONS = 1_200;
+  private static readonly MAX_PERIOD_PARTITIONS = 1_200;
+  private static readonly PARTITION_READ_CONCURRENCY = 16;
+  private static readonly RESET_SCAN_BATCH_SIZE = 500;
+  private static readonly TRACKED_DENIAL_PATTERN = "^quota:1:0:([1-9]%d*):(id%.[^:]*):([1-9]%d*)$";
+  private static readonly TRACKED_QUOTA_WRITE_PATTERN = "^quota:([01]):1:([1-9]%d*):(id%.[^:]*)$";
+  private static readonly TRACKED_WRITE_PATTERN = "^usage:recorded:(id%.[^:]*)$";
+  private static readonly RECORD_USAGE_SCRIPT = `
+${LUA_URI_COMPONENT_DECODER}
+local usageKey = KEYS[1]
+local dedupeKey = KEYS[2]
+local score = ARGV[1]
+local member = ARGV[2]
+local ttlSeconds = ARGV[3]
+local operationId = ARGV[4]
+local generation = tonumber(ARGV[5])
+local currentOperation = operationId and decodeComponent(string.sub(operationId, 4))
+
+local receipt = redis.call('GET', dedupeKey)
+if receipt then
+  if not generation then
+    return { 0 }
+  end
+  local _, quotaUsage, quotaOperation = string.match(receipt, '${RedisUsageStorage.TRACKED_QUOTA_WRITE_PATTERN}')
+  local recordedOperation = quotaOperation or string.match(receipt, '${RedisUsageStorage.TRACKED_WRITE_PATTERN}')
+  if quotaUsage and tonumber(quotaUsage) > ${Number.MAX_SAFE_INTEGER} then
+    return redis.error_reply('Invalid stored usage receipt')
+  end
+  if recordedOperation then
+    local recordedId = decodeComponent(string.sub(recordedOperation, 4))
+    if not recordedId then
+      return redis.error_reply('Invalid stored usage receipt')
+    end
+    if recordedId ~= currentOperation then
+      return redis.error_reply('Recorded usage belongs to a different operation')
+    end
+    return { 0 }
+  end
+  if receipt == '1' or string.match(receipt, '^quota:[01]:[1-9]%d*$') or
+    string.match(receipt, '^quota:[01]:1:[1-9]%d*$') then
+    return redis.error_reply('Legacy usage marker does not prove a recorded write')
+  end
+  local deniedUsage, deniedOperation, deniedGeneration =
+    string.match(receipt, '${RedisUsageStorage.TRACKED_DENIAL_PATTERN}')
+  if deniedGeneration then
+    local deniedId = decodeComponent(string.sub(deniedOperation, 4))
+    if not deniedId or tonumber(deniedUsage) > ${Number.MAX_SAFE_INTEGER} or tonumber(deniedGeneration) > ${Number.MAX_SAFE_INTEGER} then
+      return redis.error_reply('Invalid stored usage receipt')
+    end
+    if deniedId == currentOperation and generation <= tonumber(deniedGeneration) then
+      return redis.error_reply('Usage write attempt was denied by quota')
+    end
+  else
+    local legacyDenial = string.match(receipt, '^quota:1:0:([1-9]%d*)$')
+    if not legacyDenial or tonumber(legacyDenial) > ${Number.MAX_SAFE_INTEGER} then
+      return redis.error_reply('Invalid stored usage receipt')
+    end
+  end
+end
+
+redis.call('ZADD', usageKey, score, member)
+redis.call('SET', dedupeKey, generation and ('usage:recorded:' .. operationId) or '1', 'EX', ttlSeconds)
+
+return { 1 }
+`;
+  private static readonly SCAN_AND_DELETE_USAGE_KEYS_SCRIPT = `
+local cursor = ARGV[1]
+local pattern = ARGV[2]
+local count = tonumber(ARGV[3])
+local result = redis.call('SCAN', cursor, 'MATCH', pattern, 'COUNT', count)
+local nextCursor = result[1]
+local keys = result[2]
+
+if #keys > 0 then
+  redis.call('DEL', unpack(keys))
+end
+
+return { nextCursor, #keys }
+`;
+  // Redis remains the idempotency source of truth; this cache only short-circuits duplicate quota writes.
+  private readonly recordedRecordKeys = new Map<string, RecordedQuotaResult>();
+  private nextRecordIdempotencyCachePruneAt = 0;
+
+  private static readonly CHECK_AND_RECORD_WITHIN_QUOTA_SCRIPT = `
+${LUA_URI_COMPONENT_DECODER}
+local usageKey = KEYS[1]
+local dedupeKey = KEYS[2]
+local quota = tonumber(ARGV[1])
+local value = tonumber(ARGV[2])
+local score = tonumber(ARGV[3])
+local member = ARGV[4]
+local allowOverQuota = ARGV[5] == '1'
+local operationId = ARGV[6]
+local generation = tonumber(ARGV[7])
+local currentOperation = operationId and decodeComponent(string.sub(operationId, 4))
+local ttlSeconds = ${RedisUsageStorage.RECORD_IDEMPOTENCY_TTL_SECONDS}
+local maxSafeInteger = ${Number.MAX_SAFE_INTEGER}
+local recordedResult = redis.call('GET', dedupeKey)
+
+if recordedResult then
+  local trackedExceeded, trackedUsage, quotaOperation =
+    string.match(recordedResult, '${RedisUsageStorage.TRACKED_QUOTA_WRITE_PATTERN}')
+  local usageOperation = string.match(recordedResult, '${RedisUsageStorage.TRACKED_WRITE_PATTERN}')
+  local recordedOperation = quotaOperation or usageOperation
+  if recordedOperation then
+    local recordedId = decodeComponent(string.sub(recordedOperation, 4))
+    if not recordedId then
+      return redis.error_reply('Invalid stored quota result')
+    end
+    if generation and recordedId ~= currentOperation then
+      return redis.error_reply('Recorded usage belongs to a different operation')
+    end
+  end
+  if quotaOperation then
+    recordedResult = 'quota:' .. trackedExceeded .. ':1:' .. trackedUsage
+  elseif usageOperation then
+    recordedResult = 'usage:recorded'
+  end
+  local deniedUsage, deniedOperation, deniedGeneration =
+    string.match(recordedResult, '${RedisUsageStorage.TRACKED_DENIAL_PATTERN}')
+  if deniedGeneration then
+    local deniedId = decodeComponent(string.sub(deniedOperation, 4))
+    if not deniedId or tonumber(deniedUsage) > maxSafeInteger or tonumber(deniedGeneration) > maxSafeInteger then
+      return redis.error_reply('Invalid stored quota result')
+    end
+    if generation and deniedId == currentOperation and generation <= tonumber(deniedGeneration) then
+      return redis.error_reply('Usage write attempt was already denied by quota')
+    end
+    recordedResult = 'quota:1:0:' .. deniedUsage
+  end
+  local recordedExceeded, wasRecorded, recordedUsage = string.match(recordedResult, '^quota:([01]):([01]):([1-9]%d*)$')
+  local recordedUsageNumber = recordedUsage and tonumber(recordedUsage) or nil
+  if recordedExceeded and wasRecorded and recordedUsageNumber then
+    if recordedUsageNumber < 0 or recordedUsageNumber % 1 ~= 0 or recordedUsageNumber > maxSafeInteger then
+      return redis.error_reply('Invalid stored quota result')
+    end
+    if recordedExceeded == '0' and wasRecorded == '0' then
+      return redis.error_reply('Invalid stored quota result')
+    end
+    if wasRecorded == '1' then
+      if generation and not recordedOperation then
+        return redis.error_reply('Legacy usage marker does not prove a recorded write')
+      end
+      return { tonumber(recordedExceeded), recordedUsageNumber, 1 }
+    end
+  else
+    local legacyExceeded, legacyUsage = string.match(recordedResult, '^quota:([01]):([1-9]%d*)$')
+    local legacyUsageNumber = legacyUsage and tonumber(legacyUsage) or nil
+    if legacyExceeded and legacyUsageNumber then
+      if legacyUsageNumber < 0 or legacyUsageNumber % 1 ~= 0 or legacyUsageNumber > maxSafeInteger then
+        return redis.error_reply('Invalid stored quota result')
+      end
+      if generation then
+        return redis.error_reply('Legacy usage marker does not prove a recorded write')
+      end
+      return { tonumber(legacyExceeded), legacyUsageNumber, 1 }
+    end
+    if recordedResult == '1' and generation then
+      return redis.error_reply('Legacy usage marker does not prove a recorded write')
+    end
+    if recordedResult ~= '1' and recordedResult ~= 'usage:recorded' then
+      return redis.error_reply('Invalid stored quota result')
+    end
+  end
 end
 
 -- Isolate decoder settings from other scripts sharing Redis's Lua VM.
@@ -357,9 +410,9 @@ for index = 1, #records, 2 do
   end
 end
 
-if recordedResult == '1' then
+if recordedResult == '1' or recordedResult == 'usage:recorded' then
   local legacyExceeded = currentUsage > quota
-  return { legacyExceeded and 1 or 0, currentUsage }
+  return { legacyExceeded and 1 or 0, currentUsage, 1 }
 end
 
 local newUsage = currentUsage + value
@@ -376,12 +429,13 @@ end
 redis.call(
   'SET',
   dedupeKey,
-  'quota:' .. (exceeded and '1' or '0') .. ':' .. (shouldRecord and '1' or '0') .. ':' .. string.format('%.0f', newUsage),
+  'quota:' .. (exceeded and '1' or '0') .. ':' .. (shouldRecord and '1' or '0') .. ':' .. string.format('%.0f', newUsage) ..
+    (generation and (':' .. operationId .. (shouldRecord and '' or (':' .. ARGV[7]))) or ''),
   'EX',
   ttlSeconds
 )
 
-return { exceeded and 1 or 0, newUsage }
+return { exceeded and 1 or 0, newUsage, shouldRecord and 1 or 0 }
 `;
 
   constructor(private readonly redis: RedisClient) {}
@@ -409,7 +463,7 @@ return { exceeded and 1 or 0, newUsage }
     }
   }
 
-  async record(usage: UsageRecord): Promise<void> {
+  async record(usage: UsageRecord, writeGeneration?: number): Promise<void> {
     validateUsageValue(usage.value);
 
     const key = this.buildUsageKey(usage.tenantId, usage.meterId, usage.timestamp, "billing_cycle");
@@ -425,7 +479,12 @@ return { exceeded and 1 or 0, newUsage }
       this.redis.eval<[number]>(
         RedisUsageStorage.RECORD_USAGE_SCRIPT,
         [key, dedupeKey],
-        [score, member, RedisUsageStorage.RECORD_IDEMPOTENCY_TTL_SECONDS],
+        [
+          score,
+          member,
+          RedisUsageStorage.RECORD_IDEMPOTENCY_TTL_SECONDS,
+          ...trackedWriteArguments(usage.id, writeGeneration),
+        ],
       ),
     );
   }
@@ -438,6 +497,74 @@ return { exceeded and 1 or 0, newUsage }
       );
     } catch (error) {
       throw this.toRedisProblem("ZRANGEBYSCORE", error);
+    }
+  }
+
+  async readWriteReceipt(
+    identity: Pick<UsageRecord, "tenantId" | "meterId" | "idempotencyKey">,
+  ): Promise<UsageWriteReceipt | undefined> {
+    const key = this.buildRecordIdempotencyKey(
+      identity.tenantId,
+      identity.meterId,
+      identity.idempotencyKey,
+    );
+    const [receipt] = await this.runRedisOperation("EVAL", () =>
+      this.redis.eval<[string]>("return {redis.call('GET', KEYS[1]) or ''}", [key], []),
+    );
+    if (receipt === "" || receipt === "1") {
+      return undefined;
+    }
+    const trackedWrite = /^usage:recorded:(id\.[^:]*)$/.exec(receipt);
+    if (trackedWrite?.[1]) {
+      return { outcome: "recorded", operationId: this.decodeReceiptOperationId(trackedWrite[1]) };
+    }
+    const trackedQuotaWrite = /^quota:([01]):1:([1-9][0-9]*):(id\.[^:]*)$/.exec(receipt);
+    if (trackedQuotaWrite?.[3]) {
+      const newUsage = Number(trackedQuotaWrite[2]);
+      if (!Number.isSafeInteger(newUsage)) {
+        throw new RedisProblem("EVAL", "Invalid stored quota result");
+      }
+      return {
+        outcome: "recorded",
+        operationId: this.decodeReceiptOperationId(trackedQuotaWrite[3]),
+        quota: { exceeded: trackedQuotaWrite[1] === "1", newUsage },
+      };
+    }
+    const trackedDenial = /^quota:1:0:([1-9][0-9]*):(id\.[^:]*):([1-9][0-9]*)$/.exec(receipt);
+    if (trackedDenial) {
+      const [, total, operationId, generation] = trackedDenial;
+      if (
+        operationId &&
+        Number.isSafeInteger(Number(total)) &&
+        Number.isSafeInteger(Number(generation))
+      ) {
+        return {
+          outcome: "rejected",
+          operationId: this.decodeReceiptOperationId(operationId),
+          writeGeneration: Number(generation),
+        };
+      }
+      throw new RedisProblem("EVAL", "Invalid stored quota rejection");
+    }
+    const match = /^quota:([01]):(?:([01]):)?([1-9][0-9]*)$/.exec(receipt);
+    const newUsage = Number(match?.[3]);
+    if (!match || !Number.isSafeInteger(newUsage) || (match[1] === "0" && match[2] === "0")) {
+      throw new RedisProblem("EVAL", "Invalid stored quota result");
+    }
+    if (match[2] === "0") {
+      return { outcome: "rejected" };
+    }
+    if (match[2] === undefined && match[1] === "1") {
+      return undefined;
+    }
+    return { outcome: "recorded", quota: { exceeded: match[1] === "1", newUsage } };
+  }
+
+  private decodeReceiptOperationId(encoded: string): string {
+    try {
+      return decodeURIComponent(encoded.slice(3));
+    } catch (error) {
+      throw this.toRedisProblem("EVAL", error);
     }
   }
 
@@ -481,31 +608,42 @@ return { exceeded and 1 or 0, newUsage }
     );
     const score = options.usageRecord.timestamp.getTime();
     const member = this.serializeUsageMember(options.usageRecord);
-    const recordedResult = this.getRecordedQuotaResult(dedupeKey);
+    const trackedWrite = trackedWriteArguments(options.usageRecord.id, options.writeGeneration);
+    const recordedResult =
+      options.writeGeneration === undefined ? this.getRecordedQuotaResult(dedupeKey) : undefined;
     if (recordedResult) {
       return recordedResult;
     }
 
-    const [exceeded, newUsage] = await this.runRedisOperation("EVAL", () =>
-      this.redis.eval<[number, number]>(
+    const [exceeded, newUsage, recorded] = await this.runRedisOperation("EVAL", () =>
+      this.redis.eval<[number, number, number]>(
         RedisUsageStorage.CHECK_AND_RECORD_WITHIN_QUOTA_SCRIPT,
         [key, dedupeKey],
-        [options.quota, options.value, score, member, options.allowOverQuota ? 1 : 0],
+        [
+          options.quota,
+          options.value,
+          score,
+          member,
+          options.allowOverQuota ? 1 : 0,
+          ...trackedWrite,
+        ],
       ),
     );
 
-    this.rememberRecordIdempotencyKey(
-      dedupeKey,
-      {
-        exceeded: exceeded === 1,
-        newUsage,
-      },
-      exceeded !== 1 || options.allowOverQuota,
-    );
+    if (options.writeGeneration === undefined) {
+      this.rememberRecordIdempotencyKey(
+        dedupeKey,
+        { exceeded: exceeded === 1, newUsage },
+        exceeded !== 1 || options.allowOverQuota,
+      );
+    }
 
     return {
       exceeded: exceeded === 1,
       newUsage,
+      ...(options.resuming && options.writeGeneration !== undefined && recorded !== undefined
+        ? { recorded: recorded === 1 }
+        : {}),
     };
   }
 
@@ -874,6 +1012,10 @@ return { exceeded and 1 or 0, newUsage }
         return;
       }
     }
+  }
+
+  validateRecord(usage: UsageRecord): void {
+    this.serializeUsageMember(usage);
   }
 
   private serializeUsageMember(

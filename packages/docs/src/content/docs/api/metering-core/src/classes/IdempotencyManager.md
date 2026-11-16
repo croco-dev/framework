@@ -375,7 +375,7 @@ Idempotency key 확보 (없으면 생성)
 
 ### markMeteringPersistenceStarted()
 
-> **markMeteringPersistenceStarted**(`tenantId`, `meterId`, `idempotencyKey`, `token`): `Promise`\<`void`\>
+> **markMeteringPersistenceStarted**(`tenantId`, `meterId`, `idempotencyKey`, `token`, `usageRecord?`, `replaceRejectedRecord?`): `Promise`\<`void`\>
 
 #### Parameters
 
@@ -394,6 +394,14 @@ Idempotency key 확보 (없으면 생성)
 ##### token
 
 [`IdempotencyClaim`](/api/metering-core/src/type-aliases/idempotencyclaim/)
+
+##### usageRecord?
+
+`Omit`\<[`UsageRecord`](/api/metering-core/src/type-aliases/usagerecord/), `"timestamp"`\> & `object`
+
+##### replaceRejectedRecord?
+
+`boolean` = `false`
 
 #### Returns
 
@@ -459,7 +467,7 @@ Idempotency key 확보 (없으면 생성)
 
 ### releaseMeteringQuotaRejection()
 
-> **releaseMeteringQuotaRejection**(`tenantId`, `meterId`, `idempotencyKey`, `token`): `Promise`\<`void`\>
+> **releaseMeteringQuotaRejection**(`tenantId`, `meterId`, `idempotencyKey`, `token`, `unstagedRejection?`): `Promise`\<`void`\>
 
 #### Parameters
 
@@ -478,6 +486,10 @@ Idempotency key 확보 (없으면 생성)
 ##### token
 
 [`IdempotencyClaim`](/api/metering-core/src/type-aliases/idempotencyclaim/)
+
+##### unstagedRejection?
+
+[`PendingMeteringDelivery`](/api/metering-core/src/type-aliases/pendingmeteringdelivery/)
 
 #### Returns
 

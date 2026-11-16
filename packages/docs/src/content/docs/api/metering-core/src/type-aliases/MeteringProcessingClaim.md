@@ -21,6 +21,16 @@ title: "MeteringProcessingClaim"
 
 ---
 
+### persistence?
+
+> `optional` **persistence?**: `object`
+
+#### usageRecord?
+
+> `optional` **usageRecord?**: [`PendingMeteringDelivery`](/api/metering-core/src/type-aliases/pendingmeteringdelivery/)\[`"usageRecord"`\]
+
+---
+
 ### rejectedInput?
 
 > `optional` **rejectedInput?**: `Pick`\<[`UsageRecord`](/api/metering-core/src/type-aliases/usagerecord/), `"value"` \| `"eventId"` \| `"dimensions"` \| `"metadata"`\>
@@ -30,3 +40,9 @@ title: "MeteringProcessingClaim"
 ### token
 
 > **token**: [`IdempotencyClaim`](/api/metering-core/src/type-aliases/idempotencyclaim/)
+
+---
+
+### writeGeneration?
+
+> `optional` **writeGeneration?**: `number`

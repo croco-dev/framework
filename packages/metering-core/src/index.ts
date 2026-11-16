@@ -542,6 +542,7 @@ export type {
   AtomicQuotaCheckOptions,
   AtomicQuotaCheckResult,
   UsageStorage,
+  UsageWriteReceipt,
 } from "./libs/UsageStorage";
 export type { MeteredMetadata, MeteredOptions, MeteredRefOptions } from "./libs/decorators/Metered";
 export type {

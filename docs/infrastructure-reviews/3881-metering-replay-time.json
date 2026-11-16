@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "metering-core",
+      "classification": "durable-provider",
+      "reason": "Keep the original usage record in the Redis processing receipt before writing usage. A replacement writer recovers the original timestamp after a write and reads the usage storage receipt to distinguish completed writes from quota rejections.",
+      "files": {
+        "packages/metering-core/src/index.ts": "acebb21fa1f13840662e9d8242b2ed0c6742a261f9157ca217e1b852ae029943",
+        "packages/metering-core/src/libs/IdempotencyManager.ts": "c70383328e8099e35404b47382777901963f74b6c6c02015b99cf027f366a340",
+        "packages/metering-core/src/libs/MeteringService.ts": "872f60c95bdb505cd9694d83c5e4ec8c06ef3bd84860988ca50a93b09c5a40e1",
+        "packages/metering-core/src/libs/QuotaManager.ts": "cebd79c2fbac544bc6e09a219dcc4db9e48ad515c257e8ad8611e8f774f6b53d",
+        "packages/metering-core/src/libs/RedisUsageStorage.ts": "a8498bb8d9c21faf2e5b8f7a067e41aad8cfe1fce4664aeaeffe3d276800357d",
+        "packages/metering-core/src/libs/UsageStorage.ts": "6199ef7784ab43ccbe34f82b0988cfb7db7347756a2086cf54b34de247c384a3",
+        "packages/metering-core/src/libs/usageJson.ts": "5b723f3ba4c8c6fc742ad2efba1fc9b0afd7e121e96c4de5bc5615f603ed1150"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "unverified",
+          "reason": "Native Redis replay was exercised locally. Node Host execution on Kubernetes is unverified.",
+          "providers": ["@croco/metering-core/RedisUsageStorage", "@croco/metering-upstash"],
+          "constraints": [
+            "The application owns Redis connectivity and the processing lease. Coordinate metering writer versions when sharing a Redis keyspace."
+          ],
+          "references": [
+            "packages/metering-core/src/libs/IdempotencyManager.ts",
+            "packages/metering-core/src/tests/RedisMetering.integration.spec.ts",
+            "packages/metering-upstash/README.md"
+          ]
+        },
+        "aws-lambda": {
+          "result": "unverified",
+          "reason": "The existing metering provider and claim transitions apply without a Lambda-specific adapter. Lambda execution is unverified.",
+          "providers": ["@croco/metering-core/RedisUsageStorage", "@croco/metering-upstash"],
+          "constraints": [
+            "Await metering before invocation exit. A replacement invocation needs the same Redis keyspace and an available lease to resume the write."
+          ],
+          "references": [
+            "packages/metering-core/src/libs/IdempotencyManager.ts",
+            "packages/metering-core/src/tests/RedisMetering.integration.spec.ts",
+            "packages/metering-upstash/README.md"
+          ]
+        },
+        "cloudflare": {
+          "result": "unverified",
+          "reason": "This change does not establish Cloudflare Workers or Node Container metering support.",
+          "providers": ["@croco/metering-core/RedisUsageStorage", "@croco/metering-upstash"],
+          "constraints": [
+            "A Cloudflare host would require a compatible Redis client and a Redis service that supports the existing multi-key Lua operations."
+          ],
+          "references": [
+            "packages/metering-core/src/libs/IdempotencyManager.ts",
+            "packages/metering-core/src/tests/RedisMetering.integration.spec.ts",
+            "packages/metering-upstash/README.md"
+          ]
+        }
+      }
+    }
+  ]
+}

@@ -135,9 +135,27 @@ true: 새 키 (기록 가능), false: 중복 (기록 불가)
 
 ---
 
+### readWriteReceipt()?
+
+> `optional` **readWriteReceipt**(`identity`): `Promise`\<[`UsageWriteReceipt`](/api/metering-core/src/type-aliases/usagewritereceipt/) \| `undefined`\>
+
+Read a durable write outcome before resuming a staged usage record.
+
+#### Parameters
+
+##### identity
+
+`Pick`\<[`UsageRecord`](/api/metering-core/src/type-aliases/usagerecord/), `"tenantId"` \| `"meterId"` \| `"idempotencyKey"`\>
+
+#### Returns
+
+`Promise`\<[`UsageWriteReceipt`](/api/metering-core/src/type-aliases/usagewritereceipt/) \| `undefined`\>
+
+---
+
 ### record()
 
-> **record**(`usage`): `Promise`\<`void`\>
+> **record**(`usage`, `writeGeneration?`): `Promise`\<`void`\>
 
 Usage 기록 (즉시 flush)
 Redis Sorted Set에 저장
@@ -149,6 +167,10 @@ Redis Sorted Set에 저장
 ##### usage
 
 [`UsageRecord`](/api/metering-core/src/type-aliases/usagerecord/)
+
+##### writeGeneration?
+
+`number`
 
 #### Returns
 
@@ -180,3 +202,21 @@ Meter ID (optional, 없으면 해당 테넌트의 모든 meter 리셋)
 #### Returns
 
 `Promise`\<`void`\>
+
+---
+
+### validateRecord()?
+
+> `optional` **validateRecord**(`usage`): `void`
+
+Check storage-specific constraints before a metering attempt is staged.
+
+#### Parameters
+
+##### usage
+
+[`UsageRecord`](/api/metering-core/src/type-aliases/usagerecord/)
+
+#### Returns
+
+`void`

@@ -29475,6 +29475,11 @@
               "name": "UsageStorage",
               "exportKind": "named",
               "source": "./libs/UsageStorage"
+            },
+            {
+              "name": "UsageWriteReceipt",
+              "exportKind": "named",
+              "source": "./libs/UsageStorage"
             }
           ]
         }
