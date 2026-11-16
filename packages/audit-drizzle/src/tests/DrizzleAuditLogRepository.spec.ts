@@ -1,6 +1,7 @@
 import Database from "better-sqlite3";
 import { getTableColumns } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
+import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ProblemFactory } from "@croco/problems-core";
 import { createDrizzleProviderConformanceSuite } from "@croco/testing/drizzle";
@@ -67,6 +68,136 @@ describe("DrizzleAuditLogRepository", () => {
   });
 
   defineBigintAuditPersistenceTests(() => repository);
+
+  describe("custom column mappings", () => {
+    const renamed = sqliteTable("audit_logs", {
+      key: integer("id").primaryKey({ autoIncrement: true }),
+      tenant: text("tenant_id").notNull(),
+      actor: text("actor_id").notNull(),
+      operation: text("action").notNull(),
+      kind: text("resource_type").notNull(),
+      resource: text("resource_id").notNull(),
+      data: text("payload").notNull(),
+      changes: text("diff"),
+      context: text("metadata").notNull(),
+      time: integer("created_at", { mode: "timestamp" }).notNull(),
+    });
+    const schema = {
+      id: renamed.key,
+      tenantId: renamed.tenant,
+      actorId: renamed.actor,
+      action: renamed.operation,
+      resourceType: renamed.kind,
+      resourceId: renamed.resource,
+      payload: renamed.data,
+      diff: renamed.changes,
+      metadata: renamed.context,
+      createdAt: renamed.time,
+    };
+    const partial = sqliteTable("audit_logs", {
+      id: integer("id").primaryKey({ autoIncrement: true }),
+      tenantId: text("tenant_id").notNull(),
+      actorId: text("actor_id").notNull(),
+      action: text("action").notNull(),
+      resourceType: text("resource_type").notNull(),
+      resourceId: text("resource_id").notNull(),
+      payload: text("payload").notNull(),
+      diff: text("diff"),
+      attributes: text("metadata").notNull().default("{}"),
+      createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
+    });
+    const cases = [
+      { name: "all properties renamed", table: renamed, schema },
+      {
+        name: "only metadata renamed",
+        table: partial,
+        schema: { ...partial, metadata: partial.attributes },
+      },
+    ];
+    const input = {
+      tenantId: "tenant-custom",
+      actorId: "actor-custom",
+      action: "invoice.approve",
+      resourceType: "Invoice",
+      resourceId: "invoice-42",
+      payload: { amount: 314, note: "approved" },
+      diff: { status: { before: "draft", after: "approved" } },
+      metadata: { requestId: "request-7" },
+    };
+    const at = new Date("2026-02-03T04:05:06.000Z");
+
+    it.each(cases)("persists every mapped field with $name", async (config) => {
+      vi.useFakeTimers({ toFake: ["Date"] });
+      vi.setSystemTime(at);
+      const mapped = new DrizzleAuditLogRepository(db, txManager, config);
+      const created = await mapped.create(input);
+
+      expect(created).toEqual({ ...input, id: "1", createdAt: at });
+      expect(sqlite.prepare("SELECT * FROM audit_logs").get()).toEqual({
+        id: 1,
+        tenant_id: "tenant-custom",
+        actor_id: "actor-custom",
+        action: "invoice.approve",
+        resource_type: "Invoice",
+        resource_id: "invoice-42",
+        payload: JSON.stringify(input.payload),
+        diff: JSON.stringify(input.diff),
+        metadata: JSON.stringify(input.metadata),
+        created_at: at.getTime() / 1000,
+      });
+    });
+
+    it.each(cases)("reads existing rows through every query with $name", async (config) => {
+      sqlite
+        .prepare(`INSERT INTO audit_logs
+        (id, tenant_id, actor_id, action, resource_type, resource_id, payload, diff, metadata, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+        .run(
+          17,
+          input.tenantId,
+          input.actorId,
+          input.action,
+          input.resourceType,
+          input.resourceId,
+          JSON.stringify(input.payload),
+          null,
+          JSON.stringify(input.metadata),
+          at.getTime() / 1000,
+        );
+      await repository.create({ ...input, tenantId: "another-tenant" });
+      const mapped = new DrizzleAuditLogRepository(db, txManager, config);
+      const expected = [{ ...input, diff: null, id: "17", createdAt: at }];
+
+      expect(await mapped.find({ tenantId: input.tenantId })).toEqual(expected);
+      expect(await mapped.findByDateRange(input.tenantId, at, at)).toEqual(expected);
+      expect(await mapped.findByActor(input.tenantId, input.actorId)).toEqual(expected);
+      expect(
+        await mapped.findByResource(input.tenantId, input.resourceType, input.resourceId),
+      ).toEqual(expected);
+    });
+
+    it("rejects a mapping from another table before writing", () => {
+      expect(
+        () =>
+          new DrizzleAuditLogRepository(db, txManager, {
+            table: renamed,
+            schema: { ...schema, metadata: auditLogsSqlite.metadata },
+          }),
+      ).toThrow(expect.objectContaining({ code: "audit/invalid-column-mapping" }));
+      expect(sqlite.prepare("SELECT * FROM audit_logs").all()).toEqual([]);
+    });
+
+    it("rejects duplicate column mappings before writing", () => {
+      expect(
+        () =>
+          new DrizzleAuditLogRepository(db, txManager, {
+            table: renamed,
+            schema: { ...schema, metadata: renamed.data },
+          }),
+      ).toThrow(expect.objectContaining({ code: "audit/invalid-column-mapping" }));
+      expect(sqlite.prepare("SELECT * FROM audit_logs").all()).toEqual([]);
+    });
+  });
 
   describe("deterministic ordering", () => {
     const startDate = new Date("2026-01-01T00:00:00.000Z");

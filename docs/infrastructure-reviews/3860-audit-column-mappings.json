@@ -1,0 +1,100 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "audit-drizzle",
+      "classification": "durable-provider",
+      "reason": "Custom table property keys are resolved from the configured Drizzle column identities for both writes and reads; foreign and duplicate mappings fail before database access. No table schema or JSON encoding changes.",
+      "files": {
+        "packages/audit-drizzle/src/libs/DrizzleAuditLogRepository.ts": "852d879c4f88cf4395b53cf2abd75c5b53ed4aa17414600ce9f242a1f883a090"
+      },
+      "catalogRuntimes": ["node", "lambda"],
+      "profiles": {
+        "kubernetes": {
+          "result": "conditional",
+          "reason": "Reuse the existing Node Drizzle repository with the configured SQLite or PostgreSQL table and column objects.",
+          "providers": ["@croco/audit-drizzle", "@croco/tx-drizzle"],
+          "constraints": [
+            "The application owns database connections, table creation and transaction lifecycle; local database tests do not certify a Kubernetes deployment."
+          ],
+          "references": [
+            "packages/audit-drizzle/src/libs/DrizzleAuditLogRepository.ts",
+            "packages/audit-drizzle/src/tests/DrizzleAuditLogRepository.spec.ts",
+            "packages/audit-drizzle/src/tests/DrizzleAuditLogRepository.postgres.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "conditional",
+          "reason": "The same column mapping is used with the existing Lambda-compatible Drizzle database client.",
+          "providers": ["@croco/audit-drizzle", "@croco/tx-drizzle"],
+          "constraints": [
+            "The application must supply a supported database client and bound connection/transaction lifetime to the invocation; no AWS deployment is verified."
+          ],
+          "references": [
+            "packages/audit-drizzle/src/libs/DrizzleAuditLogRepository.ts",
+            "packages/audit-drizzle/src/libs/schema.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "unsupported",
+          "reason": "The existing audit-drizzle catalog declares Node and Lambda, without a Workers provider.",
+          "providers": ["@croco/audit-drizzle"],
+          "constraints": [
+            "This change adds no Workers binding or Node Container deployment profile."
+          ],
+          "references": [
+            "packages/audit-drizzle/src/libs/DrizzleAuditLogRepository.ts",
+            "docs/package-catalog.json"
+          ]
+        }
+      }
+    },
+    {
+      "package": "problems-core",
+      "classification": "pure-contract",
+      "reason": "Canonical generation exposes the new audit/invalid-column-mapping diagnostic and refreshes source locations for the existing audit insert failure.",
+      "files": {
+        "packages/problems-core/src/generated/problem-code-registry.ts": "7727cc72ad9a3d85203fc5afeeecd77f2295e35b938193293216cb20ddecff04"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The generated registry describes the audit configuration error without depending on the Node Host or Kubernetes.",
+          "providers": [],
+          "constraints": [
+            "Generated Problem metadata only; no host capability, persistence or lifecycle behavior changes."
+          ],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "scripts/problem-registry.mts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The generated registry has no Lambda invocation or database lifecycle dependency.",
+          "providers": [],
+          "constraints": [
+            "Generated Problem metadata only; no host capability, persistence or lifecycle behavior changes."
+          ],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "scripts/problem-registry.mts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The generated registry requires no Workers bindings or Node Container host.",
+          "providers": [],
+          "constraints": [
+            "Generated Problem metadata only; no host capability, persistence or lifecycle behavior changes."
+          ],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "scripts/problem-registry.mts"
+          ]
+        }
+      }
+    }
+  ]
+}

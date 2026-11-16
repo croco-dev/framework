@@ -10,6 +10,7 @@ import {
   desc,
   eq,
   gte,
+  getTableColumns,
   lte,
   type SQL,
   type Table,
@@ -83,6 +84,7 @@ export type DrizzleAuditLogRepositoryConfig = {
 export class DrizzleAuditLogRepository extends AuditLogRepository {
   private readonly table: unknown;
   private readonly schema: AuditLogTable;
+  private readonly columnKeys: Record<keyof AuditLogTable, string>;
   private readonly serializeJson: (value: unknown) => string;
   private readonly deserializeJson: (value: string) => unknown;
 
@@ -96,7 +98,36 @@ export class DrizzleAuditLogRepository extends AuditLogRepository {
   ) {
     super();
     this.table = config.table;
-    this.schema = config.schema;
+    this.schema = { ...config.schema };
+    const columns = Object.entries(getTableColumns(this.table as Table));
+    const schemaKeys = [
+      "id",
+      "tenantId",
+      "actorId",
+      "action",
+      "resourceType",
+      "resourceId",
+      "payload",
+      "diff",
+      "metadata",
+      "createdAt",
+    ] as const satisfies readonly (keyof AuditLogTable)[];
+    const mappedKeys = new Set<string>();
+    this.columnKeys = Object.fromEntries(
+      schemaKeys.map((schemaKey) => {
+        const key = columns.find(([, column]) => column === this.schema[schemaKey])?.[0];
+        if (key === undefined || mappedKeys.has(key)) {
+          throw ProblemFactory.invalidArgument(
+            "audit/invalid-column-mapping",
+            key === undefined
+              ? `schema.${schemaKey} must reference a column of table`
+              : `schema.${schemaKey} must reference a distinct column of table`,
+          );
+        }
+        mappedKeys.add(key);
+        return [schemaKey, key];
+      }),
+    ) as Record<keyof AuditLogTable, string>;
     this.serializeJson = config.serializeJson ?? JSON.stringify;
     this.deserializeJson = config.deserializeJson ?? JSON.parse;
   }
@@ -113,15 +144,16 @@ export class DrizzleAuditLogRepository extends AuditLogRepository {
     const now = new Date();
 
     const values = {
-      tenantId: entry.tenantId,
-      actorId: entry.actorId,
-      action: entry.action,
-      resourceType: entry.resourceType,
-      resourceId: entry.resourceId,
-      payload: this.encodeJsonColumn(entry.payload, this.schema.payload),
-      diff: entry.diff === null ? null : this.encodeJsonColumn(entry.diff, this.schema.diff),
-      metadata: this.encodeJsonColumn(entry.metadata, this.schema.metadata),
-      createdAt: now,
+      [this.columnKeys.tenantId]: entry.tenantId,
+      [this.columnKeys.actorId]: entry.actorId,
+      [this.columnKeys.action]: entry.action,
+      [this.columnKeys.resourceType]: entry.resourceType,
+      [this.columnKeys.resourceId]: entry.resourceId,
+      [this.columnKeys.payload]: this.encodeJsonColumn(entry.payload, this.schema.payload),
+      [this.columnKeys.diff]:
+        entry.diff === null ? null : this.encodeJsonColumn(entry.diff, this.schema.diff),
+      [this.columnKeys.metadata]: this.encodeJsonColumn(entry.metadata, this.schema.metadata),
+      [this.columnKeys.createdAt]: now,
     };
 
     const [inserted] = await client
@@ -271,20 +303,22 @@ export class DrizzleAuditLogRepository extends AuditLogRepository {
   }
 
   private mapToEntry(raw: Record<string, unknown>): AuditLogEntry {
+    const keys = this.columnKeys;
+    const createdAt = raw[keys.createdAt];
     return {
-      id: String(raw.id),
-      tenantId: String(raw.tenantId),
-      actorId: String(raw.actorId),
-      action: String(raw.action),
-      resourceType: String(raw.resourceType),
-      resourceId: String(raw.resourceId),
-      payload: this.decodeJsonColumn(raw.payload) as Record<string, unknown>,
+      id: String(raw[keys.id]),
+      tenantId: String(raw[keys.tenantId]),
+      actorId: String(raw[keys.actorId]),
+      action: String(raw[keys.action]),
+      resourceType: String(raw[keys.resourceType]),
+      resourceId: String(raw[keys.resourceId]),
+      payload: this.decodeJsonColumn(raw[keys.payload]) as Record<string, unknown>,
       diff:
-        raw.diff === null || raw.diff === undefined
+        raw[keys.diff] === null || raw[keys.diff] === undefined
           ? null
-          : (this.decodeJsonColumn(raw.diff) as Record<string, unknown>),
-      metadata: this.decodeJsonColumn(raw.metadata) as Record<string, unknown>,
-      createdAt: raw.createdAt instanceof Date ? raw.createdAt : new Date(String(raw.createdAt)),
+          : (this.decodeJsonColumn(raw[keys.diff]) as Record<string, unknown>),
+      metadata: this.decodeJsonColumn(raw[keys.metadata]) as Record<string, unknown>,
+      createdAt: createdAt instanceof Date ? createdAt : new Date(String(createdAt)),
     };
   }
 }

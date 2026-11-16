@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { TxManager } from "@croco/tx-core";
 import { createDrizzleTxAdapter } from "@croco/tx-drizzle";
 import { drizzle } from "drizzle-orm/node-postgres";
+import { jsonb, pgTable, text, timestamp as pgTimestamp, uuid } from "drizzle-orm/pg-core";
 import { Client } from "pg";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { DrizzleAuditLogRepository } from "../libs/DrizzleAuditLogRepository";
@@ -75,6 +76,106 @@ describe.skipIf(connectionString.length === 0)(
     });
 
     defineBigintAuditPersistenceTests(() => repository);
+
+    it("preserves custom column mappings through PostgreSQL JSONB writes and every read", async () => {
+      const table = pgTable("audit_logs", {
+        key: uuid("id").defaultRandom().primaryKey(),
+        tenant: text("tenant_id").notNull(),
+        actor: text("actor_id").notNull(),
+        operation: text("action").notNull(),
+        kind: text("resource_type").notNull(),
+        resource: text("resource_id").notNull(),
+        data: jsonb("payload").notNull(),
+        changes: jsonb("diff"),
+        context: jsonb("metadata").notNull(),
+        time: pgTimestamp("created_at").notNull(),
+      });
+      const db = drizzle(client);
+      const mapped = new DrizzleAuditLogRepository(
+        db,
+        new TxManager<DrizzleAuditDatabase>(createDrizzleTxAdapter(db)),
+        {
+          table,
+          schema: {
+            id: table.key,
+            tenantId: table.tenant,
+            actorId: table.actor,
+            action: table.operation,
+            resourceType: table.kind,
+            resourceId: table.resource,
+            payload: table.data,
+            diff: table.changes,
+            metadata: table.context,
+            createdAt: table.time,
+          },
+        },
+      );
+      const input = {
+        tenantId: "tenant-custom",
+        actorId: "actor-custom",
+        action: "invoice.approve",
+        resourceType: "Invoice",
+        resourceId: "invoice-42",
+        payload: { amount: 314 },
+        diff: { status: { before: "draft", after: "approved" } },
+        metadata: { requestId: "request-7" },
+      };
+      const created = await mapped.create(input);
+      expect(created).toEqual({ ...input, id: expect.any(String), createdAt: expect.any(Date) });
+      expect(created.id).toMatch(/^[0-9a-f-]{36}$/);
+      expect(Number.isFinite(created.createdAt.getTime())).toBe(true);
+      const stored = await client.query(
+        `SELECT id, tenant_id, actor_id, action, resource_type, resource_id, payload, diff, metadata,
+           to_char(created_at, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS created_at
+         FROM audit_logs WHERE tenant_id = $1`,
+        [input.tenantId],
+      );
+      expect(stored.rows).toEqual([
+        {
+          id: created.id,
+          tenant_id: input.tenantId,
+          actor_id: input.actorId,
+          action: input.action,
+          resource_type: input.resourceType,
+          resource_id: input.resourceId,
+          payload: input.payload,
+          diff: input.diff,
+          metadata: input.metadata,
+          created_at: created.createdAt.toISOString(),
+        },
+      ]);
+      // A native SQL insert checks decoding independently of the repository's writer.
+      const existingId = "00000000-0000-4000-8000-000000000099";
+      await client.query(
+        `INSERT INTO audit_logs
+        (id, tenant_id, actor_id, action, resource_type, resource_id, payload, diff, metadata, created_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, NULL, $8, $9)`,
+        [
+          existingId,
+          input.tenantId,
+          input.actorId,
+          input.action,
+          input.resourceType,
+          input.resourceId,
+          input.payload,
+          input.metadata,
+          startDate.toISOString(),
+        ],
+      );
+      const expected = [created, { ...input, id: existingId, diff: null, createdAt: startDate }];
+      expect(await mapped.find({ tenantId: input.tenantId })).toEqual(expected);
+      expect(
+        await mapped.findByDateRange(
+          input.tenantId,
+          startDate,
+          new Date(created.createdAt.getTime() + 1000),
+        ),
+      ).toEqual(expected);
+      expect(await mapped.findByActor(input.tenantId, input.actorId)).toEqual(expected);
+      expect(
+        await mapped.findByResource(input.tenantId, input.resourceType, input.resourceId),
+      ).toEqual(expected);
+    });
 
     const queries = [
       {
