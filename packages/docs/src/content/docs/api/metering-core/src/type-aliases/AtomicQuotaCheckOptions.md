@@ -33,6 +33,14 @@ title: "AtomicQuotaCheckOptions"
 
 ---
 
+### resuming?
+
+> `optional` **resuming?**: `true`
+
+Ask the provider to report the stored disposition on a persistence replay.
+
+---
+
 ### tenantId
 
 > **tenantId**: `string`
@@ -48,3 +56,9 @@ title: "AtomicQuotaCheckOptions"
 ### value
 
 > **value**: `number`
+
+---
+
+### writeGeneration?
+
+> `optional` **writeGeneration?**: `number`

@@ -20,6 +20,8 @@ export type PendingMeteringDelivery = {
 export type MeteringProcessingClaim = {
   delivery?: PendingMeteringDelivery;
   operationId: string;
+  writeGeneration?: number;
+  persistence?: { usageRecord?: PendingMeteringDelivery["usageRecord"] };
   rejectedInput?: Pick<UsageRecord, "value" | "eventId" | "dimensions" | "metadata">;
   token: IdempotencyClaim;
 };
@@ -178,9 +180,15 @@ export class IdempotencyManager {
     const legacyKey = this.buildKey(tenantId, meterId, idempotencyKey);
     const token = ulid() as IdempotencyClaim;
     const operationId = ulid();
-    const [claimed, deliveryJson, claimedOperationId, rejectedDeliveryJson] = await this.redis.eval<
-      [number, string, string, string]
-    >(
+    const [
+      claimed,
+      deliveryJson,
+      claimedOperationId,
+      rejectedDeliveryJson,
+      persistenceStarted,
+      usageRecordJson,
+      writeGeneration,
+    ] = await this.redis.eval<[number, string, string, string, number, string, number]>(
       `
         local time = redis.call('TIME')
         local now = tonumber(time[1]) * 1000 + math.floor(tonumber(time[2]) / 1000)
@@ -190,7 +198,7 @@ export class IdempotencyManager {
           local legacyStatus = redis.call('GET', KEYS[2])
           if legacyStatus == ARGV[6] or legacyStatus == ARGV[8] or
             (legacyStatus and string.sub(legacyStatus, 1, string.len(ARGV[5])) == ARGV[5]) then
-            return { 0, '', '', '' }
+            return { 0, '', '', '', 0, '', 0 }
           end
 
           local state = {
@@ -203,7 +211,7 @@ export class IdempotencyManager {
           if not legacyStatus then
             redis.call('SET', KEYS[2], ARGV[7], 'EX', ARGV[3])
           end
-          return { 1, '', state.operationId, '' }
+          return { 1, '', state.operationId, '', 0, '', 0 }
         end
 
         local state = cjson.decode(stateJson)
@@ -217,10 +225,13 @@ export class IdempotencyManager {
           state.leaseExpiresAt = now + tonumber(ARGV[2])
           redis.call('SET', KEYS[1], cjson.encode(state), 'EX', ARGV[3])
           redis.call('SET', KEYS[2], ARGV[7], 'EX', ARGV[3])
-          return { 1, hasDelivery and state.delivery or '', state.operationId, state.rejectedDelivery or '' }
+          return {
+            1, hasDelivery and state.delivery or '', state.operationId, state.rejectedDelivery or '',
+            state.persistenceStarted and 1 or 0, state.usageRecord or '', state.writeGeneration or 0
+          }
         end
 
-        return { 0, '', '', '' }
+        return { 0, '', '', '', 0, '', 0 }
       `,
       [key, legacyKey],
       [
@@ -238,6 +249,18 @@ export class IdempotencyManager {
     if (claimed !== 1) {
       throw new DuplicateRecordProblem(idempotencyKey);
     }
+    if (
+      (persistenceStarted !== 0 && persistenceStarted !== 1) ||
+      typeof usageRecordJson !== "string" ||
+      !Number.isSafeInteger(writeGeneration) ||
+      writeGeneration < 0
+    ) {
+      throw new MeteringTransitionProblem(
+        "claim-processing",
+        "INVALID_PERSISTENCE_RECEIPT",
+        idempotencyKey,
+      );
+    }
 
     const rejectedRecord =
       rejectedDeliveryJson.length === 0
@@ -246,11 +269,20 @@ export class IdempotencyManager {
 
     return {
       operationId: claimedOperationId,
+      writeGeneration,
       token,
       delivery:
         deliveryJson.length === 0
           ? undefined
           : (JSON.parse(deliveryJson) as PendingMeteringDelivery),
+      persistence:
+        persistenceStarted === 1
+          ? {
+              usageRecord: usageRecordJson
+                ? (JSON.parse(usageRecordJson) as PendingMeteringDelivery["usageRecord"])
+                : undefined,
+            }
+          : undefined,
       rejectedInput: rejectedRecord && {
         value: rejectedRecord.value,
         eventId: rejectedRecord.eventId,
@@ -322,6 +354,8 @@ export class IdempotencyManager {
     meterId: string,
     idempotencyKey: string,
     token: IdempotencyClaim,
+    usageRecord?: PendingMeteringDelivery["usageRecord"],
+    replaceRejectedRecord = false,
   ): Promise<void> {
     const key = this.buildDeliveryKey(tenantId, meterId, idempotencyKey);
     const [transitioned, reason] = await this.redis.eval<[number, string]>(
@@ -342,13 +376,25 @@ export class IdempotencyManager {
 
         local time = redis.call('TIME')
         local now = tonumber(time[1]) * 1000 + math.floor(tonumber(time[2]) / 1000)
-        state.persistenceStarted = true
+        if not state.persistenceStarted or (ARGV[5] == '1' and state.usageRecord) then
+          state.persistenceStarted = true
+          state.writeGeneration = (state.writeGeneration or 0) + 1
+          if ARGV[4] ~= '' then
+            state.usageRecord = ARGV[4]
+          end
+        end
         state.leaseExpiresAt = now + tonumber(ARGV[2])
         redis.call('SET', KEYS[1], cjson.encode(state), 'EX', ARGV[3])
         return { 1, 'OK' }
       `,
       [key],
-      [token, this.processingLeaseMilliseconds, this.activeStateTtlSeconds],
+      [
+        token,
+        this.processingLeaseMilliseconds,
+        this.activeStateTtlSeconds,
+        usageRecord === undefined ? "" : JSON.stringify(usageRecord),
+        replaceRejectedRecord ? "1" : "0",
+      ],
     );
     this.requireStagedTransition(transitioned, reason, idempotencyKey, "mark-persistence-started");
   }
@@ -380,6 +426,7 @@ export class IdempotencyManager {
         local now = tonumber(time[1]) * 1000 + math.floor(tonumber(time[2]) / 1000)
         state.status = 'PUBLISHING'
         state.delivery = ARGV[2]
+        state.usageRecord = nil
         state.leaseExpiresAt = now + tonumber(ARGV[3])
         redis.call('SET', KEYS[1], cjson.encode(state), 'EX', ARGV[4])
         return { 1, 'OK' }
@@ -470,6 +517,7 @@ export class IdempotencyManager {
     meterId: string,
     idempotencyKey: string,
     token: IdempotencyClaim,
+    unstagedRejection?: PendingMeteringDelivery,
   ): Promise<void> {
     const key = this.buildDeliveryKey(tenantId, meterId, idempotencyKey);
     const [transitioned, reason] = await this.redis.eval<[number, string]>(
@@ -480,27 +528,33 @@ export class IdempotencyManager {
         end
 
         local state = cjson.decode(stateJson)
-        if state.status ~= 'PUBLISHING' then
+        local expectedStatus = ARGV[3] ~= '' and 'PROCESSING' or 'PUBLISHING'
+        if state.status ~= expectedStatus then
           return { 0, 'STATUS:' .. tostring(state.status) }
         end
         if state.token ~= ARGV[1] then
           return { 0, 'TOKEN' }
         end
 
-        if not state.delivery then
+        if not state.delivery and ARGV[3] == '' then
           return { 0, 'DELIVERY' }
         end
-        state.rejectedDelivery = state.delivery
+        state.rejectedDelivery = state.delivery or ARGV[3]
         state.status = 'PROCESSING'
         state.delivery = nil
         state.persistenceStarted = nil
+        state.usageRecord = nil
         state.token = nil
         state.leaseExpiresAt = 0
         redis.call('SET', KEYS[1], cjson.encode(state), 'EX', ARGV[2])
         return { 1, 'OK' }
       `,
       [key],
-      [token, this.activeStateTtlSeconds],
+      [
+        token,
+        this.activeStateTtlSeconds,
+        unstagedRejection ? JSON.stringify(unstagedRejection) : "",
+      ],
     );
     this.requireStagedTransition(transitioned, reason, idempotencyKey, "release-quota-rejection");
   }

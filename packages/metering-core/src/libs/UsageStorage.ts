@@ -7,12 +7,21 @@ export type AtomicQuotaCheckOptions = {
   quota: number;
   allowOverQuota: boolean;
   usageRecord: UsageRecord;
+  /** Ask the provider to report the stored disposition on a persistence replay. */
+  resuming?: true;
+  writeGeneration?: number;
 };
 
 export type AtomicQuotaCheckResult = {
   exceeded: boolean;
   newUsage: number;
+  /** When known, the actual disposition of this idempotency key, including replays. */
+  recorded?: boolean;
 };
+
+export type UsageWriteReceipt =
+  | { outcome: "recorded"; operationId?: string; quota?: AtomicQuotaCheckResult }
+  | { outcome: "rejected"; operationId?: string; writeGeneration?: number };
 
 /**
  * Redis 기반 실시간 Usage 저장소 인터페이스
@@ -27,13 +36,21 @@ export interface UsageStorage {
    */
   readonly replayContract: "idempotent";
 
+  /** Check storage-specific constraints before a metering attempt is staged. */
+  validateRecord?(usage: UsageRecord): void;
+
   /**
    * Usage 기록 (즉시 flush)
    * Redis Sorted Set에 저장
    *
    * 동일한 tenantId, meterId, idempotencyKey 조합의 재시도는 사용량을 중복 기록하지 않아야 합니다.
    */
-  record(usage: UsageRecord): Promise<void>;
+  record(usage: UsageRecord, writeGeneration?: number): Promise<void>;
+
+  /** Read a durable write outcome before resuming a staged usage record. */
+  readWriteReceipt?(
+    identity: Pick<UsageRecord, "tenantId" | "meterId" | "idempotencyKey">,
+  ): Promise<UsageWriteReceipt | undefined>;
 
   /**
    * Usage 조회 (특정 기간 합산)

@@ -13,11 +13,14 @@ export type QuotaCheckAndRecordOptions = {
   quota: number;
   allowOverQuota: boolean;
   usageRecord: UsageRecord;
+  resuming?: true;
+  writeGeneration?: number;
 };
 
 export type QuotaCheckAndRecordResult = {
   exceeded: boolean;
   newUsage: number;
+  recorded?: boolean;
 };
 
 export class QuotaManager {
@@ -36,6 +39,7 @@ export class QuotaManager {
     return {
       exceeded: result.exceeded,
       newUsage: result.newUsage,
+      ...(result.recorded === undefined ? {} : { recorded: result.recorded }),
     };
   }
 

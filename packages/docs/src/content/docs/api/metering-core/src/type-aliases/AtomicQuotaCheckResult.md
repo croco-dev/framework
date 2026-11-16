@@ -24,3 +24,11 @@ title: "AtomicQuotaCheckResult"
 ### newUsage
 
 > **newUsage**: `number`
+
+---
+
+### recorded?
+
+> `optional` **recorded?**: `boolean`
+
+When known, the actual disposition of this idempotency key, including replays.

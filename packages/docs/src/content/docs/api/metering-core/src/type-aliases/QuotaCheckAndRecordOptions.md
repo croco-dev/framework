@@ -33,6 +33,12 @@ Quota 검증 및 기록 작업의 옵션과 결과를 정의합니다.
 
 ---
 
+### resuming?
+
+> `optional` **resuming?**: `true`
+
+---
+
 ### tenantId
 
 > **tenantId**: `string`
@@ -48,3 +54,9 @@ Quota 검증 및 기록 작업의 옵션과 결과를 정의합니다.
 ### value
 
 > **value**: `number`
+
+---
+
+### writeGeneration?
+
+> `optional` **writeGeneration?**: `number`

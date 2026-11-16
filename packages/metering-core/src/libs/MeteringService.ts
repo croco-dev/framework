@@ -23,9 +23,12 @@ import type { MeterRegistry } from "./MeterRegistry";
 import { BillableUsageJournalRequiredProblem } from "./problems/BillableUsageJournalRequiredProblem";
 import { DuplicateRecordProblem } from "./problems/DuplicateRecordProblem";
 import { InvalidUsageEnvelopeProblem } from "./problems/InvalidUsageEnvelopeProblem";
+import { MeteringTransitionProblem } from "./problems/MeteringTransitionProblem";
+import { RedisProblem } from "./problems/RedisProblem";
 import { QuotaManager } from "./QuotaManager";
 import type { MeterDefinition, RecordOptions, UsageQueryOptions, UsageRecord } from "./types";
-import type { UsageStorage } from "./UsageStorage";
+import type { UsageStorage, UsageWriteReceipt } from "./UsageStorage";
+import { stableStringify } from "./usageJson";
 import { validateUsageValue } from "./validateUsageValue";
 
 export type MeteringServiceOptions = {
@@ -36,24 +39,121 @@ export type MeteringServiceOptions = {
 };
 
 type BillableMeterDescriptor = Pick<MeterRef, "aggregation" | "billing" | "unit">;
+type BillableUsageIntent = { journal: BillableUsageJournal; event: BillableUsageEvent };
+type UsageInput = Pick<UsageRecord, "value" | "eventId" | "dimensions" | "metadata">;
 
-function stableStringify(value: unknown): string {
-  return JSON.stringify(value, (_key, nestedValue: unknown) => {
-    if (nestedValue === null || typeof nestedValue !== "object" || Array.isArray(nestedValue)) {
-      return nestedValue;
+function normalizeUsageInput(input: UsageInput): UsageInput {
+  try {
+    const { metadata, ...normalized } = JSON.parse(JSON.stringify(input)) as Omit<
+      UsageInput,
+      "metadata"
+    > & { metadata?: unknown };
+    if (
+      metadata !== undefined &&
+      (metadata === null || typeof metadata !== "object" || Array.isArray(metadata))
+    ) {
+      throw new RedisProblem("SERIALIZE", "Usage metadata must serialize to a JSON object");
     }
-
-    const prototype = Object.getPrototypeOf(nestedValue);
-    if (prototype !== Object.prototype && prototype !== null) {
-      return nestedValue;
+    return { ...normalized, metadata: metadata as UsageInput["metadata"] };
+  } catch (error) {
+    if (error instanceof RedisProblem) {
+      throw error;
     }
+    throw new RedisProblem("SERIALIZE", error instanceof Error ? error : String(error));
+  }
+}
 
-    return Object.fromEntries(
-      Object.entries(nestedValue as Record<string, unknown>).sort(([left], [right]) =>
-        left < right ? -1 : left > right ? 1 : 0,
-      ),
+function restoreUsageRecord(record: PendingMeteringDelivery["usageRecord"]): UsageRecord {
+  const { timestamp, eventId, dimensions, metadata, ...identity } = record;
+  return { ...identity, timestamp: new Date(timestamp), eventId, dimensions, metadata };
+}
+
+function hasSharedBacking(value: unknown, seen = new WeakSet<object>()): boolean {
+  if (value === null || typeof value !== "object" || seen.has(value)) {
+    return false;
+  }
+  seen.add(value);
+  if (typeof SharedArrayBuffer === "function" && value instanceof SharedArrayBuffer) {
+    return true;
+  }
+  if (ArrayBuffer.isView(value)) {
+    return hasSharedBacking(value.buffer, seen);
+  }
+  if (typeof WebAssembly === "object" && value instanceof WebAssembly.Memory) {
+    return hasSharedBacking(value.buffer, seen);
+  }
+  if (value instanceof Map) {
+    return Array.from(value).some(
+      ([key, entry]) => hasSharedBacking(key, seen) || hasSharedBacking(entry, seen),
+    );
+  }
+  if (value instanceof Set) {
+    return Array.from(value).some((entry) => hasSharedBacking(entry, seen));
+  }
+  return Reflect.ownKeys(value).some((key) => {
+    const descriptor = Object.getOwnPropertyDescriptor(value, key);
+    return (
+      descriptor !== undefined && "value" in descriptor && hasSharedBacking(descriptor.value, seen)
     );
   });
+}
+
+function restoreBufferTypes(
+  original: unknown,
+  snapshot: unknown,
+  seen = new WeakSet<object>(),
+): void {
+  if (
+    original === null ||
+    typeof original !== "object" ||
+    snapshot === null ||
+    typeof snapshot !== "object" ||
+    seen.has(snapshot)
+  ) {
+    return;
+  }
+  seen.add(snapshot);
+  if (Buffer.isBuffer(original) && snapshot instanceof Uint8Array) {
+    Object.setPrototypeOf(snapshot, Buffer.prototype);
+  } else if (original instanceof Map && snapshot instanceof Map) {
+    const originalEntries = original.entries();
+    for (const [key, entry] of snapshot) {
+      const originalEntry = originalEntries.next().value;
+      restoreBufferTypes(originalEntry?.[0], key, seen);
+      restoreBufferTypes(originalEntry?.[1], entry, seen);
+    }
+  } else if (original instanceof Set && snapshot instanceof Set) {
+    const originalEntries = original.values();
+    for (const entry of snapshot) {
+      restoreBufferTypes(originalEntries.next().value, entry, seen);
+    }
+  } else if (!ArrayBuffer.isView(snapshot)) {
+    for (const key of Reflect.ownKeys(snapshot)) {
+      const before = Object.getOwnPropertyDescriptor(original, key);
+      const after = Object.getOwnPropertyDescriptor(snapshot, key);
+      if (before && "value" in before && after && "value" in after) {
+        restoreBufferTypes(before.value, after.value, seen);
+      }
+    }
+  }
+}
+
+function snapshotLiveInput(input: UsageInput, normalized: UsageInput): UsageInput {
+  try {
+    const snapshot = structuredClone(input);
+    if (hasSharedBacking(snapshot)) {
+      return normalized;
+    }
+    if (typeof Buffer !== "undefined") {
+      restoreBufferTypes(input, snapshot);
+    }
+    return stableStringify(normalizeUsageInput(snapshot)) === stableStringify(normalized)
+      ? snapshot
+      : normalized;
+  } catch {
+    // JSON is the durable representation for values without an equivalent detached live shape.
+    return normalized;
+  }
 }
 
 /**
@@ -155,47 +255,116 @@ export class MeteringService {
       idempotencyKey,
     );
     let publishingClaimed = claim.delivery !== undefined;
-    let persistenceStarted = claim.delivery !== undefined;
+    let persistenceStarted = claim.delivery !== undefined || claim.persistence !== undefined;
     let claimSettled = false;
+    let unstagedRejection: PendingMeteringDelivery | undefined;
+    let liveRecord: PendingMeteringDelivery["usageRecord"] | undefined;
 
     try {
       let delivery = claim.delivery;
       if (!delivery) {
+        const originalRecord = claim.persistence?.usageRecord;
+        if (claim.persistence && !originalRecord) {
+          throw new MeteringTransitionProblem(
+            "resume-persistence",
+            "USAGE_RECORD_UNAVAILABLE",
+            idempotencyKey,
+          );
+        }
+        const meter = await this.meterRegistry.getOrThrow(tenantId, meterId);
+        const input = {
+          value,
+          eventId: options.eventId,
+          dimensions: options.dimensions,
+          metadata: options.metadata,
+        };
+        const normalizedInput = normalizeUsageInput(input);
         if (
           claim.rejectedInput &&
-          stableStringify(claim.rejectedInput) !==
-            stableStringify({
-              value,
-              eventId: options.eventId,
-              dimensions: options.dimensions,
-              metadata: options.metadata,
-            })
+          stableStringify(claim.rejectedInput) !== stableStringify(normalizedInput)
         ) {
           throw new DuplicateRecordProblem(idempotencyKey);
         }
-        const meter = await this.meterRegistry.getOrThrow(tenantId, meterId);
-        const billingRequired = this.isBillingRequired(meter, billableMeter);
-        if (billingRequired && !normalizedEventId) {
-          throw new InvalidUsageEnvelopeProblem(
-            meterId,
-            "billing-required meters require a caller-supplied eventId or idempotencyKey",
+        const recordIdentity = {
+          id: claim.operationId,
+          tenantId,
+          meterId,
+          timestamp: originalRecord?.timestamp ?? new Date().toISOString(),
+          idempotencyKey,
+        };
+        const receiptRecord = { ...recordIdentity, ...normalizedInput };
+        if (originalRecord && stableStringify(originalRecord) !== stableStringify(receiptRecord)) {
+          throw new DuplicateRecordProblem(idempotencyKey);
+        }
+        const previousWrite = originalRecord
+          ? await this.recoverUsageWrite(receiptRecord)
+          : undefined;
+        const retryingRejectedWrite =
+          previousWrite?.outcome === "rejected" &&
+          previousWrite.operationId === receiptRecord.id &&
+          previousWrite.writeGeneration === claim.writeGeneration;
+        const continuingWrite = originalRecord !== undefined && !retryingRejectedWrite;
+        const writeGeneration = (claim.writeGeneration ?? 0) + (continuingWrite ? 0 : 1);
+        const currentTime = new Date().toISOString();
+        if (
+          continuingWrite &&
+          previousWrite?.outcome !== "recorded" &&
+          receiptRecord.timestamp.slice(0, 7) !== currentTime.slice(0, 7)
+        ) {
+          throw new MeteringTransitionProblem(
+            "resume-persistence",
+            "USAGE_RECORD_UNAVAILABLE",
+            idempotencyKey,
           );
         }
+        if (retryingRejectedWrite) {
+          receiptRecord.timestamp = currentTime;
+        }
+        liveRecord = continuingWrite
+          ? receiptRecord
+          : { ...receiptRecord, ...snapshotLiveInput(input, normalizedInput) };
+        if (previousWrite?.outcome !== "recorded") {
+          this.usageStorage.validateRecord?.(restoreUsageRecord(receiptRecord));
+        }
+        const billableUsage = this.prepareBillableUsage(
+          meter,
+          liveRecord,
+          normalizedEventId,
+          billableMeter,
+        );
         await this.idempotencyManager.markMeteringPersistenceStarted(
           tenantId,
           meterId,
           idempotencyKey,
           claim.token,
+          receiptRecord,
+          retryingRejectedWrite,
         );
         persistenceStarted = true;
+        const recovery = continuingWrite ? { previousWrite } : undefined;
         delivery = await this.persistUsage(
-          options,
-          idempotencyKey,
-          claim.operationId,
+          receiptRecord,
+          liveRecord,
           meter,
-          normalizedEventId,
-          billableMeter,
+          billableUsage,
+          writeGeneration,
+          recovery,
         );
+        const quota = delivery.quota;
+        if (quota?.exceeded && !quota.allowOverQuota) {
+          unstagedRejection = delivery;
+        }
+        if (billableUsage) {
+          const { journal, event } = billableUsage;
+          if (unstagedRejection) {
+            await journal.markUndeliverable(event.eventId, {
+              code: "metering/quota-exceeded",
+              message: `Usage for meter '${meterId}' was rejected before provider delivery`,
+            });
+          } else {
+            await journal.markDeliverable(event.eventId);
+          }
+        }
         await this.idempotencyManager.markMeteringEventsPublishing(
           tenantId,
           meterId,
@@ -206,7 +375,8 @@ export class MeteringService {
         publishingClaimed = true;
       }
 
-      return await this.publishDelivery(claim, delivery, () => {
+      const publication = liveRecord ? { ...delivery, usageRecord: liveRecord } : delivery;
+      return await this.publishDelivery(claim, publication, () => {
         claimSettled = true;
       });
     } catch (error) {
@@ -220,6 +390,16 @@ export class MeteringService {
             meterId,
             idempotencyKey,
             claim.token,
+          ),
+        );
+      } else if (unstagedRejection) {
+        await this.runCleanup(error, () =>
+          this.idempotencyManager.releaseMeteringQuotaRejection(
+            tenantId,
+            meterId,
+            idempotencyKey,
+            claim.token,
+            unstagedRejection,
           ),
         );
       } else if (!persistenceStarted && !claim.rejectedInput) {
@@ -291,97 +471,159 @@ export class MeteringService {
     return this.idempotencyManager.getMeteringRecordStatus(tenantId, meterId, idempotencyKey);
   }
 
-  private async persistUsage(
-    options: RecordOptions & {
-      eventId?: string;
-      dimensions?: Record<string, MeterDimensionValue>;
-    },
-    idempotencyKey: string,
-    operationId: string,
+  private prepareBillableUsage(
     meter: MeterDefinition,
-    normalizedEventId?: string,
+    usageRecord: PendingMeteringDelivery["usageRecord"],
+    eventId: string | undefined,
     billableMeter?: BillableMeterDescriptor,
-  ): Promise<PendingMeteringDelivery> {
-    const { tenantId, meterId, value = 1, metadata } = options;
-    const usageRecord: UsageRecord = {
-      id: operationId,
-      tenantId,
-      meterId,
-      value,
-      timestamp: new Date(),
-      idempotencyKey,
-      eventId: options.eventId,
-      dimensions: options.dimensions,
-      metadata,
-    };
-    const serializedUsageRecord = {
-      ...usageRecord,
-      timestamp: usageRecord.timestamp.toISOString(),
-    };
+  ): BillableUsageIntent | undefined {
+    if (!this.isBillingRequired(meter, billableMeter)) {
+      return undefined;
+    }
 
-    const billing = this.isBillingRequired(meter, billableMeter) ? "required" : "local";
-    let billableEventId: string | undefined;
-    if (billing === "required") {
-      const journal = this.billableUsageJournal;
-      if (journal?.durability !== "persistent") {
-        throw new BillableUsageJournalRequiredProblem(meterId);
-      }
-      if (meter.aggregation && billableMeter && meter.aggregation !== billableMeter.aggregation) {
-        throw new InvalidUsageEnvelopeProblem(
-          meterId,
-          `aggregation '${billableMeter.aggregation}' does not match registered '${meter.aggregation}'`,
-        );
-      }
-      if (meter.unit && billableMeter && meter.unit !== billableMeter.unit) {
-        throw new InvalidUsageEnvelopeProblem(
-          meterId,
-          `unit '${billableMeter.unit}' does not match registered '${meter.unit}'`,
-        );
-      }
-      const event: BillableUsageEvent = {
-        eventId: normalizedEventId ?? idempotencyKey,
+    const { tenantId, meterId, value, dimensions } = usageRecord;
+    if (!eventId) {
+      throw new InvalidUsageEnvelopeProblem(
+        meterId,
+        "billing-required meters require a caller-supplied eventId or idempotencyKey",
+      );
+    }
+    const journal = this.billableUsageJournal;
+    if (journal?.durability !== "persistent") {
+      throw new BillableUsageJournalRequiredProblem(meterId);
+    }
+    if (meter.aggregation && billableMeter && meter.aggregation !== billableMeter.aggregation) {
+      throw new InvalidUsageEnvelopeProblem(
+        meterId,
+        `aggregation '${billableMeter.aggregation}' does not match registered '${meter.aggregation}'`,
+      );
+    }
+    if (meter.unit && billableMeter && meter.unit !== billableMeter.unit) {
+      throw new InvalidUsageEnvelopeProblem(
+        meterId,
+        `unit '${billableMeter.unit}' does not match registered '${meter.unit}'`,
+      );
+    }
+    return {
+      journal,
+      event: {
+        eventId,
         tenantId,
         meterId,
         aggregation: billableMeter?.aggregation ?? meter.aggregation ?? "COUNT",
         unit: billableMeter?.unit ?? meter.unit ?? "event",
         value,
-        dimensions: Object.freeze({ ...options.dimensions }),
-      };
-      await journal.append(event);
-      billableEventId = event.eventId;
+        dimensions: Object.freeze({ ...dimensions }),
+      },
+    };
+  }
+
+  private async recoverUsageWrite(
+    receiptRecord: PendingMeteringDelivery["usageRecord"],
+  ): Promise<UsageWriteReceipt | undefined> {
+    const receipt = await this.usageStorage.readWriteReceipt?.(receiptRecord);
+    if (receipt?.outcome === "rejected" || receipt?.operationId === receiptRecord.id) {
+      return receipt;
+    }
+    if (receipt?.operationId !== undefined) {
+      throw new DuplicateRecordProblem(receiptRecord.idempotencyKey);
+    }
+    const { tenantId, meterId, id, idempotencyKey, value, timestamp } = receiptRecord;
+    const recordedAt = new Date(timestamp);
+    const records = await this.usageStorage.fetchUsageRecords({
+      tenantId,
+      meterId,
+      period: "billing_cycle",
+      startDate: recordedAt,
+      endDate: recordedAt,
+    });
+    if (
+      records.some(
+        (record) =>
+          record.id === id &&
+          record.idempotencyKey === idempotencyKey &&
+          record.value === value &&
+          record.timestamp.getTime() === recordedAt.getTime(),
+      )
+    ) {
+      // The write and its quota outcome may have committed while the row was being read.
+      const recordedReceipt =
+        receipt ?? (await this.usageStorage.readWriteReceipt?.(receiptRecord));
+      if (recordedReceipt?.operationId !== undefined && recordedReceipt.operationId !== id) {
+        throw new DuplicateRecordProblem(idempotencyKey);
+      }
+      return recordedReceipt?.outcome === "recorded" ? recordedReceipt : { outcome: "recorded" };
+    }
+    if (receipt?.outcome === "recorded") {
+      throw new MeteringTransitionProblem(
+        "resume-persistence",
+        "USAGE_RECORD_UNAVAILABLE",
+        idempotencyKey,
+      );
+    }
+    return undefined;
+  }
+
+  private async persistUsage(
+    receiptRecord: PendingMeteringDelivery["usageRecord"],
+    liveRecord: PendingMeteringDelivery["usageRecord"],
+    meter: MeterDefinition,
+    billableUsage: BillableUsageIntent | undefined,
+    writeGeneration: number,
+    recovery?: { previousWrite?: UsageWriteReceipt },
+  ): Promise<PendingMeteringDelivery> {
+    if (billableUsage) {
+      await billableUsage.journal.append(billableUsage.event);
     }
 
-    if (meter.quota === undefined) {
-      await this.usageStorage.record(usageRecord);
-      if (billableEventId) {
-        await this.billableUsageJournal?.markDeliverable(billableEventId);
+    const usageRecord = restoreUsageRecord(liveRecord);
+    const { tenantId, meterId, value } = usageRecord;
+    const previousWrite = recovery?.previousWrite;
+    const recorded = previousWrite?.outcome === "recorded";
+    if (meter.quota === undefined || (recorded && !previousWrite.quota)) {
+      if (!recorded) {
+        if (this.usageStorage.readWriteReceipt) {
+          await this.usageStorage.record(usageRecord, writeGeneration);
+        } else {
+          await this.usageStorage.record(usageRecord);
+        }
       }
-      return { usageRecord: serializedUsageRecord };
+      return { usageRecord: receiptRecord };
     }
 
     const allowOverQuota = meter.allowOverQuota ?? false;
-    const quotaResult = await this.quotaManager.checkAndRecord({
-      tenantId,
-      meterId,
-      value,
-      quota: meter.quota,
-      allowOverQuota,
-      usageRecord,
-    });
-    if (billableEventId) {
-      if (quotaResult.exceeded && !allowOverQuota) {
-        await this.billableUsageJournal?.markUndeliverable(billableEventId, {
-          code: "metering/quota-exceeded",
-          message: `Usage for meter '${meterId}' was rejected before provider delivery`,
-        });
-      } else {
-        await this.billableUsageJournal?.markDeliverable(billableEventId);
-      }
+    const quotaResult =
+      (recorded && previousWrite.quota) ||
+      (await this.quotaManager.checkAndRecord({
+        tenantId,
+        meterId,
+        value,
+        quota: meter.quota,
+        allowOverQuota,
+        usageRecord,
+        ...(this.usageStorage.readWriteReceipt ? { resuming: true, writeGeneration } : {}),
+      }));
+    if (
+      recovery &&
+      !recorded &&
+      quotaResult.recorded === undefined &&
+      quotaResult.exceeded &&
+      !allowOverQuota
+    ) {
+      throw new MeteringTransitionProblem(
+        "resume-persistence",
+        "QUOTA_OUTCOME_UNAVAILABLE",
+        usageRecord.idempotencyKey,
+      );
     }
     return {
-      usageRecord: serializedUsageRecord,
+      usageRecord: receiptRecord,
       quota: {
-        allowOverQuota,
+        allowOverQuota:
+          quotaResult.recorded === false
+            ? false
+            : allowOverQuota ||
+              ((recorded || quotaResult.recorded === true) && quotaResult.exceeded),
         exceeded: quotaResult.exceeded,
         newUsage: quotaResult.newUsage,
         quota: meter.quota,
@@ -394,10 +636,7 @@ export class MeteringService {
     delivery: PendingMeteringDelivery,
     onClaimSettled: () => void,
   ): Promise<UsageRecord> {
-    const usageRecord: UsageRecord = {
-      ...delivery.usageRecord,
-      timestamp: new Date(delivery.usageRecord.timestamp),
-    };
+    const usageRecord = restoreUsageRecord(delivery.usageRecord);
     const { tenantId, meterId, value, idempotencyKey, metadata } = usageRecord;
     const quota = delivery.quota;
 

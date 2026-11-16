@@ -138,14 +138,39 @@ describe("SaaS golden path demo", () => {
       },
     };
 
-    await manager.markMeteringEventsPublishing(
+    await manager.markMeteringPersistenceStarted(
       "tenant-1",
       "api_requests",
       "request-1",
       firstClaim.token,
+      delivery.usageRecord,
+    );
+    await manager.releaseMeteringProcessing(
+      "tenant-1",
+      "api_requests",
+      "request-1",
+      firstClaim.token,
+    );
+    const persistenceRetry = await manager.claimMeteringProcessingOrThrow(
+      "tenant-1",
+      "api_requests",
+      "request-1",
+    );
+    expect(persistenceRetry.persistence?.usageRecord).toEqual(delivery.usageRecord);
+
+    await manager.markMeteringEventsPublishing(
+      "tenant-1",
+      "api_requests",
+      "request-1",
+      persistenceRetry.token,
       delivery,
     );
-    await manager.releaseMeteringEvents("tenant-1", "api_requests", "request-1", firstClaim.token);
+    await manager.releaseMeteringEvents(
+      "tenant-1",
+      "api_requests",
+      "request-1",
+      persistenceRetry.token,
+    );
 
     const replayClaim = await manager.claimMeteringProcessingOrThrow(
       "tenant-1",
@@ -211,6 +236,46 @@ describe("SaaS golden path demo", () => {
     expect(retryClaim.operationId).toBe(firstClaim.operationId);
     expect(retryClaim.delivery).toBeUndefined();
     expect(retryClaim.rejectedInput).toMatchObject({ value: 2 });
+  });
+
+  it("only deduplicates a matching tracked operation and keeps different tuples distinct", async () => {
+    const storage = new InMemoryUsageStorage();
+    const first = {
+      id: "first-operation",
+      tenantId: "tenant-1",
+      meterId: "api",
+      idempotencyKey: "daily:key",
+      value: 2,
+      timestamp: new Date("2026-01-01T00:00:00.000Z"),
+    };
+    const second = {
+      ...first,
+      id: "second-operation",
+      meterId: "api:daily",
+      idempotencyKey: "key",
+    };
+    await storage.record(first, 1);
+    await storage.record(first, 1);
+    await expect(storage.record({ ...first, id: second.id }, 1)).rejects.toThrow(
+      "Recorded usage belongs to a different operation",
+    );
+    await storage.record(second, 1);
+    await expect(
+      storage.checkAndRecordWithinQuota({
+        tenantId: first.tenantId,
+        meterId: first.meterId,
+        value: first.value,
+        usageRecord: first,
+        quota: first.value,
+        allowOverQuota: false,
+        resuming: true,
+        writeGeneration: 1,
+      }),
+    ).resolves.toEqual({ exceeded: false, newUsage: first.value, recorded: true });
+    await expect(storage.readWriteReceipt(first)).resolves.toMatchObject({ operationId: first.id });
+    await expect(storage.readWriteReceipt(second)).resolves.toMatchObject({
+      operationId: second.id,
+    });
   });
 
   it("records previously rejected usage once after the quota policy changes", async () => {

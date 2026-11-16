@@ -243,6 +243,28 @@ logger를 조회하지 않습니다. local meter 기록 실패는 logger가 있�
 - `UsageStorage` 구현은 `replayContract: "idempotent"`를 선언하고 동일 idempotency key의 persistence
   재실행을 안전하게 처리해야 합니다. 이는 usage 저장 직후 프로세스가 중단되어 processing lease가 만료된
   경우의 복구 계약입니다.
+- `MeteringService.record()`는 저장을 시작하기 전에 사용량 ID와 시각을 포함한 원본 기록을 Redis에
+  보관합니다. 저장 결과가 불확실한 요청은 같은 입력과 idempotency key로 재시도하면 원래 시각과 UTC 청구
+  월을 유지합니다. quota 초과가 확정되어 거절된 요청은 다음 시도 시점의 quota를 다시 확인합니다.
+- `RedisUsageStorage`는 quota 응답을 받지 못한 경우에도 저장된 결과를 읽어 기록 완료와 거절을 구분합니다.
+  거절 결과는 해당 저장 시도에 연결되어 다음 시도의 lease가 바뀌어도 이전 거절을 다시 적용하지 않습니다.
+  저장 시도 번호(`writeGeneration`)는 1 이상의 안전한 정수입니다.
+  사용자 정의 `UsageStorage`는 내구성 있는 결과를 확인할 수 있으면 `readWriteReceipt`로 제공할 수 있습니다.
+  기존 기록 여부를 확인할 수 없는 초과 사용량은 `QUOTA_OUTCOME_UNAVAILABLE`로 실패하며 원래 기록을 보존합니다.
+- 기존 예약 마커만으로는 저장 완료를 판단할 수 없습니다. 저장 마커는 기본 24시간 동안 유지되며,
+  마커가 사라진 뒤에는 원래 시각과 ID가 일치하는 사용량 기록이 저장소에 남아 있을 때 완료를 확인할 수 있습니다.
+  사용량 기록만 남아 있으면 당시 quota 초과 여부는 복구할 수 없습니다.
+- 이전 UTC 청구월에 시작한 요청의 저장 여부를 확인할 수 없으면 `persistence-uncertain` 상태를 유지합니다.
+  재시도는 `USAGE_RECORD_UNAVAILABLE`을 반환하며 마감된 청구월에 사용량을 새로 기록하지 않습니다.
+- 중단된 요청을 복구할 때는 저장된 JSON 표현으로 application metadata를 반환하고 이벤트를 발행합니다.
+  첫 호출에서도 원래 표현을 안전하게 복제할 수 없는 metadata는 저장된 JSON으로 반환합니다.
+- 원본 기록 없이 저장 시작만 남은 구버전 요청은 `persistence-uncertain` 상태를 유지합니다. 재시도는
+  `metering/transition-conflict` (`USAGE_RECORD_UNAVAILABLE`)를 반환합니다. 사용량 저장 내역과 billable
+  journal을 대조해 실제 처리 결과를 확인한 뒤 후속 처리를 결정하세요.
+- 같은 Redis를 쓰는 metering writer는 함께 교체하세요. 구버전의 quota 경로는 새 저장 완료 마커와 저장
+  시도가 포함된 거절 마커를 읽을 수 없습니다. 구버전으로 되돌릴 때는 해당 마커의 보존 기간이 끝나기 전까지 그 키를
+  재처리하지 마세요. 원본 기록이 남은 `persistence-uncertain` 요청은 되돌리기 전에 새 writer로 복구하거나
+  실제 저장 결과를 확인해 정리하세요.
 - `RedisUsageStorage`와 `IdempotencyManager`는 `scriptKeyAccess: "multi-key"` capability를 선언한
   `RedisClient`가 필요합니다. 원자적 Lua 스크립트가 여러 logical key에 접근하므로 cross-slot script를
   거부하는 Redis Cluster deployment는 지원하지 않습니다. Standalone Redis와 제공되는 Upstash adapter는

@@ -327,7 +327,7 @@ describe("UpstashRedisClient with metering-core JSON-returning scripts", () => {
         timestamp: "2026-01-01T00:00:00.000Z",
       },
     };
-    stubUpstashRest(() => [1, JSON.stringify(delivery), "01JOPERATION", ""]);
+    stubUpstashRest(() => [1, JSON.stringify(delivery), "01JOPERATION", "", 1, "", 1]);
     const manager = new IdempotencyManager(createEnvClient());
 
     const claim = await manager.claimMeteringProcessingOrThrow("tenant-a", "api.calls", "idem-1");

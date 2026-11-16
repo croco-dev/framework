@@ -12,6 +12,7 @@ import {
   type UsageQueryOptions,
   type UsageRecord,
   type UsageStorage,
+  type UsageWriteReceipt,
 } from "@croco/metering-core";
 
 class InMemoryUsageStorage implements UsageStorage {
@@ -19,21 +20,30 @@ class InMemoryUsageStorage implements UsageStorage {
 
   private records: UsageRecord[] = [];
   private readonly idempotencyKeys = new Set<string>();
-  private readonly recordedKeys = new Set<string>();
+  private readonly recordedKeys = new Map<string, string>();
   private readonly quotaResults = new Map<string, AtomicQuotaCheckResult>();
+  private readonly quotaDenials = new Map<
+    string,
+    { operationId: string; writeGeneration: number }
+  >();
 
-  async record(usage: UsageRecord): Promise<void> {
+  async record(usage: UsageRecord, writeGeneration?: number): Promise<void> {
     const key = this.buildIdempotencyKey(usage.tenantId, usage.meterId, usage.idempotencyKey);
+    this.assertCurrentGeneration(key, usage.id, writeGeneration);
     if (this.recordedKeys.has(key)) {
       return;
     }
-
-    this.recordedKeys.add(key);
+    this.quotaDenials.delete(key);
+    this.recordedKeys.set(key, usage.id);
     this.records = [...this.records, usage];
     console.log("usage recorded", usage);
   }
 
   async getUsage(options: UsageQueryOptions): Promise<number> {
+    return this.sumUsage(options);
+  }
+
+  private sumUsage(options: UsageQueryOptions): number {
     return this.filterRecords(options).reduce((total, record) => total + record.value, 0);
   }
 
@@ -56,6 +66,22 @@ class InMemoryUsageStorage implements UsageStorage {
     return this.filterRecords(options);
   }
 
+  async readWriteReceipt(
+    identity: Pick<UsageRecord, "tenantId" | "meterId" | "idempotencyKey">,
+  ): Promise<UsageWriteReceipt | undefined> {
+    const key = this.buildIdempotencyKey(
+      identity.tenantId,
+      identity.meterId,
+      identity.idempotencyKey,
+    );
+    const operationId = this.recordedKeys.get(key);
+    if (operationId !== undefined) {
+      return { outcome: "recorded", operationId, quota: this.quotaResults.get(key) };
+    }
+    const denial = this.quotaDenials.get(key);
+    return denial ? { outcome: "rejected", ...denial } : undefined;
+  }
+
   async checkAndRecordWithinQuota(
     options: AtomicQuotaCheckOptions,
   ): Promise<AtomicQuotaCheckResult> {
@@ -64,27 +90,35 @@ class InMemoryUsageStorage implements UsageStorage {
       options.meterId,
       options.usageRecord.idempotencyKey,
     );
+    const { id: operationId } = options.usageRecord;
+    const { writeGeneration } = options;
+    this.assertCurrentGeneration(key, operationId, writeGeneration);
     const recordedResult = this.quotaResults.get(key);
     if (recordedResult) {
-      return recordedResult;
+      return options.resuming ? { ...recordedResult, recorded: true } : recordedResult;
     }
 
-    const currentUsage = await this.getUsage({
+    const currentUsage = this.sumUsage({
       tenantId: options.tenantId,
       meterId: options.meterId,
       period: "billing_cycle",
     });
+    if (this.recordedKeys.has(key)) {
+      const result = { exceeded: currentUsage > options.quota, newUsage: currentUsage };
+      return options.resuming ? { ...result, recorded: true } : result;
+    }
     const newUsage = currentUsage + options.value;
     const exceeded = newUsage > options.quota;
-    if (!exceeded || options.allowOverQuota) {
-      await this.record(options.usageRecord);
-    }
-
+    const recorded = !exceeded || options.allowOverQuota;
     const result = { exceeded, newUsage };
-    if (!exceeded || options.allowOverQuota) {
+    if (recorded) {
+      const write = this.record(options.usageRecord, writeGeneration);
       this.quotaResults.set(key, result);
+      await write;
+    } else if (writeGeneration !== undefined) {
+      this.quotaDenials.set(key, { operationId, writeGeneration });
     }
-    return result;
+    return options.resuming ? { ...result, recorded } : result;
   }
 
   private filterRecords(options: UsageQueryOptions): UsageRecord[] {
@@ -100,8 +134,37 @@ class InMemoryUsageStorage implements UsageStorage {
     });
   }
 
+  private assertCurrentGeneration(
+    key: string,
+    operationId: string,
+    writeGeneration?: number,
+  ): void {
+    if (
+      writeGeneration !== undefined &&
+      (!Number.isSafeInteger(writeGeneration) || writeGeneration < 1)
+    ) {
+      throw new RedisProblem("EVAL", "Usage write generation must be a positive safe integer");
+    }
+    const recordedOperation = this.recordedKeys.get(key);
+    if (
+      writeGeneration !== undefined &&
+      recordedOperation !== undefined &&
+      recordedOperation !== operationId
+    ) {
+      throw new RedisProblem("EVAL", "Recorded usage belongs to a different operation");
+    }
+    const denial = this.quotaDenials.get(key);
+    if (
+      denial?.operationId === operationId &&
+      writeGeneration !== undefined &&
+      writeGeneration <= denial.writeGeneration
+    ) {
+      throw new RedisProblem("EVAL", "Usage write attempt was already denied by quota");
+    }
+  }
+
   private buildIdempotencyKey(tenantId: string, meterId: string, idempotencyKey: string): string {
-    return `${tenantId}:${meterId}:${idempotencyKey}`;
+    return JSON.stringify([tenantId, meterId, idempotencyKey]);
   }
 }
 
@@ -113,6 +176,8 @@ type InMemoryMeteringDeliveryState = {
   delivery?: string;
   rejectedDelivery?: string;
   persistenceStarted?: boolean;
+  writeGeneration?: number;
+  usageRecord?: string;
 };
 
 export class InMemoryRedisClient implements RedisClient {
@@ -250,7 +315,7 @@ export class InMemoryRedisClient implements RedisClient {
   private claimMeteringDelivery(
     keys: string[],
     args: Array<string | number>,
-  ): [number, string, string, string] {
+  ): [number, string, string, string, number, string, number] {
     const [deliveryKey, legacyKey] = keys;
     const [
       token,
@@ -272,7 +337,7 @@ export class InMemoryRedisClient implements RedisClient {
         legacyStatus === String(completedStatus) ||
         legacyStatus === String(rejectedStatus)
       ) {
-        return [0, "", "", ""];
+        return [0, "", "", "", 0, "", 0];
       }
 
       const newOperationId = String(operationId);
@@ -286,14 +351,14 @@ export class InMemoryRedisClient implements RedisClient {
       if (!legacyStatus) {
         this.values.set(legacyKey, String(leaseValue));
       }
-      return [1, "", newOperationId, ""];
+      return [1, "", newOperationId, "", 0, "", 0];
     }
 
     const leaseExpired =
       (existingState.status === "PROCESSING" || existingState.status === "PUBLISHING") &&
       (existingState.leaseExpiresAt ?? 0) <= now;
     if (existingState.status !== "EVENTS_PENDING" && !leaseExpired) {
-      return [0, "", "", ""];
+      return [0, "", "", "", 0, "", 0];
     }
 
     existingState.status = existingState.delivery ? "PUBLISHING" : "PROCESSING";
@@ -308,17 +373,26 @@ export class InMemoryRedisClient implements RedisClient {
       existingState.delivery ?? "",
       claimedOperationId,
       existingState.rejectedDelivery ?? "",
+      existingState.persistenceStarted ? 1 : 0,
+      existingState.usageRecord ?? "",
+      existingState.writeGeneration ?? 0,
     ];
   }
 
   private markMeteringPersistenceStarted(key: string, args: Array<string | number>): [number] {
-    const [token, leaseMilliseconds] = args;
+    const [token, leaseMilliseconds, , usageRecord, replaceRejectedRecord] = args;
     const state = this.readDeliveryState(key);
     if (!state || state.status !== "PROCESSING" || state.token !== String(token)) {
       return [0];
     }
 
-    state.persistenceStarted = true;
+    if (!state.persistenceStarted || (replaceRejectedRecord === "1" && state.usageRecord)) {
+      state.persistenceStarted = true;
+      state.writeGeneration = (state.writeGeneration ?? 0) + 1;
+      if (typeof usageRecord === "string" && usageRecord !== "") {
+        state.usageRecord = usageRecord;
+      }
+    }
     state.leaseExpiresAt = Date.now() + Number(leaseMilliseconds);
     this.values.set(key, JSON.stringify(state));
     return [1];
@@ -333,6 +407,7 @@ export class InMemoryRedisClient implements RedisClient {
 
     state.status = "PUBLISHING";
     state.delivery = String(deliveryJson);
+    delete state.usageRecord;
     state.leaseExpiresAt = Date.now() + Number(leaseMilliseconds);
     this.values.set(key, JSON.stringify(state));
     return [1];
@@ -370,18 +445,22 @@ export class InMemoryRedisClient implements RedisClient {
     key: string,
     args: Array<string | number>,
   ): [number, string] {
+    const [token, , unstagedRejection] = args;
     const state = this.readDeliveryState(key);
-    if (!state || state.status !== "PUBLISHING" || state.token !== String(args[0])) {
+    const expectedStatus = unstagedRejection ? "PROCESSING" : "PUBLISHING";
+    if (!state || state.status !== expectedStatus || state.token !== String(token)) {
       return [0, "INVALID_STATE"];
     }
-    if (!state.delivery) {
+    const rejectedDelivery = state.delivery ?? unstagedRejection;
+    if (typeof rejectedDelivery !== "string" || rejectedDelivery === "") {
       return [0, "DELIVERY"];
     }
 
-    state.rejectedDelivery = state.delivery;
+    state.rejectedDelivery = rejectedDelivery;
     state.status = "PROCESSING";
     delete state.delivery;
     delete state.persistenceStarted;
+    delete state.usageRecord;
     delete state.token;
     state.leaseExpiresAt = 0;
     this.values.set(key, JSON.stringify(state));
