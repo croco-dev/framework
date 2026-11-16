@@ -1,0 +1,192 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "metrics-core",
+      "classification": "pure-contract",
+      "reason": "Metric evaluation rejects impossible local calendar times in windows and fact values before deriving buckets or aggregate keys.",
+      "files": {
+        "packages/metrics-core/src/libs/metric/MetricExpression.ts": "b527b9087cb24706ec2cd4ed9d3262ba120dbb6f360e57df472f2400d356bc04"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Instant validation is pure string and calendar arithmetic and uses no Kubernetes Node Host capabilities, storage, or lifecycle hooks.",
+          "providers": ["@croco/warehouse-core"],
+          "constraints": [
+            "The evaluator preserves numeric offsets and up to nine fractional digits."
+          ],
+          "references": [
+            "packages/metrics-core/src/libs/metric/MetricExpression.ts",
+            "packages/warehouse-core/src/libs/parseWarehouseInstant.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Instant validation is pure string and calendar arithmetic and uses no Lambda Host capabilities, storage, or lifecycle hooks.",
+          "providers": ["@croco/warehouse-core"],
+          "constraints": [
+            "The evaluator preserves numeric offsets and up to nine fractional digits."
+          ],
+          "references": [
+            "packages/metrics-core/src/libs/metric/MetricExpression.ts",
+            "packages/warehouse-core/src/libs/parseWarehouseInstant.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Instant validation is pure string and calendar arithmetic and uses no Cloudflare Workers or Node Container Host capabilities, storage, or lifecycle hooks.",
+          "providers": ["@croco/warehouse-core"],
+          "constraints": [
+            "The evaluator preserves numeric offsets and up to nine fractional digits."
+          ],
+          "references": [
+            "packages/metrics-core/src/libs/metric/MetricExpression.ts",
+            "packages/warehouse-core/src/libs/parseWarehouseInstant.ts"
+          ]
+        }
+      }
+    },
+    {
+      "package": "problems-core",
+      "classification": "pure-contract",
+      "reason": "Refresh generated source coordinates for existing MetricExpression diagnostics.",
+      "files": {
+        "packages/problems-core/src/generated/problem-code-registry.ts": "c32a72856bbc6e803aaf6d80fee4595797402d9dcffddf0b240f11f51d476076"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Generated diagnostic source coordinates have no host, storage, or lifecycle requirements.",
+          "providers": ["@croco/problems-core/ProblemCodeRegistry"],
+          "constraints": [],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "scripts/problem-registry.mts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Generated diagnostic source coordinates have no host, storage, or lifecycle requirements.",
+          "providers": ["@croco/problems-core/ProblemCodeRegistry"],
+          "constraints": [],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "scripts/problem-registry.mts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Generated diagnostic source coordinates have no host, storage, or lifecycle requirements.",
+          "providers": ["@croco/problems-core/ProblemCodeRegistry"],
+          "constraints": [],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "scripts/problem-registry.mts"
+          ]
+        }
+      }
+    },
+    {
+      "package": "warehouse-core",
+      "classification": "pure-contract",
+      "reason": "A shared instant parser validates calendar components and offsets for metric consumers and the warehouse row codec.",
+      "files": {
+        "packages/warehouse-core/src/index.ts": "8ca8c0a81127e2a0b676a4372fcd4fbe9d3151e9b8f051f7f8bf27b334fa5ced",
+        "packages/warehouse-core/src/libs/codec.ts": "bef38709bddb150191e6a8a8661799a418dca6e5b66323b73d7781fedd78b683",
+        "packages/warehouse-core/src/libs/parseWarehouseInstant.ts": "f49f43b06a8c0c4960094ce8025b35b8f14422c2aea9cfdabcb0332d26f674fd"
+      },
+      "catalogRuntimes": ["browser", "node", "lambda", "cloudflare-workers"],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Instant validation is pure string and calendar arithmetic and uses no Kubernetes Node Host capabilities, storage, or lifecycle hooks.",
+          "providers": [],
+          "constraints": [
+            "Warehouse row encoding still requires UTC and the declared fractional precision."
+          ],
+          "references": [
+            "packages/warehouse-core/src/index.ts",
+            "packages/warehouse-core/src/libs/codec.ts",
+            "packages/warehouse-core/src/libs/parseWarehouseInstant.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Instant validation is pure string and calendar arithmetic and uses no Lambda Host capabilities, storage, or lifecycle hooks.",
+          "providers": [],
+          "constraints": [
+            "Warehouse row encoding still requires UTC and the declared fractional precision."
+          ],
+          "references": [
+            "packages/warehouse-core/src/index.ts",
+            "packages/warehouse-core/src/libs/codec.ts",
+            "packages/warehouse-core/src/libs/parseWarehouseInstant.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Instant validation is pure string and calendar arithmetic and uses no Cloudflare Workers or Node Container Host capabilities, storage, or lifecycle hooks.",
+          "providers": [],
+          "constraints": [
+            "Warehouse row encoding still requires UTC and the declared fractional precision."
+          ],
+          "references": [
+            "packages/warehouse-core/src/index.ts",
+            "packages/warehouse-core/src/libs/codec.ts",
+            "packages/warehouse-core/src/libs/parseWarehouseInstant.ts"
+          ]
+        }
+      }
+    },
+    {
+      "package": "warehouse-postgres",
+      "classification": "pure-contract",
+      "reason": "The PostgreSQL metric compiler rejects invalid calendar bounds before the warehouse reader opens a connection.",
+      "files": {
+        "packages/warehouse-postgres/src/facts/compilePostgresMetric.ts": "7ffe01ead2d3f33207fdb87081e3b0cc80b04147072de47c654134e723544555"
+      },
+      "catalogRuntimes": ["node", "lambda"],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Instant validation is pure string and calendar arithmetic and uses no Kubernetes Node Host capabilities, storage, or lifecycle hooks.",
+          "providers": ["@croco/warehouse-core", "@croco/metrics-core"],
+          "constraints": [
+            "The compiler accepts at most six fractional digits and only year and offset values accepted by PostgreSQL timestamptz."
+          ],
+          "references": [
+            "packages/warehouse-postgres/src/facts/compilePostgresMetric.ts",
+            "packages/warehouse-core/src/libs/parseWarehouseInstant.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Instant validation is pure string and calendar arithmetic and uses no Lambda Host capabilities, storage, or lifecycle hooks.",
+          "providers": ["@croco/warehouse-core", "@croco/metrics-core"],
+          "constraints": [
+            "The compiler accepts at most six fractional digits and only year and offset values accepted by PostgreSQL timestamptz."
+          ],
+          "references": [
+            "packages/warehouse-postgres/src/facts/compilePostgresMetric.ts",
+            "packages/warehouse-core/src/libs/parseWarehouseInstant.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Instant validation is pure string and calendar arithmetic and uses no Cloudflare Workers or Node Container Host capabilities, storage, or lifecycle hooks.",
+          "providers": ["@croco/warehouse-core", "@croco/metrics-core"],
+          "constraints": [
+            "The compiler accepts at most six fractional digits and only year and offset values accepted by PostgreSQL timestamptz."
+          ],
+          "references": [
+            "packages/warehouse-postgres/src/facts/compilePostgresMetric.ts",
+            "packages/warehouse-core/src/libs/parseWarehouseInstant.ts"
+          ]
+        }
+      }
+    }
+  ]
+}

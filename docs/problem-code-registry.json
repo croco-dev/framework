@@ -3078,7 +3078,7 @@
       "sources": [
         {
           "file": "packages/metrics-core/src/libs/metric/MetricExpression.ts",
-          "line": 213,
+          "line": 214,
           "column": 11,
           "kind": "problem-constructor"
         }
@@ -3108,7 +3108,7 @@
       "sources": [
         {
           "file": "packages/metrics-core/src/libs/metric/MetricExpression.ts",
-          "line": 237,
+          "line": 238,
           "column": 11,
           "kind": "problem-constructor"
         }
@@ -35660,7 +35660,7 @@
       "className": "MetricExpressionError",
       "source": {
         "file": "packages/metrics-core/src/libs/metric/MetricExpression.ts",
-        "line": 99,
+        "line": 100,
         "column": 1,
         "kind": "problem-class"
       },

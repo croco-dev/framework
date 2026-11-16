@@ -1,4 +1,5 @@
 import { defineMetric, eq, MetricExpressionError } from "@croco/metrics-core";
+import { parseWarehouseInstant } from "@croco/warehouse-core";
 import type {
   AggregateExpression,
   MetricColumnRef,
@@ -9,6 +10,8 @@ import type {
 } from "@croco/metrics-core";
 import type { FactDescriptor } from "@croco/warehouse-core";
 import { factColumnName, factTableName, quoteIdentifier } from "./schema";
+
+const POSTGRES_INSTANT_MAX_LENGTH = "YYYY-MM-DDTHH:MM:SS.ffffff+HH:MM".length;
 
 function requireMetric(condition: unknown, code: string): asserts condition {
   if (!condition) throw new MetricExpressionError(code);
@@ -76,14 +79,16 @@ export function compilePostgresMetric(
     Number.isFinite(Date.parse(value)) &&
     new Date(value).toISOString().startsWith(value);
   const instant = (value: string): bigint => {
-    const match = /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(?:\.(\d{1,6}))?(Z|[+-]\d{2}:\d{2})$/.exec(
-      value,
+    requireMetric(
+      typeof value === "string" && value.length <= POSTGRES_INSTANT_MAX_LENGTH,
+      "METRIC_INVALID_WINDOW",
     );
-    requireMetric(match && Number.isFinite(Date.parse(value)), "METRIC_INVALID_WINDOW");
-    return (
-      BigInt(Date.parse(`${match[1]}${match[3]}`)) * BigInt(1000000) +
-      BigInt((match[2] ?? "").padEnd(9, "0"))
-    );
+    const parsed = parseWarehouseInstant(value);
+    requireMetric(parsed && parsed.fraction.length <= 6, "METRIC_INVALID_WINDOW");
+    // The bound text must fit PostgreSQL's timestamptz input range.
+    const offsetHours = parsed.offset === "Z" ? 0 : Number(parsed.offset.slice(1, 3));
+    requireMetric(!value.startsWith("0000-") && offsetHours < 16, "METRIC_INVALID_WINDOW");
+    return BigInt(parsed.epochSeconds) * BigInt(1_000_000) + BigInt(parsed.fraction.padEnd(6, "0"));
   };
   requireMetric(
     isDate

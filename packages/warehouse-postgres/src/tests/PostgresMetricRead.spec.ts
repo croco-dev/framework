@@ -98,6 +98,22 @@ function fixture(executionDescriptor = descriptor) {
 }
 
 describe("native metric read boundary", () => {
+  it.each(["2026-02-30T00:00:00Z", "2026-02-28T00:00:00+16:00", "0000-02-29T00:00:00Z"])(
+    "rejects invalid PostgreSQL window bound %s before connecting or querying",
+    async (from) => {
+      const test = fixture();
+      const request = {
+        ...test.request,
+        window: { ...test.request.window, from },
+      };
+      await expect(test.reader.readMetric(request)).rejects.toThrowError(
+        expect.objectContaining({ code: "METRIC_INVALID_WINDOW" }),
+      );
+      expect(test.connect).not.toHaveBeenCalled();
+      expect(test.query).not.toHaveBeenCalled();
+    },
+  );
+
   it.each(["version", "grain"] as const)(
     "rejects a metric from another %s before connecting or querying",
     async (change) => {
