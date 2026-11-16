@@ -404,6 +404,106 @@ describe("PostgresWarehouseCatalog", () => {
     expect(result.state).toBe("sealed");
     expect(query).toHaveBeenCalledWith("COMMIT");
   });
+  it.each([
+    ["reversed offsets", "2026-01-01T00:00:00Z", "2026-01-01T01:00:00+02:00"],
+    ["reversed microseconds", "2026-01-01T00:00:00.000002Z", "2026-01-01T01:00:00.000001+01:00"],
+    [
+      "reversed long fractions",
+      "2026-01-01T00:00:00.000123457Z",
+      "2026-01-01T00:00:00.0001234567Z",
+    ],
+    ["reversed legacy microseconds", "2026-01-01 0:00:0.000002Z", "2026-01-01 0:00:0.000001Z"],
+    [
+      "reversed fractions at the upper Date boundary",
+      "+275760-09-13T00:00:00.000002Z",
+      "+275760-09-13T01:00:00.000001+01:00",
+    ],
+    [
+      "reversed legacy midnight fractions",
+      "2026-01-01 24:00:00.000002 -0100",
+      "2026-01-02T01:00:00.000001Z",
+    ],
+    [
+      "reversed fractions after a legacy date separator",
+      "Jan 1 2026-24:00:00.000002 GMT",
+      "2026-01-02T00:00:00.000001Z",
+    ],
+    ["invalid date", "invalid", "2026-01-01"],
+    ["non-string input", 1 as unknown as string, "2026-01-01"],
+  ])("rejects %s before updating the candidate", async (_label, from, through) => {
+    await expect(
+      catalog.sealCandidate({
+        access,
+        candidateId: candidate.id,
+        fence: candidate.fence,
+        expectedBatchIds: ["batch"],
+        quality: {
+          ...quality,
+          sourceCoverage: [{ ...quality.sourceCoverage[0], from, through }],
+        },
+        audit,
+      }),
+    ).rejects.toThrow("WAREHOUSE_COVERAGE_INCOMPLETE");
+    expect(query).toHaveBeenCalledWith("ROLLBACK");
+    expect(query.mock.calls.some(([sql]) => sql.startsWith("UPDATE warehouse_candidates"))).toBe(
+      false,
+    );
+  });
+  it.each([
+    ["fractional spellings", "2026-01-01T02:00:00.0000010+02:00", "2026-01-01T00:00:00.000001Z"],
+    ["long fractions", "2026-01-01T00:00:00.0012345670Z", "2026-01-01T00:00:00.001234567Z"],
+    [
+      "legacy midnight spellings",
+      "2026-01-02T00:00:00.000002Z",
+      "2026-01-01 24:00:(local)00.000002 GMT (rollover)",
+    ],
+    [
+      "legacy date comments",
+      "Thu, 01 Jan 2026 00:00:00 +0000 (recorded (time 12:34:56.123456))",
+      "Thu, 01 Jan 2026 00:00:00 GMT",
+    ],
+    [
+      "legacy dates after a time zone",
+      "00:00 GMT+00: 0.000001 1 2026",
+      "2026-01-01T00:00:00.000000Z",
+    ],
+    [
+      "a fractional field following a legacy UTC offset",
+      "2026-01-01 GMT+00:00:00.000002",
+      "2026-01-01T00:00:00Z",
+    ],
+    [
+      "a fractional field following a negative legacy UTC offset",
+      "2026-01-01 GMT -00:00:00.000002",
+      "2026-01-01T00:00:00Z",
+    ],
+    [
+      "a native legacy millisecond field",
+      "2026-01-01 00:00:00.001 GMT",
+      "2026-01-01 00:00:00:.000002 GMT",
+    ],
+  ])("seals valid coverage with %s", async (_label, from, through) => {
+    const input = {
+      ...quality,
+      sourceCoverage: [
+        {
+          ...quality.sourceCoverage[0],
+          from,
+          through,
+        },
+      ],
+    };
+    await expect(
+      catalog.sealCandidate({
+        access,
+        candidateId: candidate.id,
+        fence: candidate.fence,
+        expectedBatchIds: ["batch"],
+        quality: input,
+        audit,
+      }),
+    ).resolves.toMatchObject({ state: "sealed", quality: input });
+  });
   it("rejects publication against a changed head before physical visibility changes", async () => {
     candidate = { ...candidate, state: "sealed", quality };
     head.snapshot_id = "competitor";

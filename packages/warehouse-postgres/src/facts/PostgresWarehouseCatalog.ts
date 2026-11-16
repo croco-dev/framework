@@ -35,6 +35,57 @@ type Head = {
   privacy_epoch: string | number;
 };
 
+type CoverageTime = {
+  milliseconds: number;
+  subMilliseconds: string;
+};
+
+function parseCoverageTime(value: string): CoverageTime | undefined {
+  if (typeof value !== "string") return undefined;
+  const milliseconds = Date.parse(value);
+  if (!Number.isFinite(milliseconds)) return undefined;
+
+  let commentDepth = 0;
+  let uncommented = "";
+  let segmentStart = 0;
+  for (const match of value.matchAll(/[()]|\.(\d{3})(\d+)/g)) {
+    const [token, millisecondDigits, subMilliseconds] = match;
+    if (token === "(") {
+      if (commentDepth === 0) uncommented += value.slice(segmentStart, match.index) + " ";
+      commentDepth++;
+      continue;
+    }
+    if (token === ")") {
+      if (commentDepth > 0) {
+        commentDepth--;
+        if (commentDepth === 0) segmentStart = match.index + 1;
+      }
+      continue;
+    }
+    if (commentDepth) continue;
+
+    // Preserve the native interpretation of other numeric fields in legacy dates.
+    const clockPrefix = uncommented + value.slice(segmentStart, match.index);
+    const clock = /(?:^|[^\d:])(\d+:(?:\s*\d+:|:)\s*\d+)$/.exec(clockPrefix);
+    if (!clock) continue;
+    const beforeClock = clockPrefix.slice(0, -clock[1].length);
+    if (/(?:^|[^a-z])(?:gmt|utc|ut|z)\W*[+-]$/i.test(beforeClock)) continue;
+
+    // Parse only the millisecond digits so long fractions do not affect whole milliseconds.
+    const prefix = value.slice(0, match.index + 1);
+    const suffix = value.slice(match.index + token.length);
+    const truncated = Date.parse(prefix + millisecondDigits + suffix);
+    return Number.isFinite(truncated) ? { milliseconds: truncated, subMilliseconds } : undefined;
+  }
+  return { milliseconds, subMilliseconds: "" };
+}
+
+function isCoverageTimeAfter(left: CoverageTime, right: CoverageTime): boolean {
+  if (left.milliseconds !== right.milliseconds) return left.milliseconds > right.milliseconds;
+  const digits = Math.max(left.subMilliseconds.length, right.subMilliseconds.length);
+  return left.subMilliseconds.padEnd(digits, "0") > right.subMilliseconds.padEnd(digits, "0");
+}
+
 export class PostgresWarehouseCatalog implements CatalogStore {
   constructor(
     private readonly pool: WarehousePostgresPool,
@@ -410,19 +461,31 @@ export class PostgresWarehouseCatalog implements CatalogStore {
           !Number.isFinite(Date.parse(quality.freshness.newestEventAt)))
       )
         throw new WarehouseContractError("WAREHOUSE_QUALITY_REJECTED");
+      const partition = candidate.partitionSelection;
+      const partitionBounds = partition && {
+        from: parseCoverageTime(partition.from),
+        through: parseCoverageTime(partition.through),
+      };
       for (const ref of candidate.sourceRefs) {
         const coverage = quality.sourceCoverage.find((item) => item.sourceRef === ref);
         if (
           !coverage ||
           !["complete", "empty"].includes(coverage.state) ||
           coverage.gaps.length ||
-          coverage.late ||
-          !Number.isFinite(Date.parse(coverage.from)) ||
-          !Number.isFinite(Date.parse(coverage.through)) ||
-          coverage.from > coverage.through ||
-          (candidate.partitionSelection &&
-            (coverage.from > candidate.partitionSelection.from ||
-              coverage.through < candidate.partitionSelection.through))
+          coverage.late
+        )
+          throw new WarehouseContractError("WAREHOUSE_COVERAGE_INCOMPLETE");
+        const from = parseCoverageTime(coverage.from);
+        const through = parseCoverageTime(coverage.through);
+        if (
+          !from ||
+          !through ||
+          isCoverageTimeAfter(from, through) ||
+          (partitionBounds &&
+            (!partitionBounds.from ||
+              !partitionBounds.through ||
+              isCoverageTimeAfter(from, partitionBounds.from) ||
+              isCoverageTimeAfter(partitionBounds.through, through)))
         )
           throw new WarehouseContractError("WAREHOUSE_COVERAGE_INCOMPLETE");
       }

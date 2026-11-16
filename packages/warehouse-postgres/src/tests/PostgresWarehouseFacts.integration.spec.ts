@@ -636,6 +636,67 @@ describe.skipIf(!realResourcesEnabled)("PostgreSQL warehouse facts", () => {
     expect(afterRemoval.rows).toEqual([{ captureId: "new" }]);
   }, 120_000);
 
+  it("seals an aggregate partition only when coverage contains its bounds in time order", async () => {
+    const store = services(randomUUID(), searchDescriptor);
+    const id = randomUUID();
+    const open = await store.catalog.createCandidate({
+      access: store.access(),
+      id,
+      transformHash: "search-transform-v1",
+      sourceRefs: ["search"],
+      expectedHead: null,
+      partitionSelection: {
+        from: "2026-09-27",
+        through: "2026-09-28",
+        series: { indexId: "products" },
+      },
+      audit: {
+        reason: "load search partitions",
+        expectedRevision: 0,
+        idempotencyKey: randomUUID(),
+      },
+    });
+    const seal = {
+      access: store.access(),
+      candidateId: id,
+      fence: open.fence,
+      expectedBatchIds: [],
+      audit: {
+        reason: "verified search partitions",
+        expectedRevision: 0,
+        idempotencyKey: randomUUID(),
+      },
+    };
+    const searchQuality = (from: string, through: string): WarehouseQuality => ({
+      ...quality,
+      sourceCoverage: [
+        { ...quality.sourceCoverage[0], sourceRef: "search", from, through, state: "empty" },
+      ],
+    });
+
+    for (const incomplete of [
+      searchQuality("2026-09-26T23:30:00-01:00", "2026-09-28T00:00:00Z"),
+      searchQuality("2026-09-26T23:00:00-01:00", "2026-09-28T01:00:00+02:00"),
+    ]) {
+      await expect(store.catalog.sealCandidate({ ...seal, quality: incomplete })).rejects.toThrow(
+        "WAREHOUSE_COVERAGE_INCOMPLETE",
+      );
+      await expect(
+        store.catalog.getCandidate({ access: store.access(), candidateId: id }),
+      ).resolves.toMatchObject({
+        state: "open",
+        quality: null,
+      });
+    }
+    const complete = searchQuality("2026-09-27T02:00:00+02:00", "2026-09-27T23:00:00-01:00");
+    await expect(
+      store.catalog.sealCandidate({ ...seal, quality: complete }),
+    ).resolves.toMatchObject({
+      state: "sealed",
+      quality: complete,
+    });
+  });
+
   it("replaces a complete aggregate partition while old snapshots keep exact typed rows", async () => {
     const store = services(randomUUID(), searchDescriptor);
     const range = { from: "2026-09-27", through: "2026-09-27", series: { indexId: "products" } };
