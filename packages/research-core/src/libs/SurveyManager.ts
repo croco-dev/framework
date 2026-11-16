@@ -30,6 +30,9 @@ type Context = { scope: SurveyScope; actor: string };
 type TokenInput = Context & { token: string };
 const definitionKey = (id: string, version: string) => JSON.stringify([id, version]);
 const equivalent = (a: unknown, b: unknown): boolean => canonical(a) === canonical(b);
+const inSurveyPeriod = (d: SurveyDefinition, now: string): boolean =>
+  now >= new Date(d.startsAt).toISOString() && now < new Date(d.endsAt).toISOString();
+
 function canonical(value: unknown): string {
   if (Array.isArray(value)) return `[${value.map(canonical).join(",")}]`;
   if (value && typeof value === "object")
@@ -53,6 +56,11 @@ export class SurveyManager {
     const value = this.clock();
     if (!Number.isFinite(value.getTime())) throw new SurveyInvalidProblem("clock");
     return value.toISOString();
+  }
+  private unexpiredAt(invitation: SurveyInvitation): string {
+    const now = this.now();
+    if (now >= invitation.expiresAt) throw new SurveyExpiredProblem();
+    return now;
   }
   private context(input: Context): void {
     validateSurveyScope(input.scope);
@@ -139,8 +147,7 @@ export class SurveyManager {
     this.registered(d);
     if (input.trigger !== "manual" && input.trigger !== d.trigger)
       return { eligible: false, reason: "trigger", definition: d };
-    if (now < new Date(d.startsAt).toISOString() || now >= new Date(d.endsAt).toISOString())
-      return { eligible: false, reason: "period", definition: d };
+    if (!inSurveyPeriod(d, now)) return { eligible: false, reason: "period", definition: d };
     const predicate = this.targeting[d.eligibility];
     if (!predicate || !(await predicate({ scope: input.scope, subject: input.subject })))
       return { eligible: false, reason: "target", definition: d };
@@ -164,14 +171,16 @@ export class SurveyManager {
     requireSurveyText(input.familyId, "family");
     requireSurveyText(input.trigger, "trigger");
     return this.store.transaction(input.scope, async (s) => {
-      const now = this.now();
-      const e = await this.eligibility(s, input, now);
+      const e = await this.eligibility(s, input, this.now());
       if (!e.eligible || !e.definition) return null;
       const token = this.tokens.create();
       requireSurveyText(token.raw, "token");
       requireSurveyText(token.hash, "token hash");
-      if (await s.get("invitation", token.hash)) throw new SurveyConflictProblem("token collision");
+      const collision = await s.get("invitation", token.hash);
       const d = e.definition;
+      const now = this.now();
+      if (!inSurveyPeriod(d, now)) return null;
+      if (collision) throw new SurveyConflictProblem("token collision");
       const invitation: SurveyInvitation = {
         id: token.hash,
         familyId: d.id,
@@ -198,7 +207,7 @@ export class SurveyManager {
     const i = record.value;
     // An anonymous bearer remains anonymous even when used by a logged-in principal.
     if (i.subject.kind === "member") await this.subject({ ...input, subject: i.subject });
-    if (this.now() >= i.expiresAt) throw new SurveyExpiredProblem();
+    this.unexpiredAt(i);
     const p = await s.get("definition", definitionKey(i.familyId, i.surveyVersion));
     if (!p || p.kind !== "definition") throw new SurveyConflictProblem("pinned definition missing");
     this.registered(p.value.definition);
@@ -211,13 +220,14 @@ export class SurveyManager {
     this.context(input);
     return this.store.transaction(input.scope, async (s) => {
       const { invitation: i, definition } = await this.invitation(s, input);
+      const now = this.unexpiredAt(i);
       if (i.dismissedAt || i.submittedAt) throw new SurveyConflictProblem("invitation completed");
       if (!i.shownAt)
         await s.put({
           kind: "invitation",
           id: i.id,
           familyId: i.familyId,
-          value: { ...i, shownAt: this.now() },
+          value: { ...i, shownAt: now },
         });
       return definition;
     });
@@ -226,6 +236,7 @@ export class SurveyManager {
     this.context(input);
     await this.store.transaction(input.scope, async (s) => {
       const { invitation: i } = await this.invitation(s, input);
+      const now = this.unexpiredAt(i);
       if (i.submittedAt || !i.shownAt)
         throw new SurveyConflictProblem("already submitted or not exposed");
       if (!i.dismissedAt)
@@ -233,9 +244,22 @@ export class SurveyManager {
           kind: "invitation",
           id: i.id,
           familyId: i.familyId,
-          value: { ...i, dismissedAt: this.now() },
+          value: { ...i, dismissedAt: now },
         });
     });
+  }
+  private responseAdmissionTime(
+    invitation: SurveyInvitation,
+    previous: SurveyResponse | null,
+    retentionMs: number,
+  ): string {
+    const now = this.unexpiredAt(invitation);
+    if (
+      previous &&
+      (previous.deletedAt || Date.parse(now) >= Date.parse(previous.submittedAt) + retentionMs)
+    )
+      throw new SurveyConflictProblem("response no longer retained");
+    return now;
   }
   async submitResponse(
     input: TokenInput & {
@@ -249,22 +273,21 @@ export class SurveyManager {
     const answers = structuredClone(input.answers);
     return this.store.transaction(input.scope, async (s) => {
       const { invitation: i, definition: d } = await this.invitation(s, input);
+      this.unexpiredAt(i);
       validateSurveyAnswers(d, answers);
       if (!i.shownAt || i.dismissedAt) throw new SurveyConflictProblem("not exposed or dismissed");
       const old = await s.get("response", i.id);
       const previous = old?.kind === "response" ? old.value : null;
-      if (
-        previous?.deletedAt ||
-        (previous && Date.parse(this.now()) >= Date.parse(previous.submittedAt) + d.retentionMs)
-      )
-        throw new SurveyConflictProblem("response no longer retained");
+      this.responseAdmissionTime(i, previous, d.retentionMs);
       const auditId = JSON.stringify(["submit", i.id, input.idempotencyKey]);
       if (previous?.idempotencyKey === input.idempotencyKey) {
         if (!equivalent(previous.answers, answers))
           throw new SurveyConflictProblem("submit identity payload mismatch");
         return { ...previous, classification: undefined };
       }
-      if (await s.get("audit", auditId)) throw new SurveyConflictProblem("submit identity reused");
+      const priorAudit = await s.get("audit", auditId);
+      const admittedAt = this.responseAdmissionTime(i, previous, d.retentionMs);
+      if (priorAudit) throw new SurveyConflictProblem("submit identity reused");
       if (previous && (!d.allowEdits || input.expectedRevision !== previous.revision))
         throw new SurveyConflictProblem("edit revision or edits disabled");
       if (!previous && input.expectedRevision !== undefined && input.expectedRevision !== 0)
@@ -274,7 +297,7 @@ export class SurveyManager {
         invitationId: i.id,
         familyId: i.familyId,
         answers,
-        submittedAt: previous?.submittedAt ?? this.now(),
+        submittedAt: previous?.submittedAt ?? admittedAt,
         revision: (previous?.revision ?? 0) + 1,
         idempotencyKey: input.idempotencyKey,
       };
