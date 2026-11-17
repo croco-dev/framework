@@ -9,6 +9,7 @@ import {
 } from "../libs/diagnosticCodes.js";
 import { GLOBAL_OPTIONS } from "./options.js";
 import { getCrocoCommandRuntime } from "../libs/cliRuntime.js";
+import { parseWorkingDirectoryInvocation } from "../libs/workingDirectoryInvocation.js";
 
 import type { DependencyGraphManifest } from "@croco/framework-context";
 import type { ModuleGraphManifest } from "@croco/framework-module";
@@ -132,8 +133,8 @@ export async function runDiCheck(
   args: readonly string[],
   options: { readonly io?: Partial<DiCheckIo> } = {},
 ): Promise<number> {
-  const parsed = parseDiCheckArgs(args);
   const io = { ...createDefaultIo(), ...options.io };
+  const { parsed, cwd = io.cwd } = parseDiCheckInvocation(args, io.cwd);
 
   if (parsed.kind === "help") {
     printDiCheckHelp(io);
@@ -146,14 +147,16 @@ export async function runDiCheck(
     return 1;
   }
 
-  const manifestPath = resolvePath(parsed.options.manifest, io.cwd);
+  const manifestPath = resolve(cwd, parsed.options.manifest);
   const report = createDiCheckReport(readJsonManifest(manifestPath, io));
   const reportJson = `${JSON.stringify(report, null, 2)}\n`;
 
   if (parsed.options.json) {
     if (parsed.options.out) {
-      writeOutputFile(parsed.options.out, reportJson, io);
-      io.stdout(`Wrote DI graph check report to ${resolvePath(parsed.options.out, io.cwd)}.`);
+      const outputPath = resolve(cwd, parsed.options.out);
+      io.mkdir(dirname(outputPath));
+      io.writeFile(outputPath, reportJson);
+      io.stdout(`Wrote DI graph check report to ${outputPath}.`);
     } else {
       io.stdout(reportJson.trimEnd());
     }
@@ -165,11 +168,30 @@ export async function runDiCheck(
 }
 
 export function parseDiCheckArgs(args: readonly string[]): DiCheckParseResult {
+  return parseDiCheckInvocation(args).parsed;
+}
+
+function parseDiCheckInvocation(
+  args: readonly string[],
+  runtimeCwd?: string,
+): { readonly parsed: DiCheckParseResult; readonly cwd?: string | undefined } {
   if (args.includes("--help") || args.includes("-h")) {
-    return { kind: "help" };
+    return { parsed: { kind: "help" } };
   }
 
-  const manifest = getFlagValue(args, "--manifest") ?? getFirstPosition(args);
+  const invocation = parseWorkingDirectoryInvocation(args, runtimeCwd);
+  if ("diagnostic" in invocation) {
+    return { parsed: { kind: "invalid", message: invocation.diagnostic } };
+  }
+
+  return { parsed: parseDiCheckOptions(args, invocation.cwdOptionIndices), cwd: invocation.cwd };
+}
+
+function parseDiCheckOptions(
+  args: readonly string[],
+  cwdOptionIndices: ReadonlySet<number>,
+): DiCheckParseResult {
+  const manifest = getFlagValue(args, "--manifest") ?? getFirstPosition(args, cwdOptionIndices);
   const out = getFlagValue(args, "--out");
 
   if (!manifest) {
@@ -353,24 +375,15 @@ function formatSourceLocation(sourceLocation: DiCheckDiagnostic["sourceLocation"
 }
 
 function printDiCheckHelp(io: DiCheckIo): void {
-  io.stdout(`Usage: croco di check --manifest <path> [--json] [--out <path>]
-       croco di check <path> [--json] [--out <path>]
+  io.stdout(`Usage: croco di check --manifest <path> [--cwd <path>] [--json] [--out <path>]
+       croco di check <path> [--cwd <path>] [--json] [--out <path>]
 
 Options:
   --manifest <path>  DI or module graph manifest JSON to validate
+  --cwd <path>       Working directory for manifest and report paths
   --json             Print a machine-readable DI check report
   --out <path>       Write the machine-readable DI check report
   --help, -h         Show this help message`);
-}
-
-function writeOutputFile(path: string, content: string, io: DiCheckIo): void {
-  const resolvedPath = resolvePath(path, io.cwd);
-  io.mkdir(dirname(resolvedPath));
-  io.writeFile(resolvedPath, content);
-}
-
-function resolvePath(path: string, cwd: string): string {
-  return resolve(cwd, path);
 }
 
 function getFlagValue(args: readonly string[], flag: string): string | null {
@@ -380,18 +393,24 @@ function getFlagValue(args: readonly string[], flag: string): string | null {
   return value && !value.startsWith("--") ? value : null;
 }
 
-function getFirstPosition(args: readonly string[]): string | null {
+function getFirstPosition(
+  args: readonly string[],
+  cwdOptionIndices: ReadonlySet<number>,
+): string | null {
   const valueFlags = new Set(["--manifest", "--out"]);
 
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index];
 
-    if (!arg) {
+    if (!arg || cwdOptionIndices.has(index)) {
       continue;
     }
 
     if (valueFlags.has(arg)) {
-      index += 1;
+      // A --cwd token cannot be the value of a preceding option.
+      if (!cwdOptionIndices.has(index + 1)) {
+        index += 1;
+      }
       continue;
     }
 

@@ -1,10 +1,17 @@
 import { resolve } from "node:path";
 
-export function parseCodegenInvocation(
+export function parseWorkingDirectoryInvocation(
   args: readonly string[],
   runtimeCwd: string | undefined,
-): { readonly args: string[]; readonly cwd: string | undefined } | { readonly diagnostic: string } {
+):
+  | {
+      readonly args: string[];
+      readonly cwd: string | undefined;
+      readonly cwdOptionIndices: ReadonlySet<number>;
+    }
+  | { readonly diagnostic: string } {
   const forwarded: string[] = [];
+  const cwdOptionIndices = new Set<number>();
   let cliCwd: string | undefined;
 
   for (let index = 0; index < args.length; index += 1) {
@@ -19,17 +26,21 @@ export function parseCodegenInvocation(
       continue;
     }
 
+    const optionIndex = index;
     const value = argument === "--cwd" ? args[++index] : argument.slice("--cwd=".length);
     if (!value || value.startsWith("--")) {
       return {
         diagnostic: "[CROCO_CLI_MISSING_VALUE] Missing working directory. Pass --cwd <path>.",
       };
     }
+    cwdOptionIndices.add(optionIndex);
+    cwdOptionIndices.add(index);
     cliCwd = value;
   }
 
   return {
     args: forwarded,
     cwd: cliCwd === undefined ? runtimeCwd : resolve(runtimeCwd ?? process.cwd(), cliCwd),
+    cwdOptionIndices,
   };
 }

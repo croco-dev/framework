@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { beforeEach, describe, expect, it } from "vitest";
@@ -518,6 +518,90 @@ describe("diCheck", () => {
       }
     },
   );
+
+  it("checks two apps independently and writes each report relative to its app directory", async () => {
+    const cwd = mkdtempSync(join(tmpdir(), "croco-di-root-"));
+    const processCwd = process.cwd();
+    try {
+      const ready = readyManifest();
+      const failed = { ...ready, status: "failed" };
+      writeFileSync(join(cwd, "graph.json"), "{}");
+      mkdirSync(join(cwd, "ready"));
+      writeFileSync(join(cwd, "ready", "graph.json"), JSON.stringify(ready));
+      mkdirSync(join(cwd, "failed"));
+      writeFileSync(join(cwd, "failed", "graph.json"), JSON.stringify(failed));
+
+      const [readyResult, failedResult] = await Promise.all([
+        runCroco(["di", "check", "--cwd", "ready", "graph.json", "--out", "reports/di.json"], {
+          cwd,
+          stdout: () => {},
+          stderr: () => {},
+        }),
+        runCroco(
+          ["di", "check", "--cwd=failed", "--manifest", "graph.json", "--out", "reports/di.json"],
+          {
+            cwd,
+            stdout: () => {},
+            stderr: () => {},
+          },
+        ),
+      ]);
+
+      expect(readyResult).toEqual({ exitCode: 0 });
+      expect(failedResult).toEqual({ exitCode: 1 });
+      expect(
+        JSON.parse(readFileSync(join(cwd, "ready", "reports", "di.json"), "utf-8")),
+      ).toMatchObject({
+        status: "passed",
+      });
+      expect(
+        JSON.parse(readFileSync(join(cwd, "failed", "reports", "di.json"), "utf-8")),
+      ).toMatchObject({
+        status: "failed",
+        diagnostics: [{ code: CLI_DIAGNOSTIC_CODES.diCheckManifestFailed }],
+      });
+      expect(existsSync(join(cwd, "reports"))).toBe(false);
+      expect(process.cwd()).toBe(processCwd);
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+
+  it.each([["--cwd"], ["--cwd="]])("rejects a missing cwd value with %s", async (cwdFlag) => {
+    const stderr: string[] = [];
+    const result = await runCroco(["di", "check", cwdFlag, "--manifest", "graph.json"], {
+      stdout: () => {},
+      stderr: (message) => stderr.push(message),
+    });
+
+    expect(result).toEqual({ exitCode: 1 });
+    expect(stderr).toEqual([
+      expect.stringContaining("Missing working directory. Pass --cwd <path>."),
+    ]);
+  });
+
+  it.each([
+    ["explicit", ["--manifest", "graph.json", "--out", "--cwd=.", "graph.json"]],
+    ["positional", ["--out", "--cwd", ".", "graph.json", "other.json"]],
+  ])("preserves the %s manifest when --out has no value before --cwd", async (_name, args) => {
+    const cwd = mkdtempSync(join(tmpdir(), "croco-di-root-"));
+    try {
+      const manifestPath = join(cwd, "graph.json");
+      const manifest = JSON.stringify(readyManifest());
+      writeFileSync(manifestPath, manifest);
+
+      const result = await runCroco(["di", "check", ...args], {
+        cwd,
+        stdout: () => {},
+        stderr: () => {},
+      });
+
+      expect(result).toEqual({ exitCode: 0 });
+      expect(readFileSync(manifestPath, "utf-8")).toBe(manifest);
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });
 
   it("parses help and manifest arguments", () => {
     expect(parseDiCheckArgs(["--help"])).toEqual({ kind: "help" });
