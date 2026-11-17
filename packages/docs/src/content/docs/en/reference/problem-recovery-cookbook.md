@@ -22129,7 +22129,7 @@ Sources:
 
 Sources:
 
-- `packages/warehouse-postgres/src/metrics/PostgresMetricsStore.ts:309:15` (problem-factory)
+- `packages/warehouse-postgres/src/metrics/PostgresMetricsStore.ts:292:15` (problem-factory)
 
 <a id="warehouse-postgres-metrics-row-invalid"></a>
 
@@ -22147,7 +22147,7 @@ Sources:
 
 Sources:
 
-- `packages/warehouse-postgres/src/metrics/PostgresMetricsStore.ts:387:9` (problem-factory)
+- `packages/warehouse-postgres/src/metrics/PostgresMetricsStore.ts:370:9` (problem-factory)
 
 <a id="warehouse-tooling-generation-failed"></a>
 

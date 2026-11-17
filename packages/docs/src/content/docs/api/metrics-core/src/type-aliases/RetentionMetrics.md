@@ -11,7 +11,7 @@ Retention metrics measuring customer and revenue retention.
 
 ## Logo churn formula
 
-Logo Churn Rate = (Churned Customers / Starting Customers) \* 100
+Logo Churn Rate = (Churned Starting Customers / Starting Customers) \* 100
 
 ## Revenue churn formula
 
@@ -40,9 +40,9 @@ Gross Revenue Retention - retention excluding expansion (0-100)
 
 ### logoChurn
 
-> **logoChurn**: [`Percentage`](/api/metrics-core/src/type-aliases/percentage/)
+> **logoChurn**: [`Percentage`](/api/metrics-core/src/type-aliases/percentage/) \| `null`
 
-Customer logo churn rate (0-100)
+Starting-cohort logo churn rate (0-100), or null when usable cohort evidence is unavailable.
 
 ---
 

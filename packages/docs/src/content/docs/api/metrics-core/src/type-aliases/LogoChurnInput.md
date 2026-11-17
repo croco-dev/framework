@@ -11,12 +11,16 @@ Logo Churn 계산을 위한 고객 수 기반 입력 타입입니다.
 
 ## Properties
 
-### endingCustomers
+### churnedStartingCustomers
 
-> **endingCustomers**: `number`
+> **churnedStartingCustomers**: `number`
+
+Distinct starting customers who churned in the period and are inactive at its end.
 
 ---
 
 ### startingCustomers
 
 > **startingCustomers**: `number`
+
+Distinct customers active at the start of the period.

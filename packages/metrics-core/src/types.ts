@@ -64,7 +64,7 @@ export type MRRMovement = {
  *
  * ## Logo churn formula
  *
- * Logo Churn Rate = (Churned Customers / Starting Customers) * 100
+ * Logo Churn Rate = (Churned Starting Customers / Starting Customers) * 100
  *
  * ## Revenue churn formula
  *
@@ -82,8 +82,8 @@ export type MRRMovement = {
  * NRR = ((Starting MRR + Expansion MRR - Churned MRR - Contraction MRR) / Starting MRR) * 100
  */
 export type RetentionMetrics = {
-  /** Customer logo churn rate (0-100) */
-  logoChurn: Percentage;
+  /** Starting-cohort logo churn rate (0-100), or null when usable cohort evidence is unavailable. */
+  logoChurn: Percentage | null;
   /** Revenue churn rate (non-negative; may exceed 100 when churned MRR exceeds starting MRR) */
   revenueChurn: Percentage;
   /** Gross Revenue Retention - retention excluding expansion (0-100) */

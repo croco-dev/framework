@@ -216,7 +216,7 @@ const metricsRepository = new PostgresMetricsStore(db);
 
 `PostgresMetricsStore` implements `MetricsRepository` from `@croco/metrics-core`. It preserves the
 existing `mrr_movements`, `mrr_movement_event_keys`, and `metrics_snapshots` layout, event-key
-idempotency, tenant filtering, amount meaning, timestamp boundaries, and retention calculations.
+idempotency, tenant filtering, amount meaning, and timestamp boundaries.
 PostgreSQL `BIGINT` values are decoded to safe JavaScript integers because the core `Money` contract
 uses `number`; values outside the safe-integer range fail explicitly instead of corrupting a metric.
 
@@ -225,7 +225,11 @@ including zero amounts. Retention additionally requires that currency to match t
 A mismatch throws `warehouse-postgres/metrics-currency-mismatch` before calculating rates, with
 operator-only tenant, period, movement index, field and expected/actual currency evidence. No currency
 conversion or historical data repair is performed. Single-currency histories without a baseline and
-empty periods keep their existing neutral retention values.
+empty periods keep their existing neutral revenue retention values.
+
+`getRetentionMetrics` returns `logoChurn: null` because the stored snapshots and movement history
+contain aggregate totals. Applications with starting-cohort churn counts can pass them to
+[`RetentionCalculator`](../metrics-core/README.md#사용법).
 
 ### Plain PostgreSQL
 

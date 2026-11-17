@@ -1,0 +1,137 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "metrics-core",
+      "classification": "pure-contract",
+      "reason": "Logo churn uses explicit counts for the starting cohort and reports unavailable when the cohort cannot be measured.",
+      "files": {
+        "packages/metrics-core/src/libs/RetentionCalculator.ts": "fe4920b300426d16a0de2bf35aea7ab77eff11d2d9a524db12ae8ae2091806ae",
+        "packages/metrics-core/src/types.ts": "72268cf5e20a2635ebda635ae88771b5f127df1587eaa375fb191eb05a56845f"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The calculator validates and divides caller-supplied counts without Kubernetes Node Host capabilities, storage or lifecycle hooks.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/metrics-core/src/libs/RetentionCalculator.ts",
+            "packages/metrics-core/src/types.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The calculator validates and divides caller-supplied counts without Lambda Host capabilities, storage or lifecycle hooks.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/metrics-core/src/libs/RetentionCalculator.ts",
+            "packages/metrics-core/src/types.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The calculator validates and divides caller-supplied counts without Cloudflare Workers or Node Container Host capabilities, storage or lifecycle hooks.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/metrics-core/src/libs/RetentionCalculator.ts",
+            "packages/metrics-core/src/types.ts"
+          ]
+        }
+      }
+    },
+    {
+      "package": "warehouse-postgres",
+      "classification": "durable-provider",
+      "reason": "The existing metrics provider returns unavailable logo churn for aggregate snapshots and movement amounts.",
+      "files": {
+        "packages/warehouse-postgres/src/metrics/PostgresMetricsStore.ts": "2c9b7414cba2befe2309f812177afd06103249481fb0cad6de07af1086f4d161"
+      },
+      "catalogRuntimes": ["node", "lambda"],
+      "profiles": {
+        "kubernetes": {
+          "result": "unverified",
+          "reason": "The provider uses the existing Node PostgreSQL client. Local PostgreSQL and TimescaleDB fixtures cover the store read.",
+          "providers": ["@croco/warehouse-postgres/metrics"],
+          "constraints": ["A Kubernetes Node Host deployment was not exercised."],
+          "references": [
+            "packages/warehouse-postgres/src/metrics/PostgresMetricsStore.ts",
+            "packages/warehouse-postgres/README.md",
+            "packages/presentation-preset/runtime-profiles.json"
+          ]
+        },
+        "aws-lambda": {
+          "result": "conditional",
+          "reason": "The same PostgreSQL read uses the existing Lambda-compatible provider contract.",
+          "providers": ["@croco/warehouse-postgres/metrics"],
+          "constraints": [
+            "The caller owns invocation-scoped connection use and awaits database I/O before returning.",
+            "A deployed Lambda invocation was not exercised."
+          ],
+          "references": [
+            "packages/warehouse-postgres/src/metrics/PostgresMetricsStore.ts",
+            "packages/warehouse-postgres/README.md",
+            "packages/presentation-preset/runtime-profiles.json"
+          ]
+        },
+        "cloudflare": {
+          "result": "unsupported",
+          "reason": "The metrics provider advertises Node and Lambda runtimes.",
+          "providers": ["@croco/warehouse-postgres/metrics"],
+          "constraints": [
+            "The change supplies no Workers adapter or Cloudflare Node Container deployment."
+          ],
+          "references": [
+            "packages/warehouse-postgres/src/metrics/PostgresMetricsStore.ts",
+            "packages/warehouse-postgres/README.md",
+            "packages/presentation-preset/runtime-profiles.json"
+          ]
+        }
+      }
+    },
+    {
+      "package": "problems-core",
+      "classification": "pure-contract",
+      "reason": "Refresh the generated source coordinates for the existing metrics provider diagnostics.",
+      "files": {
+        "packages/problems-core/src/generated/problem-code-registry.ts": "9b300744d46bbaa7eb35a26c5abc87967ea42dbb49a90f910cd081da3923d8d6"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Generated diagnostic coordinates have no infrastructure capabilities, storage or lifecycle requirements.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "scripts/problem-registry.mts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Generated diagnostic coordinates have no infrastructure capabilities, storage or lifecycle requirements.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "scripts/problem-registry.mts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Generated diagnostic coordinates have no infrastructure capabilities, storage or lifecycle requirements.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "scripts/problem-registry.mts"
+          ]
+        }
+      }
+    }
+  ]
+}

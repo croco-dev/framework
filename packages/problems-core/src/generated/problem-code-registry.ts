@@ -32307,7 +32307,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/warehouse-postgres/src/metrics/PostgresMetricsStore.ts";
-          readonly line: 309;
+          readonly line: 292;
           readonly column: 15;
           readonly kind: "problem-factory";
         },
@@ -32335,7 +32335,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/warehouse-postgres/src/metrics/PostgresMetricsStore.ts";
-          readonly line: 387;
+          readonly line: 370;
           readonly column: 9;
           readonly kind: "problem-factory";
         },
@@ -69733,7 +69733,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/warehouse-postgres/src/metrics/PostgresMetricsStore.ts",
-          line: 309,
+          line: 292,
           column: 15,
           kind: "problem-factory",
         },
@@ -69764,7 +69764,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/warehouse-postgres/src/metrics/PostgresMetricsStore.ts",
-          line: 387,
+          line: 370,
           column: 9,
           kind: "problem-factory",
         },

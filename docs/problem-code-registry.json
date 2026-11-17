@@ -34528,7 +34528,7 @@
       "sources": [
         {
           "file": "packages/warehouse-postgres/src/metrics/PostgresMetricsStore.ts",
-          "line": 309,
+          "line": 292,
           "column": 15,
           "kind": "problem-factory"
         }
@@ -34558,7 +34558,7 @@
       "sources": [
         {
           "file": "packages/warehouse-postgres/src/metrics/PostgresMetricsStore.ts",
-          "line": 387,
+          "line": 370,
           "column": 9,
           "kind": "problem-factory"
         }

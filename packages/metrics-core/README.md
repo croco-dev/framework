@@ -94,8 +94,22 @@ import { RetentionCalculator } from "@croco/metrics-core";
 
 const retention = new RetentionCalculator();
 
-await retention.calculateRetention(10000, movement, 120, 114);
+const logoChurnInput = { startingCustomers: 100, churnedStartingCustomers: 10 };
+const logoChurn = await retention.calculateLogoChurn(logoChurnInput); // 10
+await retention.calculateRetention(10000, movement, logoChurnInput);
 ```
+
+Logo churn은 기간 초에 활성 상태였던 고객 중 기간 내에 해지하고 기간 말에도 비활성 상태인 고객의 비율입니다.
+고객 ID 기준으로 한 번만 집계합니다. 기간 내 재활성화 후 기간 말까지 활성 상태인 고객은 해지 수에서 제외하고,
+기간 중 새로 유입된 고객은 분자와 분모 모두에서 제외합니다. 기초 고객 100명 중 10명이 해지하고 20명이 새로
+유입되면 기말 고객은 110명이고 logo churn은 10%입니다.
+
+기존에 기초·기말 전체 고객 수를 위치 인자로 전달했다면, 기초 고객 명단을 기준으로 해지 고객 수를 집계해
+`{ startingCustomers, churnedStartingCustomers }`로 전달하세요. 두 전체 고객 수만 있으면
+`calculateRetention`에서 이 인자를 생략하세요. 기초 고객이 0명이거나 집계 근거가 없으면
+`logoChurn`은 `null`입니다. 두 수는 음이 아닌 안전한 정수여야 하며, 해지 고객 수가 기초 고객 수를
+초과하는 등 유효하지 않은 집계도 `null`을 반환합니다. `RetentionMetrics.logoChurn`을 사용하는 코드에서도
+`null`을 측정 불가 상태로 처리하세요.
 
 ## API 레퍼런스
 

@@ -187,7 +187,7 @@ describe("PostgresMetricsStore", () => {
     );
   });
 
-  it("should calculate retention metrics from snapshots and movement history", async () => {
+  it("calculates revenue retention and reports logo churn as unavailable with only aggregate data", async () => {
     vi.mocked(db.query)
       .mockResolvedValueOnce({
         rows: [
@@ -196,16 +196,6 @@ describe("PostgresMetricsStore", () => {
             total_mrr_amount: 100000,
             total_mrr_currency: "USD",
             activeCustomers: 100,
-          },
-        ],
-      })
-      .mockResolvedValueOnce({
-        rows: [
-          {
-            date: new Date("2026-03-31T00:00:00.000Z"),
-            total_mrr_amount: 103000,
-            total_mrr_currency: "USD",
-            activeCustomers: 95,
           },
         ],
       })
@@ -237,7 +227,7 @@ describe("PostgresMetricsStore", () => {
     const result = await store.getRetentionMetrics("tenant-1", period);
 
     expect(result).toEqual({
-      logoChurn: 5,
+      logoChurn: null,
       revenueChurn: 3,
       grr: 95,
       nrr: 103,
@@ -245,10 +235,7 @@ describe("PostgresMetricsStore", () => {
   });
 
   it("should fall back to neutral retention values when baseline snapshot is missing", async () => {
-    vi.mocked(db.query)
-      .mockResolvedValueOnce({ rows: [] })
-      .mockResolvedValueOnce({ rows: [] })
-      .mockResolvedValueOnce({ rows: [] });
+    vi.mocked(db.query).mockResolvedValueOnce({ rows: [] }).mockResolvedValueOnce({ rows: [] });
 
     const period = {
       from: new Date("2026-03-01T00:00:00.000Z"),
@@ -259,7 +246,7 @@ describe("PostgresMetricsStore", () => {
     const result = await store.getRetentionMetrics("tenant-1", period);
 
     expect(result).toEqual({
-      logoChurn: 0,
+      logoChurn: null,
       revenueChurn: 0,
       grr: 100,
       nrr: 100,
@@ -338,7 +325,6 @@ describe("PostgresMetricsStore", () => {
           },
         ],
       })
-      .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({ rows: [storedMovement("KRW")] });
     await expect(store.getRetentionMetrics("tenant-1", currencyPeriod)).rejects.toMatchObject({
       ...currencyFailure,
@@ -349,10 +335,9 @@ describe("PostgresMetricsStore", () => {
   it("preserves neutral retention for a non-USD history without a baseline", async () => {
     vi.mocked(db.query)
       .mockResolvedValueOnce({ rows: [] })
-      .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({ rows: [storedMovement("KRW")] });
     await expect(store.getRetentionMetrics("tenant-1", currencyPeriod)).resolves.toEqual({
-      logoChurn: 0,
+      logoChurn: null,
       revenueChurn: 0,
       grr: 100,
       nrr: 100,
@@ -371,10 +356,9 @@ describe("PostgresMetricsStore", () => {
           },
         ],
       })
-      .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({ rows: [] });
     await expect(store.getRetentionMetrics("tenant-1", currencyPeriod)).resolves.toEqual({
-      logoChurn: 0,
+      logoChurn: null,
       revenueChurn: 0,
       grr: 100,
       nrr: 100,
