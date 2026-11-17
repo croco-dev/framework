@@ -25822,6 +25822,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "InvitationRateLimitUnavailableProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/RateLimitProblems",
+              "declarationKind": "class"
+            },
+            {
               "name": "InvitationRevokedEvent",
               "exportKind": "named",
               "source": "./libs/events/InvitationEvents",

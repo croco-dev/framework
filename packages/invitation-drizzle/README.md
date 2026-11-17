@@ -66,6 +66,8 @@ const policy = await policyStore.findByTenantAndDomain("tenant-1", "example.com"
 - `findAllByTenant(tenantId)`, 테넌트의 모든 초대를 반환합니다.
 - `save(invitation)`, 초대를 upsert로 저장합니다.
 - `createEmailInvitation(input)`, 이메일 및 링크 초대와 재생 가능한 알림/이벤트 의도를 하나의 트랜잭션으로 저장합니다.
+- `createRateLimitedInvitation(input, config, expiresInDays)`는 동일 PostgreSQL 데이터베이스의 tenant별 트랜잭션 잠금으로 한도를 적용합니다. 잠금을 얻은 뒤 PostgreSQL 시각으로 한도와 기존 초대의 유효 여부를 판단하고, 새 초대의 발급·만료 시각을 정합니다. 새 발급을 승인하면 해당 tenant의 만료된 생성 기록을 정리합니다. 한도 적용 발급은 외부 트랜잭션 밖에서 호출하세요. PostgreSQL 트랜잭션 어댑터는 `READ COMMITTED`를 지원해야 합니다. 쓰기 경로마다 같은 tenant 한도를 설정하고 새 경로를 모든 발급 인스턴스에 배포해야 동시 발급 제한을 보장할 수 있습니다.
+- 일반 발급과 알림·이벤트 claim도 PostgreSQL 시각을 사용합니다. 여러 발급 인스턴스의 서버 시계가 달라도 동일한 만료 시각을 기준으로 재시도합니다.
 - 단계별 claim/complete/release 메서드는 동시에 하나의 전달 작업만 수행하도록 fencing합니다.
 - `activateEmailInvitation(tenantId, idempotencyKey)`, 이벤트와 알림 완료 뒤 초대를 `pending`으로 활성화합니다.
 - `updateStatus(id, status)`, 초대 상태를 갱신합니다.

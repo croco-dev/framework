@@ -1,0 +1,143 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "invitation-core",
+      "classification": "pure-contract",
+      "reason": "A live idempotency replay precedes quota admission. New creations must check the tenant quota and persist together.",
+      "files": {
+        "packages/invitation-core/src/index.ts": "cf76a6a54c4679404da70c492d680d5a06bce0b0655e875afbf04557c5977277",
+        "packages/invitation-core/src/libs/InMemoryInvitationStore.ts": "588a59ff5b2019c1f9b4c58b5df8829b2a57be3399f5da1825180bac0eef5d72",
+        "packages/invitation-core/src/libs/InvitationManager.ts": "812a349f45ab2b243f85460bf85da098dc134b20513c11ab95003f020a65cba8",
+        "packages/invitation-core/src/libs/InvitationStore.ts": "cbeb84205aeec52bd4b9fc43cb8e35826a978bc79ff8bbfe211431b93078a1c5",
+        "packages/invitation-core/src/libs/RateLimitedInvitationService.ts": "c3f0ddf7d11094de0be856f614c9235f00e5ec9916cca9ac8d54ee5a22dd6fdf",
+        "packages/invitation-core/src/libs/problems/RateLimitProblems.ts": "1c5c7500cdcf8db176ea68d81bb4d80f0bc6e159787a75ce94d78272dfb1718f"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The quota contract defines domain behavior without selecting a Host or storage provider.",
+          "providers": ["@croco/invitation-core:InvitationStore"],
+          "constraints": [
+            "InMemoryInvitationStore enforces the quota within a single store instance. Cross-process admission needs a shared store."
+          ],
+          "references": [
+            "packages/invitation-core/src/libs/InvitationStore.ts",
+            "packages/invitation-core/src/libs/InMemoryInvitationStore.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The quota contract defines domain behavior without selecting a Host or storage provider.",
+          "providers": ["@croco/invitation-core:InvitationStore"],
+          "constraints": [
+            "InMemoryInvitationStore enforces the quota within a single store instance. Cross-process admission needs a shared store."
+          ],
+          "references": [
+            "packages/invitation-core/src/libs/InvitationStore.ts",
+            "packages/invitation-core/src/libs/InMemoryInvitationStore.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The quota contract defines domain behavior without selecting a Host or storage provider.",
+          "providers": ["@croco/invitation-core:InvitationStore"],
+          "constraints": [
+            "InMemoryInvitationStore enforces the quota within a single store instance. Cross-process admission needs a shared store."
+          ],
+          "references": [
+            "packages/invitation-core/src/libs/InvitationStore.ts",
+            "packages/invitation-core/src/libs/InMemoryInvitationStore.ts"
+          ]
+        }
+      }
+    },
+    {
+      "package": "invitation-drizzle",
+      "classification": "durable-provider",
+      "reason": "The PostgreSQL transaction serializes same-tenant admissions and commits the invitation and creation intent together.",
+      "files": {
+        "packages/invitation-drizzle/src/libs/DrizzleInvitationStore.ts": "77b6423fa9a168b305141f2eed30e16edf95ec30ff86ca877d8caa3c518c89d0"
+      },
+      "catalogRuntimes": ["node", "lambda"],
+      "profiles": {
+        "kubernetes": {
+          "result": "conditional",
+          "reason": "Concurrent Node callers sharing PostgreSQL use a transaction-held lock for quota admission.",
+          "providers": ["@croco/invitation-drizzle:DrizzleInvitationStore", "@croco/tx-drizzle"],
+          "constraints": [
+            "Point all issuing instances at the same writable database and use the same tenant policy. Call admission outside an existing transaction.",
+            "Disposable PostgreSQL integration coverage in Node. Kubernetes deployment has not been verified."
+          ],
+          "references": [
+            "packages/invitation-drizzle/src/libs/DrizzleInvitationStore.ts",
+            "packages/invitation-drizzle/src/tests/DrizzleInvitationQuota.integration.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "conditional",
+          "reason": "Lambda functions can share the PostgreSQL admission boundary when configured with the Node PostgreSQL adapter.",
+          "providers": ["@croco/invitation-drizzle:DrizzleInvitationStore", "@croco/tx-drizzle"],
+          "constraints": [
+            "Use a transaction-capable PostgreSQL connection and the same tenant policy across concurrent invocations. Call admission outside an existing transaction.",
+            "Lambda Host execution has not been verified."
+          ],
+          "references": [
+            "packages/invitation-drizzle/src/libs/DrizzleInvitationStore.ts",
+            "packages/invitation-drizzle/src/tests/DrizzleInvitationQuota.integration.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "unsupported",
+          "reason": "Invitation Drizzle uses the Node PostgreSQL provider. The Worker isolate has no supported invitation provider for this change.",
+          "providers": ["@croco/invitation-drizzle:DrizzleInvitationStore"],
+          "constraints": ["Node Containers require their own runtime verification."],
+          "references": ["packages/invitation-drizzle/src/libs/DrizzleInvitationStore.ts"],
+          "host": "workers"
+        }
+      }
+    },
+    {
+      "package": "problems-core",
+      "classification": "pure-contract",
+      "reason": "Register the invitation quota configuration failure and its recovery metadata.",
+      "files": {
+        "packages/problems-core/src/generated/problem-code-registry.ts": "fb2687ffd0ae7201d98eb0be63e8b52e88323204f08f80d754a66502d5ccc59f"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The generated registry describes invitation quota configuration failures without a Host, storage or deployment dependency.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "scripts/problem-registry.mts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The generated registry describes invitation quota configuration failures without a Host, storage or deployment dependency.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "scripts/problem-registry.mts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The generated registry describes invitation quota configuration failures without a Host, storage or deployment dependency.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "scripts/problem-registry.mts"
+          ]
+        }
+      }
+    }
+  ]
+}

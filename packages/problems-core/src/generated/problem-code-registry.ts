@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export type CrocoProblemRegistry = {
   readonly version: "croco.problem-code-registry.v1";
-  readonly problemCount: 1186;
+  readonly problemCount: 1187;
   readonly problems: readonly [
     {
       readonly code: "ACCESS_DENIED";
@@ -1511,7 +1511,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/invitation-core/src/libs/problems/RateLimitProblems.ts";
-          readonly line: 12;
+          readonly line: 27;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -2604,6 +2604,34 @@ export type CrocoProblemRegistry = {
         {
           readonly file: "packages/invitation-core/src/libs/problems/RateLimitProblems.ts";
           readonly line: 3;
+          readonly column: 1;
+          readonly kind: "problem-class";
+        },
+      ];
+    },
+    {
+      readonly code: "INVITATION_RATE_LIMIT_UNAVAILABLE";
+      readonly category: "InternalServerError";
+      readonly status: 500;
+      readonly title: "Internal Server Error";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#invitation-rate-limit-unavailable";
+      readonly recovery: {
+        readonly cause: "The invitation store could not atomically check the tenant quota and persist a creation.";
+        readonly userAction: "Ask the application operator to check the invitation store configuration.";
+        readonly operatorAction: "Implement atomic quota admission on custom stores. For Drizzle, use the PostgreSQL transaction adapter and call rate-limited creation outside an existing transaction.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "operator-only";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.error";
+          readonly severity: "error";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/invitation-core/src/libs/problems/RateLimitProblems.ts";
+          readonly line: 12;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -33522,7 +33550,7 @@ export type CrocoProblemRegistry = {
 
 export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 1186,
+  problemCount: 1187,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -35192,7 +35220,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/invitation-core/src/libs/problems/RateLimitProblems.ts",
-          line: 12,
+          line: 27,
           column: 1,
           kind: "problem-class",
         },
@@ -36400,6 +36428,38 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
         {
           file: "packages/invitation-core/src/libs/problems/RateLimitProblems.ts",
           line: 3,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "INVITATION_RATE_LIMIT_UNAVAILABLE",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#invitation-rate-limit-unavailable",
+      recovery: {
+        cause:
+          "The invitation store could not atomically check the tenant quota and persist a creation.",
+        userAction: "Ask the application operator to check the invitation store configuration.",
+        operatorAction:
+          "Implement atomic quota admission on custom stores. For Drizzle, use the PostgreSQL transaction adapter and call rate-limited creation outside an existing transaction.",
+        retryability: "not-retryable",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/invitation-core/src/libs/problems/RateLimitProblems.ts",
+          line: 12,
           column: 1,
           kind: "problem-class",
         },

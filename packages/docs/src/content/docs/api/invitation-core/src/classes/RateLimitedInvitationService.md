@@ -25,7 +25,7 @@ title: "RateLimitedInvitationService"
 
 ##### config?
 
-[`RateLimitConfig`](/api/invitation-core/src/type-aliases/ratelimitconfig/) \| `undefined`
+[`RateLimitConfig`](/api/invitation-core/src/type-aliases/ratelimitconfig/) = `DEFAULT_RATE_LIMIT`
 
 #### Returns
 
@@ -61,6 +61,8 @@ title: "RateLimitedInvitationService"
 
 > **checkRateLimit**(`tenantId`): `Promise`\<`void`\>
 
+Inspect current usage without reserving capacity.
+
 #### Parameters
 
 ##### tenantId
@@ -81,7 +83,7 @@ title: "RateLimitedInvitationService"
 
 ##### input
 
-`CreateEmailInvitationInput`
+[`CreateEmailInvitationInput`](/api/invitation-core/src/type-aliases/createemailinvitationinput/)
 
 #### Returns
 
@@ -97,7 +99,7 @@ title: "RateLimitedInvitationService"
 
 ##### input
 
-`CreateLinkInvitationInput`
+[`CreateLinkInvitationInput`](/api/invitation-core/src/type-aliases/createlinkinvitationinput/)
 
 #### Returns
 
