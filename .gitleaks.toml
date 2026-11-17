@@ -4,7 +4,7 @@ title = "Croco gitleaks config"
 useDefault = true
 
 # Allowlist test fixtures: dummy API keys / idempotency keys under packages/*/src/tests/.
-# Scoped tightly to *.spec.ts and five source-digest review records; production code remains scanned.
+# Scoped tightly to *.spec.ts and individual source-digest review records.
 [allowlist]
 description = "Test fixture dummy keys and reviewed source-digest records"
 paths = [
@@ -13,5 +13,6 @@ paths = [
   '''^docs/infrastructure-reviews/2842-operation-rest\.json$''',
   '''^docs/infrastructure-reviews/clerk-workers-auth-subset\.json$''',
   '''^docs/infrastructure-reviews/3295-codegen-cwd\.json$''',
+  '''^docs/infrastructure-reviews/3710-di-check-working-directory\.json$''',
   '''(^|/)packages/[^/]+/src/tests/.*\.spec\.ts$''',
 ]
