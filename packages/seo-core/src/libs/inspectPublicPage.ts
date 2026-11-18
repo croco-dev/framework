@@ -40,6 +40,11 @@ function hidden(node: Node): boolean {
   return (
     "tagName" in node &&
     (["script", "style", "template"].includes(node.tagName) ||
+      (node.namespaceURI === parse5Html.NS.SVG &&
+        ["title", "desc", "metadata"].includes(node.tagName)) ||
+      (node.namespaceURI === parse5Html.NS.HTML &&
+        node.tagName === "dialog" &&
+        attr(node, "open") === undefined) ||
       attr(node, "hidden") !== undefined ||
       /(?:display\s*:\s*none|visibility\s*:\s*hidden)/i.test(attr(node, "style") ?? ""))
   );

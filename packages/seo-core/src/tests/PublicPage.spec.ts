@@ -194,24 +194,25 @@ describe("Public page contracts", () => {
     expect(validate(separated)).toMatchObject({ state: "ready", diagnostics: [] });
   });
   it.each([
-    ["Del<br>ivery", "SEO_LINK_MISSING", "links"],
-    ["Del<div>ivery</div>", "SEO_LINK_MISSING", "links"],
-    ["Del <span>ivery</span>", "SEO_LINK_MISSING", "links"],
-    ["Del<strong>ay</strong>", "SEO_LINK_MISSING", "links"],
-    ["<span hidden>Delivery</span>", "SEO_LINK_MISSING", "links"],
-    ["<template>Delivery</template>", "SEO_LINK_MISSING", "links"],
-    ["<script>Delivery</script>", "SEO_LINK_MISSING", "links"],
-  ])("rejects link text %s that does not match the declared label", (label, code, field) => {
+    "Del<br>ivery",
+    "Del<div>ivery</div>",
+    "Del <span>ivery</span>",
+    "Del<strong>ay</strong>",
+    "<span hidden>Delivery</span>",
+    "<template>Delivery</template>",
+    "<script>Delivery</script>",
+    "Del<svg><title>iv</title></svg>ery",
+  ])("rejects link text %s that does not match the declared label", (label) => {
     expect(validate(html.replace(">Delivery</a>", `>${label}</a>`))).toMatchObject({
       state: "partial",
-      diagnostics: [{ code, field }],
+      diagnostics: [{ code: "SEO_LINK_MISSING", field: "links" }],
     });
   });
   it("keeps visible inline characters adjacent across hidden content", () => {
     const hidden = html.replace(">Delivery</a>", ">Del<div hidden>ignored</div>ivery</a>");
     expect(validate(hidden)).toMatchObject({ state: "ready", diagnostics: [] });
   });
-  it.each(["USD<span>37.50</span>", "USD <span>37</span>.05"])(
+  it.each(["USD<span>37.50</span>", "USD <span>37</span>.05", "USD 37.<svg><desc>50</desc></svg>"])(
     "rejects price text %s that does not match the declared facts",
     (price) => {
       expect(validate(html.replace(">USD 37.50</p>", `>${price}</p>`))).toMatchObject({
@@ -220,6 +221,26 @@ describe("Public page contracts", () => {
       });
     },
   );
+  it("inspects offer text in an open dialog and excludes the same offer when closed", () => {
+    const offer = '<p data-public-price="37.50" data-public-currency="USD">USD 37.50</p>';
+    const dialog = html.replace(
+      offer,
+      `<dialog open>${offer.replace("37.50</p>", "37.<span>50</span></p>")}</dialog>`,
+    );
+
+    expect(validate(dialog)).toMatchObject({ state: "ready", diagnostics: [] });
+    expect(validate(dialog.replace("<dialog open>", "<dialog>"))).toMatchObject({
+      state: "partial",
+      diagnostics: [{ code: "SEO_BODY_PRICE_MISMATCH", field: "product.price" }],
+    });
+  });
+  it("omits SVG metadata while keeping visible SVG label text", () => {
+    const inline = html.replace(
+      ">Delivery</a>",
+      ">Del<svg><title>Icon</title><text>iv</text><desc>Icon description</desc></svg>ery</a>",
+    );
+    expect(validate(inline)).toMatchObject({ state: "ready", diagnostics: [] });
+  });
   it("reads noscript content as a JavaScript-disabled browser does", () => {
     const fallback = html
       .replace("<main>", "<noscript><main>")
