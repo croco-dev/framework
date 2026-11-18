@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export type CrocoProblemRegistry = {
   readonly version: "croco.problem-code-registry.v1";
-  readonly problemCount: 1188;
+  readonly problemCount: 1189;
   readonly problems: readonly [
     {
       readonly code: "ACCESS_DENIED";
@@ -22008,7 +22008,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/metrics-core/src/libs/problems/MetricsProblems.ts";
-          readonly line: 87;
+          readonly line: 104;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -22204,7 +22204,35 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/metrics-core/src/libs/problems/MetricsProblems.ts";
-          readonly line: 75;
+          readonly line: 92;
+          readonly column: 1;
+          readonly kind: "problem-class";
+        },
+      ];
+    },
+    {
+      readonly code: "metrics-core/invalid-revenue-carrying-capacity-metric";
+      readonly category: "ValidationError";
+      readonly status: 422;
+      readonly title: "Validation Error";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#metrics-core-invalid-revenue-carrying-capacity-metric";
+      readonly recovery: {
+        readonly cause: "The selected revenue metrics contain invalid net retention or yield a non-finite capacity.";
+        readonly userAction: "Ask the application operator to check the revenue metrics before retrying.";
+        readonly operatorAction: "Use the reported field to inspect the tenant's period NRR or new MRR movements. Correct the source metrics before recalculating capacity.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/metrics-core/src/libs/problems/MetricsProblems.ts";
+          readonly line: 65;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -22260,7 +22288,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/metrics-core/src/libs/problems/MetricsProblems.ts";
-          readonly line: 95;
+          readonly line: 112;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -22288,7 +22316,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/metrics-core/src/libs/problems/MetricsProblems.ts";
-          readonly line: 117;
+          readonly line: 134;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -22372,7 +22400,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/metrics-core/src/libs/problems/MetricsProblems.ts";
-          readonly line: 65;
+          readonly line: 82;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -22484,7 +22512,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/metrics-core/src/libs/problems/MetricsProblems.ts";
-          readonly line: 105;
+          readonly line: 122;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -33578,7 +33606,7 @@ export type CrocoProblemRegistry = {
 
 export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 1188,
+  problemCount: 1189,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -58135,7 +58163,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/metrics-core/src/libs/problems/MetricsProblems.ts",
-          line: 87,
+          line: 104,
           column: 1,
           kind: "problem-class",
         },
@@ -58346,7 +58374,40 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/metrics-core/src/libs/problems/MetricsProblems.ts",
-          line: 75,
+          line: 92,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "metrics-core/invalid-revenue-carrying-capacity-metric",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#metrics-core-invalid-revenue-carrying-capacity-metric",
+      recovery: {
+        cause:
+          "The selected revenue metrics contain invalid net retention or yield a non-finite capacity.",
+        userAction: "Ask the application operator to check the revenue metrics before retrying.",
+        operatorAction:
+          "Use the reported field to inspect the tenant's period NRR or new MRR movements. Correct the source metrics before recalculating capacity.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/metrics-core/src/libs/problems/MetricsProblems.ts",
+          line: 65,
           column: 1,
           kind: "problem-class",
         },
@@ -58407,7 +58468,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/metrics-core/src/libs/problems/MetricsProblems.ts",
-          line: 95,
+          line: 112,
           column: 1,
           kind: "problem-class",
         },
@@ -58437,7 +58498,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/metrics-core/src/libs/problems/MetricsProblems.ts",
-          line: 117,
+          line: 134,
           column: 1,
           kind: "problem-class",
         },
@@ -58530,7 +58591,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/metrics-core/src/libs/problems/MetricsProblems.ts",
-          line: 65,
+          line: 82,
           column: 1,
           kind: "problem-class",
         },
@@ -58656,7 +58717,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/metrics-core/src/libs/problems/MetricsProblems.ts",
-          line: 105,
+          line: 122,
           column: 1,
           kind: "problem-class",
         },

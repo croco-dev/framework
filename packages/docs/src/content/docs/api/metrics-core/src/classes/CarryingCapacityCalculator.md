@@ -12,7 +12,7 @@ Calculator for Carrying Capacity (User CC & Revenue CC).
 Carrying Capacity measures the maximum sustainable scale given current inflow and churn rates.
 
 User CC: Maximum users sustainable = Daily New Users / Daily Churn Rate
-Revenue CC: Maximum MRR sustainable = Monthly New MRR / (1 - NRR)
+Revenue CC: Maximum MRR sustainable = Monthly New MRR / (1 - Monthly Net Retention)
 
 ## Example
 
@@ -64,11 +64,22 @@ Calculate Revenue Carrying Capacity.
 
 `Promise`\<[`CCResult`](/api/metrics-core/src/type-aliases/ccresult/) \| `null`\>
 
-Revenue CC result, or null if NRR = 100% (infinite capacity)
+Revenue CC result, or null if period NRR is at least 100% (no finite capacity ceiling)
 
 #### Formula
 
-Capacity = Monthly New MRR / (1 - NRR)
+Capacity = Monthly New MRR / (1 - (Period NRR / 100) ^ (1 / lookbackMonths))
+
+#### Description
+
+Convert the observed period NRR to the constant monthly retention that compounds
+to the same result. MRR history and retention share a rolling local-time window from
+Date.setMonth(now.getMonth() - lookbackMonths) to the calculation instant. Current MRR uses
+the snapshot at local midnight. Daily diagnostics divide monthly inflow and churn by 30.
+
+#### Throws
+
+InvalidRevenueCarryingCapacityMetricProblem when NRR is negative or non-finite, or capacity is non-finite
 
 ---
 

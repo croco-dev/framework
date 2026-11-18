@@ -93,11 +93,9 @@ export type RetentionMetrics = {
 };
 
 /**
- * Cohort Capacity result for user and revenue capacity planning.
+ * Carrying capacity result for user and revenue planning.
  *
  * @formula Headroom % = ((Capacity - Current) / Capacity) * 100
- * @formula Daily Churn Rate = 1 - NRR (monthly)
- * @formula Daily Inflow = New MRR per day (for revenue) or New Users per day (for users)
  */
 export type CCResult = {
   /** Maximum capacity (users or MRR) */
@@ -110,7 +108,7 @@ export type CCResult = {
   headroomPercent: Percentage;
   /** Daily new inflow rate (users/day or MRR/day) */
   dailyInflow: number;
-  /** Daily churn rate (0-1, derived from NRR) */
+  /** NRR-derived churn per day. Revenue capacity reports monthly churn divided by 30. */
   dailyChurnRate: number;
 };
 

@@ -1,0 +1,89 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "metrics-core",
+      "classification": "pure-contract",
+      "reason": "Revenue carrying capacity normalizes observed retention to one month and reports invalid metrics as a typed Problem.",
+      "files": {
+        "packages/metrics-core/src/index.ts": "23d972f64ec56070122190b44c17372a14a4a94c058963ce790dbc6e6550fe3c",
+        "packages/metrics-core/src/libs/CarryingCapacityCalculator.ts": "4eb206a8a83835cbd5a20c4bd1963091acde7594cd1dd3df888fcdb6bd4b186c",
+        "packages/metrics-core/src/libs/problems/MetricsProblems.ts": "b9a89ee3d72d5a10632356e40225c4bacda5e829dd3f863e294171f84f1f32ea"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The calculation uses the existing tenant-scoped repository reads and local calendar window. Monthly normalization adds no host capability, storage, or lifecycle dependency.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/metrics-core/src/libs/CarryingCapacityCalculator.ts",
+            "packages/metrics-core/src/tests/CarryingCapacity.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The calculation uses the existing tenant-scoped repository reads and local calendar window. Monthly normalization adds no host capability, storage, or lifecycle dependency.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/metrics-core/src/libs/CarryingCapacityCalculator.ts",
+            "packages/metrics-core/src/tests/CarryingCapacity.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The calculation uses the existing tenant-scoped repository reads and local calendar window. Monthly normalization adds no host capability, storage, or lifecycle dependency.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/metrics-core/src/libs/CarryingCapacityCalculator.ts",
+            "packages/metrics-core/src/tests/CarryingCapacity.spec.ts"
+          ]
+        }
+      }
+    },
+    {
+      "package": "problems-core",
+      "classification": "pure-contract",
+      "reason": "The generated Problem registry includes the revenue capacity validation code.",
+      "files": {
+        "packages/problems-core/src/generated/problem-code-registry.ts": "f275b0a582683093972f26744800cd60f8ca7e01497589dd35b3624d5b954b76"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The generated error metadata adds no host capability, storage, or lifecycle dependency.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "packages/metrics-core/src/libs/problems/MetricsProblems.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The generated error metadata adds no host capability, storage, or lifecycle dependency.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "packages/metrics-core/src/libs/problems/MetricsProblems.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The generated error metadata adds no host capability, storage, or lifecycle dependency.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "packages/metrics-core/src/libs/problems/MetricsProblems.ts"
+          ]
+        }
+      }
+    }
+  ]
+}

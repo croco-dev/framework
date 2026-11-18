@@ -1,6 +1,6 @@
 {
   "version": "croco.problem-code-registry.v1",
-  "problemCount": 1188,
+  "problemCount": 1189,
   "problems": [
     {
       "code": "ACCESS_DENIED",
@@ -23503,7 +23503,7 @@
       "sources": [
         {
           "file": "packages/metrics-core/src/libs/problems/MetricsProblems.ts",
-          "line": 87,
+          "line": 104,
           "column": 1,
           "kind": "problem-class"
         }
@@ -23713,7 +23713,37 @@
       "sources": [
         {
           "file": "packages/metrics-core/src/libs/problems/MetricsProblems.ts",
-          "line": 75,
+          "line": 92,
+          "column": 1,
+          "kind": "problem-class"
+        }
+      ]
+    },
+    {
+      "code": "metrics-core/invalid-revenue-carrying-capacity-metric",
+      "category": "ValidationError",
+      "status": 422,
+      "title": "Validation Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#metrics-core-invalid-revenue-carrying-capacity-metric",
+      "recovery": {
+        "cause": "The selected revenue metrics contain invalid net retention or yield a non-finite capacity.",
+        "userAction": "Ask the application operator to check the revenue metrics before retrying.",
+        "operatorAction": "Use the reported field to inspect the tenant's period NRR or new MRR movements. Correct the source metrics before recalculating capacity.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "public",
+        "telemetry": {
+          "eventName": "croco.problem.info",
+          "severity": "info",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/metrics-core/src/libs/problems/MetricsProblems.ts",
+          "line": 65,
           "column": 1,
           "kind": "problem-class"
         }
@@ -23773,7 +23803,7 @@
       "sources": [
         {
           "file": "packages/metrics-core/src/libs/problems/MetricsProblems.ts",
-          "line": 95,
+          "line": 112,
           "column": 1,
           "kind": "problem-class"
         }
@@ -23803,7 +23833,7 @@
       "sources": [
         {
           "file": "packages/metrics-core/src/libs/problems/MetricsProblems.ts",
-          "line": 117,
+          "line": 134,
           "column": 1,
           "kind": "problem-class"
         }
@@ -23893,7 +23923,7 @@
       "sources": [
         {
           "file": "packages/metrics-core/src/libs/problems/MetricsProblems.ts",
-          "line": 65,
+          "line": 82,
           "column": 1,
           "kind": "problem-class"
         }
@@ -24013,7 +24043,7 @@
       "sources": [
         {
           "file": "packages/metrics-core/src/libs/problems/MetricsProblems.ts",
-          "line": 105,
+          "line": 122,
           "column": 1,
           "kind": "problem-class"
         }

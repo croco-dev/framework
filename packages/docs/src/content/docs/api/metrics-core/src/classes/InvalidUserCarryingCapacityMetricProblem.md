@@ -21,7 +21,7 @@ metrics 계산 과정에서 발생하는 Problem 하위 타입들입니다.
 
 ##### field
 
-`"nrr"` \| `"dailyChurnRate"` \| `"capacity"`
+`"nrr"` \| `"capacity"` \| `"dailyChurnRate"`
 
 ##### value
 
@@ -89,7 +89,7 @@ metrics 계산 과정에서 발생하는 Problem 하위 타입들입니다.
 
 ### field
 
-> `readonly` **field**: `"nrr"` \| `"dailyChurnRate"` \| `"capacity"`
+> `readonly` **field**: `"nrr"` \| `"capacity"` \| `"dailyChurnRate"`
 
 ---
 
