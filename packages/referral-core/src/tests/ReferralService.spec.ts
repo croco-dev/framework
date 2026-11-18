@@ -14,6 +14,7 @@ import {
   ReferralLinkExpiredProblem,
   ReferralLinkRevokedProblem,
   ReferralQualificationRejectedProblem,
+  ReferralRecoveryPagingUnsupportedProblem,
   ReferralSelfReferralProblem,
   ReferralSubjectLimitReachedProblem,
   ReferralTenantMismatchProblem,
@@ -706,6 +707,119 @@ describe("ReferralService", () => {
     expect(fulfilled.state).toBe("fulfilled");
     const afterRestart = await service.recoverPendingAttributions({});
     expect(afterRestart.map((entry) => entry.id)).not.toContain(claimed.attribution.id);
+  });
+
+  it("keeps array recovery available for stores that lack paginated recovery", async () => {
+    const store = new InMemoryReferralStore();
+    Object.defineProperty(store, "listAttributionsPage", { value: undefined });
+    const { service } = serviceWith({ store });
+
+    await expect(service.recoverPendingAttributions()).resolves.toEqual([]);
+    await expect(service.recoverPendingAttributionsPage()).rejects.toBeInstanceOf(
+      ReferralRecoveryPagingUnsupportedProblem,
+    );
+  });
+
+  it("keeps distinct in-memory attribution IDs on either side of a recovery cursor", async () => {
+    const { service } = serviceWith({
+      novelty: () => ({ novelty: "unknown", reason: "no signup evidence" }),
+    });
+    await service.registerProgram(programInput());
+    const { token } = await service.createReferralLink({
+      programId: "referral-welcome",
+      referrer: referrer(),
+    });
+    for (const [index, id] of ["\uFFFD", "\uD800", "Z", "\u{10000}"].entries()) {
+      await service.claimAttribution({
+        token,
+        recipient: recipient(`recipient-${index}`),
+        attributionId: id,
+      });
+    }
+
+    const first = await service.recoverPendingAttributionsPage({ limit: 2 });
+    expect(first.attributions.map(({ id }) => id)).toEqual(["Z", "\uD800"]);
+    expect(first.nextCursor).toBe("\uD800");
+    const next = await service.recoverPendingAttributionsPage({
+      after: first.nextCursor ?? undefined,
+    });
+    expect(next.attributions.map(({ id }) => id)).toEqual(["\uFFFD", "\u{10000}"]);
+    expect(next.nextCursor).toBeNull();
+  });
+
+  it("applies scope filtering only to paginated attribution reads", async () => {
+    const { service } = serviceWith({
+      novelty: () => ({ novelty: "unknown", reason: "no signup evidence" }),
+    });
+    await service.registerProgram(programInput());
+    const { token } = await service.createReferralLink({
+      programId: "referral-welcome",
+      referrer: referrer(),
+    });
+    const { attribution } = await service.claimAttribution({ token, recipient: recipient() });
+    const filter = { states: ["held"] as const, scope: { ...SCOPE, tenantId: "another-tenant" } };
+
+    await expect(service.listAttributions(filter)).resolves.toEqual([attribution]);
+    await expect(service.recoverPendingAttributionsPage(filter)).resolves.toEqual({
+      attributions: [],
+      nextCursor: null,
+    });
+    await expect(
+      service.recoverPendingAttributionsPage({ ...filter, after: null as unknown as string }),
+    ).rejects.toBeInstanceOf(InvalidReferralProgramProblem);
+  });
+
+  it("finds payout work beyond 1,000 held attributions through bounded recovery pages", async () => {
+    const { service, store } = serviceWith({
+      novelty: ({ recipient }) =>
+        recipient.id === "held"
+          ? { novelty: "unknown", reason: "no signup evidence" }
+          : { novelty: "new", reason: "confirmed signup" },
+    });
+    await service.registerProgram(programInput());
+    const { token } = await service.createReferralLink({
+      programId: "referral-welcome",
+      referrer: referrer(),
+    });
+    const { attribution: held } = await service.claimAttribution({
+      token,
+      recipient: recipient("held"),
+      attributionId: "held-0000",
+    });
+    const heldIds = Array.from(
+      { length: 1001 },
+      (_, index) => `held-${String(index).padStart(4, "0")}`,
+    );
+    await store.transact(async (tx) => {
+      for (const id of heldIds.slice(1)) {
+        await tx.saveAttribution({ ...held, id, recipient: recipient(id) }, id);
+      }
+    });
+    const { attribution: pending } = await service.claimAttribution({
+      token,
+      recipient: recipient("pending"),
+      attributionId: "pending",
+    });
+    await service.qualifyAttribution({
+      attributionId: pending.id,
+      recipient: recipient("pending"),
+    });
+
+    const first = await service.recoverPendingAttributionsPage();
+    expect(first.attributions.map(({ id }) => id)).toEqual(heldIds.slice(0, 100));
+    expect(first.nextCursor).toBe("held-0099");
+    await store.transact(async (tx) => {
+      const anchor = await tx.getAttribution("held-0099");
+      if (!anchor) throw new Error("missing recovery cursor fixture");
+      await tx.compareAndSetAttribution(anchor.id, ["held"], { ...anchor, state: "rejected" });
+    });
+    const last = await serviceWith({ store }).service.recoverPendingAttributionsPage({
+      limit: 1000,
+      after: first.nextCursor ?? undefined,
+    });
+    expect(last.attributions.map(({ id }) => id)).toEqual([...heldIds.slice(100), pending.id]);
+    expect(last.attributions.at(-1)?.state).toBe("benefits-pending");
+    expect(last.nextCursor).toBeNull();
   });
 
   it("keeps receipt limits across revisions and unlocks a fresh explicit cycle", async () => {

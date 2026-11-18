@@ -240,3 +240,17 @@ export class ReferralBenefitFailedProblem extends Problem {
     );
   }
 }
+
+/** Reports a store that cannot resume paginated attribution recovery. */
+export class ReferralRecoveryPagingUnsupportedProblem extends Problem {
+  readonly code = "referral-core/recovery-paging-unsupported";
+  readonly category = ProblemCategory.NotImplemented;
+
+  constructor() {
+    super(
+      undefined,
+      undefined,
+      "The referral store does not support paginated attribution recovery.",
+    );
+  }
+}

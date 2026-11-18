@@ -2,8 +2,8 @@
 
 PostgreSQL persistence for `@croco/referral-core` programs, referral links,
 attributions, benefit intents, clicks, and audit entries. Apply
-`migrations/0001_referrals.up.sql` before use and
-`migrations/0001_referrals.down.sql` to remove the tables.
+`migrations/0001_referrals.up.sql` before use. Apply migrations in order
+and roll them back in reverse order.
 
 `PostgresReferralStore` runs on a minimal `ReferralPgDatabase`
 (`execute`/`transaction`) boundary so applications supply their own
@@ -37,3 +37,17 @@ for uncertain-return recovery and rollback requirements.
 Live PostgreSQL coverage runs with `pnpm test:live` when
 `REFERRALS_TEST_DATABASE_URL` is set; the default `pnpm test` runs only the
 offline contract checks.
+
+Recovery pages require a UTF-8 database and client session so each cursor
+identifies one stored attribution ID. The store checks both encodings and
+reads the page on the same connection through the application's transaction
+boundary. With another encoding, the paged API raises
+`ReferralRecoveryPagingUnsupportedProblem`. The existing array-returning
+reads remain available.
+
+Apply `migrations/0002_referral_recovery_order.up.sql` through the application's
+migration owner to make UTF-8 recovery pages eligible for an ordered index
+scan. The build blocks table writes, so use a maintenance window and a bounded
+lock wait on existing tables. The reverse migration removes only the index.
+The same cursor works before the index is applied and after it is removed.
+Selective filters can require reading more rows than the requested page size.

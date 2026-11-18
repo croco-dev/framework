@@ -586,6 +586,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`ReferralProgramNotFoundProblem`](/api/referral-core/src/classes/referralprogramnotfoundproblem/)
 - [`ReferralQualificationEvidenceInvalidProblem`](/api/referral-core/src/classes/referralqualificationevidenceinvalidproblem/)
 - [`ReferralQualificationRejectedProblem`](/api/referral-core/src/classes/referralqualificationrejectedproblem/)
+- [`ReferralRecoveryPagingUnsupportedProblem`](/api/referral-core/src/classes/referralrecoverypagingunsupportedproblem/)
 - [`ReferralSelfReferralProblem`](/api/referral-core/src/classes/referralselfreferralproblem/)
 - [`ReferralSubjectLimitReachedProblem`](/api/referral-core/src/classes/referralsubjectlimitreachedproblem/)
 - [`ReferralTenantMismatchProblem`](/api/referral-core/src/classes/referraltenantmismatchproblem/)

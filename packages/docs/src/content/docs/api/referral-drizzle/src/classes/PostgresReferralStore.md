@@ -215,6 +215,28 @@ Counts all matching claims, stored qualifications, and fulfilled states in one r
 
 ---
 
+### listAttributionsPage()
+
+> **listAttributionsPage**(`filter`): `Promise`\<[`ReferralAttributionPage`](/api/referral-core/src/type-aliases/referralattributionpage/)\>
+
+Lists recovery pages on a UTF-8 PostgreSQL database and client session.
+
+#### Parameters
+
+##### filter
+
+[`ListAttributionsPageFilter`](/api/referral-core/src/type-aliases/listattributionspagefilter/)
+
+#### Returns
+
+`Promise`\<[`ReferralAttributionPage`](/api/referral-core/src/type-aliases/referralattributionpage/)\>
+
+#### Implementation of
+
+[`ReferralStore`](/api/referral-core/src/interfaces/referralstore/).[`listAttributionsPage`](/api/referral-core/src/interfaces/referralstore/#listattributionspage)
+
+---
+
 ### listBenefitIntents()
 
 > **listBenefitIntents**(`filter`): `Promise`\<readonly [`ReferralBenefitIntent`](/api/referral-core/src/type-aliases/referralbenefitintent/)[]\>

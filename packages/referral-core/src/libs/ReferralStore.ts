@@ -1,9 +1,11 @@
 import { InvalidReferralProgramProblem } from "./problems";
 import type {
   ListAttributionsFilter,
+  ListAttributionsPageFilter,
   ListBenefitIntentsFilter,
   ListReferralLinksFilter,
   ReferralAttribution,
+  ReferralAttributionPage,
   ReferralAuditEntry,
   ReferralBenefitIntent,
   ReferralBenefitIntentStatus,
@@ -162,6 +164,8 @@ export interface ReferralStore {
     familyId?: string,
   ): Promise<Pick<ReferralFunnelCounts, "claims" | "qualified" | "fulfilled">>;
   listAttributions(filter: ListAttributionsFilter): Promise<readonly ReferralAttribution[]>;
+  /** Live keyset scan ordered by immutable attribution ID in Unicode code point order. */
+  listAttributionsPage?(filter: ListAttributionsPageFilter): Promise<ReferralAttributionPage>;
   listBenefitIntents(filter: ListBenefitIntentsFilter): Promise<readonly ReferralBenefitIntent[]>;
 }
 

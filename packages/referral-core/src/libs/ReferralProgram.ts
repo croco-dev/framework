@@ -8,8 +8,8 @@ import type {
   RegisterReferralProgramInput,
 } from "./types";
 
-function assertNonBlank(value: string, field: string): void {
-  if (value.trim().length === 0) {
+function assertNonBlank(value: unknown, field: string): void {
+  if (typeof value !== "string" || value.trim().length === 0) {
     throw new InvalidReferralProgramProblem(`${field} must not be blank`);
   }
 }
@@ -51,9 +51,9 @@ function validateBenefit(benefit: ReferralBenefit, field: string): ReferralBenef
 
 /** Validates a fully qualified referral scope; a missing tenant is never a global scope. */
 export function assertReferralScope(scope: ReferralScope): void {
-  assertNonBlank(scope.appId, "scope.appId");
-  assertNonBlank(scope.environment, "scope.environment");
-  assertNonBlank(scope.tenantId, "scope.tenantId");
+  assertNonBlank(scope?.appId, "scope.appId");
+  assertNonBlank(scope?.environment, "scope.environment");
+  assertNonBlank(scope?.tenantId, "scope.tenantId");
 }
 
 /** Validates a typed referral subject including its full scope. */

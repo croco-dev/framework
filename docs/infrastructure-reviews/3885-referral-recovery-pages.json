@@ -1,0 +1,155 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "referral-core",
+      "classification": "pure-contract",
+      "reason": "Let referral callers enumerate recoverable attributions through stable continuation and scope or state filters.",
+      "files": {
+        "packages/referral-core/src/index.ts": "0914a2bf87e6a208d5c5dd2b6257cab6096698d2e54d20a35fa10e9e64cc4df0",
+        "packages/referral-core/src/libs/InMemoryReferralStore.ts": "33d28528f10784256b0e2394e6ef4df8a6eba61c00c44c00a24015cc30f53bbf",
+        "packages/referral-core/src/libs/ReferralProgram.ts": "77d40f33c4336c244c7fe7eafb09baea7bddf8fe20c0aab9c94f732f4ed2738e",
+        "packages/referral-core/src/libs/ReferralService.ts": "fbe302999ced7f93b4e26f42931b6dbe88840c104cceb44552a8ba5d36f90dfc",
+        "packages/referral-core/src/libs/ReferralStore.ts": "75583420d7eb6bc29052fec8c95f8dd925dece0c47fcf603e2a8bd912e36ed46",
+        "packages/referral-core/src/libs/problems.ts": "dce8a566906cabfabebb1ca98963bf1f4842fcf16a67cc8f7a037145f0df1806",
+        "packages/referral-core/src/libs/types.ts": "ca7382ca74391a8eadf40a29f4c162a9247635530d1eca6f0ce41f9fe4bab445"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Recovery eligibility and continuation use the existing store contract and portable Unicode ordering. They require no host lifecycle hooks.",
+          "providers": ["ReferralStore", "InMemoryReferralStore"],
+          "constraints": [
+            "An in-memory recovery sweep only sees attributions in that process. Cross-process recovery requires a durable store."
+          ],
+          "references": [
+            "packages/referral-core/src/libs/ReferralStore.ts",
+            "packages/referral-core/src/libs/InMemoryReferralStore.ts",
+            "packages/referral-drizzle/src/tests/PostgresReferralStore.postgres.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Recovery eligibility and continuation use the existing store contract and portable Unicode ordering. They require no host lifecycle hooks.",
+          "providers": ["ReferralStore", "InMemoryReferralStore"],
+          "constraints": [
+            "An in-memory recovery sweep only sees attributions in that process. Cross-process recovery requires a durable store."
+          ],
+          "references": [
+            "packages/referral-core/src/libs/ReferralStore.ts",
+            "packages/referral-core/src/libs/InMemoryReferralStore.ts",
+            "packages/referral-drizzle/src/tests/PostgresReferralStore.postgres.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Recovery eligibility and continuation use the existing store contract and portable Unicode ordering. They require no host lifecycle hooks.",
+          "providers": ["ReferralStore", "InMemoryReferralStore"],
+          "constraints": [
+            "An in-memory recovery sweep only sees attributions in that process. Cross-process recovery requires a durable store."
+          ],
+          "references": [
+            "packages/referral-core/src/libs/ReferralStore.ts",
+            "packages/referral-core/src/libs/InMemoryReferralStore.ts",
+            "packages/referral-drizzle/src/tests/PostgresReferralStore.postgres.spec.ts"
+          ]
+        }
+      }
+    },
+    {
+      "package": "referral-drizzle",
+      "classification": "durable-provider",
+      "reason": "Read bounded PostgreSQL recovery pages behind an exclusive ID boundary and use an ordered index on UTF-8 databases.",
+      "files": {
+        "packages/referral-drizzle/src/libs/PostgresReferralStore.ts": "af46c73d05d65d1c1f57046c940e2d3708c3472d8899170f544c6b20cde8f9c8"
+      },
+      "catalogRuntimes": ["node", "lambda"],
+      "profiles": {
+        "kubernetes": {
+          "result": "unverified",
+          "reason": "The existing Node PostgreSQL provider runs the same read query. Local PostgreSQL conformance is separate from a Kubernetes deployment.",
+          "providers": ["@croco/referral-drizzle"],
+          "constraints": [
+            "Requires the existing referral schema and a Node PostgreSQL connection pool.",
+            "Recovery paging requires a UTF-8 database and client session pinned by the application transaction boundary. The host can apply the optional index through its migration owner. The index build blocks attribution table writes."
+          ],
+          "references": [
+            "packages/referral-drizzle/src/libs/PostgresReferralStore.ts",
+            "packages/referral-core/src/libs/ReferralStore.ts",
+            "packages/referral-drizzle/src/tests/PostgresReferralStore.postgres.spec.ts",
+            "packages/referral-drizzle/migrations/0002_referral_recovery_order.up.sql"
+          ]
+        },
+        "aws-lambda": {
+          "result": "conditional",
+          "reason": "Use the existing Node-compatible PostgreSQL provider with an application-owned connection.",
+          "providers": ["@croco/referral-drizzle"],
+          "constraints": [
+            "Supply the existing referral schema and a bounded pool. Await the page query before returning the invocation.",
+            "Recovery paging requires a UTF-8 database and client session pinned by the application transaction boundary. The host can apply the optional index through its migration owner. The index build blocks attribution table writes."
+          ],
+          "references": [
+            "packages/referral-drizzle/src/libs/PostgresReferralStore.ts",
+            "packages/referral-core/src/libs/ReferralStore.ts",
+            "packages/referral-drizzle/src/tests/PostgresReferralStore.postgres.spec.ts",
+            "packages/referral-drizzle/migrations/0002_referral_recovery_order.up.sql"
+          ]
+        },
+        "cloudflare": {
+          "result": "unsupported",
+          "reason": "The referral provider has no Workers runtime claim.",
+          "providers": ["@croco/referral-drizzle"],
+          "constraints": ["The PostgreSQL store uses the existing Node executor contract."],
+          "references": [
+            "packages/referral-drizzle/src/libs/PostgresReferralStore.ts",
+            "packages/referral-core/src/libs/ReferralStore.ts",
+            "packages/referral-drizzle/src/tests/PostgresReferralStore.postgres.spec.ts"
+          ],
+          "host": "workers"
+        }
+      }
+    },
+    {
+      "package": "problems-core",
+      "classification": "pure-contract",
+      "reason": "Include the referral recovery capability error in the generated Problem registry.",
+      "files": {
+        "packages/problems-core/src/generated/problem-code-registry.ts": "23154ac0bd2664128e4955c7375ed90a140dbd671353b1c3c0e1279fd188e66b"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Problem metadata is generated data and requires no host capabilities, storage, or lifecycle hooks.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "docs/problem-code-registry.json"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Problem metadata is generated data and requires no host capabilities, storage, or lifecycle hooks.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "docs/problem-code-registry.json"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Problem metadata is generated data and requires no host capabilities, storage, or lifecycle hooks.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "docs/problem-code-registry.json"
+          ]
+        }
+      }
+    }
+  ]
+}

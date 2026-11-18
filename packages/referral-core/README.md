@@ -133,6 +133,29 @@ to return the three attribution totals from a single snapshot, with zero for an
 empty result. Replace `countAttributionsByState` when upgrading the service and
 store together.
 
+Use `recoverPendingAttributionsPage({ scope, states, limit, after })` for
+restartable recovery sweeps. Pass the complete app, environment, and tenant
+scope from trusted server context to restrict a sweep to that scope. The
+optional `states` filter narrows the recoverable states. A page contains up to
+`limit` attributions (100 by default, 1,000 maximum).
+
+Scope and subject filters require the stored scope and each returned party's
+scope to agree. An unscoped operator sweep can still find records with
+inconsistent scope metadata for reconciliation.
+
+Save `nextCursor` after processing a page and pass it as `after` with the same
+filters. A null cursor ends the sweep. The stores read current state and page
+strictly after the last returned attribution ID in Unicode code point order. If an
+attribution becomes eligible at or before that cursor, a new sweep from the
+beginning can find it. Recovery queries only read attributions. The caller
+uses the existing qualification, fulfillment, and reconciliation operations.
+
+Custom stores can opt in by implementing `listAttributionsPage`. The
+PostgreSQL adapter supports pages with UTF-8 database and client encodings. Calling the
+paged operation without that capability raises
+`ReferralRecoveryPagingUnsupportedProblem`. The array-returning
+`recoverPendingAttributions` stays available to existing callers.
+
 Link tokens are issued via `@croco/referral-core/link-token`; only the
 SHA-256 hash is persisted. Use `@croco/referral-drizzle` for PostgreSQL
 persistence.

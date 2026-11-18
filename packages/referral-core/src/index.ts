@@ -61,6 +61,7 @@ export {
   ReferralQualificationEvidenceInvalidProblem,
   ReferralQualificationRejectedProblem,
   ReferralBenefitFailedProblem,
+  ReferralRecoveryPagingUnsupportedProblem,
 } from "./libs/problems";
 export type {
   ReferralScope,
@@ -92,6 +93,8 @@ export type {
   FulfillReferralBenefitsInput,
   ReferralFunnelCounts,
   ListAttributionsFilter,
+  ListAttributionsPageFilter,
+  ReferralAttributionPage,
   ListBenefitIntentsFilter,
   ListReferralLinksFilter,
 } from "./libs/types";

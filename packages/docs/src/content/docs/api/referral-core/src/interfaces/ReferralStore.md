@@ -145,6 +145,24 @@ Counts all matching claims, stored qualifications, and fulfilled states in one r
 
 ---
 
+### listAttributionsPage()?
+
+> `optional` **listAttributionsPage**(`filter`): `Promise`\<[`ReferralAttributionPage`](/api/referral-core/src/type-aliases/referralattributionpage/)\>
+
+Live keyset scan ordered by immutable attribution ID in Unicode code point order.
+
+#### Parameters
+
+##### filter
+
+[`ListAttributionsPageFilter`](/api/referral-core/src/type-aliases/listattributionspagefilter/)
+
+#### Returns
+
+`Promise`\<[`ReferralAttributionPage`](/api/referral-core/src/type-aliases/referralattributionpage/)\>
+
+---
+
 ### listBenefitIntents()
 
 > **listBenefitIntents**(`filter`): `Promise`\<readonly [`ReferralBenefitIntent`](/api/referral-core/src/type-aliases/referralbenefitintent/)[]\>

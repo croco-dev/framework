@@ -38508,6 +38508,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "ReferralRecoveryPagingUnsupportedProblem",
+              "exportKind": "named",
+              "source": "./libs/problems",
+              "declarationKind": "class"
+            },
+            {
               "name": "ReferralSelfReferralProblem",
               "exportKind": "named",
               "source": "./libs/problems",
@@ -38648,6 +38654,11 @@
               "source": "./libs/types"
             },
             {
+              "name": "ListAttributionsPageFilter",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
               "name": "ListBenefitIntentsFilter",
               "exportKind": "named",
               "source": "./libs/types"
@@ -38669,6 +38680,11 @@
             },
             {
               "name": "ReferralAttributionHoldReason",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "ReferralAttributionPage",
               "exportKind": "named",
               "source": "./libs/types"
             },

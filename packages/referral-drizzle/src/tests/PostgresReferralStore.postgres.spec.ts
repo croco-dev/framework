@@ -102,6 +102,11 @@ async function withStores(
   }
 }
 
+async function hasUtf8Encoding(pool: Pool): Promise<boolean> {
+  const { rows } = await pool.query("SHOW server_encoding");
+  return rows[0]?.server_encoding === "UTF8";
+}
+
 function serviceFor(
   store: ReferralStore,
   qualification: ReferralQualificationHook = () => ({ qualified: false, reason: "no purchase" }),
@@ -239,6 +244,425 @@ describe.skipIf(!url)("PostgreSQL referral budgets and attribution recovery", ()
       expect(audits.rows).toHaveLength(1);
     });
   });
+
+  it("recovers pending benefits behind more than a thousand held attributions", async ({
+    skip,
+  }) => {
+    await withStores(async (pool, store, restartedStore) => {
+      skip(!(await hasUtf8Encoding(pool)), "PostgreSQL recovery cursors require UTF-8");
+      const service = serviceFor(
+        store,
+        () => ({
+          qualified: true,
+          sourceEventId: "purchase-1",
+          qualifyingAction: "purchase",
+          eligibleReason: "purchase confirmed",
+        }),
+        fulfillmentOk(),
+        ({ recipient }) =>
+          recipient.id === "held"
+            ? { novelty: "unknown", reason: "no signup evidence" }
+            : { novelty: "new", reason: "new signup" },
+      );
+      const { token } = await seed(service);
+      const heldIds = [
+        ...Array.from({ length: 1000 }, (_, index) => `held-${String(index).padStart(4, "0")}`),
+        "held-\uE000",
+        "held-\u{10000}",
+      ];
+      const { attribution: held } = await service.claimAttribution({
+        token,
+        recipient: subject("held"),
+        attributionId: "held-0000",
+      });
+      const otherScope = { ...held.scope, tenantId: "tenant-\uFFFD" };
+      const neighboringId = "other-tenant-\uFFFD";
+      await store.transact(async (tx) => {
+        for (const id of heldIds.slice(1)) {
+          await tx.saveAttribution({ ...held, id, recipient: undefined }, id);
+        }
+        await tx.saveAttribution(
+          {
+            ...held,
+            id: neighboringId,
+            scope: otherScope,
+            referrer: { ...held.referrer, ...otherScope },
+            recipient: undefined,
+            state: "benefits-pending",
+          },
+          neighboringId,
+        );
+      });
+      const recipient = { ...subject("pending"), displayName: "from signup" };
+      const { attribution: pending } = await service.claimAttribution({
+        token,
+        recipient,
+        attributionId: "pending",
+      });
+      await service.qualifyAttribution({ attributionId: pending.id, recipient });
+
+      const first = await service.recoverPendingAttributionsPage({ scope: held.scope });
+      expect(first.attributions.map(({ id }) => id)).toEqual(heldIds.slice(0, 100));
+      expect(first.nextCursor).toBe("held-0099");
+      const next = await service.recoverPendingAttributionsPage({
+        scope: held.scope,
+        limit: 1,
+        after: first.nextCursor ?? undefined,
+      });
+      expect(next.attributions.map(({ id }) => id)).toEqual(["held-0100"]);
+      expect(next.nextCursor).toBe("held-0100");
+      await store.transact(async (tx) => {
+        const anchor = await tx.getAttribution("held-0099");
+        if (!anchor) throw new Error("missing recovery cursor fixture");
+        await tx.compareAndSetAttribution(anchor.id, ["held"], { ...anchor, state: "rejected" });
+      });
+
+      const restarted = serviceFor(restartedStore);
+      const remaining = await restarted.recoverPendingAttributionsPage({
+        scope: held.scope,
+        limit: 903,
+        after: first.nextCursor ?? undefined,
+      });
+      expect(remaining.attributions.map(({ id }) => id)).toEqual([
+        ...heldIds.slice(100),
+        pending.id,
+      ]);
+      expect(remaining.nextCursor).toBeNull();
+      const pendingOnly = await restarted.recoverPendingAttributionsPage({
+        scope: held.scope,
+        states: ["rejected", "benefits-pending"],
+        limit: 1,
+      });
+      expect(pendingOnly.attributions.map(({ id }) => id)).toEqual([pending.id]);
+      expect(pendingOnly.nextCursor).toBeNull();
+      const referrerFilter = { ...subject("referrer"), displayName: "from the admin console" };
+      const forSubject = await restarted.recoverPendingAttributionsPage({
+        referrer: referrerFilter,
+        recipient: subject("pending"),
+      });
+      expect(forSubject.attributions.map(({ id }) => id)).toEqual([pending.id]);
+      const neighboringScope = await restarted.recoverPendingAttributionsPage({
+        scope: otherScope,
+      });
+      expect(neighboringScope.attributions.map(({ id }) => id)).toEqual([neighboringId]);
+      for (const invalidId of ["other-tenant-\uD800", undefined as unknown as string]) {
+        await expect(restartedStore.getAttribution(invalidId)).rejects.toMatchObject({
+          code: "referral-core/program-invalid",
+        });
+        await expect(
+          restartedStore.transact((tx) => tx.getAttribution(invalidId)),
+        ).rejects.toMatchObject({ code: "referral-core/program-invalid" });
+      }
+      for (const filter of [
+        { referrer: { id: "referrer" } as ReferralSubject },
+        { recipient: { id: "pending" } as ReferralSubject },
+        { scope: { tenantId: "tenant-a" } as ReferralSubject },
+        { scope: { ...held.scope, tenantId: "tenant-\uD800" } },
+        { after: "before\u0000id" },
+        { referrer: subject("referrer\uD800") },
+        { recipient: subject("pending\u0000") },
+      ]) {
+        await expect(restarted.recoverPendingAttributionsPage(filter)).rejects.toMatchObject({
+          code: "referral-core/program-invalid",
+        });
+      }
+      await expect(
+        restarted.recoverPendingAttributionsPage({ states: ["rejected"] }),
+      ).resolves.toEqual({
+        attributions: [],
+        nextCursor: null,
+      });
+    });
+  });
+
+  it("reports unsupported recovery paging on other encodings while legacy reads work", async ({
+    skip,
+  }) => {
+    await withStores(async (pool, store) => {
+      skip(await hasUtf8Encoding(pool), "Requires a non-UTF-8 PostgreSQL database");
+      const service = serviceFor(store);
+      const { token } = await seed(service);
+      const { attribution } = await service.claimAttribution({
+        token,
+        recipient: subject("recipient"),
+        attributionId: "stored",
+      });
+      await expect(service.recoverPendingAttributions({})).resolves.toEqual([attribution]);
+      await expect(
+        service.recoverPendingAttributionsPage({ after: "\u{10000}" }),
+      ).rejects.toMatchObject({
+        code: "referral-core/recovery-paging-unsupported",
+      });
+    });
+  });
+
+  it("rejects an incompatible client encoding on the connection that would read a page", async ({
+    skip,
+  }) => {
+    await withStores(async (pool) => {
+      skip(!(await hasUtf8Encoding(pool)), "Requires a UTF-8 database and a mismatched client");
+      const delegate = database(pool);
+      const store = new PostgresReferralStore({
+        ...delegate,
+        transaction: (work) =>
+          delegate.transaction(async (executor) => {
+            await executor.execute(sql`SET LOCAL client_encoding = 'LATIN1'`);
+            return work(executor);
+          }),
+      });
+      await expect(store.listAttributionsPage({ after: "cursor-é" })).rejects.toMatchObject({
+        code: "referral-core/recovery-paging-unsupported",
+      });
+    });
+  });
+
+  it("preserves Unicode cursor order through the recovery index upgrade and rollback", async ({
+    skip,
+  }) => {
+    await withStores(async (pool, store) => {
+      skip(!(await hasUtf8Encoding(pool)), "PostgreSQL recovery cursors require UTF-8");
+      const service = serviceFor(store);
+      const { token } = await seed(service);
+      const { attribution } = await service.claimAttribution({
+        token,
+        recipient: subject("recipient"),
+        attributionId: "seed",
+      });
+      await pool.query(`
+        INSERT INTO croco_referral_attributions
+          (attribution_id, link_id, fingerprint, program_id, program_version, family_id,
+           benefit_cycle_id, scope, referrer, document, state, claimed_at, expires_at)
+        SELECT id, link_id, fingerprint, program_id, program_version, family_id, benefit_cycle_id,
+          scope, referrer, document, state, claimed_at, expires_at
+        FROM croco_referral_attributions
+        CROSS JOIN (
+          SELECT 'candidate-' || lpad(n::text, 5, '0') AS id FROM generate_series(1, 10000) AS n
+          UNION ALL SELECT unnest(ARRAY['unicode-é', 'unicode-€'])
+        ) AS ids
+        WHERE attribution_id = 'seed'
+      `);
+      const neighborScope = { ...attribution.scope, tenantId: "tenant-b" };
+      await store.transact(async (tx) => {
+        const scopedOutId = "candidate-09999-other-scope";
+        await tx.saveAttribution(
+          {
+            ...attribution,
+            id: scopedOutId,
+            scope: neighborScope,
+            referrer: { ...attribution.referrer, ...neighborScope },
+            recipient: undefined,
+          },
+          scopedOutId,
+        );
+        const rejectedId = "candidate-09999-rejected";
+        await tx.saveAttribution(
+          { ...attribution, id: rejectedId, recipient: undefined, state: "rejected" },
+          rejectedId,
+        );
+      });
+      await pool.query("ANALYZE croco_referral_attributions");
+      const filter = {
+        scope: attribution.scope,
+        states: ["claimed"] as const,
+        after: "candidate-09999",
+        limit: 3,
+      };
+      const before = await store.listAttributionsPage(filter);
+      expect(before.attributions.map(({ id }) => id)).toEqual([
+        "candidate-10000",
+        "seed",
+        "unicode-é",
+      ]);
+      expect(before.nextCursor).toBe("unicode-é");
+
+      await pool.query(
+        readFileSync(
+          new URL("../../migrations/0002_referral_recovery_order.up.sql", import.meta.url),
+          "utf8",
+        ),
+      );
+      let plan = "";
+      const delegate = database(pool);
+      const indexedStore = new PostgresReferralStore({
+        ...delegate,
+        transaction: (work) =>
+          delegate.transaction((executor) =>
+            work({
+              execute: async (statement) => {
+                if (
+                  dialect.sqlToQuery(statement).sql.includes("FROM croco_referral_attributions")
+                ) {
+                  const explain = await executor.execute(
+                    sql`EXPLAIN (ANALYZE, TIMING OFF) ${statement}`,
+                  );
+                  plan = explain.rows.map((row) => row["QUERY PLAN"]).join("\n");
+                }
+                return executor.execute(statement);
+              },
+            }),
+          ),
+      });
+      expect(await indexedStore.listAttributionsPage(filter)).toEqual(before);
+      expect(plan).toMatch(
+        /Index Scan using croco_referral_attributions_recovery_order .*actual rows=4(?:\.0+)? loops=1/,
+      );
+      expect(plan).toMatch(/Index Cond:.*attribution_id.* > /);
+      await expect(
+        store.listAttributionsPage({ ...filter, states: Array<"claimed">(65_536).fill("claimed") }),
+      ).resolves.toEqual(before);
+      const finalPage = await indexedStore.listAttributionsPage({
+        after: before.nextCursor ?? undefined,
+      });
+      expect(finalPage.attributions.map(({ id }) => id)).toEqual(["unicode-€"]);
+      expect(finalPage.nextCursor).toBeNull();
+
+      await pool.query(
+        readFileSync(
+          new URL("../../migrations/0002_referral_recovery_order.down.sql", import.meta.url),
+          "utf8",
+        ),
+      );
+      const { rows } = await pool.query(
+        "SELECT to_regclass('croco_referral_attributions_recovery_order') AS recovery_index",
+      );
+      expect(rows).toEqual([{ recovery_index: null }]);
+      expect(await store.listAttributionsPage(filter)).toEqual(before);
+    });
+  });
+
+  it.for(["in-memory", "postgres"] as const)(
+    "reads current attribution data and continues by storage identity on the %s store",
+    async (provider, { skip }) => {
+      await withStores(async (pool, postgres) => {
+        if (provider === "postgres") {
+          skip(!(await hasUtf8Encoding(pool)), "PostgreSQL recovery cursors require UTF-8");
+        }
+        const store = provider === "postgres" ? postgres : new InMemoryReferralStore();
+        const service = serviceFor(store, () => ({
+          qualified: true,
+          sourceEventId: "purchase-b",
+          qualifyingAction: "purchase",
+          eligibleReason: "paid",
+        }));
+        const { token } = await seed(service);
+        await service.claimAttribution({ token, recipient: subject("c"), attributionId: "c" });
+        await service.claimAttribution({ token, recipient: subject("a"), attributionId: "a" });
+        const { attribution: second } = await service.claimAttribution({
+          token,
+          recipient: subject("b"),
+          attributionId: "b",
+        });
+        if (provider === "postgres") {
+          await pool.query(`
+            UPDATE croco_referral_attributions
+            SET created_at = CASE WHEN attribution_id = 'c'
+              THEN TIMESTAMPTZ '2026-01-01' ELSE TIMESTAMPTZ '2026-01-02' END
+            WHERE attribution_id IN ('a', 'b', 'c')
+          `);
+        }
+
+        const first = await service.recoverPendingAttributionsPage({ limit: 1 });
+        expect(first.attributions.map(({ id }) => id)).toEqual(["a"]);
+        expect(first.nextCursor).toBe("a");
+        const pending = await service.qualifyAttribution({
+          attributionId: second.id,
+          recipient: subject("b"),
+        });
+        await store.transact((tx) =>
+          tx.compareAndSetAttribution(second.id, ["benefits-pending"], { ...pending, id: "a" }),
+        );
+
+        const page = await service.recoverPendingAttributionsPage({
+          after: first.nextCursor ?? undefined,
+          limit: 1,
+        });
+        expect(page.attributions.map(({ id, state }) => ({ id, state }))).toEqual([
+          { id: "b", state: "benefits-pending" },
+        ]);
+        expect(page.nextCursor).toBe("b");
+        const last = await service.recoverPendingAttributionsPage({
+          after: page.nextCursor ?? undefined,
+        });
+        expect(last.attributions.map(({ id }) => id)).toEqual(["c"]);
+        expect(last.nextCursor).toBeNull();
+        const settled = await service.fulfillBenefits({
+          attributionId: page.attributions[0]?.id ?? "missing",
+        });
+        expect(settled).toMatchObject({ id: "b", state: "fulfilled" });
+        expect((await store.getAttribution("a"))?.state).toBe("claimed");
+
+        const scope = second.scope;
+        const referrer = subject("second-referrer");
+        const recipient = subject("second-recipient");
+        const program = {
+          programId: "current-program",
+          familyId: "current-family",
+          benefitCycleId: "current-cycle",
+        };
+        const projected = {
+          ...settled,
+          ...program,
+          referrer,
+          recipient,
+          state: "held" as const,
+          holdReason: "unknown-novelty" as const,
+        };
+        await store.transact((tx) =>
+          tx.compareAndSetAttribution(second.id, ["fulfilled"], projected),
+        );
+        const previousProgram = await service.recoverPendingAttributionsPage({
+          programId: second.programId,
+          scope,
+          states: ["held"],
+        });
+        expect(previousProgram.attributions).toEqual([]);
+        const currentProgram = await service.recoverPendingAttributionsPage({
+          ...program,
+          scope,
+          referrer,
+          recipient,
+          states: ["held"],
+        });
+        expect(currentProgram.attributions.map(({ id }) => id)).toEqual(["b"]);
+
+        const movedScope = { ...scope, tenantId: "tenant-b" };
+        await store.transact((tx) =>
+          tx.compareAndSetAttribution(second.id, ["held"], {
+            ...projected,
+            referrer: { ...referrer, ...movedScope },
+          }),
+        );
+        const mixedSubjects = await service.recoverPendingAttributionsPage({
+          scope,
+          states: ["held"],
+        });
+        expect(mixedSubjects.attributions).toEqual([]);
+
+        // Even a document with internally consistent subjects cannot move stored ownership.
+        await store.transact((tx) =>
+          tx.compareAndSetAttribution(second.id, ["held"], {
+            ...projected,
+            scope: movedScope,
+            referrer: { ...referrer, ...movedScope },
+            recipient: { ...recipient, ...movedScope },
+          }),
+        );
+        for (const filter of [
+          { scope },
+          { scope: movedScope },
+          { referrer: { ...referrer, ...movedScope } },
+        ]) {
+          const scoped = await service.recoverPendingAttributionsPage({
+            ...filter,
+            states: ["held"],
+          });
+          expect(scoped.attributions).toEqual([]);
+        }
+        const unscoped = await service.recoverPendingAttributionsPage({ states: ["held"] });
+        expect(unscoped.attributions.map(({ id }) => id)).toEqual(["b"]);
+      });
+    },
+  );
 
   it.each(["in-memory", "postgres"] as const)(
     "keeps confirmed funnel stages during payout recovery on the %s store",
