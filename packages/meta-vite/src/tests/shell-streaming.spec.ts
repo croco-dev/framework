@@ -1,8 +1,13 @@
 import { createElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { createLambdaHandler } from "../libs/providers/lambda";
+import { createDeferredRegionStore } from "../libs/render/deferredRegions";
 import { RenderServer } from "../libs/render/renderServer";
-import { SHELL_STREAM_DEFAULT_REGION_TIMEOUT_MS } from "../libs/render/shellStream";
-import type { ShellSettleSummary } from "../libs/routes/shell";
+import {
+  SHELL_STREAM_DEFAULT_REGION_TIMEOUT_MS,
+  applyShellStreamHeaders,
+} from "../libs/render/shellStream";
+import type { ShellRenderOptions, ShellSettleSummary } from "../libs/routes/shell";
 import type { RenderRouteComponentProps } from "../libs/routes/types";
 
 function createGate<T = string>() {
@@ -23,6 +28,261 @@ describe("RenderServer shell streaming", () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+  });
+
+  it.each([
+    {
+      platform: "node",
+      afterDecision: 13,
+      renderAt: 30.5,
+      shell: "shell;dur=20.5",
+      regionsMs: 19.5,
+    },
+    { platform: "node", afterDecision: 10, renderAt: 10, shell: "shell;dur=0", regionsMs: 40 },
+    {
+      platform: "node",
+      afterDecision: 10,
+      renderAt: Number.NaN,
+      shell: "shell",
+      regionsMs: undefined,
+    },
+    { platform: "cloudflare", afterDecision: 10, renderAt: 10, shell: "shell", regionsMs: 40 },
+    {
+      platform: "cloudflare",
+      afterDecision: 13,
+      renderAt: 30,
+      shell: "shell;dur=20",
+      regionsMs: 20,
+    },
+  ] as const)(
+    "reports $shell when the $platform shell is ready",
+    async ({ platform, afterDecision, renderAt, shell, regionsMs }) => {
+      let now = 10;
+      vi.spyOn(performance, "now").mockImplementation(() => now);
+      const gate = createGate();
+      const onSettle = vi.fn(async (_summary: ShellSettleSummary) => {
+        throw new Error("Async telemetry unavailable");
+      });
+      const server = new RenderServer([
+        {
+          path: "/pdp",
+          mode: "ssr",
+          resolveShell: async () => {
+            now = afterDecision;
+            return { kind: "render" };
+          },
+          componentLoader: async () => ({
+            default: () => {
+              now = renderAt;
+              return createElement("main", null, "Shell ready");
+            },
+          }),
+          regions: [{ id: "details", loader: () => gate.promise }],
+          stream: { onSettle },
+        },
+      ]);
+
+      const response = await server.handle(new Request("https://example.com/pdp"), { platform });
+      // Inspect the headers before allowing the deferred region to settle.
+      const timing = response.headers.get("server-timing");
+      const settledBeforeBody = onSettle.mock.calls.length;
+      now = 50;
+      gate.resolve("Deferred content");
+      await expect(response.text()).resolves.toContain("Deferred content");
+
+      expect(timing).toBe(`${shell}, regions`);
+      expect(settledBeforeBody).toBe(0);
+      expect(response.headers.get("server-timing")).toBe(timing);
+      expect(onSettle).toHaveBeenCalledExactlyOnceWith(
+        expect.objectContaining({
+          regionsSettled: 1,
+          ...(regionsMs !== undefined && { regionsDurationMs: regionsMs }),
+        }),
+      );
+      if (regionsMs === undefined) {
+        expect(onSettle.mock.lastCall?.[0]).not.toHaveProperty("regionsDurationMs");
+      }
+      expect(console.error).toHaveBeenCalledWith("SSR shell settlement callback failed", undefined);
+    },
+  );
+
+  it("omits shell timing when rendering reaches the deadline before the headers", async () => {
+    let now = 0;
+    vi.spyOn(performance, "now").mockImplementation(() => now);
+    const server = new RenderServer([
+      {
+        path: "/pdp",
+        mode: "ssr",
+        componentLoader: async () => ({
+          default: () => {
+            now = 1000;
+            return createElement("main", null, "Late shell");
+          },
+        }),
+        regions: [{ id: "details", loader: async () => "Deferred content" }],
+        stream: { deadlineMs: 1000 },
+      },
+    ]);
+
+    const response = await server.handle(new Request("https://example.com/pdp"), {
+      platform: "node",
+    });
+    expect(response.status).toBe(503);
+    expect(response.headers.has("server-timing")).toBe(false);
+  });
+
+  it("preserves final region timing when the client cancels after both regions finish", async () => {
+    let now = 10;
+    vi.spyOn(performance, "now").mockImplementation(() => now);
+    const first = createGate();
+    const last = createGate();
+    const onSettle = vi.fn();
+    const server = new RenderServer([
+      {
+        path: "/pdp",
+        mode: "ssr",
+        componentLoader: async () => {
+          now = 17;
+          return { default: () => createElement("main", null, "First shell chunk") };
+        },
+        regions: [
+          {
+            id: "first",
+            loader: () => {
+              now = 20;
+              return first.promise;
+            },
+          },
+          { id: "last", loader: () => last.promise },
+        ],
+        stream: { onSettle },
+      },
+    ]);
+    const response = await server.handle(new Request("https://example.com/pdp"), {
+      platform: "node",
+    });
+    const reader = response.body?.getReader();
+    if (!reader) throw new Error("Expected a response body");
+    await reader.read();
+
+    now = 40;
+    first.resolve("First region");
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    now = 60;
+    last.resolve("Last region");
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    const reportedBeforeCancel = onSettle.mock.calls.length;
+    now = 90;
+    await reader.cancel();
+
+    expect(response.headers.get("server-timing")).toBe("shell;dur=10, regions");
+    expect(reportedBeforeCancel).toBe(0);
+    expect(onSettle).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({
+        abortReason: "client-abort",
+        regionsSettled: 2,
+        regionsDurationMs: 43,
+      }),
+    );
+  });
+
+  it("measures a region once when declarations share its loader ID", async () => {
+    let now = 10;
+    vi.spyOn(performance, "now").mockImplementation(() => now);
+    const duplicate = vi.fn(async () => "Duplicate");
+    const store = createDeferredRegionStore(
+      [
+        {
+          id: "details",
+          loader: async () => {
+            now = 14;
+            return "First declaration";
+          },
+        },
+        { id: "details", loader: duplicate },
+      ],
+      new AbortController().signal,
+      1000,
+    );
+
+    await expect(store.settle()).resolves.toMatchObject({ settled: 1, regionsDurationMs: 4 });
+    expect(duplicate).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    {
+      outcome: "successful",
+      payload: "Lambda region",
+      status: 200,
+      serverTiming: "shell;dur=5, regions",
+      abortReason: undefined,
+    },
+    {
+      outcome: "oversized",
+      payload: "R".repeat(65536),
+      status: 500,
+      serverTiming: undefined,
+      abortReason: "max-buffered-bytes",
+    },
+  ])(
+    "preserves the $outcome Lambda response when the settle callback throws",
+    async ({ payload, status, serverTiming, abortReason }) => {
+      let now = 10;
+      vi.spyOn(performance, "now").mockImplementation(() => now);
+      const gate = createGate();
+      const regionStarted = createGate<void>();
+      const onSettle = vi.fn(function (this: ShellRenderOptions, _summary: ShellSettleSummary) {
+        throw new Error("Telemetry unavailable");
+      });
+      const stream = { maxBufferedBytes: 4096, onSettle };
+      const server = new RenderServer([
+        {
+          path: "/pdp",
+          mode: "ssr",
+          componentLoader: async () => {
+            now = 15;
+            return { default: () => createElement("main", null, "Lambda shell") };
+          },
+          regions: [
+            {
+              id: "details",
+              loader: () => {
+                regionStarted.resolve();
+                return gate.promise;
+              },
+            },
+          ],
+          stream,
+        },
+      ]);
+      const handler = createLambdaHandler((request, context) => server.handle(request, context));
+      const result = handler({ version: "2.0", rawPath: "/pdp" }, {});
+      await regionStarted.promise;
+      // Resume after the ready shell has been passed to the Lambda buffer.
+      await new Promise<void>((resolve) => setImmediate(resolve));
+      now = 45;
+      gate.resolve(payload);
+
+      const response = await result;
+      expect(response.statusCode).toBe(status);
+      expect(response.body).toContain(abortReason ? "Internal Server Error" : payload);
+      expect(response.headers?.["server-timing"]).toBe(serverTiming);
+      expect(onSettle).toHaveBeenCalledExactlyOnceWith(
+        expect.objectContaining({
+          regionsSettled: 1,
+          regionsDurationMs: 30,
+          ...(abortReason && { abortReason, shellCommitted: false }),
+        }),
+      );
+      expect(onSettle.mock.contexts[0]).toBe(stream);
+    },
+  );
+
+  it("appends shell timing to metrics already set on the response", () => {
+    const headers = new Headers({ "Server-Timing": 'db;dur=4;desc="cache, hit"' });
+    applyShellStreamHeaders(headers, "stream", "node");
+
+    expect(headers.get("server-timing")).toBe('db;dur=4;desc="cache, hit", shell, regions');
   });
 
   it("streams the critical shell before a gated deferred region resolves", async () => {
@@ -485,6 +745,7 @@ describe("RenderServer shell streaming", () => {
     await response.body?.cancel().catch(() => {});
     expect(summaries).toHaveLength(1);
     expect(summaries[0]).toMatchObject({ abortReason: "client-abort" });
+    expect(summaries[0]).not.toHaveProperty("regionsDurationMs");
   });
 
   it("cancels slow shell resolution on the deadline and returns 503", async () => {
@@ -577,6 +838,7 @@ describe("RenderServer shell streaming", () => {
     });
 
     expect(response.status).toBe(500);
+    expect(response.headers.has("server-timing")).toBe(false);
     await expect(response.text()).resolves.toContain("Internal Server Error");
     expect(summaries).toHaveLength(1);
     expect(summaries[0]).toMatchObject({
@@ -638,6 +900,7 @@ describe("RenderServer shell streaming", () => {
 
   it("returns 503 when the client aborts a buffered render mid-flight", async () => {
     const gate = createGate<string>();
+    const regionStarted = createGate<void>();
     const summaries: ShellSettleSummary[] = [];
     const controller = new AbortController();
     const server = new RenderServer([
@@ -647,7 +910,15 @@ describe("RenderServer shell streaming", () => {
         componentLoader: async () => ({
           default: () => createElement("main", null, "SHELL"),
         }),
-        regions: [{ id: "slow", loader: () => gate.promise }],
+        regions: [
+          {
+            id: "slow",
+            loader: () => {
+              regionStarted.resolve();
+              return gate.promise;
+            },
+          },
+        ],
         stream: {
           onSettle: (summary) => {
             summaries.push(summary);
@@ -660,10 +931,14 @@ describe("RenderServer shell streaming", () => {
       new Request("https://example.com/buffered-abort", { signal: controller.signal }),
       { platform: "lambda" },
     );
+    await regionStarted.promise;
+    // The region remains pending after React's shell enters the response buffer.
+    await new Promise<void>((resolve) => setImmediate(resolve));
     controller.abort(new Error("client disconnect"));
     gate.resolve("late payload");
     const response = await pending;
     expect(response.status).toBe(503);
+    expect(response.headers.has("server-timing")).toBe(false);
     expect(summaries).toHaveLength(1);
     expect(summaries[0]).toMatchObject({ abortReason: "client-abort" });
   });

@@ -35,8 +35,7 @@ instead of a cumulative cap so full-size shells are not cut off mid-stream.
 
 > `readonly` `optional` **onSettle?**: (`summary`) => `void`
 
-Aggregate observability only. Individual timings or payload contents are
-never exposed to the client through this hook.
+Server-side observability after deferred rendering settles.
 
 #### Parameters
 

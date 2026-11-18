@@ -1,4 +1,5 @@
 import type { DeferredRegionDefinition, DeferredRegionLoaderInput } from "../routes/shell";
+import { isObservableDuration } from "./shellStream";
 
 /**
  * Per-request deferred region store.
@@ -18,7 +19,22 @@ export function createDeferredRegionStore(
   input?: Omit<DeferredRegionLoaderInput, "signal">,
 ): { readonly reader: DeferredRegionReader; readonly settle: () => Promise<RegionSettleCounts> } {
   const started = new Map<string, Promise<unknown>>();
+  const regionCount = new Set(regions.map(({ id }) => id)).size;
   const counts: RegionSettleCounts = { settled: 0, failed: 0, cancelled: 0 };
+  let firstRegionStartedAt: number | undefined;
+  const recordSettlement = (outcome: "settled" | "failed" | "cancelled") => {
+    counts[outcome] += 1;
+    if (
+      !signal.aborted &&
+      firstRegionStartedAt !== undefined &&
+      counts.settled + counts.failed + counts.cancelled === regionCount
+    ) {
+      const elapsed = performance.now() - firstRegionStartedAt;
+      if (isObservableDuration(elapsed, input?.context?.platform)) {
+        counts.regionsDurationMs = elapsed;
+      }
+    }
+  };
 
   const reader: DeferredRegionReader = {
     signal,
@@ -33,17 +49,14 @@ export function createDeferredRegionStore(
         return Promise.reject(new DeferredRegionUnknownError(id));
       }
 
+      if (!signal.aborted) firstRegionStartedAt ??= performance.now();
       const task = runRegion(definition, signal, regionTimeoutMs, input).then(
         (value) => {
-          counts.settled += 1;
+          recordSettlement("settled");
           return value;
         },
         (error) => {
-          if (isCancelError(error, signal)) {
-            counts.cancelled += 1;
-          } else {
-            counts.failed += 1;
-          }
+          recordSettlement(isCancelError(error, signal) ? "cancelled" : "failed");
           throw error;
         },
       );
@@ -67,6 +80,7 @@ export type RegionSettleCounts = {
   settled: number;
   failed: number;
   cancelled: number;
+  regionsDurationMs?: number;
 };
 
 export class DeferredRegionUnknownError extends Error {

@@ -5,4 +5,6 @@ prev: false
 title: "SHELL_STREAM_SERVER_TIMING"
 ---
 
-> `const` **SHELL_STREAM_SERVER_TIMING**: `"shell;dur=0, regions"` = `"shell;dur=0, regions"`
+> `const` **SHELL_STREAM_SERVER_TIMING**: `"shell, regions"` = `"shell, regions"`
+
+Server-Timing metrics when no shell duration was measured.

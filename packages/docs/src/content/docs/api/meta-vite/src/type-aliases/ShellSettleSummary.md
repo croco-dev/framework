@@ -47,6 +47,14 @@ Why the stream ended early; absent on the normal completion path.
 
 ---
 
+### regionsDurationMs?
+
+> `readonly` `optional` **regionsDurationMs?**: `number`
+
+Time from the first region start to the final settlement, when measured.
+
+---
+
 ### regionsFailed
 
 > `readonly` **regionsFailed**: `number`

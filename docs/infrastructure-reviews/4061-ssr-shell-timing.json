@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "meta-vite",
+      "classification": "protocol-render",
+      "reason": "Shell-first SSR reports the measurable interval to React shell readiness and delivers deferred region settlement time through the server-side callback.",
+      "files": {
+        "packages/meta-vite/src/libs/render/deferredRegions.ts": "a5b82dddb9e8d5084531f5d91252c580f00fecd5fd580c2f3a17cea273643aef",
+        "packages/meta-vite/src/libs/render/renderServer.ts": "131f17a4a23dd90d80493ab5cc54d394991d3598d731e84c3d90d8f33da3bd73",
+        "packages/meta-vite/src/libs/render/shellStream.ts": "f5c757631a0dc0f098f80aa0a2881c3f47e7ff1fe7bb01b2d14a9a5f4c22263d",
+        "packages/meta-vite/src/libs/routes/shell.ts": "1474a0878434b1924beec05ca8086db407aeb8c33f6ab976ba39a96724467fef"
+      },
+      "catalogRuntimes": ["node", "lambda", "cloudflare-workers", "browser"],
+      "profiles": {
+        "kubernetes": {
+          "result": "supported",
+          "reason": "The Node fetch adapter serves the measured shell header over HTTP while the deferred region is held open.",
+          "providers": ["@croco/meta-vite/createNodeHandler"],
+          "constraints": [
+            "The test executes the Node host locally. It does not establish live Kubernetes deployment or proxy behavior.",
+            "The header measures shell readiness rather than delivery through an ingress."
+          ],
+          "references": [
+            "packages/meta-vite/src/libs/providers/node.ts",
+            "packages/meta-vite/src/tests/real-http-stream.spec.ts"
+          ],
+          "evidence": {
+            "kind": "host-runtime",
+            "runtime": "node",
+            "path": "packages/meta-vite/src/tests/real-http-stream.spec.ts",
+            "testName": "real HTTP shell-first stream flushes the shell over a socket before the deferred region resolves",
+            "sha256": "ffb55e29c39b5aa5ffa391b2ddbce8b70a912b522fdd67e7510dde9ca094966c"
+          }
+        },
+        "aws-lambda": {
+          "result": "conditional",
+          "reason": "The local API Gateway adapter test samples the same shell milestone and returns it with the buffered HTML response.",
+          "providers": ["@croco/meta-vite/createLambdaHandler"],
+          "constraints": [
+            "The API Gateway v2 adapter buffers the full body. The shell duration excludes that buffering and API Gateway delivery.",
+            "The fixture simulates the invocation locally without an AWS runtime or deployment."
+          ],
+          "references": [
+            "packages/meta-vite/src/libs/providers/lambda.ts",
+            "packages/meta-vite/src/tests/shell-streaming.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "unverified",
+          "host": "workers",
+          "reason": "Controlled clocks exercise Workers delivery policy in the local renderer tests. A deployed Workers isolate was not exercised.",
+          "providers": ["@croco/meta-vite/createCloudflareHandler"],
+          "constraints": [
+            "The deployed Workers clock advances on I/O and cannot measure CPU-only execution. The duration is omitted when the clock does not advance."
+          ],
+          "references": [
+            "packages/meta-vite/src/libs/providers/cloudflare.ts",
+            "packages/meta-vite/src/tests/shell-streaming.spec.ts",
+            "packages/meta-vite/README.md"
+          ]
+        }
+      }
+    }
+  ]
+}

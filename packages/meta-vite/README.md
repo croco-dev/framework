@@ -172,12 +172,26 @@ registry.register(
 const server = new RenderServer(registry.compile());
 ```
 
-Delivery is host-driven: Node and Cloudflare pipe the shell-first stream;
-Lambda buffers the complete HTML before returning (`x-croco-delivery` reports
-`stream` or `buffered`). After headers commit, region errors keep a safe
-fallback and are observed through `console.error`; status is never rewritten
-and stacks never leak. Shell streams carry only safe aggregates in
-`Server-Timing: shell;dur=0, regions`.
+Node and Cloudflare Workers pipe the shell-first stream. Lambda buffers the
+complete HTML before returning. The `x-croco-delivery` header reports the delivery
+mode and host. After headers commit, a region error keeps the fallback in the
+body and is reported through `console.error`.
+
+For shell-first routes, `Server-Timing` reports `shell;dur=<milliseconds>, regions`.
+The shell measurement starts before `resolveShell` and ends when React's shell
+is ready. It includes the shell decision and component loader on all three hosts.
+Lambda samples the same milestone before buffering the rest of the HTML. The
+renderer appends these metrics to any existing timing entries. When the clock
+cannot provide a usable measurement, the `shell` entry omits `dur`. In deployed
+Workers, the clock advances on I/O. A zero delta there leaves the duration
+unmeasured, and a positive delta reflects the I/O-observable interval.
+[Cloudflare Workers timing documentation](https://developers.cloudflare.com/workers/runtime-apis/performance/)
+
+The `regions` header entry does not carry a duration. The server-side
+`stream.onSettle` callback can report `regionsDurationMs` from the first region
+load to final settlement. If delivery fails after all regions settle, the
+callback can still report that measurement alongside the outcome. A callback
+failure is logged and the response continues.
 
 `streaming-response` is reported in the route manifest only for SSR pages with
 declared regions. Plain SSR pages remain on the buffered render path.

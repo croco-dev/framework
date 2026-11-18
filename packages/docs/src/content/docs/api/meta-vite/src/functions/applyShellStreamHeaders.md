@@ -5,7 +5,7 @@ prev: false
 title: "applyShellStreamHeaders"
 ---
 
-> **applyShellStreamHeaders**(`headers`, `delivery`, `platform`): `void`
+> **applyShellStreamHeaders**(`headers`, `delivery`, `platform`, `shellDurationMs?`): `void`
 
 ## Parameters
 
@@ -20,6 +20,10 @@ title: "applyShellStreamHeaders"
 ### platform
 
 `"unknown"` \| [`ShellRuntimePlatform`](/api/meta-vite/src/type-aliases/shellruntimeplatform/)
+
+### shellDurationMs?
+
+`number`
 
 ## Returns
 

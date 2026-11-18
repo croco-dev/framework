@@ -1,5 +1,4 @@
 import { createElement } from "react";
-import { createServer } from "node:http";
 import { InMemoryCacheStore } from "@croco/cache-core";
 import { createApp } from "@croco/transports-http";
 import { describe, expect, it } from "vitest";
@@ -11,6 +10,7 @@ import type { CrocoFetchHandler } from "../libs/render/types";
 
 describe("real HTTP shell-first stream", () => {
   it("flushes the shell over a socket before the deferred region resolves", async () => {
+    const region = createLatch();
     const server = new RenderServer([
       {
         path: "/pdp",
@@ -22,7 +22,7 @@ describe("real HTTP shell-first stream", () => {
           {
             id: "reviews",
             loader: async () => {
-              await new Promise((resolve) => setTimeout(resolve, 100));
+              await region.promise;
               return "REAL-REGION";
             },
           },
@@ -30,30 +30,14 @@ describe("real HTTP shell-first stream", () => {
       },
     ]);
 
-    const httpServer = createServer(async (req, res) => {
-      const url = new URL(req.url ?? "/pdp", "http://localhost");
-      const response = await server.handle(new Request(url), { platform: "node" });
-      res.writeHead(response.status, Object.fromEntries(response.headers.entries()));
-      if (!response.body) {
-        res.end();
-        return;
-      }
-      const reader = response.body.getReader();
-      for (;;) {
-        const { done, value } = await reader.read();
-        if (done) {
-          res.end();
-          return;
-        }
-        res.write(value);
-      }
-    });
-
-    await new Promise<void>((resolve) => httpServer.listen(0, resolve));
+    const { origin, close } = await startHonoFixture((request, context) =>
+      server.handle(request, context),
+    );
     try {
-      const address = httpServer.address();
-      const port = typeof address === "object" && address ? address.port : 0;
-      const response = await fetch(`http://localhost:${port}/pdp`);
+      const response = await fetch(`${origin}/pdp`, {
+        signal: AbortSignal.timeout(3000),
+        headers: { "Server-Timing": "client-secret;dur=100" },
+      });
       const reader = response.body?.getReader();
       const decoder = new TextDecoder();
       let prefix = "";
@@ -63,6 +47,8 @@ describe("real HTTP shell-first stream", () => {
         prefix += decoder.decode(value, { stream: true });
         if (prefix.includes("REAL-SHELL")) break;
       }
+      const timingBeforeRegion = response.headers.get("server-timing");
+      region.release();
       let rest = "";
       for (;;) {
         const { done, value } = (await reader?.read()) ?? { done: true, value: undefined };
@@ -76,8 +62,11 @@ describe("real HTTP shell-first stream", () => {
       expect(prefix).not.toContain("REAL-REGION");
       expect(prefix + rest).toContain("REAL-REGION");
       expect(response.headers.get("x-croco-delivery")).toBe("stream; host=node");
+      expect(timingBeforeRegion).toMatch(/^shell;dur=\d+(?:\.\d+)?, regions$/u);
+      expect(response.headers.get("server-timing")).toBe(timingBeforeRegion);
     } finally {
-      await new Promise<void>((resolve) => httpServer.close(() => resolve()));
+      region.release();
+      await close();
     }
   });
 
@@ -104,6 +93,7 @@ describe("real HTTP shell-first stream", () => {
     try {
       const expired = await fetch(`${origin}/deadline`, { signal: AbortSignal.timeout(1500) });
       expect(expired.status).toBe(503);
+      expect(expired.headers.has("server-timing")).toBe(false);
       const failureHtml = await expired.text();
       expect(failureHtml).toContain("Service Unavailable");
 
