@@ -46,6 +46,15 @@ export async function runCroco(
     if (rawArgs.includes("--help") || rawArgs.includes("-h")) {
       const helpCommandIndex = findRootCommandIndex(rawArgs);
       const helpArgs = helpCommandIndex === undefined ? [] : rawArgs.slice(helpCommandIndex);
+      const leafIndex = helpArgs[0] === "di" ? findHelpSubCommandIndex(helpArgs, 1) : -1;
+      if (helpArgs[leafIndex] === "check") {
+        const { parseDiCheckWorkingDirectory } = await import("./diCheck.js");
+        const invocation = parseDiCheckWorkingDirectory(helpArgs.slice(leafIndex + 1), runtime.cwd);
+        if ("diagnostic" in invocation) {
+          runtime.stderr(invocation.diagnostic);
+          runtime.setExitCode(1);
+        }
+      }
       runtime.stdout(`${await renderHelpUsage(command, helpArgs)}\n`);
       return toRunResult(runtime.getExitCode());
     }
@@ -430,6 +439,10 @@ function bindCommandHook<T extends ArgsDef>(
   return (context) => runWithCrocoCommandRuntime(runtime, () => hook(context));
 }
 
+function findHelpSubCommandIndex(rawArgs: readonly string[], startIndex = 0): number {
+  return rawArgs.findIndex((argument, index) => index >= startIndex && !argument.startsWith("-"));
+}
+
 async function renderHelpUsage<T extends ArgsDef>(
   command: CommandDef<T>,
   rawArgs: readonly string[],
@@ -437,7 +450,7 @@ async function renderHelpUsage<T extends ArgsDef>(
 ): Promise<string> {
   const subCommands = await resolveValue(command.subCommands);
   if (subCommands !== undefined && Object.keys(subCommands).length > 0) {
-    const subCommandIndex = rawArgs.findIndex((argument) => !argument.startsWith("-"));
+    const subCommandIndex = findHelpSubCommandIndex(rawArgs);
     const subCommandName = rawArgs[subCommandIndex];
     const subCommand =
       subCommandName === undefined ? undefined : await resolveValue(subCommands[subCommandName]);

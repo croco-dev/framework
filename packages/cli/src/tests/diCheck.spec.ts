@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Container } from "@croco/framework-context";
 import { createModuleGraphManifest } from "@croco/framework-module";
 import { runCroco } from "../commands/root.js";
@@ -522,6 +522,7 @@ describe("diCheck", () => {
   it("checks two apps independently and writes each report relative to its app directory", async () => {
     const cwd = mkdtempSync(join(tmpdir(), "croco-di-root-"));
     const processCwd = process.cwd();
+    const chdir = vi.spyOn(process, "chdir").mockImplementation(() => {});
     try {
       const ready = readyManifest();
       const failed = { ...ready, status: "failed" };
@@ -562,9 +563,77 @@ describe("diCheck", () => {
       });
       expect(existsSync(join(cwd, "reports"))).toBe(false);
       expect(process.cwd()).toBe(processCwd);
+      expect(chdir).not.toHaveBeenCalled();
+    } finally {
+      chdir.mockRestore();
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+
+  it("accepts a directory starting with two dashes in the equals form", async () => {
+    const cwd = mkdtempSync(join(tmpdir(), "croco-di-root-"));
+    try {
+      mkdirSync(join(cwd, "--app"));
+      writeFileSync(join(cwd, "--app", "graph.json"), JSON.stringify(readyManifest()));
+      const stdout: string[] = [];
+
+      const result = await runCroco(["di", "check", "--cwd=--app", "graph.json", "--json"], {
+        cwd,
+        stdout: (message) => stdout.push(message),
+        stderr: () => {},
+      });
+
+      expect(result).toEqual({ exitCode: 0 });
+      expect(JSON.parse(stdout[0] ?? "{}")).toMatchObject({ status: "passed" });
     } finally {
       rmSync(cwd, { recursive: true, force: true });
     }
+  });
+
+  it.each(["--help", "-h"])(
+    "rejects a missing cwd before %s at both entry points",
+    async (help) => {
+      const args = ["--cwd", help];
+      const stderr: string[] = [];
+      const root = await runCroco(["di", "check", ...args], {
+        stdout: () => {},
+        stderr: (message) => stderr.push(message),
+      });
+      const direct = await runDiCheck(args, { io: createIo("", [], stderr) });
+
+      expect([root.exitCode, direct]).toEqual([1, 1]);
+      expect(stderr).toEqual(
+        Array.from({ length: 2 }, () => expect.stringContaining("Missing working directory.")),
+      );
+    },
+  );
+
+  it.each([
+    ["leaf help", ["di", "check", "--help"]],
+    ["root help", ["--help", "di", "check"]],
+    ["root help with cwd", ["-h", "di", "check", "--cwd", "."]],
+  ])("prints %s without requiring a manifest", async (_name, args) => {
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    const result = await runCroco(args, {
+      stdout: (message) => stdout.push(message),
+      stderr: (message) => stderr.push(message),
+    });
+
+    expect(result).toEqual({ exitCode: 0 });
+    expect(stderr).toEqual([]);
+    expect(stdout.join("\n")).toContain("Validate Croco DI graph artifacts");
+  });
+
+  it("rejects a missing cwd when help precedes the DI subcommand", async () => {
+    const stderr: string[] = [];
+    const result = await runCroco(["di", "-h", "check", "--cwd"], {
+      stdout: () => {},
+      stderr: (message) => stderr.push(message),
+    });
+
+    expect(result).toEqual({ exitCode: 1 });
+    expect(stderr).toEqual([expect.stringContaining("Missing working directory.")]);
   });
 
   it.each([["--cwd"], ["--cwd="]])("rejects a missing cwd value with %s", async (cwdFlag) => {

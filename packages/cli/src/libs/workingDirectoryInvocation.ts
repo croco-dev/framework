@@ -3,6 +3,10 @@ import { resolve } from "node:path";
 export function parseWorkingDirectoryInvocation(
   args: readonly string[],
   runtimeCwd: string | undefined,
+  options: {
+    readonly allowOptionLikeEqualsValue?: boolean;
+    readonly shortOptions?: readonly string[];
+  } = {},
 ):
   | {
       readonly args: string[];
@@ -27,8 +31,13 @@ export function parseWorkingDirectoryInvocation(
     }
 
     const optionIndex = index;
-    const value = argument === "--cwd" ? args[++index] : argument.slice("--cwd=".length);
-    if (!value || value.startsWith("--")) {
+    const separateValue = argument === "--cwd";
+    const value = separateValue ? args[++index] : argument.slice("--cwd=".length);
+    if (
+      !value ||
+      (value.startsWith("--") && (separateValue || !options.allowOptionLikeEqualsValue)) ||
+      (separateValue && options.shortOptions?.includes(value))
+    ) {
       return {
         diagnostic: "[CROCO_CLI_MISSING_VALUE] Missing working directory. Pass --cwd <path>.",
       };

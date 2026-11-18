@@ -171,17 +171,24 @@ export function parseDiCheckArgs(args: readonly string[]): DiCheckParseResult {
   return parseDiCheckInvocation(args).parsed;
 }
 
+export function parseDiCheckWorkingDirectory(args: readonly string[], runtimeCwd?: string) {
+  return parseWorkingDirectoryInvocation(args, runtimeCwd, {
+    allowOptionLikeEqualsValue: true,
+    shortOptions: ["-h"],
+  });
+}
+
 function parseDiCheckInvocation(
   args: readonly string[],
   runtimeCwd?: string,
 ): { readonly parsed: DiCheckParseResult; readonly cwd?: string | undefined } {
-  if (args.includes("--help") || args.includes("-h")) {
-    return { parsed: { kind: "help" } };
-  }
-
-  const invocation = parseWorkingDirectoryInvocation(args, runtimeCwd);
+  const invocation = parseDiCheckWorkingDirectory(args, runtimeCwd);
   if ("diagnostic" in invocation) {
     return { parsed: { kind: "invalid", message: invocation.diagnostic } };
+  }
+
+  if (args.includes("--help") || args.includes("-h")) {
+    return { parsed: { kind: "help" } };
   }
 
   return { parsed: parseDiCheckOptions(args, invocation.cwdOptionIndices), cwd: invocation.cwd };
