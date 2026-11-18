@@ -6,7 +6,8 @@ export const SHELL_STREAM_DEFAULT_REGION_TIMEOUT_MS = 5_000;
 export const SHELL_STREAM_DEFAULT_MAX_BUFFERED_BYTES = 1024 * 1024;
 
 export const SHELL_STREAM_DELIVERY_HEADER = "x-croco-delivery";
-export const SHELL_STREAM_SERVER_TIMING = "shell;dur=0, regions";
+/** Server-Timing metrics when no shell duration was measured. */
+export const SHELL_STREAM_SERVER_TIMING = "shell, regions";
 
 export const SHELL_STREAM_RENDER_ABORTED_CODE = "meta-vite/shell-stream-aborted" as const;
 export const SHELL_STREAM_MAX_BUFFERED_BYTES_CODE =
@@ -148,12 +149,29 @@ export function applyShellStreamHeaders(
   headers: Headers,
   delivery: ShellStreamDelivery,
   platform: ShellRuntimePlatform | "unknown",
+  shellDurationMs?: number,
 ): void {
   headers.set(
     SHELL_STREAM_DELIVERY_HEADER,
     delivery === "stream" ? `stream; host=${platform}` : `buffered; host=${platform}`,
   );
-  headers.set("Server-Timing", SHELL_STREAM_SERVER_TIMING);
+  const timing = isObservableDuration(shellDurationMs, platform)
+    ? `shell;dur=${shellDurationMs}, regions`
+    : SHELL_STREAM_SERVER_TIMING;
+  headers.append("Server-Timing", timing);
+}
+
+export function isObservableDuration(
+  durationMs: number | undefined,
+  platform: ShellRuntimePlatform | "unknown" | undefined,
+): durationMs is number {
+  // In deployed Workers, a clock that did not advance may hide CPU time.
+  return (
+    durationMs !== undefined &&
+    Number.isFinite(durationMs) &&
+    durationMs >= 0 &&
+    (durationMs > 0 || platform !== "cloudflare")
+  );
 }
 
 function normalizePositive(value: number | undefined, fallback: number): number {

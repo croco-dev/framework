@@ -23,9 +23,10 @@ import type { RscSsrCodec } from "../rsc/ssrDecode";
 import { decodeFlightToHtmlStream } from "../rsc/ssrDecode";
 import { encodePagePath } from "../routes/encodePagePath";
 import type { HeadMetadata } from "../routes/head";
-import type { ShellDecision, ShellSettleSummary } from "../routes/shell";
+import type { ShellDecision, ShellRenderOptions, ShellSettleSummary } from "../routes/shell";
 import type { RenderRouteComponentProps, RenderRouteIR } from "../routes/types";
 import { createDeferredRegionStore } from "./deferredRegions";
+import type { RegionSettleCounts } from "./deferredRegions";
 import { createSsrDocument, createSsrHtmlShell } from "./documentShell";
 import {
   SHELL_STREAM_DEFAULT_DEADLINE_MS,
@@ -98,7 +99,8 @@ export class RenderServer {
       regionTimeoutMs: streamOptions.regionTimeoutMs ?? SHELL_STREAM_DEFAULT_REGION_TIMEOUT_MS,
       maxBufferedBytes: streamOptions.maxBufferedBytes ?? SHELL_STREAM_DEFAULT_MAX_BUFFERED_BYTES,
     });
-    const deadlineAt = performance.now() + policy.deadlineMs;
+    const startedAt = performance.now();
+    const deadlineAt = startedAt + policy.deadlineMs;
 
     const shellDecision = await this.resolveShellSafely(route, request, context, deadlineAt);
     if (shellDecision && shellDecision.kind !== "render") {
@@ -109,7 +111,7 @@ export class RenderServer {
       return response;
     }
     if (route.regions?.length) {
-      return this.handleShellStream(route, request, context, policy, deadlineAt);
+      return this.handleShellStream(route, request, context, policy, startedAt, deadlineAt);
     }
 
     const lifetime = createShellRenderLifetime(request.signal, deadlineAt);
@@ -153,6 +155,7 @@ export class RenderServer {
     request: Request,
     context: RuntimeContext | undefined,
     policy: ShellStreamPolicy,
+    startedAt: number,
     deadlineAt: number,
   ): Promise<Response> {
     const streamOptions = route.stream ?? {};
@@ -200,21 +203,27 @@ export class RenderServer {
 
       const stream = await renderToReadableStream(element, { signal: controller.signal });
       reactStreams.push(stream);
+      const shellDurationMs = performance.now() - startedAt;
+      lifetime.check();
       const headers = new Headers(HTML_HEADERS);
-      applyShellStreamHeaders(headers, policy.delivery, context?.platform ?? "unknown");
+      applyShellStreamHeaders(
+        headers,
+        policy.delivery,
+        context?.platform ?? "unknown",
+        shellDurationMs,
+      );
 
       if (policy.delivery === "buffered") {
         try {
           const body = await this.bufferStream(stream, controller.signal, policy.maxBufferedBytes);
           const counts = await store.settle();
+          lifetime.check();
           teardown();
-          streamOptions.onSettle?.({
+          reportShellSettle(streamOptions, {
             delivery: "buffered",
             platform: context?.platform ?? "unknown",
             shellCommitted: true,
-            regionsSettled: counts.settled,
-            regionsFailed: counts.failed,
-            regionsCancelled: counts.cancelled,
+            ...summarizeRegionSettlement(counts),
             bytes: body.byteLength,
             timedOut: false,
             clientAborted: request.signal.aborted,
@@ -252,13 +261,11 @@ export class RenderServer {
           }
           const aborted =
             wasAborted || abortReason === "client-abort" || abortReason === "deadline";
-          streamOptions.onSettle?.({
+          reportShellSettle(streamOptions, {
             delivery: "buffered",
             platform: context?.platform ?? "unknown",
             shellCommitted: false,
-            regionsSettled: counts.settled,
-            regionsFailed: counts.failed,
-            regionsCancelled: counts.cancelled,
+            ...summarizeRegionSettlement(counts),
             bytes: 0,
             timedOut: abortReason === "deadline",
             clientAborted,
@@ -303,13 +310,11 @@ export class RenderServer {
           policy.regionTimeoutMs,
           { request, ...(context ? { context } : {}) },
         ).settle();
-        streamOptions.onSettle?.({
+        reportShellSettle(streamOptions, {
           delivery: policy.delivery,
           platform: context?.platform ?? "unknown",
           shellCommitted: false,
-          regionsSettled: counts.settled,
-          regionsFailed: counts.failed,
-          regionsCancelled: counts.cancelled,
+          ...summarizeRegionSettlement(counts),
           bytes: 0,
           timedOut: abortReason === "deadline",
           clientAborted: request.signal.aborted,
@@ -317,7 +322,7 @@ export class RenderServer {
         });
         return this.createHtmlResponse("<h1>Service Unavailable</h1>", 503, FALLBACK_HEAD_500);
       }
-      streamOptions.onSettle?.({
+      reportShellSettle(streamOptions, {
         delivery: policy.delivery,
         platform: context?.platform ?? "unknown",
         shellCommitted: false,
@@ -481,7 +486,7 @@ export class RenderServer {
     events: {
       platform: RuntimeContext["platform"] | "unknown";
       onSettle?: (summary: ShellSettleSummary) => void;
-      settleRegions: () => Promise<{ settled: number; failed: number; cancelled: number }>;
+      settleRegions: () => Promise<RegionSettleCounts>;
       clientAborted: () => boolean;
       onDone: () => void;
     },
@@ -496,12 +501,8 @@ export class RenderServer {
     // timeout budget the summary reports whatever settled so far. When the
     // region timeout is disabled, teardown still caps at the default budget
     // so client disconnect always settles.
-    const settleBounded = async (): Promise<{
-      settled: number;
-      failed: number;
-      cancelled: number;
-    }> => {
-      const fallback = { settled: 0, failed: 0, cancelled: 0 };
+    const settleBounded = async (): Promise<RegionSettleCounts> => {
+      const fallback: RegionSettleCounts = { settled: 0, failed: 0, cancelled: 0 };
       const settlePromise = events.settleRegions().catch(() => fallback);
       const budgetMs =
         Number.isFinite(regionTimeoutMs) && regionTimeoutMs > 0
@@ -522,27 +523,21 @@ export class RenderServer {
       }
     };
     const finish = (
-      summary: {
-        regionsSettled: number;
-        regionsFailed: number;
-        regionsCancelled: number;
-        timedOut: boolean;
-      },
+      counts: RegionSettleCounts,
+      timedOut: boolean,
       abortReason?: ShellSettleSummary["abortReason"],
     ): void => {
       if (settled) {
         return;
       }
       settled = true;
-      events.onSettle?.({
+      reportShellSettle(events, {
         delivery: "stream",
         platform: events.platform,
         shellCommitted,
-        regionsSettled: summary.regionsSettled,
-        regionsFailed: summary.regionsFailed,
-        regionsCancelled: summary.regionsCancelled,
+        ...summarizeRegionSettlement(counts),
         bytes,
-        timedOut: summary.timedOut,
+        timedOut,
         clientAborted: events.clientAborted(),
         ...(abortReason ? { abortReason } : {}),
       });
@@ -570,15 +565,7 @@ export class RenderServer {
                 cancelled: 0,
               }));
               await cancelPromise;
-              finish(
-                {
-                  regionsSettled: counts.settled,
-                  regionsFailed: counts.failed,
-                  regionsCancelled: counts.cancelled,
-                  timedOut: !clientAborted,
-                },
-                clientAborted ? "client-abort" : "deadline",
-              );
+              finish(counts, !clientAborted, clientAborted ? "client-abort" : "deadline");
               controller.error(toShellAbortError(signal.reason));
               return;
             }
@@ -594,25 +581,12 @@ export class RenderServer {
                   cancelled: 0,
                 }));
                 await cancelPromise;
-                finish(
-                  {
-                    regionsSettled: counts.settled,
-                    regionsFailed: counts.failed,
-                    regionsCancelled: counts.cancelled,
-                    timedOut: !clientAborted,
-                  },
-                  clientAborted ? "client-abort" : "deadline",
-                );
+                finish(counts, !clientAborted, clientAborted ? "client-abort" : "deadline");
                 controller.error(toShellAbortError(signal.reason));
                 return;
               }
               const counts = await settleBounded();
-              finish({
-                regionsSettled: counts.settled,
-                regionsFailed: counts.failed,
-                regionsCancelled: counts.cancelled,
-                timedOut: false,
-              });
+              finish(counts, false);
               controller.close();
               reader.releaseLock();
               return;
@@ -636,15 +610,7 @@ export class RenderServer {
               failed: 0,
               cancelled: 0,
             }));
-            finish(
-              {
-                regionsSettled: counts.settled,
-                regionsFailed: counts.failed,
-                regionsCancelled: counts.cancelled,
-                timedOut: false,
-              },
-              "render-error",
-            );
+            finish(counts, false, "render-error");
             try {
               controller.error(error);
             } finally {
@@ -665,15 +631,7 @@ export class RenderServer {
             failed: 0,
             cancelled: 0,
           }));
-          finish(
-            {
-              regionsSettled: counts.settled,
-              regionsFailed: counts.failed,
-              regionsCancelled: counts.cancelled,
-              timedOut: false,
-            },
-            "client-abort",
-          );
+          finish(counts, false, "client-abort");
           await cancelPromise;
           reader.releaseLock();
         },
@@ -1054,7 +1012,36 @@ function reportBestEffortStreamTeardown(): void {
   // No additional logging sink exists here; the summary carries the evidence.
 }
 
-function reportShellFailure(message: string, detail: unknown, routePath: string): void {
+function summarizeRegionSettlement(counts: RegionSettleCounts) {
+  return {
+    regionsSettled: counts.settled,
+    regionsFailed: counts.failed,
+    regionsCancelled: counts.cancelled,
+    ...(counts.regionsDurationMs !== undefined && {
+      regionsDurationMs: counts.regionsDurationMs,
+    }),
+  };
+}
+
+function reportShellSettle(
+  observer: Pick<ShellRenderOptions, "onSettle">,
+  summary: ShellSettleSummary,
+): void {
+  try {
+    const completion = observer.onSettle?.(summary);
+    if (completion !== undefined) {
+      void Promise.resolve(completion).catch(reportShellSettleFailure);
+    }
+  } catch {
+    reportShellSettleFailure();
+  }
+}
+
+function reportShellSettleFailure(): void {
+  reportShellFailure("SSR shell settlement callback failed");
+}
+
+function reportShellFailure(message: string, detail?: unknown, routePath?: string): void {
   // Logging sinks can throw (or throw while inspecting detail). The fallback
   // request keeps the safe 500 contract with the pre-existing warn signature.
   try {

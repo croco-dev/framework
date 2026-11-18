@@ -285,7 +285,7 @@
     {
       "package": "@croco/meta-vite",
       "file": "packages/meta-vite/src/libs/render/deferredRegions.ts",
-      "line": 72,
+      "line": 86,
       "excerpt": "export class DeferredRegionUnknownError extends Error {",
       "reason": "SSR deferred-region settlement boundary exposes meta-vite/deferred-region-unknown diagnostic code; request-scoped loader failure accounting.",
       "owner": "framework-error-handling",
@@ -294,7 +294,7 @@
     {
       "package": "@croco/meta-vite",
       "file": "packages/meta-vite/src/libs/render/deferredRegions.ts",
-      "line": 81,
+      "line": 95,
       "excerpt": "export class DeferredRegionTimeoutError extends Error {",
       "reason": "SSR deferred-region timeout boundary exposes meta-vite/deferred-region-timeout diagnostic code; region-timeout accounting instead of stack leak.",
       "owner": "framework-error-handling",
@@ -303,7 +303,7 @@
     {
       "package": "@croco/meta-vite",
       "file": "packages/meta-vite/src/libs/render/deferredRegions.ts",
-      "line": 90,
+      "line": 104,
       "excerpt": "export class DeferredRegionCancelledError extends Error {",
       "reason": "SSR deferred-region cancellation boundary exposes meta-vite/deferred-region-cancelled diagnostic code; client-abort propagation without mixing tenant state.",
       "owner": "framework-error-handling",
@@ -312,7 +312,7 @@
     {
       "package": "@croco/meta-vite",
       "file": "packages/meta-vite/src/libs/render/shellStream.ts",
-      "line": 15,
+      "line": 16,
       "excerpt": "export class ShellStreamAbortedError extends Error {",
       "reason": "SSR shell stream abort boundary exposes meta-vite/shell-stream-aborted diagnostic code; client-abort/deadline classification after header commit.",
       "owner": "framework-error-handling",
@@ -321,7 +321,7 @@
     {
       "package": "@croco/meta-vite",
       "file": "packages/meta-vite/src/libs/render/shellStream.ts",
-      "line": 27,
+      "line": 28,
       "excerpt": "export class ShellStreamMaxBufferedBytesError extends Error {",
       "reason": "SSR buffered Lambda delivery boundary exposes meta-vite/shell-stream-max-buffered-bytes diagnostic code; total-response cap enforcement.",
       "owner": "framework-error-handling",

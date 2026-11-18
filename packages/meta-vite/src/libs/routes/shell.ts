@@ -79,10 +79,7 @@ export type ShellRenderOptions = {
    * instead of a cumulative cap so full-size shells are not cut off mid-stream.
    */
   readonly maxBufferedBytes?: number;
-  /**
-   * Aggregate observability only. Individual timings or payload contents are
-   * never exposed to the client through this hook.
-   */
+  /** Server-side observability after deferred rendering settles. */
   readonly onSettle?: (summary: ShellSettleSummary) => void;
 };
 
@@ -93,6 +90,8 @@ export type ShellSettleSummary = {
   readonly regionsSettled: number;
   readonly regionsFailed: number;
   readonly regionsCancelled: number;
+  /** Time from the first region start to the final settlement, when measured. */
+  readonly regionsDurationMs?: number;
   readonly bytes: number;
   readonly timedOut: boolean;
   readonly clientAborted: boolean;
