@@ -1,0 +1,539 @@
+diff --git a/lib/parse.js b/lib/parse.js
+--- a/lib/parse.js
++++ b/lib/parse.js
+@@ -315,4 +315,315 @@
+
+   return { risky: false };
++};
++
++/**
++ * Characters a wildcard may have to absorb but that some star outputs cannot
++ * match: path separators, and the line terminators that `.` does not match.
++ */
++
++const ABSORB_CHECK_CHARS = ['/', '\\', '\n', '\r', '\u2028', '\u2029'];
++
++const LITERAL_SOURCE = /^(?:[^\\^$.*+?()[\]{}|]|\\[^a-zA-Z0-9])+/;
++const CLASS_SOURCE = /^\[(?:[^\\\]]|\\.)+\]/;
++
++// What a token emits. Some paths append to the output without updating the
++// token (quoted text; text merged into earlier text in 2.x), so those keep the
++// true source in `src`, valid while the token's own output is `srcBase`.
++// `undefined` means the source is no longer known.
++const tokenSource = token => {
++  const output = token.output != null ? token.output : token.value;
++  if (token.src === undefined) return output;
++  return token.srcBase === output ? token.src : undefined;
++};
++
++const appendSource = (token, text) => {
++  const base = tokenSource(token);
++  return () => {
++    const output = token.output != null ? token.output : token.value;
++    if (base === undefined) {
++      token.src = null;
++      token.srcBase = null;
++    } else if (base + text !== output) {
++      token.src = base + text;
++      token.srcBase = output;
++    } else {
++      delete token.src;
++      delete token.srcBase;
++    }
++  };
++};
++const literalChars = source => source.replace(/\\(.)/g, '$1');
++
++/**
++ * True when an extglob body contains a wildcard: `*`, `**`, a `!(...)` (which
++ * ends in a star), or a repeated extglob that was flattened into one.
++ * Repeating such a body nests the wildcard's unbounded quantifier inside the
++ * repeat.
++ */
++
++const hasRepeatedWildcard = (tokens, start) => {
++  for (let i = tokens.length - 1; i >= start; i--) {
++    const token = tokens[i];
++
++    // Closed extglobs already summarized their body. Skip their descendants.
++    if (token.groupOpen !== undefined && token.groupOpen >= start && token.groupOpen < i) {
++      if (token.wild) return true;
++      i = token.groupOpen;
++      continue;
++    }
++
++    if (token.wildcard === true || token.type === 'negate') return true;
++    if ((token.type === 'star' || token.type === 'globstar') && tokenSource(token) !== '') {
++      return true;
++    }
++  }
++
++  return false;
++};
++
++/**
++ * True when an extglob body is exactly one `!(...)`, which compiles to a
++ * zero-width test followed by a star.
++ */
++
++const isRepeatedNegation = (bodyTokens, stars, capture) => {
++  const first = bodyTokens[0];
++  const open = bodyTokens[1];
++  const close = bodyTokens[bodyTokens.length - 1];
++
++  if (!first || first.type !== 'negate' || !open || open.type !== 'paren' || open.value !== '(') {
++    return false;
++  }
++
++  let depth = 0;
++  for (let i = 1; i < bodyTokens.length; i++) {
++    const token = bodyTokens[i];
++    if (token.type !== 'paren') continue;
++    if (token.value === '(') depth++;
++    if (token.value === ')') depth--;
++    if (depth === 0 && i !== bodyTokens.length - 1) return false;
++  }
++
++  const output = tokenSource(close);
++  return depth === 0 && close.extglob === true && stars.some(s => [`))${s})`, `)$))${s}`].some(form => {
++    return output === form || (capture === true && output === `${form})`);
++  }));
++};
++
++/**
++ * Read the regex source of a repeated extglob body as branches of pieces: a
++ * wildcard star (with the characters it cannot match), or fixed text or a
++ * one-character class (with a test for whether it can match a character).
++ * Returns `undefined` for any other syntax.
++ */
++
++const readBodyPieces = (source, stars, flags) => {
++  const branches = [[]];
++  const pieces = () => branches[branches.length - 1];
++  let i = 0;
++
++  while (i < source.length) {
++    const star = stars.find(s => source.startsWith(s, i));
++
++    if (star) {
++      const re = new RegExp(`^(?:${star})$`, flags);
++      pieces().push({ star: true, source: star, excludes: ABSORB_CHECK_CHARS.filter(ch => !re.test(ch)) });
++      i += star.length;
++      continue;
++    }
++
++    const rest = source.slice(i);
++    const cls = CLASS_SOURCE.exec(rest);
++
++    if (cls) {
++      // Unicode sets can contain strings rather than single characters.
++      if (flags.includes('v')) return;
++      const re = new RegExp(`^${cls[0]}$`, flags);
++      pieces().push({ star: false, source: cls[0], matches: ch => re.test(ch) });
++      i += cls[0].length;
++      continue;
++    }
++
++    const literal = LITERAL_SOURCE.exec(rest);
++
++    if (literal) {
++      const chars = literalChars(literal[0]);
++      pieces().push({ star: false, source: literal[0], matches: ch => chars.includes(ch) });
++      i += literal[0].length;
++      continue;
++    }
++
++    if (source[i] === '|') {
++      branches.push([]);
++      i++;
++      continue;
++    }
++
++    return;
++  }
++
++  return branches;
++};
++
++/**
++ * Rewrite a repeated extglob body that contains wildcards so that no
++ * wildcard sits inside the repeat (CVE-2026-112366). Returns the regex source
++ * for the whole repeat, or `undefined` when no exact rewrite is known.
++ *
++ * The body must contain a single wildcard and otherwise only fixed text or
++ * single-character classes. Every character any branch can match must also
++ * be matched by the wildcard, so it can absorb whole repeats. Let `F` be the branches without a star and
++ * `T` the branches with one. For one match `u` of the body followed by
++ * another, `v`:
++ *
++ * - with a single branch, the last star of `u` absorbs the rest of `u` and all
++ *   of `v` up to `v`'s text after its last star, so `uv` is one match and
++ *   `+(T)` matches exactly what `@(T)` matches;
++ * - when every `T` ends with a star, a `T` match absorbs every repeat after it,
++ *   so a repeat is some `F` matches then one match of any branch:
++ *   `(?:F)*(?:F|T)`;
++ * - when every `T` starts with a star, a `T` match absorbs every repeat before
++ *   it: `(?:F|T)(?:F)*`.
++ *
++ * `*(...)` also matches the empty string, so its rewrite is made optional.
++ */
++
++const flattenRepeatedWildcard = (bodySource, type, stars, flags) => {
++  let branches;
++
++  try {
++    branches = readBodyPieces(bodySource, stars, flags);
++  } catch (err) {
++    return;
++  }
++
++  if (!branches || branches.some(branch => branch.length === 0)) return;
++
++  const pieces = branches.flat();
++  const wildcards = pieces.filter(p => p.star);
++  // Multiple wildcard runs can still backtrack across each other after
++  // removing the outer repeat. Only flatten a single wildcard.
++  if (wildcards.length !== 1) return;
++  if (pieces.some(p => !p.star && wildcards[0].excludes.some(ch => p.matches(ch)))) return;
++
++  // A flattened group retains capture order, but it can capture a
++  // different span from the original repeat's last iteration.
++  const wildcardIndex = branches.findIndex(branch => branch.some(piece => piece.star));
++  const wildcardBranch = branches[wildcardIndex];
++  const sources = branches.map(branch => branch.map(piece => piece.source).join(''));
++  const fixedSources = sources.filter((_, index) => index !== wildcardIndex);
++  const all = `(?:${sources.join('|')})`;
++  let output = all;
++
++  if (fixedSources.length > 0) {
++    // Equal-width, distinct literal alternatives have a unique partition.
++    const width = fixedSources[0].length;
++    if (fixedSources.some(source => !/^[a-zA-Z0-9 _-]+$/.test(source) || source.length !== width)) return;
++    const ignoreCase = flags.includes('i');
++    const identities = ignoreCase ? fixedSources.map(source => source.toLowerCase()) : fixedSources;
++    if (new Set(identities).size !== fixedSources.length) return;
++
++    const first = wildcardBranch[0];
++    const last = wildcardBranch[wildcardBranch.length - 1];
++    if (!first.star && !last.star) return;
++    const boundary = last.star ? first : last;
++
++    // Keep the boundary between fixed repeats and the wildcard branch
++    // distinct, so a failed match cannot rescan the wildcard at each split.
++    if (boundary.star || !/^[a-zA-Z0-9 _-]+$/.test(boundary.source)) return;
++    const marker = last.star ? boundary.source[0] : boundary.source[boundary.source.length - 1];
++    const boundaryIdentity = ignoreCase ? marker.toLowerCase() : marker;
++    if (identities.some(source => (last.star ? source[0] : source[source.length - 1]) === boundaryIdentity)) return;
++
++    const rest = `(?:${fixedSources.join('|')})*`;
++    output = last.star ? rest + all : all + rest;
++  }
++
++  return type === 'star' ? `(?:${output})?` : output;
++};
++
++/**
++ * Check the emitted regex for nested repetition. In addition to wildcard
++ * runs, the legacy extglob rewrite can emit a repeated literal or class.
++ */
++
++const hasNestedRepeat = source => {
++  const frame = look => ({ repeated: false, look });
++  const stack = [frame(false)];
++  let i = 0;
++
++  // Reads the quantifier at `i`, if any; returns [repeats, length].
++  const quantifier = () => {
++    const ch = source[i];
++    let len = 0;
++    let unbounded = false;
++
++    if (ch === '*' || ch === '+') {
++      unbounded = true;
++      len = 1;
++    } else if (ch === '?') {
++      len = 1;
++    } else if (ch === '{') {
++      let j = i + 1;
++      while (source[j] >= '0' && source[j] <= '9') j++;
++
++      // A bounded count above 2 nests just as badly in practice: `{1,30}`
++      // backtracks like a 30-deep nesting.
++      if (j > i + 1 && source[j] === '}') {
++        len = j + 1 - i;
++        unbounded = Number(source.slice(i + 1, j)) > 2;
++      } else if (j > i + 1 && source[j] === ',') {
++        let k = j + 1;
++        while (source[k] >= '0' && source[k] <= '9') k++;
++        if (source[k] === '}') {
++          len = k + 1 - i;
++          unbounded = k === j + 1 || Number(source.slice(j + 1, k)) > 2;
++        }
++      }
++    }
++
++    if (len > 0 && source[i + len] === '?') len++;
++    return [unbounded, len];
++  };
++
++  while (i < source.length) {
++    const ch = source[i];
++    let group;
++
++    if (ch === '(') {
++      stack.push(frame(/^\(\?<?[=!]/.test(source.slice(i, i + 4))));
++      i++;
++      continue;
++    }
++
++    if (ch === '\\') {
++      i += 2;
++    } else if (ch === '[') {
++      i++;
++      if (source[i] === '^') i++;
++      if (source[i] === ']') i++;
++      while (i < source.length && source[i] !== ']') {
++        if (source[i] === '\\') i++;
++        i++;
++      }
++      i++;
++    } else if (ch === ')') {
++      if (stack.length > 1) group = stack.pop();
++      i++;
++    } else {
++      i++;
++    }
++
++    const [repeated, len] = quantifier();
++    i += len;
++
++    // A lookaround is atomic. Check repeats within it without treating them
++    // as part of an enclosing repeat that consumes input.
++    if (group && group.look) continue;
++    if (group && repeated && group.repeated) return true;
++    if (repeated || (group && group.repeated)) stack[stack.length - 1].repeated = true;
++  }
++
++  return false;
+ };
+
+@@ -482,6 +793,8 @@
+     if (tok.value || tok.output) append(tok);
+     if (prev && prev.type === 'text' && tok.type === 'text') {
++      const track = appendSource(prev, tok.output != null ? tok.output : tok.value);
+       prev.value += tok.value;
+       prev.output = (prev.output || '') + tok.value;
++      track();
+       return;
+     }
+@@ -510,8 +823,94 @@
+   const extglobClose = token => {
+     const literal = input.slice(token.startIndex, state.index + 1);
+-    const body = input.slice(token.startIndex + 2, state.index);
+-    const analysis = analyzeRepeatedExtglob(body, opts);
+-
+-    if ((token.type === 'plus' || token.type === 'star') && analysis.risky) {
++    const repeated = token.type === 'plus' || token.type === 'star';
++    const analysis = repeated
++      ? analyzeRepeatedExtglob(input.slice(token.startIndex + 2, state.index), opts)
++      : { risky: false };
++    let output = token.close + (opts.capture ? ')' : '');
++    let flattenedClose = false;
++    let flattened;
++
++    // A wildcard inside a repeat nests one unbounded quantifier in another,
++    // which backtracks exponentially on input that almost matches
++    // (CVE-2026-112366). Rewrite the repeat exactly when we can, and treat it
++    // as risky otherwise.
++    // A brace range can pop the tokens this extglob opened with; then there is
++    // nothing left to analyse here (the final check in `parse` still applies).
++    const opener = tokens[token.tokensIndex];
++    const intact = opener !== undefined && opener.type === token.type &&
++      tokens[token.tokensIndex + 1] !== undefined && tokens[token.tokensIndex + 1].type === 'paren';
++    const bodyStart = token.tokensIndex + 2;
++    const bodyWildcard = intact && !analysis.risky && token.type !== 'negate' && hasRepeatedWildcard(tokens, bodyStart);
++
++    if (repeated && bodyWildcard && opts.maxExtglobRecursion !== false) {
++      // Quoted text immediately after the opening paren lives on that
++      // token and is part of the repeated body.
++      const paren = tokens[token.tokensIndex + 1];
++      const parenOutput = paren.output != null ? paren.output : paren.value;
++      const parenSource = tokenSource(paren);
++      const head = parenSource === undefined ? undefined : parenSource.slice(parenOutput.length) + (paren.suffix || '');
++      const bodyTokens = tokens.slice(bodyStart);
++
++      if (head === '' && isRepeatedNegation(bodyTokens, [star, STAR, globstar(opts)], opts.capture === true)) {
++        // `+(!(x))` is a zero-width test followed by a star, so the first
++        // repeat's star absorbs every later repeat: one repeat is enough.
++        opener.wildcard = true;
++        output = (token.type === 'star' ? ')?' : ')') + (opts.capture ? ')' : '');
++        flattenedClose = true;
++        state.rewritten = true;
++      } else {
++        // Character probes must match the whole input once. The caller's
++        // flags are kept on the final regex.
++        const flags = (opts.flags || (opts.nocase ? 'i' : '')).replace(/[gmy]/g, '');
++        // The tokens hold what will be emitted; `state.output` can still be
++        // stale here (POSIX classes are only applied by the final rebuild).
++        const sources = [head, ...bodyTokens.map(t => {
++          const src = tokenSource(t);
++          return src === undefined ? undefined : src + (t.suffix || '');
++        })];
++        flattened = sources.includes(undefined)
++          ? undefined
++          : flattenRepeatedWildcard(sources.join(''), token.type, [star, '.*?'], flags);
++        if (!flattened) analysis.risky = true;
++        state.rewritten = true;
++      }
++    }
++
++    // What `state.output` held before this extglob. `token.output` is a
++    // snapshot from before the extglob's own tokens were pushed, which can be
++    // stale (pushing `+(` demotes a preceding `**` to `*`); derive it from the
++    // current output when the tokens account for its tail.
++    let prefix = token.output;
++    if (intact && (flattened || (repeated && analysis.risky))) {
++      const sources = tokens.slice(token.tokensIndex).map(t => tokenSource(t));
++      const tail = sources.includes(undefined) ? undefined : sources.join('');
++      if (tail !== undefined && state.output.endsWith(tail)) {
++        prefix = state.output.slice(0, state.output.length - tail.length);
++      }
++    }
++
++    if (flattened) {
++      // The whole rewrite goes on the closing paren, which keeps a non-empty
++      // output: rebuilds that fall back from an empty output to the token's
++      // value (literal braces) would otherwise emit the old `+` and `)`.
++      const close = (token.output ? '' : ONE_CHAR) + (opts.capture ? `(${flattened})` : flattened);
++
++      for (let i = token.tokensIndex; i < tokens.length; i++) {
++        tokens[i].value = '';
++        tokens[i].output = '';
++        delete tokens[i].suffix;
++        delete tokens[i].src;
++        delete tokens[i].srcBase;
++      }
++
++      opener.wildcard = true;
++      state.output = prefix;
++
++      push({ type: 'paren', extglob: true, value, output: close, groupOpen: token.tokensIndex, wild: true, flattened: true });
++      decrement('parens');
++      return;
++    }
++
++    if (repeated && analysis.risky) {
+       const safeOutput = analysis.safeOutput
+         ? (token.output ? '' : ONE_CHAR) + (opts.capture ? `(${analysis.safeOutput})` : analysis.safeOutput)
+@@ -522,4 +921,6 @@
+       open.value = literal;
+       open.output = safeOutput || utils.escapeRegex(literal);
++      delete open.src;
++      delete open.srcBase;
+
+       for (let i = token.tokensIndex + 1; i < tokens.length; i++) {
+@@ -527,15 +928,16 @@
+         tokens[i].output = '';
+         delete tokens[i].suffix;
+-      }
+-
+-      state.output = token.output + open.output;
++        delete tokens[i].src;
++        delete tokens[i].srcBase;
++      }
++
++      state.output = prefix + open.output;
+       state.backtrack = true;
+
+-      push({ type: 'paren', extglob: true, value, output: '' });
++      push({ type: 'paren', extglob: true, value, output: '', groupOpen: intact ? token.tokensIndex : undefined, wild: false });
+       decrement('parens');
+       return;
+     }
+
+-    let output = token.close + (opts.capture ? ')' : '');
+     let rest;
+
+@@ -567,5 +969,10 @@
+     }
+
+-    push({ type: 'paren', extglob: true, value, output });
++    if (intact) {
++      const wild = token.type === 'negate' || opener.wildcard === true || bodyWildcard;
++      push({ type: 'paren', extglob: true, value, output, groupOpen: token.tokensIndex, wild, flattened: flattenedClose });
++    } else {
++      push({ type: 'paren', extglob: true, value, output });
++    }
+     decrement('parens');
+   };
+@@ -736,6 +1143,8 @@
+     if (state.quotes === 1 && value !== '"') {
+       value = utils.escapeRegex(value);
++      const track = appendSource(prev, value);
+       prev.value += value;
+       append({ value });
++      track();
+       continue;
+     }
+@@ -997,4 +1406,12 @@
+       }
+
++      if (prev && prev.type === 'paren' && prev.flattened === true && opts.capture !== true && prev.src === undefined) {
++        // This `?` made the removed `+` or `*` lazy, which changes no match.
++        // (With `capture` it follows the capture group and makes it optional;
++        // after quoted text it belongs to that text. Both keep it.)
++        push({ type: 'text', value: '', output: '' });
++        continue;
++      }
++
+       if (prev && prev.type === 'paren') {
+         const next = peek();
+@@ -1259,4 +1676,8 @@
+   }
+
++  // The repairs below escape the last unmatched opening, which may sit inside
++  // a rewrite; the final check treats that as unsafe.
++  const repaired = state.brackets > 0 || state.parens > 0 || state.braces > 0;
++
+   while (state.brackets > 0) {
+     if (opts.strictBrackets === true) throw new SyntaxError(syntaxError('closing', ']'));
+@@ -1286,9 +1707,38 @@
+
+     for (const token of state.tokens) {
+-      state.output += token.output != null ? token.output : token.value;
++      // A repeat rewrite can force a rebuild after adjacent text tokens
++      // have been merged. Preserve the emitted source while it is still valid.
++      const source = state.rewritten === true ? tokenSource(token) : undefined;
++      state.output += source === undefined ? (token.output != null ? token.output : token.value) : source;
+
+       if (token.suffix) {
+         state.output += token.suffix;
+       }
++    }
++  }
++
++  // Last line of defence for CVE-2026-112366: however the pattern got there
++  // (unbalanced parentheses are repaired after the extglob checks ran), never
++  // return an unchecked nested repeat, including a synthesized class star.
++  // A rewrite above can also meet a later repair (unbalanced parentheses,
++  // literal braces) that leaves an invalid regex; fall back the same way.
++  if (opts.maxExtglobRecursion !== false) {
++    // A token rebuild can discard quoted text, changing which atom a
++    // following quantifier applies to. Backreferences can depend on the
++    // captured span of the original repeat. Neither case has an exact rewrite.
++    const inexactRewrite = state.rewritten === true && (repaired ||
++      (state.backtrack === true && input.includes('"')) || /\\(?:[1-9]|k<)/.test(state.output));
++    let unsafe = inexactRewrite || hasNestedRepeat(state.output);
++
++    if (!unsafe && state.rewritten === true) {
++      try {
++        unsafe = !(new RegExp(state.output, (opts.flags || '').replace(/[gy]/g, '')) instanceof RegExp);
++      } catch (err) {
++        unsafe = true;
++      }
++    }
++
++    if (unsafe) {
++      state.output = (opts.prepend || '') + input.slice(state.start).replace(/[\\^$.*+?()[\]{}|/]/g, '\\$&');
+     }
+   }

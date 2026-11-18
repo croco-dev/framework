@@ -90,6 +90,7 @@ type MetadataEntry = {
   readonly owner: string;
   readonly reason: string;
   readonly reviewDate: string;
+  readonly workspaceOnly: boolean;
   readonly valid: boolean;
   readonly errors: readonly string[];
 };
@@ -675,7 +676,9 @@ function classifyAuditJson(
         ? dependencyFieldFor(manifest, parsedPath.directDependency)
         : "unknown";
       const classification = classifyPath(manifest, parsedPath.directDependency, field);
-      const metadataEntry = metadataEntryFor(advisory, metadata);
+      const review = metadataEntryFor(advisory, metadata);
+      const metadataEntry =
+        review?.workspaceOnly && manifest?.generatedTemplate ? undefined : review;
       const metadataRequired = blockingClasses.has(classification) && isHighRisk(advisory);
       const metadataStatus = metadataRequired
         ? metadataEntry?.valid
@@ -1164,12 +1167,14 @@ function readMetadataEntry(rawEntry: unknown, today: string): MetadataEntry {
   const id = stringValue(entry.id);
   const owner = stringValue(entry.owner);
   const reason = stringValue(entry.reason);
+  const scope = entry.scope;
   const reviewDate =
     stringValue(entry.reviewDate) || stringValue(entry.reviewBy) || stringValue(entry.expiresOn);
   const errors = [
     id ? "" : "id is required",
     owner ? "" : "owner is required",
     reason ? "" : "reason is required",
+    scope === undefined || scope === "workspace" ? "" : "scope must be workspace when specified",
     isValidDate(reviewDate) ? "" : "reviewDate/reviewBy/expiresOn must be YYYY-MM-DD",
     isValidDate(reviewDate) && reviewDate >= today ? "" : "reviewDate/reviewBy/expiresOn is stale",
   ].filter(Boolean);
@@ -1180,6 +1185,7 @@ function readMetadataEntry(rawEntry: unknown, today: string): MetadataEntry {
     owner,
     reason,
     reviewDate,
+    workspaceOnly: scope === "workspace",
     valid: errors.length === 0,
   };
 }
