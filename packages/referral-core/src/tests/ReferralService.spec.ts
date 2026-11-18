@@ -21,6 +21,7 @@ import {
 import { generateReferralToken, hashReferralToken } from "../libs/linkToken";
 import type { ReferralTx } from "../libs/ReferralStore";
 import type {
+  ReferralBenefitSide,
   ReferralFulfillmentPort,
   ReferralFulfillmentResult,
   ReferralNoveltyHook,
@@ -1166,7 +1167,10 @@ describe("ReferralService granting recovery", () => {
     return { promise, resolve };
   }
 
-  async function claimSetup(fulfillment: ReferralFulfillmentPort, unknownNovelty = false) {
+  async function claimSetup(
+    fulfillment: ReferralFulfillmentPort,
+    options: { unknownNovelty?: boolean; noBenefitSide?: ReferralBenefitSide } = {},
+  ) {
     const store = new InMemoryReferralStore();
     const restart = () =>
       new ReferralService({
@@ -1175,7 +1179,7 @@ describe("ReferralService granting recovery", () => {
           generateToken: () => "test-token",
           hashToken: (token) => createHash("sha256").update(token).digest("hex"),
         },
-        novelty: () => ({ novelty: unknownNovelty ? "unknown" : "new", reason: "signup" }),
+        novelty: () => ({ novelty: options.unknownNovelty ? "unknown" : "new", reason: "signup" }),
         qualification: () => ({
           qualified: true,
           sourceEventId: "purchase",
@@ -1192,8 +1196,14 @@ describe("ReferralService granting recovery", () => {
       benefitCycleId: "cycle",
       conversionWindowMs: 86400000,
       qualifyingAction: "purchase",
-      referrerBenefit: { kind: "trial-credits", creditAmount: "7" },
-      recipientBenefit: { kind: "trial-credits", creditAmount: "3" },
+      referrerBenefit:
+        options.noBenefitSide === "referrer"
+          ? { kind: "none" }
+          : { kind: "trial-credits", creditAmount: "7" },
+      recipientBenefit:
+        options.noBenefitSide === "recipient"
+          ? { kind: "none" }
+          : { kind: "trial-credits", creditAmount: "3" },
       startsAt: new Date("2026-01-01Z"),
       endsAt: new Date("2027-01-01Z"),
       perSubjectLimit: 1,
@@ -1246,7 +1256,7 @@ describe("ReferralService granting recovery", () => {
     "does not grant unqualified attributions (unknown novelty: %s)",
     async (unknownNovelty) => {
       const { fulfillment, calls } = port();
-      const { restart, store, attributionId } = await claimSetup(fulfillment, unknownNovelty);
+      const { restart, store, attributionId } = await claimSetup(fulfillment, { unknownNovelty });
       expect((await restart().reconcileBenefits({ attributionId })).state).toBe(
         unknownNovelty ? "held" : "claimed",
       );
@@ -1431,6 +1441,144 @@ describe("ReferralService granting recovery", () => {
     ).toEqual(["3"]);
   });
 
+  it.each([
+    ["referrer", "recipient"],
+    ["recipient", "referrer"],
+  ] as const)(
+    "settles only the %s grant when %s has no benefit",
+    async (payable, noBenefitSide) => {
+      const fulfill = vi.fn<ReferralFulfillmentPort["fulfill"]>().mockResolvedValue({
+        outcome: "unknown",
+        reason: "grant response lost",
+      });
+      const { service, store, attributionId, recipient } = await claimSetup(
+        { fulfill, check: async () => null },
+        { noBenefitSide },
+      );
+      await service.qualifyAttribution({ attributionId, recipient });
+      expect((await service.fulfillBenefits({ attributionId })).state).toBe("indeterminate");
+      const skipped = (await store.listBenefitIntents({ attributionId })).find(
+        (intent) => intent.side === noBenefitSide,
+      );
+      expect(skipped?.status).toBe("skipped");
+
+      const fulfilled = await service.resolveIndeterminateBenefits({
+        attributionId,
+        decision: "fulfilled",
+        grantRefs: { [payable]: "verified-grant" },
+        actorId: "operator",
+        reason: "verified ledger receipt",
+      });
+
+      expect(fulfilled.state).toBe("fulfilled");
+      expect(await store.getAttribution(attributionId)).toEqual(fulfilled);
+      expect(await store.listBenefitIntents({ attributionId })).toEqual(
+        expect.arrayContaining([
+          skipped,
+          expect.objectContaining({
+            side: payable,
+            status: "granted",
+            receipt: "verified-grant",
+          }),
+        ]),
+      );
+      expect(fulfill.mock.calls.map(([input]) => input.intent.side)).toEqual([payable]);
+      expect(await store.listAudits()).toContainEqual(
+        expect.objectContaining({
+          action: "attribution.fulfilled-by-operator",
+          targetId: attributionId,
+          actorId: "operator",
+          reason: "verified ledger receipt",
+        }),
+      );
+    },
+  );
+
+  it("requires proof for every uncertain intent before recording any settlement", async () => {
+    const { service, store, attributionId, recipient } = await claimSetup({
+      fulfill: async () => ({ outcome: "unknown", reason: "grant response lost" }),
+      check: async () => null,
+    });
+    await service.qualifyAttribution({ attributionId, recipient });
+    const attribution = await service.fulfillBenefits({ attributionId });
+    expect(attribution.state).toBe("indeterminate");
+    const intents = await store.listBenefitIntents({ attributionId });
+    expect(intents.map((intent) => intent.status)).toEqual(["unknown", "unknown"]);
+    const audits = await store.listAudits();
+    const decision = {
+      attributionId,
+      decision: "fulfilled" as const,
+      actorId: "operator",
+      reason: "verified ledger receipts",
+    };
+    for (const grantRefs of [
+      { referrer: "referrer-grant" },
+      { recipient: "recipient-grant", referrer: " " },
+    ]) {
+      await expect(
+        service.resolveIndeterminateBenefits({ ...decision, grantRefs }),
+      ).rejects.toBeInstanceOf(InvalidReferralProgramProblem);
+      expect(await store.getAttribution(attributionId)).toEqual(attribution);
+      expect(await store.listBenefitIntents({ attributionId })).toEqual(intents);
+      expect(await store.listAudits()).toEqual(audits);
+    }
+
+    expect(
+      (
+        await service.resolveIndeterminateBenefits({
+          ...decision,
+          grantRefs: { referrer: "referrer-grant", recipient: "recipient-grant" },
+        })
+      ).state,
+    ).toBe("fulfilled");
+    expect(await store.listBenefitIntents({ attributionId })).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ side: "referrer", status: "granted", receipt: "referrer-grant" }),
+        expect.objectContaining({
+          side: "recipient",
+          status: "granted",
+          receipt: "recipient-grant",
+        }),
+      ]),
+    );
+  });
+
+  it("retains the previously granted side without requiring another receipt", async () => {
+    const { service, store, attributionId, recipient } = await claimSetup({
+      fulfill: async ({ intent }) =>
+        intent.side === "referrer"
+          ? { outcome: "granted", grantRef: "original-grant" }
+          : { outcome: "unknown", reason: "grant response lost" },
+      check: async () => null,
+    });
+    await service.qualifyAttribution({ attributionId, recipient });
+    expect((await service.fulfillBenefits({ attributionId })).state).toBe("indeterminate");
+    const granted = (await store.listBenefitIntents({ attributionId })).find(
+      (intent) => intent.side === "referrer",
+    );
+    expect(granted).toMatchObject({ status: "granted", receipt: "original-grant" });
+
+    const fulfilled = await service.resolveIndeterminateBenefits({
+      attributionId,
+      decision: "fulfilled",
+      grantRefs: { recipient: "verified-recipient-grant" },
+      actorId: "operator",
+      reason: "verified ledger receipt",
+    });
+
+    expect(fulfilled.state).toBe("fulfilled");
+    expect(await store.listBenefitIntents({ attributionId })).toEqual(
+      expect.arrayContaining([
+        granted,
+        expect.objectContaining({
+          side: "recipient",
+          status: "granted",
+          receipt: "verified-recipient-grant",
+        }),
+      ]),
+    );
+  });
+
   it("preserves operator fulfillment when a receipt check returns after settlement", async () => {
     const started = deferred<void>();
     const release = deferred<void>();
@@ -1450,6 +1598,21 @@ describe("ReferralService granting recovery", () => {
     const { service, restart, store, attributionId, recipient } = await claimSetup(fulfillment);
     await service.qualifyAttribution({ attributionId, recipient });
     await expect(service.fulfillBenefits({ attributionId })).rejects.toThrow("response lost");
+    expect((await store.getAttribution(attributionId))?.state).toBe("indeterminate");
+    const intents = await store.listBenefitIntents({ attributionId });
+    expect(intents).toContainEqual(
+      expect.objectContaining({ side: "recipient", status: "pending" }),
+    );
+    await expect(
+      service.resolveIndeterminateBenefits({
+        attributionId,
+        decision: "fulfilled",
+        grantRefs: { referrer: "settled-referrer" },
+        actorId: "operator",
+        reason: "only the referrer grant is verified",
+      }),
+    ).rejects.toBeInstanceOf(InvalidReferralProgramProblem);
+    expect(await store.listBenefitIntents({ attributionId })).toEqual(intents);
     expect((await store.getAttribution(attributionId))?.state).toBe("indeterminate");
     const pending = restart().reconcileBenefits({ attributionId });
     await started.promise;

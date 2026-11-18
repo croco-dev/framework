@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "referral-core",
+      "classification": "pure-contract",
+      "reason": "Validate references for outstanding referral payouts before committing the operator settlement. Skipped or settled benefits keep their recorded state and receipt. The existing store transaction and persisted formats cover the settlement.",
+      "files": {
+        "packages/referral-core/src/libs/ReferralService.ts": "5cbdefbea99a6e315813e035331ed021c74732aed668a4e16fc4ee9095127a30"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The receipt requirement is independent of the Node Host. It uses the existing attribution transaction and adds no host capability, storage, or lifecycle dependency.",
+          "providers": [
+            "@croco/referral-core:ReferralService",
+            "@croco/referral-drizzle:PostgresReferralStore"
+          ],
+          "constraints": [],
+          "references": [
+            "packages/referral-core/src/libs/ReferralService.ts",
+            "packages/referral-core/src/tests/ReferralService.spec.ts",
+            "packages/referral-drizzle/src/tests/PostgresReferralStore.postgres.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The receipt requirement is independent of the Lambda Host. It uses the existing attribution transaction and adds no host capability, storage, or lifecycle dependency.",
+          "providers": [
+            "@croco/referral-core:ReferralService",
+            "@croco/referral-drizzle:PostgresReferralStore"
+          ],
+          "constraints": [],
+          "references": [
+            "packages/referral-core/src/libs/ReferralService.ts",
+            "packages/referral-core/src/tests/ReferralService.spec.ts",
+            "packages/referral-drizzle/src/tests/PostgresReferralStore.postgres.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The receipt requirement is independent of the Workers or Node Container Host. It uses the existing attribution transaction and adds no host capability, storage, or lifecycle dependency.",
+          "providers": [
+            "@croco/referral-core:ReferralService",
+            "@croco/referral-drizzle:PostgresReferralStore"
+          ],
+          "constraints": [],
+          "references": [
+            "packages/referral-core/src/libs/ReferralService.ts",
+            "packages/referral-core/src/tests/ReferralService.spec.ts",
+            "packages/referral-drizzle/src/tests/PostgresReferralStore.postgres.spec.ts"
+          ]
+        }
+      }
+    }
+  ]
+}

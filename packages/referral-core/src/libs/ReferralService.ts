@@ -651,9 +651,10 @@ export class ReferralService {
   }
 
   /**
-   * Operator adjustment for indeterminate attributions: explicitly complete
-   * with a verified grant reference per side, or reject and release the locked
-   * budget. Every decision preserves actor, reason, and an audit trail.
+   * To fulfill an indeterminate attribution, supply a verified grant reference
+   * for each side without a terminal benefit intent. Only unknown or granting
+   * intents transition to granted. Rejecting releases the locked budget.
+   * Every decision preserves actor, reason, and an audit trail.
    */
   async resolveIndeterminateBenefits(input: {
     readonly attributionId: string;
@@ -703,24 +704,29 @@ export class ReferralService {
         );
         return rejected;
       }
+      const grantUpdates: { intentId: string; grantRef: string }[] = [];
       for (const side of ["referrer", "recipient"] as const) {
+        const intent = await tx.getBenefitIntentByLogicalKey(
+          referralBenefitIdempotencyKey(stored.id, side),
+        );
+        if (intent && TERMINAL_BENEFIT_STATES.includes(intent.status)) continue;
         const grantRef = input.grantRefs?.[side];
         if (grantRef === undefined || grantRef.trim().length === 0) {
           throw new InvalidReferralProgramProblem(
             `resolving side '${side}' as fulfilled requires a grantRef`,
           );
         }
-        const intent = await tx.getBenefitIntentByLogicalKey(
-          referralBenefitIdempotencyKey(stored.id, side),
-        );
-        if (intent && (intent.status === "unknown" || intent.status === "granting")) {
-          await tx.compareAndSetBenefitIntent(
-            intent.id,
-            ["unknown", "granting"],
-            { status: "granted", receipt: grantRef, reason: undefined },
-            now,
-          );
+        if (intent?.status === "unknown" || intent?.status === "granting") {
+          grantUpdates.push({ intentId: intent.id, grantRef });
         }
+      }
+      for (const { intentId, grantRef } of grantUpdates) {
+        await tx.compareAndSetBenefitIntent(
+          intentId,
+          ["unknown", "granting"],
+          { status: "granted", receipt: grantRef, reason: undefined },
+          now,
+        );
       }
       const fulfilled: ReferralAttribution = {
         ...stored,
