@@ -89,6 +89,10 @@ timestamp를 유지해 재전달합니다.
 - 다운그레이드: `contraction` MRR 기록 (차액)
 - 동일 금액: `unchanged` (0)
 
+플랜 변경 시점에 이벤트에 고정된 이전·이후 플랜 버전으로 MRR 차액을 계산합니다.
+이벤트가 늦게 도착해 현재 구독의 가격이 바뀌었거나 구독이 삭제된 경우에도 같은 차액을 기록합니다.
+이 계산에는 테넌트의 결제 계정과 두 플랜 버전이 필요하며, 두 버전의 통화가 같아야 합니다.
+
 ### SubscriptionCanceledEvent
 
 - `cancelAtPeriodEnd: false`: `churned` MRR 기록

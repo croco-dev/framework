@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "metrics-billing",
+      "classification": "pure-contract",
+      "reason": "Record historical plan-change MRR after the current subscription has been deleted, using the existing immutable plan evidence and movement identity.",
+      "files": {
+        "packages/metrics-billing/src/libs/BillingEventHandler.ts": "011f961cbde387262f33bcef5398f06f5812992c36005be445c78be93ca5a383"
+      },
+      "catalogRuntimes": ["node", "lambda", "cloudflare-workers"],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The handler reads the plan versions pinned to the event and removes a current subscription lookup. The change requires no host capability, storage adapter or lifecycle change.",
+          "providers": ["@croco/metrics-billing"],
+          "constraints": [
+            "Replay still requires the billing account, both historical plan versions and a movement repository with identity version 2."
+          ],
+          "references": [
+            "packages/metrics-billing/src/libs/BillingEventHandler.ts",
+            "packages/billing-core/src/libs/events/PlanChangedEvent.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The handler reads the plan versions pinned to the event and removes a current subscription lookup. The change requires no host capability, storage adapter or lifecycle change.",
+          "providers": ["@croco/metrics-billing"],
+          "constraints": [
+            "Replay still requires the billing account, both historical plan versions and a movement repository with identity version 2."
+          ],
+          "references": [
+            "packages/metrics-billing/src/libs/BillingEventHandler.ts",
+            "packages/billing-core/src/libs/events/PlanChangedEvent.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The handler reads the plan versions pinned to the event and removes a current subscription lookup. The change requires no host capability, storage adapter or lifecycle change.",
+          "providers": ["@croco/metrics-billing"],
+          "constraints": [
+            "Replay still requires the billing account, both historical plan versions and a movement repository with identity version 2."
+          ],
+          "references": [
+            "packages/metrics-billing/src/libs/BillingEventHandler.ts",
+            "packages/billing-core/src/libs/events/PlanChangedEvent.ts"
+          ]
+        }
+      }
+    }
+  ]
+}

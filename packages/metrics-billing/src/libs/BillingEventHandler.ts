@@ -148,17 +148,6 @@ export class BillingEventHandler
       throw this.createDroppedProblem(event, "account_not_found", event.tenantId);
     }
 
-    const subscription = await this.billingStore.findSubscriptionByExternalId(
-      event.externalSubscriptionId,
-    );
-    if (subscription === null) {
-      throw this.createDroppedProblem(
-        event,
-        "subscription_not_found",
-        event.externalSubscriptionId,
-      );
-    }
-
     const previousPlan = await this.getPinnedPlan(event.previousPlanVersionRef);
     const newPlan = await this.getPinnedPlan(event.newPlanVersionRef);
     if (previousPlan === null || newPlan === null) {
