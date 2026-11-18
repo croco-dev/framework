@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "events-core",
+      "classification": "pure-contract",
+      "reason": "EventBusConfig records each successful detach during bus replacement so a failed replacement can be recovered using the existing process-local configuration.",
+      "files": {
+        "packages/events-core/src/libs/EventBusConfig.ts": "f0e15d95b05f9189a8b48c14f302c38b5c957d4caff61445597099109a6edce5"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Recovery updates the process-local subscription map through the existing EventBus contract. It needs no Node Host capability, storage or Kubernetes lifecycle integration.",
+          "providers": ["@croco/events-core/EventBusConfig"],
+          "constraints": [
+            "Recovery stays in the current application scope and uses synchronous EventBus subscription calls."
+          ],
+          "references": [
+            "packages/events-core/src/libs/EventBusConfig.ts",
+            "packages/events-core/src/tests/EventBusConfig.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Recovery uses the same in-memory subscription state without an invocation hook or storage across Lambda invocations.",
+          "providers": ["@croco/events-core/EventBusConfig"],
+          "constraints": [
+            "Recovery stays in the current application scope and uses synchronous EventBus subscription calls."
+          ],
+          "references": [
+            "packages/events-core/src/libs/EventBusConfig.ts",
+            "packages/events-core/src/tests/EventBusConfig.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Recovery needs no Workers binding, durable state or isolate lifecycle hook.",
+          "providers": ["@croco/events-core/EventBusConfig"],
+          "constraints": [
+            "Recovery stays in the current application scope and uses synchronous EventBus subscription calls."
+          ],
+          "references": [
+            "packages/events-core/src/libs/EventBusConfig.ts",
+            "packages/events-core/src/tests/EventBusConfig.spec.ts"
+          ]
+        }
+      }
+    }
+  ]
+}

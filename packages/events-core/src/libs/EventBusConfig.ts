@@ -126,12 +126,12 @@ export class EventBusConfig {
     }
 
     if (this.eventBus) {
-      for (const subscription of this.startedSubscriptions.values()) {
+      for (const [key, subscription] of this.startedSubscriptions) {
         this.eventBus.unsubscribe(subscription);
+        this.startedSubscriptions.delete(key);
       }
     }
 
-    this.startedSubscriptions.clear();
     this.eventBus = eventBus;
   }
 
