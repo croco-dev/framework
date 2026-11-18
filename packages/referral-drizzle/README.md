@@ -38,11 +38,14 @@ Live PostgreSQL coverage runs with `pnpm test:live` when
 `REFERRALS_TEST_DATABASE_URL` is set; the default `pnpm test` runs only the
 offline contract checks.
 
-Apply `migrations/0002_referral_recovery_order.up.sql` on UTF-8 databases
-to make recovery pages eligible for an ordered index scan. Apply the index
-through the application's migration owner. The build blocks table writes, so
-use a maintenance window and a bounded lock wait on existing tables. The
-reverse migration removes only the index. The same cursor works before the
-index is applied and after it is removed. Databases with another encoding sort
-by converted UTF-8 keys and can skip the index. In either case, selective
-filters can require reading more rows than the requested page size.
+Recovery pages require UTF-8 server encoding so each cursor identifies one
+stored attribution ID. With another encoding, the paged API raises
+`ReferralRecoveryPagingUnsupportedProblem`. The existing array-returning
+reads remain available.
+
+Apply `migrations/0002_referral_recovery_order.up.sql` through the application's
+migration owner to make UTF-8 recovery pages eligible for an ordered index
+scan. The build blocks table writes, so use a maintenance window and a bounded
+lock wait on existing tables. The reverse migration removes only the index.
+The same cursor works before the index is applied and after it is removed.
+Selective filters can require reading more rows than the requested page size.

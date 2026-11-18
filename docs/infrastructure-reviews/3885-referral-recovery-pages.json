@@ -62,7 +62,7 @@
       "classification": "durable-provider",
       "reason": "Read bounded PostgreSQL recovery pages behind an exclusive ID boundary and use an ordered index on UTF-8 databases.",
       "files": {
-        "packages/referral-drizzle/src/libs/PostgresReferralStore.ts": "ad638c64d5611bc80db54b2ba7273b72ccfcc104331fcdf12e7a743cb7c87c54"
+        "packages/referral-drizzle/src/libs/PostgresReferralStore.ts": "28422b964ee14273116cc2721073a592820d4c1920c543fb85eaf12c8d511620"
       },
       "catalogRuntimes": ["node", "lambda"],
       "profiles": {
@@ -72,7 +72,7 @@
           "providers": ["@croco/referral-drizzle"],
           "constraints": [
             "Requires the existing referral schema and a Node PostgreSQL connection pool.",
-            "The host applies the optional order index through its migration owner. The index accelerates UTF-8 pages, and its build blocks attribution table writes."
+            "Recovery paging requires UTF-8 server encoding for a lossless ID order. The host can apply the optional index through its migration owner. The index build blocks attribution table writes."
           ],
           "references": [
             "packages/referral-drizzle/src/libs/PostgresReferralStore.ts",
@@ -87,7 +87,7 @@
           "providers": ["@croco/referral-drizzle"],
           "constraints": [
             "Supply the existing referral schema and a bounded pool. Await the page query before returning the invocation.",
-            "The host applies the optional order index through its migration owner. The index accelerates UTF-8 pages, and its build blocks attribution table writes."
+            "Recovery paging requires UTF-8 server encoding for a lossless ID order. The host can apply the optional index through its migration owner. The index build blocks attribution table writes."
           ],
           "references": [
             "packages/referral-drizzle/src/libs/PostgresReferralStore.ts",

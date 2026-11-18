@@ -102,6 +102,11 @@ async function withStores(
   }
 }
 
+async function hasUtf8Encoding(pool: Pool): Promise<boolean> {
+  const { rows } = await pool.query("SHOW server_encoding");
+  return rows[0]?.server_encoding === "UTF8";
+}
+
 function serviceFor(
   store: ReferralStore,
   qualification: ReferralQualificationHook = () => ({ qualified: false, reason: "no purchase" }),
@@ -240,8 +245,11 @@ describe.skipIf(!url)("PostgreSQL referral budgets and attribution recovery", ()
     });
   });
 
-  it("recovers pending benefits behind more than a thousand held attributions", async () => {
-    await withStores(async (_pool, store, restartedStore) => {
+  it("recovers pending benefits behind more than a thousand held attributions", async ({
+    skip,
+  }) => {
+    await withStores(async (pool, store, restartedStore) => {
+      skip(!(await hasUtf8Encoding(pool)), "PostgreSQL recovery cursors require UTF-8");
       const service = serviceFor(
         store,
         () => ({
@@ -367,8 +375,32 @@ describe.skipIf(!url)("PostgreSQL referral budgets and attribution recovery", ()
     });
   });
 
-  it("preserves Unicode cursor order through the recovery index upgrade and rollback", async () => {
+  it("reports unsupported recovery paging on other encodings while legacy reads work", async ({
+    skip,
+  }) => {
     await withStores(async (pool, store) => {
+      skip(await hasUtf8Encoding(pool), "Requires a non-UTF-8 PostgreSQL database");
+      const service = serviceFor(store);
+      const { token } = await seed(service);
+      const { attribution } = await service.claimAttribution({
+        token,
+        recipient: subject("recipient"),
+        attributionId: "stored",
+      });
+      await expect(service.recoverPendingAttributions({})).resolves.toEqual([attribution]);
+      await expect(
+        service.recoverPendingAttributionsPage({ after: "\u{10000}" }),
+      ).rejects.toMatchObject({
+        code: "referral-core/recovery-paging-unsupported",
+      });
+    });
+  });
+
+  it("preserves Unicode cursor order through the recovery index upgrade and rollback", async ({
+    skip,
+  }) => {
+    await withStores(async (pool, store) => {
+      skip(!(await hasUtf8Encoding(pool)), "PostgreSQL recovery cursors require UTF-8");
       const service = serviceFor(store);
       const { token } = await seed(service);
       const { attribution } = await service.claimAttribution({
@@ -389,9 +421,32 @@ describe.skipIf(!url)("PostgreSQL referral budgets and attribution recovery", ()
         ) AS ids
         WHERE attribution_id = 'seed'
       `);
+      const neighborScope = { ...attribution.scope, tenantId: "tenant-b" };
+      await store.transact(async (tx) => {
+        const scopedOutId = "candidate-09999-other-scope";
+        await tx.saveAttribution(
+          {
+            ...attribution,
+            id: scopedOutId,
+            scope: neighborScope,
+            referrer: { ...attribution.referrer, ...neighborScope },
+            recipient: undefined,
+          },
+          scopedOutId,
+        );
+        const rejectedId = "candidate-09999-rejected";
+        await tx.saveAttribution(
+          { ...attribution, id: rejectedId, recipient: undefined, state: "rejected" },
+          rejectedId,
+        );
+      });
       await pool.query("ANALYZE croco_referral_attributions");
-      const encoding = await pool.query("SHOW server_encoding");
-      const filter = { scope: attribution.scope, after: "candidate-09999", limit: 3 };
+      const filter = {
+        scope: attribution.scope,
+        states: ["claimed"] as const,
+        after: "candidate-09999",
+        limit: 3,
+      };
       const before = await store.listAttributionsPage(filter);
       expect(before.attributions.map(({ id }) => id)).toEqual([
         "candidate-10000",
@@ -411,16 +466,21 @@ describe.skipIf(!url)("PostgreSQL referral budgets and attribution recovery", ()
         ...database(pool),
         execute: async (statement) => {
           const { sql: query, params } = dialect.sqlToQuery(statement);
-          const explain = await pool.query(`EXPLAIN (ANALYZE, TIMING OFF) ${query}`, params);
-          plan = explain.rows.map((row) => row["QUERY PLAN"]).join("\n");
+          if (query.includes("FROM croco_referral_attributions")) {
+            const explain = await pool.query(`EXPLAIN (ANALYZE, TIMING OFF) ${query}`, params);
+            plan = explain.rows.map((row) => row["QUERY PLAN"]).join("\n");
+          }
           return pool.query(query, params);
         },
       });
       expect(await indexedStore.listAttributionsPage(filter)).toEqual(before);
-      if (encoding.rows[0]?.server_encoding === "UTF8") {
-        expect(plan).toContain("Index Scan using croco_referral_attributions_recovery_order");
-        expect(plan).toMatch(/Index Cond:.*attribution_id.* > /);
-      }
+      expect(plan).toMatch(
+        /Index Scan using croco_referral_attributions_recovery_order .*actual rows=4(?:\.0+)? loops=1/,
+      );
+      expect(plan).toMatch(/Index Cond:.*attribution_id.* > /);
+      await expect(
+        store.listAttributionsPage({ ...filter, states: Array<"claimed">(65_536).fill("claimed") }),
+      ).resolves.toEqual(before);
       const finalPage = await indexedStore.listAttributionsPage({
         after: before.nextCursor ?? undefined,
       });
@@ -433,14 +493,21 @@ describe.skipIf(!url)("PostgreSQL referral budgets and attribution recovery", ()
           "utf8",
         ),
       );
+      const { rows } = await pool.query(
+        "SELECT to_regclass('croco_referral_attributions_recovery_order') AS recovery_index",
+      );
+      expect(rows).toEqual([{ recovery_index: null }]);
       expect(await store.listAttributionsPage(filter)).toEqual(before);
     });
   });
 
-  it.each(["in-memory", "postgres"] as const)(
+  it.for(["in-memory", "postgres"] as const)(
     "reads current attribution data and continues by storage identity on the %s store",
-    async (provider) => {
+    async (provider, { skip }) => {
       await withStores(async (pool, postgres) => {
+        if (provider === "postgres") {
+          skip(!(await hasUtf8Encoding(pool)), "PostgreSQL recovery cursors require UTF-8");
+        }
         const store = provider === "postgres" ? postgres : new InMemoryReferralStore();
         const service = serviceFor(store, () => ({
           qualified: true,

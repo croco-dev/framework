@@ -219,7 +219,7 @@ Counts all matching claims, stored qualifications, and fulfilled states in one r
 
 > **listAttributionsPage**(`filter`): `Promise`\<[`ReferralAttributionPage`](/api/referral-core/src/type-aliases/referralattributionpage/)\>
 
-Live keyset scan ordered by immutable attribution ID in Unicode code point order.
+Lists recovery pages on PostgreSQL databases with UTF-8 server encoding.
 
 #### Parameters
 

@@ -150,7 +150,8 @@ attribution becomes eligible at or before that cursor, a new sweep from the
 beginning can find it. Recovery queries only read attributions. The caller
 uses the existing qualification, fulfillment, and reconciliation operations.
 
-Custom stores can opt in by implementing `listAttributionsPage`. Calling the
+Custom stores can opt in by implementing `listAttributionsPage`. The
+PostgreSQL adapter supports pages with UTF-8 server encoding. Calling the
 paged operation without that capability raises
 `ReferralRecoveryPagingUnsupportedProblem`. The array-returning
 `recoverPendingAttributions` stays available to existing callers.

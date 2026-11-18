@@ -14,6 +14,7 @@ import {
   ReferralLinkNotFoundProblem,
   ReferralProgramConflictProblem,
   ReferralProgramNotFoundProblem,
+  ReferralRecoveryPagingUnsupportedProblem,
   stableReferralFingerprint,
   subtractReferralAmounts,
   ZERO_REFERRAL_AMOUNT,
@@ -335,6 +336,7 @@ export class PostgresReferralStore implements ReferralStore {
     return run("list referral attributions", () => listAttributionsWith(this.database, filter));
   }
 
+  /** Lists recovery pages on PostgreSQL databases with UTF-8 server encoding. */
   async listAttributionsPage(filter: ListAttributionsPageFilter): Promise<ReferralAttributionPage> {
     return run("list referral attribution page", async () => {
       const limit = assertLimit(filter.limit, 100);
@@ -354,15 +356,21 @@ export class PostgresReferralStore implements ReferralStore {
           ...(filter.recipient ? Object.values(subjectIdentity(filter.recipient)) : []),
         ].filter((value) => value !== undefined),
       );
-      const rows = await listAttributionsWith(this.database, filter, {
+      const { rows } = await this.database.execute(sql`
+        SELECT pg_catalog.getdatabaseencoding() AS encoding
+      `);
+      if (rows[0]?.encoding !== "UTF8") {
+        throw new ReferralRecoveryPagingUnsupportedProblem();
+      }
+      const candidates = await listAttributionsWith(this.database, filter, {
         limit: limit + 1,
         scope: filter.scope ?? filter.referrer ?? filter.recipient,
         after: filter.after,
       });
-      const attributions = rows.slice(0, limit);
+      const attributions = candidates.slice(0, limit);
       return {
         attributions,
-        nextCursor: rows.length > limit ? (attributions.at(-1)?.id ?? null) : null,
+        nextCursor: candidates.length > limit ? (attributions.at(-1)?.id ?? null) : null,
       };
     });
   }
@@ -412,7 +420,11 @@ async function listAttributionsWith(
   page?: Pick<ListAttributionsPageFilter, "scope" | "after"> & { readonly limit: number },
 ): Promise<readonly ReferralAttribution[]> {
   const limit = page?.limit ?? assertLimit(filter.limit, 100);
-  const states = filter.states ?? ATTRIBUTION_STATES;
+  const requestedStates = filter.states;
+  const states =
+    page && requestedStates !== undefined
+      ? ATTRIBUTION_STATES.filter((state) => requestedStates.includes(state))
+      : (requestedStates ?? ATTRIBUTION_STATES);
   if (page && states.length === 0) return [];
   const stateList = sql.join(
     states.map((state) => sql`${state}`),
@@ -471,25 +483,12 @@ async function listAttributionsWith(
   }
 
   const indexKey = sql`attribution_id COLLATE pg_catalog."C"`;
-  const utf8Key = sql`pg_catalog.convert_to(attribution_id, 'UTF8')`;
-  const indexedBoundary =
+  const cursorClause =
     page.after === undefined ? sql.empty() : sql`AND ${indexKey} > ${page.after}::text`;
-  const convertedBoundary =
-    page.after === undefined
-      ? sql.empty()
-      : sql`AND ${utf8Key} > pg_catalog.convert_to(${page.after}, 'UTF8')`;
-  // Only one branch reads rows. The outer sort preserves the shared order over the bounded page.
   const result = await executor.execute(sql`
-    SELECT attribution_id, document FROM (
-      (SELECT attribution_id, document ${matchingAttributions}
-        AND pg_catalog.getdatabaseencoding() = 'UTF8' ${indexedBoundary}
-        ORDER BY ${indexKey} LIMIT ${limit})
-      UNION ALL
-      (SELECT attribution_id, document ${matchingAttributions}
-        AND pg_catalog.getdatabaseencoding() <> 'UTF8' ${convertedBoundary}
-        ORDER BY ${utf8Key} LIMIT ${limit})
-    ) AS attribution_page
-    ORDER BY ${utf8Key}
+    SELECT attribution_id, document ${matchingAttributions}
+    ${cursorClause}
+    ORDER BY ${indexKey} LIMIT ${limit}
   `);
   return result.rows.map(reviveAttributionWithKey);
 }
