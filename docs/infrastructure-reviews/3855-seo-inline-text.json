@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "seo-core",
+      "classification": "pure-contract",
+      "reason": "Initial HTML comparison preserves inline text adjacency and uses structural boundaries for whitespace. The inspector applies this rule to the same parsed response on every host.",
+      "files": {
+        "packages/seo-core/src/libs/inspectPublicPage.ts": "28ec9e7c1f0bf69e201d7e5e65fcf6182a90d75b25a8c6b2f9c4eb47b75e30ed"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The text comparison has no Node Host dependency.",
+          "providers": [],
+          "constraints": [
+            "Reads only the parsed response without accessing storage or the Host lifecycle."
+          ],
+          "references": ["packages/seo-core/src/libs/inspectPublicPage.ts"]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The text comparison requires no Lambda-specific capability.",
+          "providers": [],
+          "constraints": [
+            "The comparison needs no invocation state, storage, or lifecycle callback."
+          ],
+          "references": ["packages/seo-core/src/libs/inspectPublicPage.ts"]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The text comparison requires no Workers or Node Container integration.",
+          "providers": [],
+          "constraints": [
+            "The comparison uses the existing HTML parser without bindings, storage, or lifecycle callbacks."
+          ],
+          "references": ["packages/seo-core/src/libs/inspectPublicPage.ts"]
+        }
+      }
+    }
+  ]
+}

@@ -162,6 +162,108 @@ describe("Public page contracts", () => {
       diagnostics: [],
     });
   });
+  it("accepts source facts split across inline nodes in a registered response", async () => {
+    const inline = html
+      .replace(
+        "<p>A warm adjustable reading lamp.</p>",
+        "<p>A warm ad<em>just</em>able reading lamp.</p>",
+      )
+      .replace(">Delivery</a>", ">Del<span>iv<!-- comment -->er</span>y</a>")
+      .replace(">USD 37.50</p>", ">USD <span>37</span>.<strong>50</strong></p>")
+      .replace(">Sold out</p>", ">Sold<strong>\n  out</strong></p>");
+    const inspect = createPublicPageInspector({
+      targets: [
+        {
+          ...target,
+          respond: async () =>
+            new Response(inline, {
+              headers: { "content-type": "text/html" },
+            }),
+        },
+      ],
+      authorize: async () => true,
+    });
+
+    expect(await inspect("lamp")).toMatchObject({ state: "ready", diagnostics: [] });
+  });
+  it("uses block and line-break boundaries when comparing the description", () => {
+    const separated = html.replace(
+      "<p>A warm adjustable reading lamp.</p>",
+      "<div>A warm</div><div>adjustable<br>reading lamp.</div>",
+    );
+    expect(validate(separated)).toMatchObject({ state: "ready", diagnostics: [] });
+  });
+  it.each([
+    "Del<br>ivery",
+    "Del<div>ivery</div>",
+    "Del <span>ivery</span>",
+    "Del<strong>ay</strong>",
+    "<span hidden>Delivery</span>",
+    "<template>Delivery</template>",
+    "<script>Delivery</script>",
+    "Del<svg><title>iv</title></svg>ery",
+  ])("rejects link text %s that does not match the declared label", (label) => {
+    expect(validate(html.replace(">Delivery</a>", `>${label}</a>`))).toMatchObject({
+      state: "partial",
+      diagnostics: [{ code: "SEO_LINK_MISSING", field: "links" }],
+    });
+  });
+  it("keeps visible inline characters adjacent across hidden content", () => {
+    const hidden = html.replace(">Delivery</a>", ">Del<div hidden>ignored</div>ivery</a>");
+    expect(validate(hidden)).toMatchObject({ state: "ready", diagnostics: [] });
+  });
+  it.each([
+    "USD<span>37.50</span>",
+    "USD <span>37</span>.05",
+    "USD 37.<svg><desc>50</desc></svg>",
+    "USD 37.<svg><defs><text>50</text></defs></svg>",
+    "USD 37.<svg><symbol><text>50</text></symbol></svg>",
+    "USD 37.<datalist><option>50</option></datalist>",
+    "USD 37.<iframe>50</iframe>",
+    "USD 37.<title>50</title>",
+  ])("rejects price text %s that does not match the declared facts", (price) => {
+    expect(validate(html.replace(">USD 37.50</p>", `>${price}</p>`))).toMatchObject({
+      state: "partial",
+      diagnostics: [{ code: "SEO_BODY_PRICE_MISMATCH", field: "product.price" }],
+    });
+  });
+  it.each(["dialog", "details"])(
+    "inspects an open %s and excludes its hidden offer when closed",
+    (tag) => {
+      const offer = '<p data-public-price="37.50" data-public-currency="USD">USD 37.50</p>';
+      const summary = tag === "details" ? "<summary>Offer</summary>" : "";
+      const splitOffer = offer.replace("37.50</p>", "37.<span>50</span></p>");
+      const opened = html.replace(offer, `<${tag} open>${summary}${splitOffer}</${tag}>`);
+
+      expect(validate(opened)).toMatchObject({ state: "ready", diagnostics: [] });
+      expect(validate(opened.replace(`<${tag} open>`, `<${tag}>`))).toMatchObject({
+        state: "partial",
+        diagnostics: [{ code: "SEO_BODY_PRICE_MISMATCH", field: "product.price" }],
+      });
+    },
+  );
+  it("uses the visible summary of closed details for body text and link checks", () => {
+    const visibleSummary = html.replace(
+      '<a href="/delivery">Delivery</a>',
+      '<details><summary><a href="/delivery">Del<span>ivery</span></a></summary><p>More</p></details>',
+    );
+    expect(validate(visibleSummary)).toMatchObject({ state: "ready", diagnostics: [] });
+  });
+  it("excludes offer text from an initially hidden popover", () => {
+    const price = html.replace(">USD 37.50</p>", ">USD 37.<span>50</span></p>");
+    const popover = price.replace("<p data-public-price=", "<p popover data-public-price=");
+    expect(validate(popover)).toMatchObject({
+      state: "partial",
+      diagnostics: [{ code: "SEO_BODY_PRICE_MISMATCH", field: "product.price" }],
+    });
+  });
+  it("omits SVG metadata while keeping visible SVG label text", () => {
+    const inline = html.replace(
+      ">Delivery</a>",
+      ">Del<svg><title>Icon</title><text>iv</text><desc>Icon description</desc></svg>ery</a>",
+    );
+    expect(validate(inline)).toMatchObject({ state: "ready", diagnostics: [] });
+  });
   it("reads noscript content as a JavaScript-disabled browser does", () => {
     const fallback = html
       .replace("<main>", "<noscript><main>")

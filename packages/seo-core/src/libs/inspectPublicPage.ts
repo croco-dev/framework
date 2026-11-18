@@ -1,4 +1,4 @@
-import { parse } from "parse5";
+import { html as parse5Html, parse } from "parse5";
 import type { DefaultTreeAdapterMap } from "parse5";
 import {
   createPublicPageSourceRequest,
@@ -36,17 +36,64 @@ function elements(node: Node): Element[] {
     "tagName" in child ? [child, ...elements(child)] : elements(child),
   );
 }
+
+// SVG definitions and metadata are not rendered directly.
+const NON_RENDERED_SVG_ELEMENTS = new Set([
+  "clipPath",
+  "defs",
+  "desc",
+  "filter",
+  "linearGradient",
+  "marker",
+  "mask",
+  "metadata",
+  "pattern",
+  "radialGradient",
+  "symbol",
+  "title",
+]);
+
+// HTML elements whose descendants do not supply visible text in the initial document.
+const NON_RENDERED_HTML_ELEMENTS = new Set(["datalist", "iframe", "noembed", "noframes", "rp"]);
+
 function hidden(node: Node): boolean {
   return (
     "tagName" in node &&
     (["script", "style", "template"].includes(node.tagName) ||
+      (node.namespaceURI === parse5Html.NS.SVG && NON_RENDERED_SVG_ELEMENTS.has(node.tagName)) ||
+      (node.namespaceURI === parse5Html.NS.HTML &&
+        (NON_RENDERED_HTML_ELEMENTS.has(node.tagName) ||
+          (node.tagName === "title" && node.parentNode?.nodeName !== "head") ||
+          (node.tagName === "dialog"
+            ? attr(node, "open") === undefined
+            : attr(node, "popover") !== undefined))) ||
       attr(node, "hidden") !== undefined ||
       /(?:display\s*:\s*none|visibility\s*:\s*hidden)/i.test(attr(node, "style") ?? ""))
   );
 }
+
+function inspectionChildren(node: Node): readonly Node[] {
+  if (!("childNodes" in node)) return [];
+  if (
+    "tagName" in node &&
+    node.namespaceURI === parse5Html.NS.HTML &&
+    node.tagName === "details" &&
+    attr(node, "open") === undefined
+  ) {
+    const summary = node.childNodes.find(
+      (child) =>
+        "tagName" in child &&
+        child.namespaceURI === parse5Html.NS.HTML &&
+        child.tagName === "summary",
+    );
+    return summary ? [summary] : [];
+  }
+  return node.childNodes;
+}
+
 function visibleElements(node: Node): Element[] {
-  if (hidden(node) || !("childNodes" in node)) return [];
-  return node.childNodes.flatMap((child) =>
+  if (hidden(node)) return [];
+  return inspectionChildren(node).flatMap((child) =>
     hidden(child)
       ? []
       : "tagName" in child
@@ -54,10 +101,72 @@ function visibleElements(node: Node): Element[] {
         : visibleElements(child),
   );
 }
+
+// Structural separators in initial HTML, independent of page styles.
+const HTML_TEXT_BOUNDARIES = new Set([
+  "address",
+  "article",
+  "aside",
+  "blockquote",
+  "br",
+  "caption",
+  "center",
+  "dd",
+  "details",
+  "dialog",
+  "dir",
+  "div",
+  "dl",
+  "dt",
+  "fieldset",
+  "figcaption",
+  "figure",
+  "footer",
+  "form",
+  "h1",
+  "h2",
+  "h3",
+  "h4",
+  "h5",
+  "h6",
+  "header",
+  "hgroup",
+  "hr",
+  "legend",
+  "li",
+  "listing",
+  "main",
+  "menu",
+  "nav",
+  "ol",
+  "p",
+  "plaintext",
+  "pre",
+  "search",
+  "section",
+  "summary",
+  "table",
+  "tbody",
+  "td",
+  "tfoot",
+  "th",
+  "thead",
+  "tr",
+  "ul",
+  "xmp",
+]);
+
 function text(node: Node): string {
   if ("value" in node) return node.value;
   if (hidden(node)) return "";
-  return "childNodes" in node ? node.childNodes.map(text).join(" ") : "";
+  const children = inspectionChildren(node).map(text).join("");
+  if (
+    "tagName" in node &&
+    node.namespaceURI === parse5Html.NS.HTML &&
+    HTML_TEXT_BOUNDARIES.has(node.tagName)
+  )
+    return ` ${children} `;
+  return children;
 }
 const normalize = (value: string) => value.replace(/\s+/g, " ").trim();
 const hasNoindex = (value: string | null | undefined) => /\b(?:noindex|none)\b/i.test(value ?? "");
@@ -184,7 +293,7 @@ export function validatePublicPageResponse(
   const bodyNodes = body ? visibleElements(body) : [];
   const baseHref = nodes.find(
     (node) =>
-      node.namespaceURI === "http://www.w3.org/1999/xhtml" &&
+      node.namespaceURI === parse5Html.NS.HTML &&
       node.tagName === "base" &&
       attr(node, "href") !== undefined,
   );
