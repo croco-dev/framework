@@ -1,4 +1,4 @@
-import { parse } from "parse5";
+import { html as parse5Html, parse } from "parse5";
 import type { DefaultTreeAdapterMap } from "parse5";
 import {
   createPublicPageSourceRequest,
@@ -54,10 +54,72 @@ function visibleElements(node: Node): Element[] {
         : visibleElements(child),
   );
 }
+
+// Structural separators in initial HTML, independent of page styles.
+const HTML_TEXT_BOUNDARIES = new Set([
+  "address",
+  "article",
+  "aside",
+  "blockquote",
+  "br",
+  "caption",
+  "center",
+  "dd",
+  "details",
+  "dialog",
+  "dir",
+  "div",
+  "dl",
+  "dt",
+  "fieldset",
+  "figcaption",
+  "figure",
+  "footer",
+  "form",
+  "h1",
+  "h2",
+  "h3",
+  "h4",
+  "h5",
+  "h6",
+  "header",
+  "hgroup",
+  "hr",
+  "legend",
+  "li",
+  "listing",
+  "main",
+  "menu",
+  "nav",
+  "ol",
+  "p",
+  "plaintext",
+  "pre",
+  "search",
+  "section",
+  "summary",
+  "table",
+  "tbody",
+  "td",
+  "tfoot",
+  "th",
+  "thead",
+  "tr",
+  "ul",
+  "xmp",
+]);
+
 function text(node: Node): string {
   if ("value" in node) return node.value;
-  if (hidden(node)) return "";
-  return "childNodes" in node ? node.childNodes.map(text).join(" ") : "";
+  if (hidden(node) || !("childNodes" in node)) return "";
+  const children = node.childNodes.map(text).join("");
+  if (
+    "tagName" in node &&
+    node.namespaceURI === parse5Html.NS.HTML &&
+    HTML_TEXT_BOUNDARIES.has(node.tagName)
+  )
+    return ` ${children} `;
+  return children;
 }
 const normalize = (value: string) => value.replace(/\s+/g, " ").trim();
 const hasNoindex = (value: string | null | undefined) => /\b(?:noindex|none)\b/i.test(value ?? "");
@@ -184,7 +246,7 @@ export function validatePublicPageResponse(
   const bodyNodes = body ? visibleElements(body) : [];
   const baseHref = nodes.find(
     (node) =>
-      node.namespaceURI === "http://www.w3.org/1999/xhtml" &&
+      node.namespaceURI === parse5Html.NS.HTML &&
       node.tagName === "base" &&
       attr(node, "href") !== undefined,
   );

@@ -162,6 +162,64 @@ describe("Public page contracts", () => {
       diagnostics: [],
     });
   });
+  it("accepts source facts split across inline nodes in a registered response", async () => {
+    const inline = html
+      .replace(
+        "<p>A warm adjustable reading lamp.</p>",
+        "<p>A warm ad<em>just</em>able reading lamp.</p>",
+      )
+      .replace(">Delivery</a>", ">Del<span>iv<!-- comment -->er</span>y</a>")
+      .replace(">USD 37.50</p>", ">USD <span>37</span>.<strong>50</strong></p>")
+      .replace(">Sold out</p>", ">Sold<strong>\n  out</strong></p>");
+    const inspect = createPublicPageInspector({
+      targets: [
+        {
+          ...target,
+          respond: async () =>
+            new Response(inline, {
+              headers: { "content-type": "text/html" },
+            }),
+        },
+      ],
+      authorize: async () => true,
+    });
+
+    expect(await inspect("lamp")).toMatchObject({ state: "ready", diagnostics: [] });
+  });
+  it("uses block and line-break boundaries when comparing the description", () => {
+    const separated = html.replace(
+      "<p>A warm adjustable reading lamp.</p>",
+      "<div>A warm</div><div>adjustable<br>reading lamp.</div>",
+    );
+    expect(validate(separated)).toMatchObject({ state: "ready", diagnostics: [] });
+  });
+  it.each([
+    ["Del<br>ivery", "SEO_LINK_MISSING", "links"],
+    ["Del<div>ivery</div>", "SEO_LINK_MISSING", "links"],
+    ["Del <span>ivery</span>", "SEO_LINK_MISSING", "links"],
+    ["Del<strong>ay</strong>", "SEO_LINK_MISSING", "links"],
+    ["<span hidden>Delivery</span>", "SEO_LINK_MISSING", "links"],
+    ["<template>Delivery</template>", "SEO_LINK_MISSING", "links"],
+    ["<script>Delivery</script>", "SEO_LINK_MISSING", "links"],
+  ])("rejects link text %s that does not match the declared label", (label, code, field) => {
+    expect(validate(html.replace(">Delivery</a>", `>${label}</a>`))).toMatchObject({
+      state: "partial",
+      diagnostics: [{ code, field }],
+    });
+  });
+  it("keeps visible inline characters adjacent across hidden content", () => {
+    const hidden = html.replace(">Delivery</a>", ">Del<div hidden>ignored</div>ivery</a>");
+    expect(validate(hidden)).toMatchObject({ state: "ready", diagnostics: [] });
+  });
+  it.each(["USD<span>37.50</span>", "USD <span>37</span>.05"])(
+    "rejects price text %s that does not match the declared facts",
+    (price) => {
+      expect(validate(html.replace(">USD 37.50</p>", `>${price}</p>`))).toMatchObject({
+        state: "partial",
+        diagnostics: [{ code: "SEO_BODY_PRICE_MISMATCH", field: "product.price" }],
+      });
+    },
+  );
   it("reads noscript content as a JavaScript-disabled browser does", () => {
     const fallback = html
       .replace("<main>", "<noscript><main>")
