@@ -7,7 +7,7 @@ import {
   CLI_LEGACY_DIAGNOSTIC_CODES,
   getStableCliDiagnosticCodeForLegacyCode,
 } from "../libs/diagnosticCodes.js";
-import { GLOBAL_OPTIONS } from "./options.js";
+import { DI_CHECK_FILE_OPTIONS, GLOBAL_OPTIONS, isDiCheckOptionValue } from "./options.js";
 import { getCrocoCommandRuntime } from "../libs/cliRuntime.js";
 import { parseWorkingDirectoryInvocation } from "../libs/workingDirectoryInvocation.js";
 
@@ -191,6 +191,7 @@ function parseDiCheckInvocation(
   prefixArgs: readonly (readonly string[])[] = [],
 ): { readonly parsed: DiCheckParseResult; readonly cwd?: string | undefined } {
   let cwd = runtimeCwd;
+  let help = false;
   for (const prefix of prefixArgs) {
     const invocation = parseDiCheckWorkingDirectory(prefix, runtimeCwd);
     if ("diagnostic" in invocation) {
@@ -199,12 +200,13 @@ function parseDiCheckInvocation(
     const separator = invocation.args.indexOf("--");
     const options = separator === -1 ? invocation.args : invocation.args.slice(0, separator);
     const misplaced = options
-      .map((arg) => arg.split("=")[0])
-      .find((arg) => arg === "--out" || arg === "--manifest" || arg === "--json");
+      .map((arg) => arg.split("=")[0] ?? "")
+      .find((arg) => DI_CHECK_FILE_OPTIONS.has(arg) || arg === "--json");
     if (misplaced) {
       return { parsed: { kind: "invalid", message: `Pass ${misplaced} after 'di check'.` } };
     }
     if (invocation.cwdOptionIndices.size > 0) cwd = invocation.cwd;
+    help ||= options.includes("--help") || options.includes("-h");
   }
 
   const invocation = parseDiCheckWorkingDirectory(args, runtimeCwd);
@@ -212,12 +214,8 @@ function parseDiCheckInvocation(
     return { parsed: { kind: "invalid", message: invocation.diagnostic } };
   }
 
-  if (hasDiCheckHelp(args) || prefixArgs.some(hasDiCheckHelp)) {
-    return { parsed: { kind: "help" } };
-  }
-
   return {
-    parsed: parseDiCheckOptions(args, invocation.cwdOptionIndices),
+    parsed: parseDiCheckOptions(args, invocation.cwdOptionIndices, help),
     cwd: invocation.cwdOptionIndices.size > 0 ? invocation.cwd : cwd,
   };
 }
@@ -229,24 +227,46 @@ function parseDiCheckWorkingDirectory(args: readonly string[], runtimeCwd?: stri
   });
 }
 
-function hasDiCheckHelp(args: readonly string[]): boolean {
-  return args.includes("--help") || args.includes("-h");
-}
-
 function parseDiCheckOptions(
   args: readonly string[],
   cwdOptionIndices: ReadonlySet<number>,
+  help: boolean,
 ): DiCheckParseResult {
-  const manifest = getFlagValue(args, "--manifest") ?? getFirstPosition(args, cwdOptionIndices);
-  const out = getFlagValue(args, "--out");
-
-  if (out === null && args.includes("--out")) {
-    return {
-      kind: "invalid",
-      message: "[CROCO_CLI_MISSING_VALUE] Missing report output path. Pass --out <path>.",
-    };
+  const separator = args.indexOf("--");
+  const endOfOptions = separator === -1 ? args.length : separator;
+  let positional: string | undefined;
+  let explicitManifest: string | undefined;
+  let out: string | null = null;
+  let json = false;
+  for (let index = 0; index < endOfOptions; index++) {
+    const arg = args[index];
+    if (!arg || cwdOptionIndices.has(index)) continue;
+    if (DI_CHECK_FILE_OPTIONS.has(arg)) {
+      const value = args[index + 1];
+      if (!isDiCheckOptionValue(value)) {
+        return {
+          kind: "invalid",
+          message:
+            arg === "--out"
+              ? "[CROCO_CLI_MISSING_VALUE] Missing report output path. Pass --out <path>."
+              : "[CROCO_CLI_MISSING_VALUE] Missing DI graph manifest. Pass --manifest <path>.",
+        };
+      }
+      if (arg === "--manifest") explicitManifest ??= value;
+      else out ??= value;
+      index++;
+    } else if (arg === "--help" || arg === "-h") {
+      help = true;
+    } else if (arg === "--json") {
+      json = true;
+    } else if (!arg.startsWith("-")) {
+      positional ??= arg;
+    }
   }
 
+  if (help) return { kind: "help" };
+
+  const manifest = explicitManifest ?? positional ?? args[endOfOptions + 1];
   if (!manifest) {
     return {
       kind: "invalid",
@@ -259,7 +279,7 @@ function parseDiCheckOptions(
     options: {
       manifest,
       out,
-      json: args.includes("--json") || out !== null,
+      json: json || out !== null,
     },
   };
 }
@@ -437,42 +457,6 @@ Options:
   --json             Print a machine-readable DI check report
   --out <path>       Write the machine-readable DI check report
   --help, -h         Show this help message`);
-}
-
-function getFlagValue(args: readonly string[], flag: string): string | null {
-  const index = args.indexOf(flag);
-  const value = index >= 0 ? args[index + 1] : undefined;
-
-  return value && !value.startsWith("--") ? value : null;
-}
-
-function getFirstPosition(
-  args: readonly string[],
-  cwdOptionIndices: ReadonlySet<number>,
-): string | null {
-  const valueFlags = new Set(["--manifest", "--out"]);
-
-  for (let index = 0; index < args.length; index += 1) {
-    const arg = args[index];
-
-    if (!arg || cwdOptionIndices.has(index)) {
-      continue;
-    }
-
-    if (valueFlags.has(arg)) {
-      // A --cwd token cannot be the value of a preceding option.
-      if (!cwdOptionIndices.has(index + 1)) {
-        index += 1;
-      }
-      continue;
-    }
-
-    if (!arg.startsWith("-")) {
-      return arg;
-    }
-  }
-
-  return null;
 }
 
 function asRecord(value: unknown): Readonly<Record<string, unknown>> | null {

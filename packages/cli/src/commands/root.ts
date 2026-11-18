@@ -15,7 +15,7 @@ import {
   migrateArgumentsAreValid,
   migrateOptionConsumesNextArgument,
 } from "./migrate.js";
-import { GLOBAL_OPTIONS } from "./options.js";
+import { DI_CHECK_FILE_OPTIONS, GLOBAL_OPTIONS, isDiCheckOptionValue } from "./options.js";
 
 type LoadedCommand = Awaited<Extract<SubCommandsDef[string], Promise<unknown>>>;
 type CommandLoader = () => Promise<LoadedCommand>;
@@ -302,25 +302,31 @@ function findDiCheckCommandIndex(
   command: "di" | "check",
   startIndex: number,
 ): number | undefined {
-  const separator = args.indexOf("--", startIndex);
-  const index =
-    separator === -1
-      ? findRootCommandIndex(args, startIndex)
-      : (findRootCommandIndex(args, startIndex, separator) ??
-        args.findIndex((arg, offset) => offset > separator && !arg.startsWith("-")));
-  if (index !== undefined && args[index] === command) return index;
-
-  // Preserve Citty's fallback command boundary so a missing prefix --cwd value can be reported.
-  const positional = args.findIndex((arg, offset) => offset >= startIndex && !arg.startsWith("-"));
-  return args[positional] === command ? positional : undefined;
+  let optionsEnded = false;
+  let possibleCommand: number | undefined;
+  for (let index = startIndex; index < args.length; index++) {
+    const arg = args[index];
+    if (!arg) continue;
+    if (arg === "--") {
+      optionsEnded = true;
+      continue;
+    }
+    if (!optionsEnded && (arg === "--cwd" || DI_CHECK_FILE_OPTIONS.has(arg))) {
+      const value = args[index + 1];
+      if (isDiCheckOptionValue(value)) {
+        // If no command follows the value, validate the ambiguous prefix at this boundary.
+        if (value === command) possibleCommand ??= index + 1;
+        index++;
+      }
+      continue;
+    }
+    if (!arg.startsWith("-")) return arg === command ? index : possibleCommand;
+  }
+  return possibleCommand;
 }
 
-function findRootCommandIndex(
-  rawArgs: readonly string[],
-  startIndex = 0,
-  endIndex = rawArgs.length,
-): number | undefined {
-  for (let index = startIndex; index < endIndex; index++) {
+function findRootCommandIndex(rawArgs: readonly string[]): number | undefined {
+  for (let index = 0; index < rawArgs.length; index++) {
     const argument = rawArgs[index];
     if (argument === undefined) {
       continue;

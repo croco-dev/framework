@@ -14,3 +14,9 @@ export const GLOBAL_OPTIONS = {
     description: "Overwrite existing files",
   },
 } satisfies ArgsDef;
+
+export const DI_CHECK_FILE_OPTIONS: ReadonlySet<string> = new Set(["--manifest", "--out"]);
+
+export function isDiCheckOptionValue(value: string | undefined): value is string {
+  return Boolean(value && !value.startsWith("--") && value !== "-h");
+}

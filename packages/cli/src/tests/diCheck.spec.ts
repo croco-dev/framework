@@ -623,6 +623,7 @@ describe("diCheck", () => {
   it.each([
     ["root", ["--cwd", "di", "check"]],
     ["DI parent", ["di", "--cwd", "check"]],
+    ["misplaced report before help", ["di", "--cwd", "--out", "report.json", "check", "--help"]],
   ])("rejects cwd without a value at the %s command boundary", async (_name, args) => {
     const cwd = mkdtempSync(join(tmpdir(), "croco-di-root-"));
     try {
@@ -639,6 +640,61 @@ describe("diCheck", () => {
     } finally {
       rmSync(cwd, { recursive: true, force: true });
     }
+  });
+
+  it.each([
+    ["output", ["--out", "graph.json"]],
+    ["help", ["--help"]],
+  ])("does not interpret the %s token after the leaf separator", async (_name, tokens) => {
+    const content = JSON.stringify(readyManifest());
+    const stdout: string[] = [];
+    const readFile = vi.fn(() => content);
+    const mkdir = vi.fn();
+    const writeFile = vi.fn();
+    const result = await runDiCheck(["--cwd", "app", "graph.json", "--", ...tokens], {
+      io: { ...createIo(content, stdout, []), readFile, mkdir, writeFile },
+    });
+
+    expect(result).toBe(0);
+    expect(readFile).toHaveBeenCalledWith("/workspace/app/app/graph.json");
+    expect(mkdir).not.toHaveBeenCalled();
+    expect(writeFile).not.toHaveBeenCalled();
+    expect(stdout[0]).toContain("DI graph check passed");
+  });
+
+  it("preserves an explicit output before the leaf separator", () => {
+    expect(parseDiCheckArgs(["--out", "report.json", "--", "--graph.json"])).toEqual({
+      kind: "run",
+      options: { manifest: "--graph.json", out: "report.json", json: true },
+    });
+  });
+
+  it.each([
+    {
+      name: "later report flag",
+      args: ["graph.json", "--out", "report.json", "--out", "--cwd", "app"],
+      diagnostic: "Missing report output path.",
+    },
+    {
+      name: "explicit manifest flag",
+      args: ["--manifest", "--out", "graph.json", "--cwd", "app", "intended.json"],
+      diagnostic: "Missing DI graph manifest.",
+    },
+  ])("rejects a missing path for the $name before file I/O", async ({ args, diagnostic }) => {
+    const content = JSON.stringify(readyManifest());
+    const stderr: string[] = [];
+    const readFile = vi.fn(() => content);
+    const mkdir = vi.fn();
+    const writeFile = vi.fn();
+    const result = await runDiCheck(args, {
+      io: { ...createIo(content, [], stderr), readFile, mkdir, writeFile },
+    });
+
+    expect(result).toBe(1);
+    expect(stderr).toEqual([expect.stringContaining(diagnostic)]);
+    expect(readFile).not.toHaveBeenCalled();
+    expect(mkdir).not.toHaveBeenCalled();
+    expect(writeFile).not.toHaveBeenCalled();
   });
 
   it("rejects a report flag before the leaf command without changing the manifest", async () => {
