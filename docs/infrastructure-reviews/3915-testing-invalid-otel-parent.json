@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "testing",
+      "classification": "pure-contract",
+      "reason": "Telemetry capture creates a root span when the selected parent context is invalid.",
+      "files": {
+        "packages/testing/src/libs/telemetry-testing.ts": "dd4390a27b3373a9652812c4da0deff7cf3b96963baa213e492914d16556ee48"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Parent context validation uses OpenTelemetry's SpanContext API in the process-local test capture. It has no dependency on host capabilities, storage, exporters, or deployment lifecycle.",
+          "providers": ["@croco/testing/installTestingTelemetryCapture"],
+          "constraints": ["The change affects test capture only."],
+          "references": [
+            "packages/testing/src/libs/telemetry-testing.ts",
+            "packages/testing/src/tests/testing.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Parent context validation uses OpenTelemetry's SpanContext API in the process-local test capture. It has no dependency on host capabilities, storage, exporters, or deployment lifecycle.",
+          "providers": ["@croco/testing/installTestingTelemetryCapture"],
+          "constraints": ["The change affects test capture only."],
+          "references": [
+            "packages/testing/src/libs/telemetry-testing.ts",
+            "packages/testing/src/tests/testing.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Parent context validation uses OpenTelemetry's SpanContext API in the process-local test capture. It has no dependency on host capabilities, storage, exporters, or deployment lifecycle.",
+          "providers": ["@croco/testing/installTestingTelemetryCapture"],
+          "constraints": ["The change affects test capture only."],
+          "references": [
+            "packages/testing/src/libs/telemetry-testing.ts",
+            "packages/testing/src/tests/testing.spec.ts"
+          ]
+        }
+      }
+    }
+  ]
+}

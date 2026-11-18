@@ -161,13 +161,15 @@ class TestingTracerProvider implements TracerProvider {
 class TestingTracer implements Tracer {
   startSpan(name: string, options: SpanOptions = {}, parentContext = context.active()): Span {
     const effectiveParentContext = options.root ? ROOT_CONTEXT : parentContext;
-    const parentSpanContext = trace.getSpanContext(effectiveParentContext);
+    const candidateParent = trace.getSpanContext(effectiveParentContext);
+    const parentSpanContext =
+      candidateParent && trace.isSpanContextValid(candidateParent) ? candidateParent : undefined;
     const record: CapturedSpan = {
       attributes: options.attributes ? { ...options.attributes } : {},
       events: [],
       exceptions: [],
       name,
-      ...(parentSpanContext?.spanId ? { parentSpanId: parentSpanContext.spanId } : {}),
+      ...(parentSpanContext ? { parentSpanId: parentSpanContext.spanId } : {}),
       spanId: nextSpanId(),
       startTime: options.startTime,
       ended: false,

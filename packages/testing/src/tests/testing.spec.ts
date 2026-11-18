@@ -4,10 +4,12 @@ import { setImmediate } from "node:timers/promises";
 import { queryObjects } from "node:v8";
 import {
   context,
+  INVALID_SPAN_CONTEXT,
   isSpanContextValid,
   ProxyTracerProvider,
   ROOT_CONTEXT,
   SpanStatusCode,
+  TraceFlags,
   trace,
 } from "@opentelemetry/api";
 import { CurrentApiKey, CurrentPrincipal, User } from "@croco/auth-core";
@@ -1420,6 +1422,42 @@ describe("@croco/testing", () => {
   describe.each(["startSpan", "startActiveSpan"] as const)(
     "telemetry %s parent selection",
     (method) => {
+      it.each([
+        { source: "invalid", parent: INVALID_SPAN_CONTEXT, expectedParent: undefined },
+        {
+          source: "remote",
+          parent: {
+            traceId: "12345678123456781234567812345678",
+            spanId: "1234567812345678",
+            traceFlags: TraceFlags.NONE,
+            isRemote: true,
+          },
+          expectedParent: "1234567812345678",
+        },
+      ])("selects the parent from a $source span context", ({ parent, expectedParent }) => {
+        const capture = installTestingTelemetryCapture();
+        const tracer = trace.getTracer("testing.parent-validity");
+        const ctx = trace.setSpanContext(ROOT_CONTEXT, parent);
+        const span =
+          method === "startSpan"
+            ? tracer.startSpan("subject", {}, ctx)
+            : tracer.startActiveSpan("subject", {}, ctx, (activeSpan) => activeSpan);
+        const spanContext = span.spanContext();
+        span.end();
+
+        expect(isSpanContextValid(spanContext)).toBe(true);
+        expect(capture.spans).toMatchObject([
+          {
+            name: "subject",
+            traceId: spanContext.traceId,
+            spanId: spanContext.spanId,
+            ended: true,
+          },
+        ]);
+        expect(capture.spans[0]?.parentSpanId).toBe(expectedParent);
+        if (expectedParent) expect(spanContext.traceId).toBe(parent.traceId);
+      });
+
       it.each([
         { root: true, parentSource: "active" },
         { root: false, parentSource: "active" },
