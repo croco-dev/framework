@@ -651,10 +651,10 @@ export class ReferralService {
   }
 
   /**
-   * Operator adjustment for indeterminate attributions: explicitly complete
-   * with a verified grant reference for each unknown or granting intent, or
-   * reject and release the locked budget. Every decision preserves actor,
-   * reason, and an audit trail.
+   * To fulfill an indeterminate attribution, supply a verified grant reference
+   * for each side without a terminal benefit intent. Only unknown or granting
+   * intents transition to granted. Rejecting releases the locked budget.
+   * Every decision preserves actor, reason, and an audit trail.
    */
   async resolveIndeterminateBenefits(input: {
     readonly attributionId: string;

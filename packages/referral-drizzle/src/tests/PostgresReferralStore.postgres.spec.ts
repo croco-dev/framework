@@ -167,7 +167,7 @@ async function seed(
 
 describe.skipIf(!url)("PostgreSQL referral budgets and attribution recovery", () => {
   it("persists operator settlement with only the uncertain side's receipt", async () => {
-    await withStores(async (_pool, writer, observer) => {
+    await withStores(async (pool, writer, observer) => {
       const service = serviceFor(
         writer,
         () => ({
@@ -203,10 +203,24 @@ describe.skipIf(!url)("PostgreSQL referral budgets and attribution recovery", ()
       expect((await observer.getAttribution(attributionId))?.state).toBe("indeterminate");
       expect(await observer.listBenefitIntents({ attributionId })).toEqual(intents);
 
-      await service.resolveIndeterminateBenefits({
+      const settlement = {
         ...decision,
         grantRefs: { referrer: "verified-referrer-grant" },
+      };
+      await pool.query(
+        "ALTER TABLE croco_referral_audit ADD CONSTRAINT reject_test_operator_audit CHECK (action <> 'attribution.fulfilled-by-operator')",
+      );
+      await expect(service.resolveIndeterminateBenefits(settlement)).rejects.toMatchObject({
+        code: "referral-drizzle/persistence-failure",
+        cause: { code: "23514" },
       });
+      expect((await observer.getAttribution(attributionId))?.state).toBe("indeterminate");
+      expect(await observer.listBenefitIntents({ attributionId })).toEqual(intents);
+      await pool.query(
+        "ALTER TABLE croco_referral_audit DROP CONSTRAINT reject_test_operator_audit",
+      );
+
+      await service.resolveIndeterminateBenefits(settlement);
       expect((await observer.getAttribution(attributionId))?.state).toBe("fulfilled");
       expect(await observer.listBenefitIntents({ attributionId })).toEqual(
         expect.arrayContaining([
@@ -218,6 +232,11 @@ describe.skipIf(!url)("PostgreSQL referral budgets and attribution recovery", ()
           }),
         ]),
       );
+      const audits = await pool.query(
+        "SELECT action FROM croco_referral_audit WHERE target_id = $1 AND action = 'attribution.fulfilled-by-operator'",
+        [attributionId],
+      );
+      expect(audits.rows).toHaveLength(1);
     });
   });
 
