@@ -36,22 +36,59 @@ function elements(node: Node): Element[] {
     "tagName" in child ? [child, ...elements(child)] : elements(child),
   );
 }
+
+// SVG definitions and metadata have no direct representation in the parsed document.
+const NON_RENDERED_SVG_ELEMENTS = new Set([
+  "clipPath",
+  "defs",
+  "desc",
+  "filter",
+  "linearGradient",
+  "marker",
+  "mask",
+  "metadata",
+  "pattern",
+  "radialGradient",
+  "symbol",
+  "title",
+]);
+
 function hidden(node: Node): boolean {
   return (
     "tagName" in node &&
     (["script", "style", "template"].includes(node.tagName) ||
-      (node.namespaceURI === parse5Html.NS.SVG &&
-        ["title", "desc", "metadata"].includes(node.tagName)) ||
+      (node.namespaceURI === parse5Html.NS.SVG && NON_RENDERED_SVG_ELEMENTS.has(node.tagName)) ||
       (node.namespaceURI === parse5Html.NS.HTML &&
-        node.tagName === "dialog" &&
-        attr(node, "open") === undefined) ||
+        (node.tagName === "dialog"
+          ? attr(node, "open") === undefined
+          : attr(node, "popover") !== undefined)) ||
       attr(node, "hidden") !== undefined ||
       /(?:display\s*:\s*none|visibility\s*:\s*hidden)/i.test(attr(node, "style") ?? ""))
   );
 }
+
+function inspectionChildren(node: Node): readonly Node[] {
+  if (!("childNodes" in node)) return [];
+  if (
+    "tagName" in node &&
+    node.namespaceURI === parse5Html.NS.HTML &&
+    node.tagName === "details" &&
+    attr(node, "open") === undefined
+  ) {
+    const summary = node.childNodes.find(
+      (child) =>
+        "tagName" in child &&
+        child.namespaceURI === parse5Html.NS.HTML &&
+        child.tagName === "summary",
+    );
+    return summary ? [summary] : [];
+  }
+  return node.childNodes;
+}
+
 function visibleElements(node: Node): Element[] {
-  if (hidden(node) || !("childNodes" in node)) return [];
-  return node.childNodes.flatMap((child) =>
+  if (hidden(node)) return [];
+  return inspectionChildren(node).flatMap((child) =>
     hidden(child)
       ? []
       : "tagName" in child
@@ -116,8 +153,8 @@ const HTML_TEXT_BOUNDARIES = new Set([
 
 function text(node: Node): string {
   if ("value" in node) return node.value;
-  if (hidden(node) || !("childNodes" in node)) return "";
-  const children = node.childNodes.map(text).join("");
+  if (hidden(node)) return "";
+  const children = inspectionChildren(node).map(text).join("");
   if (
     "tagName" in node &&
     node.namespaceURI === parse5Html.NS.HTML &&

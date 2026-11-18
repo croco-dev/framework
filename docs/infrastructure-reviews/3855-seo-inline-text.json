@@ -6,7 +6,7 @@
       "classification": "pure-contract",
       "reason": "Initial HTML comparison preserves inline text adjacency and uses structural boundaries for whitespace. The inspector applies this rule to the same parsed response on every host.",
       "files": {
-        "packages/seo-core/src/libs/inspectPublicPage.ts": "fce4d9031b8a9b178a15630ec24ff1e06e0219ae5b29fb0105be004536e908dd"
+        "packages/seo-core/src/libs/inspectPublicPage.ts": "11bdaef6a2fb78c66af15b52c7d17996272940f8583188982a8dee07126953df"
       },
       "catalogRuntimes": [],
       "profiles": {

@@ -212,24 +212,44 @@ describe("Public page contracts", () => {
     const hidden = html.replace(">Delivery</a>", ">Del<div hidden>ignored</div>ivery</a>");
     expect(validate(hidden)).toMatchObject({ state: "ready", diagnostics: [] });
   });
-  it.each(["USD<span>37.50</span>", "USD <span>37</span>.05", "USD 37.<svg><desc>50</desc></svg>"])(
-    "rejects price text %s that does not match the declared facts",
-    (price) => {
-      expect(validate(html.replace(">USD 37.50</p>", `>${price}</p>`))).toMatchObject({
+  it.each([
+    "USD<span>37.50</span>",
+    "USD <span>37</span>.05",
+    "USD 37.<svg><desc>50</desc></svg>",
+    "USD 37.<svg><defs><text>50</text></defs></svg>",
+    "USD 37.<svg><symbol><text>50</text></symbol></svg>",
+  ])("rejects price text %s that does not match the declared facts", (price) => {
+    expect(validate(html.replace(">USD 37.50</p>", `>${price}</p>`))).toMatchObject({
+      state: "partial",
+      diagnostics: [{ code: "SEO_BODY_PRICE_MISMATCH", field: "product.price" }],
+    });
+  });
+  it.each(["dialog", "details"])(
+    "inspects an open %s and excludes its hidden offer when closed",
+    (tag) => {
+      const offer = '<p data-public-price="37.50" data-public-currency="USD">USD 37.50</p>';
+      const summary = tag === "details" ? "<summary>Offer</summary>" : "";
+      const splitOffer = offer.replace("37.50</p>", "37.<span>50</span></p>");
+      const opened = html.replace(offer, `<${tag} open>${summary}${splitOffer}</${tag}>`);
+
+      expect(validate(opened)).toMatchObject({ state: "ready", diagnostics: [] });
+      expect(validate(opened.replace(`<${tag} open>`, `<${tag}>`))).toMatchObject({
         state: "partial",
         diagnostics: [{ code: "SEO_BODY_PRICE_MISMATCH", field: "product.price" }],
       });
     },
   );
-  it("inspects offer text in an open dialog and excludes the same offer when closed", () => {
-    const offer = '<p data-public-price="37.50" data-public-currency="USD">USD 37.50</p>';
-    const dialog = html.replace(
-      offer,
-      `<dialog open>${offer.replace("37.50</p>", "37.<span>50</span></p>")}</dialog>`,
+  it("uses the visible summary of closed details for body text and link checks", () => {
+    const visibleSummary = html.replace(
+      '<a href="/delivery">Delivery</a>',
+      '<details><summary><a href="/delivery">Del<span>ivery</span></a></summary><p>More</p></details>',
     );
-
-    expect(validate(dialog)).toMatchObject({ state: "ready", diagnostics: [] });
-    expect(validate(dialog.replace("<dialog open>", "<dialog>"))).toMatchObject({
+    expect(validate(visibleSummary)).toMatchObject({ state: "ready", diagnostics: [] });
+  });
+  it("excludes offer text from an initially hidden popover", () => {
+    const price = html.replace(">USD 37.50</p>", ">USD 37.<span>50</span></p>");
+    const popover = price.replace("<p data-public-price=", "<p popover data-public-price=");
+    expect(validate(popover)).toMatchObject({
       state: "partial",
       diagnostics: [{ code: "SEO_BODY_PRICE_MISMATCH", field: "product.price" }],
     });
