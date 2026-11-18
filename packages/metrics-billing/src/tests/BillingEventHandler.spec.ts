@@ -1,5 +1,6 @@
 import type { BillingStore, Plan, PlanRegistry, PlanVersionDefinition } from "@croco/billing-core";
 import {
+  InMemoryBillingStore,
   OrderPaidEvent,
   planVersionRef,
   PlanChangedEvent,
@@ -674,47 +675,90 @@ describe("BillingEventHandler", () => {
       },
     );
 
-    it("uses the exact version references carried by a version-aware event", async () => {
-      const basicVersion = asPlanVersion({
-        id: "plan-basic",
-        name: "Basic Plan",
-        amount: 900,
-        currency: "USD",
-        interval: "month",
-        intervalCount: 1,
-      });
-      const event = new PlanChangedEvent(
-        "tenant-1",
-        "plan-basic",
-        "plan-pro",
-        "sub-stripe",
-        basicVersion.ref,
-        mockSubscription.planVersionRef,
-      );
+    it.each([
+      { state: "deleted", previousAmount: 900, newAmount: 2900, movement: "expansion", net: 2000 },
+      {
+        state: "repriced",
+        previousAmount: 2900,
+        newAmount: 900,
+        movement: "contraction",
+        net: -2000,
+      },
+    ] as const)(
+      "records delayed $movement once when the current subscription is $state",
+      async ({ state, previousAmount, newAmount, movement, net }) => {
+        const store = new InMemoryBillingStore();
+        const previousVersion = asPlanVersion({
+          ...mockPlan,
+          id: "plan-previous",
+          amount: previousAmount,
+        });
+        const newVersion = asPlanVersion({ ...mockPlan, amount: newAmount });
+        const currentVersion = {
+          ...newVersion,
+          ref: planVersionRef("plan-pro@v2"),
+          versionId: "v2",
+          amount: 10900,
+        };
+        const versions = [previousVersion, newVersion, currentVersion];
+        vi.mocked(planRegistry.getPlanVersion).mockImplementation(
+          async (ref) => versions.find((version) => version.ref === ref) ?? null,
+        );
+        const serializer = new DefaultEventSerializer(
+          new EventRegistry().register(PlanChangedEvent),
+        );
+        const consumer = new BillingEventHandler(planRegistry, store, metricsRepository);
 
-      vi.mocked(billingStore.findAccountByTenantId).mockResolvedValue(mockAccount);
-      vi.mocked(billingStore.findSubscriptionByExternalId).mockResolvedValue(mockSubscription);
-      vi.mocked(planRegistry.getPlanVersion).mockImplementation((ref) => {
-        if (ref === basicVersion.ref) return Promise.resolve(basicVersion);
-        if (ref === mockSubscription.planVersionRef) {
-          return Promise.resolve(asPlanVersion(mockPlan));
+        await store.saveAccount(mockAccount);
+        await store.saveSubscription(mockSubscription);
+        vi.useFakeTimers({ toFake: ["Date"] });
+        try {
+          const occurredAt = new Date("2026-09-01T12:00:00Z");
+          vi.setSystemTime(occurredAt);
+          const event = createPlanChangedEvent(previousVersion.planId, newVersion.planId);
+          const saved = JSON.parse(JSON.stringify(serializer.serialize(event)));
+
+          vi.setSystemTime(new Date("2026-09-02T12:00:00Z"));
+          if (state === "deleted") {
+            await store.deleteSubscription(mockSubscription.billingAccountId);
+          } else {
+            await store.saveSubscription({
+              ...mockSubscription,
+              planVersionRef: currentVersion.ref,
+            });
+          }
+
+          await consumer.handle(serializer.deserialize<PlanChangedEvent>(saved));
+          await consumer.handle(serializer.deserialize<PlanChangedEvent>(saved));
+
+          expect(recordedMovements).toHaveLength(1);
+          expect(recordedMovements[0]).toMatchObject({
+            [movement]: { amount: 2000, currency: "USD" },
+            net: { amount: net, currency: "USD" },
+          });
+          expect(metricsRepository.recordMRRMovement).toHaveBeenCalledWith(
+            mockAccount.tenantId,
+            expect.any(Object),
+            occurredAt,
+            primaryEventKey(event),
+            [],
+            [legacyTimestampEventKey(event)],
+          );
+        } finally {
+          vi.useRealTimers();
         }
-        return Promise.resolve(null);
+      },
+    );
+
+    it("rejects a plan change for a missing billing account", async () => {
+      const event = createPlanChangedEvent("plan-basic", "plan-pro");
+      vi.mocked(billingStore.findAccountByTenantId).mockResolvedValue(null);
+
+      await expect(handler.handle(event)).rejects.toMatchObject({
+        code: "metrics-billing/metric-dropped",
+        extensions: { reason: "account_not_found", resourceId: event.tenantId },
       });
-
-      await handler.handle(event);
-
-      expect(planRegistry.getPlan).not.toHaveBeenCalled();
-      expect(metricsRepository.recordMRRMovement).toHaveBeenCalledWith(
-        "tenant-1",
-        expect.objectContaining({
-          expansion: { amount: 2000, currency: "USD" },
-        }),
-        event.timestamp,
-        primaryEventKey(event),
-        [],
-        [legacyTimestampEventKey(event)],
-      );
+      expect(metricsRepository.recordMRRMovement).not.toHaveBeenCalled();
     });
 
     it("should record expansion MRR when upgrading plan", async () => {
