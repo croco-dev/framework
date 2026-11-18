@@ -367,6 +367,76 @@ describe.skipIf(!url)("PostgreSQL referral budgets and attribution recovery", ()
     });
   });
 
+  it("preserves Unicode cursor order through the recovery index upgrade and rollback", async () => {
+    await withStores(async (pool, store) => {
+      const service = serviceFor(store);
+      const { token } = await seed(service);
+      const { attribution } = await service.claimAttribution({
+        token,
+        recipient: subject("recipient"),
+        attributionId: "seed",
+      });
+      await pool.query(`
+        INSERT INTO croco_referral_attributions
+          (attribution_id, link_id, fingerprint, program_id, program_version, family_id,
+           benefit_cycle_id, scope, referrer, document, state, claimed_at, expires_at)
+        SELECT id, link_id, fingerprint, program_id, program_version, family_id, benefit_cycle_id,
+          scope, referrer, document, state, claimed_at, expires_at
+        FROM croco_referral_attributions
+        CROSS JOIN (
+          SELECT 'candidate-' || lpad(n::text, 5, '0') AS id FROM generate_series(1, 10000) AS n
+          UNION ALL SELECT unnest(ARRAY['unicode-é', 'unicode-€'])
+        ) AS ids
+        WHERE attribution_id = 'seed'
+      `);
+      await pool.query("ANALYZE croco_referral_attributions");
+      const encoding = await pool.query("SHOW server_encoding");
+      const filter = { scope: attribution.scope, after: "candidate-09999", limit: 3 };
+      const before = await store.listAttributionsPage(filter);
+      expect(before.attributions.map(({ id }) => id)).toEqual([
+        "candidate-10000",
+        "seed",
+        "unicode-é",
+      ]);
+      expect(before.nextCursor).toBe("unicode-é");
+
+      await pool.query(
+        readFileSync(
+          new URL("../../migrations/0002_referral_recovery_order.up.sql", import.meta.url),
+          "utf8",
+        ),
+      );
+      let plan = "";
+      const indexedStore = new PostgresReferralStore({
+        ...database(pool),
+        execute: async (statement) => {
+          const { sql: query, params } = dialect.sqlToQuery(statement);
+          const explain = await pool.query(`EXPLAIN (ANALYZE, TIMING OFF) ${query}`, params);
+          plan = explain.rows.map((row) => row["QUERY PLAN"]).join("\n");
+          return pool.query(query, params);
+        },
+      });
+      expect(await indexedStore.listAttributionsPage(filter)).toEqual(before);
+      if (encoding.rows[0]?.server_encoding === "UTF8") {
+        expect(plan).toContain("Index Scan using croco_referral_attributions_recovery_order");
+        expect(plan).toMatch(/Index Cond:.*attribution_id.* > /);
+      }
+      const finalPage = await indexedStore.listAttributionsPage({
+        after: before.nextCursor ?? undefined,
+      });
+      expect(finalPage.attributions.map(({ id }) => id)).toEqual(["unicode-€"]);
+      expect(finalPage.nextCursor).toBeNull();
+
+      await pool.query(
+        readFileSync(
+          new URL("../../migrations/0002_referral_recovery_order.down.sql", import.meta.url),
+          "utf8",
+        ),
+      );
+      expect(await store.listAttributionsPage(filter)).toEqual(before);
+    });
+  });
+
   it.each(["in-memory", "postgres"] as const)(
     "reads current attribution data and continues by storage identity on the %s store",
     async (provider) => {

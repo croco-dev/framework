@@ -60,9 +60,9 @@
     {
       "package": "referral-drizzle",
       "classification": "durable-provider",
-      "reason": "Read a bounded recovery page from the existing PostgreSQL attribution table using an exclusive ID boundary.",
+      "reason": "Read bounded PostgreSQL recovery pages behind an exclusive ID boundary and use an ordered index on UTF-8 databases.",
       "files": {
-        "packages/referral-drizzle/src/libs/PostgresReferralStore.ts": "891c6a366e1002760b6d469b3c9dfd58b13615d9f0a23864f72a5d053b6166f6"
+        "packages/referral-drizzle/src/libs/PostgresReferralStore.ts": "ad638c64d5611bc80db54b2ba7273b72ccfcc104331fcdf12e7a743cb7c87c54"
       },
       "catalogRuntimes": ["node", "lambda"],
       "profiles": {
@@ -71,12 +71,14 @@
           "reason": "The existing Node PostgreSQL provider runs the same read query. Local PostgreSQL conformance is separate from a Kubernetes deployment.",
           "providers": ["@croco/referral-drizzle"],
           "constraints": [
-            "Requires the existing referral schema and a Node PostgreSQL connection pool."
+            "Requires the existing referral schema and a Node PostgreSQL connection pool.",
+            "The host applies the optional order index through its migration owner. The index accelerates UTF-8 pages, and its build blocks attribution table writes."
           ],
           "references": [
             "packages/referral-drizzle/src/libs/PostgresReferralStore.ts",
             "packages/referral-core/src/libs/ReferralStore.ts",
-            "packages/referral-drizzle/src/tests/PostgresReferralStore.postgres.spec.ts"
+            "packages/referral-drizzle/src/tests/PostgresReferralStore.postgres.spec.ts",
+            "packages/referral-drizzle/migrations/0002_referral_recovery_order.up.sql"
           ]
         },
         "aws-lambda": {
@@ -84,12 +86,14 @@
           "reason": "Use the existing Node-compatible PostgreSQL provider with an application-owned connection.",
           "providers": ["@croco/referral-drizzle"],
           "constraints": [
-            "Supply the existing referral schema and a bounded pool. Await the page query before returning the invocation."
+            "Supply the existing referral schema and a bounded pool. Await the page query before returning the invocation.",
+            "The host applies the optional order index through its migration owner. The index accelerates UTF-8 pages, and its build blocks attribution table writes."
           ],
           "references": [
             "packages/referral-drizzle/src/libs/PostgresReferralStore.ts",
             "packages/referral-core/src/libs/ReferralStore.ts",
-            "packages/referral-drizzle/src/tests/PostgresReferralStore.postgres.spec.ts"
+            "packages/referral-drizzle/src/tests/PostgresReferralStore.postgres.spec.ts",
+            "packages/referral-drizzle/migrations/0002_referral_recovery_order.up.sql"
           ]
         },
         "cloudflare": {

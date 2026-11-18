@@ -1,0 +1,1 @@
+DROP INDEX croco_referral_attributions_recovery_order;

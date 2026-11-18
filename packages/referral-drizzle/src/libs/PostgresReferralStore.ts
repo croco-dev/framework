@@ -452,14 +452,8 @@ async function listAttributionsWith(
           AND (document->'referrer') @> ${scopeJson}::jsonb
           AND (document->>'recipient' IS NULL OR (document->'recipient') @> ${scopeJson}::jsonb)`
       : sql.empty();
-  const after = page?.after;
-  const attributionKey = sql`convert_to(attribution_id, 'UTF8')`;
-  const cursorClause =
-    after === undefined ? sql.empty() : sql`AND ${attributionKey} > convert_to(${after}, 'UTF8')`;
-  const order = page ? attributionKey : sql`created_at, attribution_id`;
-  const selection = page ? sql`attribution_id, document` : sql`document`;
-  const result = await executor.execute(sql`
-    SELECT ${selection} FROM croco_referral_attributions
+  const matchingAttributions = sql`
+    FROM croco_referral_attributions
     WHERE (${programId}::text IS NULL OR ${fields.program} = ${programId})
       AND (${familyId}::text IS NULL OR ${fields.family} = ${familyId})
       AND (${cycleId}::text IS NULL OR ${fields.cycle} = ${cycleId})
@@ -467,13 +461,37 @@ async function listAttributionsWith(
       AND (${referrerJson}::jsonb IS NULL OR ${fields.referrer} ${subjectMatchOperator} ${referrerJson}::jsonb)
       AND (${recipientJson}::jsonb IS NULL OR ${fields.recipient} ${subjectMatchOperator} ${recipientJson}::jsonb)
       ${scopeClause}
-      ${cursorClause}
-    ORDER BY ${order}
-    LIMIT ${limit}
+  `;
+  if (!page) {
+    const result = await executor.execute(sql`
+      SELECT document ${matchingAttributions}
+      ORDER BY created_at, attribution_id LIMIT ${limit}
+    `);
+    return result.rows.map(({ document }) => reviveAttribution(document));
+  }
+
+  const indexKey = sql`attribution_id COLLATE pg_catalog."C"`;
+  const utf8Key = sql`pg_catalog.convert_to(attribution_id, 'UTF8')`;
+  const indexedBoundary =
+    page.after === undefined ? sql.empty() : sql`AND ${indexKey} > ${page.after}::text`;
+  const convertedBoundary =
+    page.after === undefined
+      ? sql.empty()
+      : sql`AND ${utf8Key} > pg_catalog.convert_to(${page.after}, 'UTF8')`;
+  // Only one branch reads rows. The outer sort preserves the shared order over the bounded page.
+  const result = await executor.execute(sql`
+    SELECT attribution_id, document FROM (
+      (SELECT attribution_id, document ${matchingAttributions}
+        AND pg_catalog.getdatabaseencoding() = 'UTF8' ${indexedBoundary}
+        ORDER BY ${indexKey} LIMIT ${limit})
+      UNION ALL
+      (SELECT attribution_id, document ${matchingAttributions}
+        AND pg_catalog.getdatabaseencoding() <> 'UTF8' ${convertedBoundary}
+        ORDER BY ${utf8Key} LIMIT ${limit})
+    ) AS attribution_page
+    ORDER BY ${utf8Key}
   `);
-  return page
-    ? result.rows.map(reviveAttributionWithKey)
-    : result.rows.map(({ document }) => reviveAttribution(document));
+  return result.rows.map(reviveAttributionWithKey);
 }
 
 async function listBenefitIntentsWith(
