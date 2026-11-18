@@ -17,7 +17,7 @@ title: "ExperimentConditionalAggregate"
 
 ### estimate
 
-> `readonly` **estimate**: `number`
+> `readonly` **estimate**: `number` \| `null`
 
 ---
 

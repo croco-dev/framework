@@ -49,7 +49,7 @@ export type ExperimentReviewVariantView = {
   readonly assigned: number;
   readonly exposed: number;
   readonly n: number;
-  readonly estimate: number;
+  readonly estimate: number | null;
   readonly availability: "complete" | "partial";
   readonly funnel: {
     readonly assigned: number;
@@ -63,7 +63,7 @@ export type ExperimentReviewConditionalView = {
   readonly variantId: string;
   readonly exposed: number;
   readonly nExposed: number;
-  readonly estimate: number;
+  readonly estimate: number | null;
   readonly availability: "complete" | "partial";
 };
 
@@ -84,7 +84,7 @@ export type ExperimentReviewSliceCellView = {
   readonly attributeValue: string;
   readonly assigned: number;
   readonly n: number;
-  readonly estimate: number;
+  readonly estimate: number | null;
 };
 
 export type ExperimentReviewSliceView = {
@@ -407,7 +407,7 @@ function summarizeIntoReadyState(
       assigned: aggregate?.assigned ?? 0,
       exposed: aggregate?.exposed ?? 0,
       n: aggregate?.n ?? 0,
-      estimate: aggregate?.estimate ?? 0,
+      estimate: aggregate?.estimate ?? null,
       availability: aggregate?.availability ?? "complete",
       funnel: { ...funnel },
     } satisfies ExperimentReviewVariantView;
@@ -418,7 +418,7 @@ function summarizeIntoReadyState(
       variantId: variant.id,
       exposed: aggregate?.exposed ?? 0,
       nExposed: aggregate?.nExposed ?? 0,
-      estimate: aggregate?.estimate ?? 0,
+      estimate: aggregate?.estimate ?? null,
       availability: aggregate?.availability ?? "complete",
     } satisfies ExperimentReviewConditionalView;
   });

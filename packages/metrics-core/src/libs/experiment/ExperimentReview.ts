@@ -112,7 +112,7 @@ export type ExperimentVariantAggregate = {
   readonly assigned: number;
   readonly exposed: number;
   readonly n: number;
-  readonly estimate: number;
+  readonly estimate: number | null;
   readonly method: string;
   readonly observedWindow: { readonly from: string; readonly to: string };
   readonly availability: "complete" | "partial";
@@ -134,7 +134,7 @@ export type ExperimentConditionalAggregate = {
   readonly variantId: string;
   readonly exposed: number;
   readonly nExposed: number;
-  readonly estimate: number;
+  readonly estimate: number | null;
   readonly availability: "complete" | "partial";
 };
 
@@ -144,7 +144,7 @@ export type ExperimentSliceCell = {
   readonly attributeValue: string;
   readonly assigned: number;
   readonly n: number;
-  readonly estimate: number;
+  readonly estimate: number | null;
 };
 
 export type ExperimentSliceResult = {
@@ -592,6 +592,15 @@ function resolveOutcome(
   return { included: false, value: 0, imputed: false };
 }
 
+function estimateOutcome(
+  numerator: number,
+  denominator: number,
+  outcomeKind: ExperimentOutcomeKind,
+): number | null {
+  if (denominator > 0) return numerator / denominator;
+  return outcomeKind === "mean" ? null : 0;
+}
+
 function serializeAttributeValue(value: string | number | boolean | null | undefined): string {
   if (value === null || value === undefined) return MISSING_ATTRIBUTE_BUCKET;
   const text = String(value);
@@ -681,7 +690,7 @@ export function summarizeExperiment(input: ExperimentReviewInput): ExperimentRev
       }
     }
     let n: number;
-    let estimate: number;
+    let estimate: number | null;
     if (isCluster) {
       // Cluster randomization: each cluster mean counts once; members never inflate n.
       const byCluster = new Map<string, ExperimentAssignment[]>();
@@ -709,14 +718,15 @@ export function summarizeExperiment(input: ExperimentReviewInput): ExperimentRev
         if (clusterCount > 0) clusterMeans.push(clusterSum / clusterCount);
       }
       n = byCluster.size;
-      estimate =
-        clusterMeans.length === 0
-          ? 0
-          : clusterMeans.reduce((sum, value) => sum + value, 0) / clusterMeans.length;
+      estimate = estimateOutcome(
+        clusterMeans.reduce((sum, value) => sum + value, 0),
+        clusterMeans.length,
+        plan.outcomeKind,
+      );
       actualCounts[variant.id] = byCluster.size;
     } else {
       n = assigned.length;
-      estimate = denominator === 0 ? 0 : numerator / denominator;
+      estimate = estimateOutcome(numerator, denominator, plan.outcomeKind);
       actualCounts[variant.id] = assigned.length;
     }
     const funnelCounts: ExperimentFunnelCounts = {
@@ -741,7 +751,7 @@ export function summarizeExperiment(input: ExperimentReviewInput): ExperimentRev
       variantId: variant.id,
       exposed,
       nExposed: exposed,
-      estimate: conditionalDenominator === 0 ? 0 : conditionalNumerator / conditionalDenominator,
+      estimate: estimateOutcome(conditionalNumerator, conditionalDenominator, plan.outcomeKind),
       availability,
     };
   }
@@ -778,7 +788,7 @@ export function summarizeExperiment(input: ExperimentReviewInput): ExperimentRev
           attributeValue: valueKey,
           assigned: members.length,
           n: members.length,
-          estimate: cellDenominator === 0 ? 0 : cellNumerator / cellDenominator,
+          estimate: estimateOutcome(cellNumerator, cellDenominator, plan.outcomeKind),
         };
       }
     }
@@ -786,6 +796,7 @@ export function summarizeExperiment(input: ExperimentReviewInput): ExperimentRev
   }
 
   const srm = checkSampleRatioMismatch(plan, actualCounts);
+  const missingPrimaryMean = Object.values(primary).some(({ estimate }) => estimate === null);
   const quality: QualityCheck[] = [
     {
       kind: "denominator",
@@ -820,14 +831,16 @@ export function summarizeExperiment(input: ExperimentReviewInput): ExperimentRev
           },
     {
       kind: "coverage",
-      result: availability === "complete" ? "pass_signal" : "warning",
+      result: availability === "complete" && !missingPrimaryMean ? "pass_signal" : "warning",
       evidence:
         availability === "complete"
           ? plan.outcomeKind === "binary"
             ? `Observation coverage is complete through the planned window; ${totalImputed} complete binary missing/null outcome(s) imputed as 0`
-            : "Observation coverage is complete through the planned window; mean-outcome nulls stay distinct from zero"
+            : missingPrimaryMean
+              ? "Coverage is complete through the planned window, but one or more variants have no usable mean outcomes"
+              : "Observation coverage is complete through the planned window; mean-outcome nulls stay distinct from zero"
           : "Observation coverage is partial; null and incomplete outcomes stay distinct from zero",
-      limitations: "Only complete coverage permits interpreting absent outcomes as zero",
+      limitations: "Only complete binary coverage permits interpreting absent outcomes as zero",
     },
   ];
 

@@ -29,7 +29,7 @@ title: "ExperimentReviewSliceCellView"
 
 ### estimate
 
-> `readonly` **estimate**: `number`
+> `readonly` **estimate**: `number` \| `null`
 
 ---
 

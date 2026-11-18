@@ -29,7 +29,7 @@ title: "ExperimentSliceCell"
 
 ### estimate
 
-> `readonly` **estimate**: `number`
+> `readonly` **estimate**: `number` \| `null`
 
 ---
 

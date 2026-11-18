@@ -1,0 +1,128 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "metrics-core",
+      "classification": "pure-contract",
+      "reason": "Compute local means and describe collection coverage from in-memory observations.",
+      "files": {
+        "packages/metrics-core/src/libs/experiment/ExperimentReview.ts": "a9ef7acfc72e2d545c5e10cb988e3386785f2525a7002373aac2dcbd1179e349"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Compute local means and describe collection coverage from in-memory observations. This change requires no host APIs, provider storage, or lifecycle integration.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/metrics-core/src/libs/experiment/ExperimentReview.ts",
+            "packages/metrics-core/src/tests/ExperimentReview.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Compute local means and describe collection coverage from in-memory observations. This change requires no host APIs, provider storage, or lifecycle integration.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/metrics-core/src/libs/experiment/ExperimentReview.ts",
+            "packages/metrics-core/src/tests/ExperimentReview.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Compute local means and describe collection coverage from in-memory observations. This change requires no host APIs, provider storage, or lifecycle integration.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/metrics-core/src/libs/experiment/ExperimentReview.ts",
+            "packages/metrics-core/src/tests/ExperimentReview.spec.ts"
+          ]
+        }
+      }
+    },
+    {
+      "package": "admin-core",
+      "classification": "pure-contract",
+      "reason": "Preserve undefined means in the console snapshot mapping.",
+      "files": {
+        "packages/admin-core/src/libs/ExperimentReviewConsole.ts": "2e68c9693e7c267eb66bb8d3c8ce5032f0d95c790ada8902a5d4988de2c79213"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Preserve undefined means in the console snapshot mapping. This change requires no host APIs, provider storage, or lifecycle integration.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/admin-core/src/libs/ExperimentReviewConsole.ts",
+            "packages/admin-core/src/tests/ExperimentReviewConsole.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Preserve undefined means in the console snapshot mapping. This change requires no host APIs, provider storage, or lifecycle integration.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/admin-core/src/libs/ExperimentReviewConsole.ts",
+            "packages/admin-core/src/tests/ExperimentReviewConsole.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Preserve undefined means in the console snapshot mapping. This change requires no host APIs, provider storage, or lifecycle integration.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/admin-core/src/libs/ExperimentReviewConsole.ts",
+            "packages/admin-core/src/tests/ExperimentReviewConsole.spec.ts"
+          ]
+        }
+      }
+    },
+    {
+      "package": "admin-react",
+      "classification": "protocol-render",
+      "reason": "Present unavailable means in the existing React console.",
+      "files": {
+        "packages/admin-react/src/libs/ExperimentReviewConsole.ts": "6602d8fd85b7aec889246d66d251cb084d90dd1465f810530b9c992796dae89b"
+      },
+      "catalogRuntimes": ["browser", "node"],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Present unavailable means in the existing React console. This change requires no host APIs, provider storage, or lifecycle integration.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/admin-react/src/libs/ExperimentReviewConsole.ts",
+            "packages/admin-react/src/tests/ExperimentReviewConsole.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Present unavailable means in the existing React console. This change requires no host APIs, provider storage, or lifecycle integration.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/admin-react/src/libs/ExperimentReviewConsole.ts",
+            "packages/admin-react/src/tests/ExperimentReviewConsole.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Present unavailable means in the existing React console. This change requires no host APIs, provider storage, or lifecycle integration.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/admin-react/src/libs/ExperimentReviewConsole.ts",
+            "packages/admin-react/src/tests/ExperimentReviewConsole.spec.ts"
+          ]
+        }
+      }
+    }
+  ]
+}

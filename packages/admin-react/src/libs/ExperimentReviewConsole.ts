@@ -190,7 +190,7 @@ function createReadyReview({
                 onClick: () => onSelectVariant?.(variant.variantId),
                 type: "button",
               },
-              `${variant.variantId} · n=${variant.n} · estimate ${variant.estimate}`,
+              `${variant.variantId} · n=${variant.n} · estimate ${variant.estimate ?? "unavailable"}`,
             ),
             createElement(
               "span",
@@ -213,7 +213,7 @@ function createReadyReview({
           createElement(
             "li",
             { "data-conditional-variant": row.variantId, key: row.variantId },
-            `${row.variantId} · exposed ${row.exposed} · nExposed ${row.nExposed} · estimate ${row.estimate}`,
+            `${row.variantId} · exposed ${row.exposed} · nExposed ${row.nExposed} · estimate ${row.estimate ?? "unavailable"}`,
           ),
         ),
       ),
@@ -230,7 +230,7 @@ function createReadyReview({
               createElement(
                 "li",
                 { key: `${cell.variantId}::${cell.attributeValue}` },
-                `${cell.variantId} · ${cell.attributeValue} · assigned ${cell.assigned} · n=${cell.n} · estimate ${cell.estimate}`,
+                `${cell.variantId} · ${cell.attributeValue} · assigned ${cell.assigned} · n=${cell.n} · estimate ${cell.estimate ?? "unavailable"}`,
               ),
             ),
           ),
