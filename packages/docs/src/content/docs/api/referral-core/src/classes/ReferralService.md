@@ -314,8 +314,9 @@ Lists pending attributions so restarts can resume qualification and benefits.
 > **resolveIndeterminateBenefits**(`input`): `Promise`\<[`ReferralAttribution`](/api/referral-core/src/type-aliases/referralattribution/)\>
 
 Operator adjustment for indeterminate attributions: explicitly complete
-with a verified grant reference per side, or reject and release the locked
-budget. Every decision preserves actor, reason, and an audit trail.
+with a verified grant reference for each unknown or granting intent, or
+reject and release the locked budget. Every decision preserves actor,
+reason, and an audit trail.
 
 #### Parameters
 

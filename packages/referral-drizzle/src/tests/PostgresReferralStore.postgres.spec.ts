@@ -124,9 +124,19 @@ function serviceFor(
 async function seed(
   service: ReferralService,
   perSubjectLimit = 10,
-  identity: { programId?: string; version?: number; familyId?: string } = {},
+  options: {
+    programId?: string;
+    version?: number;
+    familyId?: string;
+    noRecipientBenefit?: boolean;
+  } = {},
 ): Promise<{ programId: string; token: string }> {
-  const { programId = `referral-${randomUUID()}`, version = 1, familyId } = identity;
+  const {
+    programId = `referral-${randomUUID()}`,
+    version = 1,
+    familyId,
+    noRecipientBenefit,
+  } = options;
   await service.registerProgram({
     id: programId,
     version,
@@ -135,7 +145,9 @@ async function seed(
     conversionWindowMs: 86400000,
     qualifyingAction: "purchase",
     referrerBenefit: { kind: "trial-credits", creditAmount: "7" },
-    recipientBenefit: { kind: "trial-credits", creditAmount: "3" },
+    recipientBenefit: noRecipientBenefit
+      ? { kind: "none" }
+      : { kind: "trial-credits", creditAmount: "3" },
     startsAt: new Date("2026-01-01T00:00:00Z"),
     endsAt: new Date("2026-12-31T00:00:00Z"),
     perSubjectLimit,
@@ -154,6 +166,61 @@ async function seed(
 }
 
 describe.skipIf(!url)("PostgreSQL referral budgets and attribution recovery", () => {
+  it("persists operator settlement with only the uncertain side's receipt", async () => {
+    await withStores(async (_pool, writer, observer) => {
+      const service = serviceFor(
+        writer,
+        () => ({
+          qualified: true,
+          sourceEventId: "purchase",
+          qualifyingAction: "purchase",
+          eligibleReason: "paid",
+        }),
+        {
+          fulfill: async () => ({ outcome: "unknown", reason: "response lost" }),
+          check: async () => null,
+        },
+      );
+      const { token } = await seed(service, 10, { noRecipientBenefit: true });
+      const recipient = subject("recipient");
+      const { attribution } = await service.claimAttribution({ token, recipient });
+      const attributionId = attribution.id;
+      await service.qualifyAttribution({ attributionId, recipient });
+      expect((await service.fulfillBenefits({ attributionId })).state).toBe("indeterminate");
+      const intents = await observer.listBenefitIntents({ attributionId });
+      const skipped = intents.find((intent) => intent.side === "recipient");
+      expect(skipped?.status).toBe("skipped");
+      const decision = {
+        attributionId,
+        decision: "fulfilled" as const,
+        actorId: "operator",
+        reason: "verified ledger receipt",
+      };
+
+      await expect(service.resolveIndeterminateBenefits(decision)).rejects.toMatchObject({
+        code: "referral-core/program-invalid",
+      });
+      expect((await observer.getAttribution(attributionId))?.state).toBe("indeterminate");
+      expect(await observer.listBenefitIntents({ attributionId })).toEqual(intents);
+
+      await service.resolveIndeterminateBenefits({
+        ...decision,
+        grantRefs: { referrer: "verified-referrer-grant" },
+      });
+      expect((await observer.getAttribution(attributionId))?.state).toBe("fulfilled");
+      expect(await observer.listBenefitIntents({ attributionId })).toEqual(
+        expect.arrayContaining([
+          skipped,
+          expect.objectContaining({
+            side: "referrer",
+            status: "granted",
+            receipt: "verified-referrer-grant",
+          }),
+        ]),
+      );
+    });
+  });
+
   it.each(["in-memory", "postgres"] as const)(
     "keeps confirmed funnel stages during payout recovery on the %s store",
     async (provider) => {
