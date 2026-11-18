@@ -1,7 +1,7 @@
 diff --git a/lib/parse.js b/lib/parse.js
 --- a/lib/parse.js
 +++ b/lib/parse.js
-@@ -315,4 +315,462 @@
+@@ -315,4 +315,315 @@
 
    return { risky: false };
 +};
@@ -15,7 +15,6 @@ diff --git a/lib/parse.js b/lib/parse.js
 +
 +const LITERAL_SOURCE = /^(?:[^\\^$.*+?()[\]{}|]|\\[^a-zA-Z0-9])+/;
 +const CLASS_SOURCE = /^\[(?:[^\\\]]|\\.)+\]/;
-+const BRACKET_SOURCE = /^\((?:\?:)?((?:[^\\^$.*+?()[\]{}|]|\\[^a-zA-Z0-9])+)\|(\[(?:[^\\\]]|\\.)+\])\)/;
 +
 +// What a token emits. Some paths append to the output without updating the
 +// token (quoted text; text merged into earlier text in 2.x), so those keep the
@@ -52,20 +51,17 @@ diff --git a/lib/parse.js b/lib/parse.js
 + * repeat.
 + */
 +
-+const hasRepeatedWildcard = bodyTokens => {
-+  const stack = [];
++const hasRepeatedWildcard = (tokens, start) => {
++  for (let i = tokens.length - 1; i >= start; i--) {
++    const token = tokens[i];
 +
-+  for (const token of bodyTokens) {
-+    if (token.type === 'paren') {
-+      if (token.value === '(') {
-+        stack.push(token.prev && token.prev.type === 'negate' ? 'negate' : 'group');
-+      } else if (token.value === ')') {
-+        stack.pop();
-+      }
++    // Closed extglobs already summarized their body. Skip their descendants.
++    if (token.groupOpen !== undefined && token.groupOpen >= start && token.groupOpen < i) {
++      if (token.wild) return true;
++      i = token.groupOpen;
 +      continue;
 +    }
 +
-+    if (stack.includes('negate')) continue;
 +    if (token.wildcard === true || token.type === 'negate') return true;
 +    if ((token.type === 'star' || token.type === 'globstar') && tokenSource(token) !== '') {
 +      return true;
@@ -105,120 +101,6 @@ diff --git a/lib/parse.js b/lib/parse.js
 +};
 +
 +/**
-+ * True when the token at `index` closes a group (`(...)`, `@(...)`, an extglob
-+ * or a brace) whose body holds a wildcard, so a regex quantifier after it
-+ * would nest the wildcard in a repeat. Results are kept on the closing token,
-+ * and walks skip groups already measured, so a pattern costs linear time.
-+ */
-+
-+const groupHasWildcard = (tokens, index) => {
-+  const close = tokens[index];
-+
-+  if (!close || (close.type !== 'paren' && close.type !== 'brace')) return false;
-+  if (close.wild !== undefined) return close.wild;
-+  if (close.value !== ')' && close.value !== '}') return false;
-+
-+  let depth = 1;
-+  let wild = false;
-+  let i = index - 1;
-+
-+  for (; i >= 0 && depth > 0; i--) {
-+    const token = tokens[i];
-+
-+    // A closing token that already found no opening cannot get one now.
-+    if (token.unmatched === true) break;
-+
-+    if (token.groupOpen !== undefined && token.groupOpen < i && tokens[token.groupOpen] !== undefined) {
-+      wild = wild || token.wild === true;
-+      i = token.groupOpen;
-+      continue;
-+    }
-+
-+    if (token.type === 'paren' || token.type === 'brace') {
-+      if (token.value === ')' || token.value === '}') depth++;
-+      if (token.value === '(' || token.value === '{') depth--;
-+      continue;
-+    }
-+
-+    if (token.wildcard === true || token.type === 'negate') wild = true;
-+    if ((token.type === 'star' || token.type === 'globstar') && tokenSource(token) !== '') wild = true;
-+  }
-+
-+  // A group whose opening was popped (brace ranges) is not ours to judge; the
-+  // final check in `parse` still applies.
-+  if (depth !== 0) {
-+    close.unmatched = true;
-+    return false;
-+  }
-+
-+  close.groupOpen = i + 1;
-+  close.wild = wild;
-+  return wild;
-+};
-+
-+/**
-+ * Read a group of alternatives without stars, like `(js|ts)` from a brace or
-+ * `@(js|ts)`, optionally followed by `?`, as one fixed piece. The absorption
-+ * argument in `flattenRepeatedWildcard` only needs a piece to match no
-+ * character a star cannot, not a fixed width.
-+ */
-+
-+const readFixedGroup = (source, flags) => {
-+  const open = /^\((?:\?:)?/.exec(source);
-+  if (!open || source[open[0].length] === '?') return;
-+
-+  const alternatives = [''];
-+  let inClass = false;
-+  let i = open[0].length;
-+
-+  for (; i < source.length; i++) {
-+    const ch = source[i];
-+
-+    if (ch === '\\') {
-+      alternatives[alternatives.length - 1] += ch + (source[i + 1] || '');
-+      i++;
-+      continue;
-+    }
-+
-+    if (inClass === true) {
-+      if (ch === ']') inClass = false;
-+    } else if (ch === '[') {
-+      inClass = true;
-+    } else if (ch === '(') {
-+      return;
-+    } else if (ch === ')') {
-+      break;
-+    } else if (ch === '|') {
-+      alternatives.push('');
-+      continue;
-+    }
-+
-+    alternatives[alternatives.length - 1] += ch;
-+  }
-+
-+  if (source[i] !== ')') return;
-+
-+  const tests = [];
-+
-+  for (const alternative of alternatives) {
-+    if (alternative === '') continue;
-+    const branches = readBodyPieces(alternative, [], flags);
-+    if (!branches || branches.length !== 1 || branches[0].some(p => p.star)) return;
-+    tests.push(...branches[0].map(p => p.matches));
-+  }
-+
-+  const quantifier = source[i + 1] === '?' ? '?' : '';
-+  const body = source.slice(open[0].length, i);
-+
-+  return {
-+    star: false,
-+    source: source.slice(0, i + 1) + quantifier,
-+    plain: `(?:${body})${quantifier}`,
-+    matches: ch => tests.some(test => test(ch))
-+  };
-+};
-+
-+/**
 + * Read the regex source of a repeated extglob body as branches of pieces: a
 + * wildcard star (with the characters it cannot match), or fixed text or a
 + * one-character class (with a test for whether it can match a character).
@@ -241,28 +123,11 @@ diff --git a/lib/parse.js b/lib/parse.js
 +    }
 +
 +    const rest = source.slice(i);
-+    const group = readFixedGroup(rest, flags);
-+
-+    if (group) {
-+      pieces().push(group);
-+      i += group.source.length;
-+      continue;
-+    }
-+
-+    const bracket = BRACKET_SOURCE.exec(rest);
-+
-+    if (bracket) {
-+      const chars = literalChars(bracket[1]);
-+      const re = new RegExp(`^${bracket[2]}$`, flags);
-+      const plain = `(?:${bracket[1]}|${bracket[2]})`;
-+      pieces().push({ star: false, source: bracket[0], plain, matches: ch => chars.includes(ch) || re.test(ch) });
-+      i += bracket[0].length;
-+      continue;
-+    }
-+
 +    const cls = CLASS_SOURCE.exec(rest);
 +
 +    if (cls) {
++      // Unicode sets can contain strings rather than single characters.
++      if (flags.includes('v')) return;
 +      const re = new RegExp(`^${cls[0]}$`, flags);
 +      pieces().push({ star: false, source: cls[0], matches: ch => re.test(ch) });
 +      i += cls[0].length;
@@ -295,9 +160,9 @@ diff --git a/lib/parse.js b/lib/parse.js
 + * wildcard sits inside the repeat (CVE-2026-112366). Returns the regex source
 + * for the whole repeat, or `undefined` when no exact rewrite is known.
 + *
-+ * The body must be branches of stars, fixed text, `?` and brackets, and every
-+ * character any branch can match must also be matched by every star, so a
-+ * star can absorb whole repeats. Let `F` be the branches without a star and
++ * The body must contain a single wildcard and otherwise only fixed text or
++ * single-character classes. Every character any branch can match must also
++ * be matched by the wildcard, so it can absorb whole repeats. Let `F` be the branches without a star and
 + * `T` the branches with one. For one match `u` of the body followed by
 + * another, `v`:
 + *
@@ -325,54 +190,55 @@ diff --git a/lib/parse.js b/lib/parse.js
 +  if (!branches || branches.some(branch => branch.length === 0)) return;
 +
 +  const pieces = branches.flat();
-+  const excludes = [...new Set(pieces.filter(p => p.star).flatMap(p => p.excludes))];
-+  if (pieces.some(p => !p.star && excludes.some(ch => p.matches(ch)))) return;
++  const wildcards = pieces.filter(p => p.star);
++  // Multiple wildcard runs can still backtrack across each other after
++  // removing the outer repeat. Only flatten a single wildcard.
++  if (wildcards.length !== 1) return;
++  if (pieces.some(p => !p.star && wildcards[0].excludes.some(ch => p.matches(ch)))) return;
 +
-+  // The fixed branches are written twice; the second copy captures nothing, so
-+  // `capture: true` keeps the same groups in the same order.
-+  const join = (list, key) => list.map(branch => branch.map(p => p[key] || p.source).join('')).join('|');
-+  const fixed = branches.filter(branch => !branch.some(p => p.star));
-+  const starred = branches.filter(branch => branch.some(p => p.star));
-+  const fixedSources = fixed.map(branch => join([branch], 'plain'));
++  // A flattened group retains capture order, but it can capture a
++  // different span from the original repeat's last iteration.
++  const wildcardIndex = branches.findIndex(branch => branch.some(piece => piece.star));
++  const wildcardBranch = branches[wildcardIndex];
++  const sources = branches.map(branch => branch.map(piece => piece.source).join(''));
++  const fixedSources = sources.filter((_, index) => index !== wildcardIndex);
++  const all = `(?:${sources.join('|')})`;
++  let output = all;
 +
-+  // The rewrite repeats the fixed alternatives. Equal-width, distinct
-+  // literals are unambiguous at every repeat boundary.
 +  if (fixedSources.length > 0) {
++    // Equal-width, distinct literal alternatives have a unique partition.
 +    const width = fixedSources[0].length;
 +    if (fixedSources.some(source => !/^[a-zA-Z0-9 _-]+$/.test(source) || source.length !== width)) return;
-+    const identities = flags.includes('i') ? fixedSources.map(source => source.toLowerCase()) : fixedSources;
++    const ignoreCase = flags.includes('i');
++    const identities = ignoreCase ? fixedSources.map(source => source.toLowerCase()) : fixedSources;
 +    if (new Set(identities).size !== fixedSources.length) return;
-+  }
 +
-+  const all = `(?:${join(branches, 'source')})`;
-+  const rest = fixedSources.length ? `(?:${fixedSources.join('|')})*` : '';
-+  let output;
++    const first = wildcardBranch[0];
++    const last = wildcardBranch[wildcardBranch.length - 1];
++    if (!first.star && !last.star) return;
++    const boundary = last.star ? first : last;
 +
-+  if (starred.length === 0) {
-+    return;
-+  } else if (branches.length === 1) {
-+    output = all;
-+  } else if (starred.every(branch => branch[branch.length - 1].star)) {
-+    output = rest + all;
-+  } else if (starred.every(branch => branch[0].star)) {
-+    output = all + rest;
-+  } else {
-+    return;
++    // Keep the boundary between fixed repeats and the wildcard branch
++    // distinct, so a failed match cannot rescan the wildcard at each split.
++    if (boundary.star || !/^[a-zA-Z0-9 _-]+$/.test(boundary.source)) return;
++    const marker = last.star ? boundary.source[0] : boundary.source[boundary.source.length - 1];
++    const boundaryIdentity = ignoreCase ? marker.toLowerCase() : marker;
++    if (identities.some(source => (last.star ? source[0] : source[source.length - 1]) === boundaryIdentity)) return;
++
++    const rest = `(?:${fixedSources.join('|')})*`;
++    output = last.star ? rest + all : all + rest;
 +  }
 +
 +  return type === 'star' ? `(?:${output})?` : output;
 +};
 +
 +/**
-+ * True when a regex source repeats, with `*`, `+` or `{n,}`, a group that
-+ * holds a repeated wildcard: a negated class, `.`, `\\S`, `\\W` or `\\D` under
-+ * an unbounded quantifier, or a repeated group of them. That nesting backtracks
-+ * exponentially. Lookarounds are skipped: they are atomic in JavaScript.
-+ * Linear in the length of the source.
++ * Check the emitted regex for nested repetition. In addition to wildcard
++ * runs, the legacy extglob rewrite can emit a repeated literal or class.
 + */
 +
-+const hasNestedWildcardRepeat = source => {
-+  const frame = look => ({ wild: false, wildRepeat: false, look });
++const hasNestedRepeat = source => {
++  const frame = look => ({ repeated: false, look });
 +  const stack = [frame(false)];
 +  let i = 0;
 +
@@ -412,7 +278,6 @@ diff --git a/lib/parse.js b/lib/parse.js
 +
 +  while (i < source.length) {
 +    const ch = source[i];
-+    let atomWild = false;
 +    let group;
 +
 +    if (ch === '(') {
@@ -422,18 +287,13 @@ diff --git a/lib/parse.js b/lib/parse.js
 +    }
 +
 +    if (ch === '\\') {
-+      atomWild = /[SWD]/.test(source[i + 1] || '');
 +      i += 2;
 +    } else if (ch === '[') {
-+      atomWild = source[i + 1] === '^';
 +      i++;
 +      if (source[i] === '^') i++;
 +      if (source[i] === ']') i++;
 +      while (i < source.length && source[i] !== ']') {
-+        if (source[i] === '\\') {
-+          if (/[SWD]/.test(source[i + 1] || '')) atomWild = true;
-+          i++;
-+        }
++        if (source[i] === '\\') i++;
 +        i++;
 +      }
 +      i++;
@@ -441,30 +301,23 @@ diff --git a/lib/parse.js b/lib/parse.js
 +      if (stack.length > 1) group = stack.pop();
 +      i++;
 +    } else {
-+      atomWild = ch === '.';
 +      i++;
 +    }
 +
 +    const [repeated, len] = quantifier();
 +    i += len;
 +
-+    const parent = stack[stack.length - 1];
-+
-+    if (group) {
-+      if (group.look) continue;
-+      if (repeated && group.wildRepeat) return true;
-+      if (group.wild) parent.wild = true;
-+      if (group.wildRepeat || (repeated && group.wild)) parent.wildRepeat = true;
-+    } else if (atomWild) {
-+      parent.wild = true;
-+      if (repeated) parent.wildRepeat = true;
-+    }
++    // A lookaround is atomic. Check repeats within it without treating them
++    // as part of an enclosing repeat that consumes input.
++    if (group && group.look) continue;
++    if (group && repeated && group.repeated) return true;
++    if (repeated || (group && group.repeated)) stack[stack.length - 1].repeated = true;
 +  }
 +
 +  return false;
  };
 
-@@ -482,6 +940,8 @@
+@@ -482,6 +793,8 @@
      if (tok.value || tok.output) append(tok);
      if (prev && prev.type === 'text' && tok.type === 'text') {
 +      const track = appendSource(prev, tok.output != null ? tok.output : tok.value);
@@ -473,12 +326,17 @@ diff --git a/lib/parse.js b/lib/parse.js
 +      track();
        return;
      }
-@@ -512,6 +972,85 @@
-     const body = input.slice(token.startIndex + 2, state.index);
-     const analysis = analyzeRepeatedExtglob(body, opts);
+@@ -510,8 +823,94 @@
+   const extglobClose = token => {
+     const literal = input.slice(token.startIndex, state.index + 1);
+-    const body = input.slice(token.startIndex + 2, state.index);
+-    const analysis = analyzeRepeatedExtglob(body, opts);
 -
 -    if ((token.type === 'plus' || token.type === 'star') && analysis.risky) {
 +    const repeated = token.type === 'plus' || token.type === 'star';
++    const analysis = repeated
++      ? analyzeRepeatedExtglob(input.slice(token.startIndex + 2, state.index), opts)
++      : { risky: false };
 +    let output = token.close + (opts.capture ? ')' : '');
 +    let flattenedClose = false;
 +    let flattened;
@@ -492,25 +350,31 @@ diff --git a/lib/parse.js b/lib/parse.js
 +    const opener = tokens[token.tokensIndex];
 +    const intact = opener !== undefined && opener.type === token.type &&
 +      tokens[token.tokensIndex + 1] !== undefined && tokens[token.tokensIndex + 1].type === 'paren';
++    const bodyStart = token.tokensIndex + 2;
++    const bodyWildcard = intact && !analysis.risky && token.type !== 'negate' && hasRepeatedWildcard(tokens, bodyStart);
 +
-+    if (repeated && intact && !analysis.risky && opts.maxExtglobRecursion !== false) {
-+      const bodyTokens = tokens.slice(token.tokensIndex + 2);
++    if (repeated && bodyWildcard && opts.maxExtglobRecursion !== false) {
++      // Quoted text immediately after the opening paren lives on that
++      // token and is part of the repeated body.
++      const paren = tokens[token.tokensIndex + 1];
++      const parenOutput = paren.output != null ? paren.output : paren.value;
++      const parenSource = tokenSource(paren);
++      const head = parenSource === undefined ? undefined : parenSource.slice(parenOutput.length) + (paren.suffix || '');
++      const bodyTokens = tokens.slice(bodyStart);
 +
-+      if (isRepeatedNegation(bodyTokens, [star, STAR, globstar(opts)], opts.capture === true)) {
++      if (head === '' && isRepeatedNegation(bodyTokens, [star, STAR, globstar(opts)], opts.capture === true)) {
 +        // `+(!(x))` is a zero-width test followed by a star, so the first
 +        // repeat's star absorbs every later repeat: one repeat is enough.
 +        opener.wildcard = true;
 +        output = (token.type === 'star' ? ')?' : ')') + (opts.capture ? ')' : '');
 +        flattenedClose = true;
 +        state.rewritten = true;
-+      } else if (hasRepeatedWildcard(bodyTokens)) {
-+        const flags = (opts.flags || (opts.nocase ? 'i' : '')).replace(/[gy]/g, '');
++      } else {
++        // Character probes must match the whole input once. The caller's
++        // flags are kept on the final regex.
++        const flags = (opts.flags || (opts.nocase ? 'i' : '')).replace(/[gmy]/g, '');
 +        // The tokens hold what will be emitted; `state.output` can still be
 +        // stale here (POSIX classes are only applied by the final rebuild).
-+        // Quoted text right after the `(` is kept on the paren token.
-+        const paren = tokens[token.tokensIndex + 1];
-+        const parenSource = tokenSource(paren);
-+        const head = parenSource === undefined ? undefined : parenSource.slice((paren.output != null ? paren.output : paren.value).length);
 +        const sources = [head, ...bodyTokens.map(t => {
 +          const src = tokenSource(t);
 +          return src === undefined ? undefined : src + (t.suffix || '');
@@ -561,14 +425,14 @@ diff --git a/lib/parse.js b/lib/parse.js
 +    if (repeated && analysis.risky) {
        const safeOutput = analysis.safeOutput
          ? (token.output ? '' : ONE_CHAR) + (opts.capture ? `(${analysis.safeOutput})` : analysis.safeOutput)
-@@ -522,4 +1061,6 @@
+@@ -522,4 +921,6 @@
        open.value = literal;
        open.output = safeOutput || utils.escapeRegex(literal);
 +      delete open.src;
 +      delete open.srcBase;
 
        for (let i = token.tokensIndex + 1; i < tokens.length; i++) {
-@@ -527,15 +1068,16 @@
+@@ -527,15 +928,16 @@
          tokens[i].output = '';
          delete tokens[i].suffix;
 -      }
@@ -590,20 +454,19 @@ diff --git a/lib/parse.js b/lib/parse.js
 -    let output = token.close + (opts.capture ? ')' : '');
      let rest;
 
-@@ -567,5 +1109,11 @@
+@@ -567,5 +969,10 @@
      }
 
 -    push({ type: 'paren', extglob: true, value, output });
 +    if (intact) {
-+      const wild = token.type === 'negate' || opener.wildcard === true ||
-+        hasRepeatedWildcard(tokens.slice(token.tokensIndex + 2));
++      const wild = token.type === 'negate' || opener.wildcard === true || bodyWildcard;
 +      push({ type: 'paren', extglob: true, value, output, groupOpen: token.tokensIndex, wild, flattened: flattenedClose });
 +    } else {
 +      push({ type: 'paren', extglob: true, value, output });
 +    }
      decrement('parens');
    };
-@@ -736,6 +1284,8 @@
+@@ -736,6 +1143,8 @@
      if (state.quotes === 1 && value !== '"') {
        value = utils.escapeRegex(value);
 +      const track = appendSource(prev, value);
@@ -612,7 +475,7 @@ diff --git a/lib/parse.js b/lib/parse.js
 +      track();
        continue;
      }
-@@ -997,4 +1547,12 @@
+@@ -997,4 +1406,12 @@
        }
 
 +      if (prev && prev.type === 'paren' && prev.flattened === true && opts.capture !== true && prev.src === undefined) {
@@ -625,29 +488,7 @@ diff --git a/lib/parse.js b/lib/parse.js
 +
        if (prev && prev.type === 'paren') {
          const next = peek();
-@@ -1056,4 +1614,13 @@
-
-       if ((prev && (prev.type === 'bracket' || prev.type === 'paren' || prev.type === 'brace')) || state.parens > 0) {
-+        // A regex `+` after a group that holds a wildcard nests the wildcard
-+        // in a repeat, the same ReDoS as `+(*)` (CVE-2026-112366). Bash reads
-+        // that `+` literally; so do we.
-+        if (opts.maxExtglobRecursion !== false && groupHasWildcard(tokens, tokens.length - 1)) {
-+          state.rewritten = true;
-+          push({ type: 'plus', value, output: PLUS_LITERAL });
-+          continue;
-+        }
-+
-         push({ type: 'plus', value });
-         continue;
-@@ -1230,5 +1797,6 @@
-     }
-
--    if (prev && (prev.type === 'bracket' || prev.type === 'paren') && opts.regex === true) {
-+    if (prev && (prev.type === 'bracket' || prev.type === 'paren') && opts.regex === true &&
-+      !(opts.maxExtglobRecursion !== false && groupHasWildcard(tokens, tokens.length - 1))) {
-       token.output = value;
-       push(token);
-@@ -1259,4 +1827,8 @@
+@@ -1259,4 +1676,8 @@
    }
 
 +  // The repairs below escape the last unmatched opening, which may sit inside
@@ -656,7 +497,7 @@ diff --git a/lib/parse.js b/lib/parse.js
 +
    while (state.brackets > 0) {
      if (opts.strictBrackets === true) throw new SyntaxError(syntaxError('closing', ']'));
-@@ -1291,4 +1863,25 @@
+@@ -1291,4 +1712,30 @@
          state.output += token.suffix;
        }
 +    }
@@ -664,11 +505,16 @@ diff --git a/lib/parse.js b/lib/parse.js
 +
 +  // Last line of defence for CVE-2026-112366: however the pattern got there
 +  // (unbalanced parentheses are repaired after the extglob checks ran), never
-+  // return a regex that repeats a wildcard inside an unbounded repeat.
++  // return an unchecked nested repeat, including a synthesized class star.
 +  // A rewrite above can also meet a later repair (unbalanced parentheses,
 +  // literal braces) that leaves an invalid regex; fall back the same way.
 +  if (opts.maxExtglobRecursion !== false) {
-+    let unsafe = hasNestedWildcardRepeat(state.output) || (repaired && state.rewritten === true);
++    // A token rebuild can discard quoted text, changing which atom a
++    // following quantifier applies to. Backreferences can depend on the
++    // captured span of the original repeat. Neither case has an exact rewrite.
++    const inexactRewrite = state.rewritten === true && (repaired ||
++      (state.backtrack === true && input.includes('"')) || /\\(?:[1-9]|k<)/.test(state.output));
++    let unsafe = inexactRewrite || hasNestedRepeat(state.output);
 +
 +    if (!unsafe && state.rewritten === true) {
 +      try {

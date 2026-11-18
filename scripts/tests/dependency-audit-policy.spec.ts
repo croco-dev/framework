@@ -50,9 +50,12 @@ describe("dependency-audit-policy.mts", () => {
     );
   });
 
-  it.each(["anymatch", "ts-morph"] as const)(
+  it.each([
+    ["anymatch", "2.3.2"],
+    ["ts-morph", "4.0.7"],
+  ] as const)(
     "bounds repeated wildcard matching in the picomatch installed for %s",
-    (consumer) => {
+    (consumer, version) => {
       const requireFrom = (manifest: string) => createRequire(realpathSync(manifest));
       const requireFromProtocolCodegen = requireFrom(
         join(repositoryRoot, "packages/protocol-codegen/package.json"),
@@ -69,8 +72,10 @@ describe("dependency-audit-policy.mts", () => {
           : requireFromMorphCommon.resolve("tinyglobby/package.json"),
       );
       const installedMatcher = requireFromConsumer.resolve("picomatch");
+      const manifest = requireFromConsumer.resolve("picomatch/package.json");
+      expect(JSON.parse(readFileSync(manifest, "utf-8"))).toMatchObject({ version });
 
-      const match = `
+      const match = String.raw`
         const assert = require("node:assert/strict");
         const { isMatch, makeRe } = require(process.argv[1]);
         const adversarialInput = "a".repeat(48);
@@ -89,6 +94,59 @@ describe("dependency-audit-policy.mts", () => {
         assert.equal(isMatch("bbza", "+(b|z*)"), true);
         const literalFallback = "+([ab]|[ac]|z*)c";
         assert.equal(makeRe(literalFallback).test(literalFallback), true);
+
+        const quotedPrefix = '+("src/"!(b))';
+        const quotedPrefixRe = makeRe(quotedPrefix);
+        assert.equal(quotedPrefixRe.test(quotedPrefix), true);
+        assert.equal(quotedPrefixRe.test("src/file"), false);
+
+        const multiline = "+(a\n*)z";
+        const multilineRe = makeRe(multiline, { bash: true, flags: "m" });
+        assert.equal(multilineRe.multiline, true);
+        assert.equal(multilineRe.test(multiline), true);
+        assert.equal(multilineRe.test("a\nz"), false);
+        assert.equal(makeRe(multiline, { bash: true, flags: "ms" }).test("a\nxa\nz"), true);
+
+        // Flattening retains the capture layout but captures the flattened body.
+        assert.deepEqual(makeRe("+(*a)", { capture: true }).exec("aaa")?.slice(), ["aaa", "aaa", "aa"]);
+
+        const referencedCapture = "+(*a)-\\2";
+        const referencedCaptureRe = makeRe(referencedCapture, { capture: true });
+        assert.equal(referencedCaptureRe.test(referencedCapture), true);
+        assert.equal(referencedCaptureRe.test("aaa-aa"), false);
+
+        const quotedRebuild = '+([[:alpha:]]*)"a"?1';
+        const quotedRebuildRe = makeRe(quotedRebuild);
+        assert.equal(quotedRebuildRe.test(quotedRebuild), true);
+        assert.equal(quotedRebuildRe.test("1"), false);
+
+        const regexRepeatPattern = "(a*b)*";
+        const regexRepeat = makeRe(regexRepeatPattern, { regex: true });
+        assert.equal(regexRepeat.test(regexRepeatPattern), true);
+        assert.equal(regexRepeat.test("abfoo"), false);
+
+        assert.equal(makeRe('?(a*b)"x"+').test("abxx"), true);
+        assert.equal(makeRe('?(a*b)"x"*', { regex: true }).test("abxx"), true);
+        assert.equal(makeRe("((?=a*)a)+").test("aaa"), true);
+
+        const multipleStars = "+(a*b*)c";
+        const multipleStarsRe = makeRe(multipleStars);
+        assert.equal(multipleStarsRe.test(multipleStars), true);
+        assert.equal(multipleStarsRe.test("axbyc"), false);
+
+        const overlappingBranches = "+(a|A*)z";
+        assert.equal(makeRe(overlappingBranches).test("aaAbz"), true);
+        assert.equal(makeRe(overlappingBranches, { nocase: true }).test(overlappingBranches), true);
+
+        const ambiguousGroups = "+(@(a|aa)@(a|aa)*)z";
+        assert.equal(makeRe(ambiguousGroups).test(ambiguousGroups), true);
+
+        assert.equal(makeRe("+(*(a))").test("aaa"), true);
+        const nestedSynthesizedRepeat = "+(a+(*(a)))";
+        assert.equal(makeRe(nestedSynthesizedRepeat).test(nestedSynthesizedRepeat), true);
+
+        const nestedOptional = "?(a".repeat(128) + ")".repeat(128);
+        assert.equal(makeRe(nestedOptional).test("a".repeat(128)), true);
       `;
       execFileSync(process.execPath, ["-e", match, installedMatcher], { timeout: 2_000 });
     },
