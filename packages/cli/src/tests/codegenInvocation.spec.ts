@@ -54,27 +54,29 @@ describe.each([
     ]);
   });
 
-  it.each([{ args: ["--cwd"] }, { args: ["--cwd="] }, { args: ["--cwd", "--check"] }])(
-    "rejects missing cwd before spawning: $args",
-    async ({ args }) => {
-      const errors: string[] = [];
-      let spawned = false;
-      const exitCodes: number[] = [];
-      const result = await runCodegen(args, {
-        resolveBin: () => {
-          throw new Error("Must not resolve a binary for invalid cwd");
-        },
-        spawn: () => {
-          spawned = true;
-          return new EventEmitter() as unknown as ChildProcess;
-        },
-        stderr: (message) => errors.push(message),
-        setExitCode: (code) => exitCodes.push(code),
-      });
-      expect(result).toBe(1);
-      expect(spawned).toBe(false);
-      expect(errors.join("\n")).toContain("--cwd <path>");
-      expect(exitCodes).toEqual([1]);
-    },
-  );
+  it.each([
+    { args: ["--cwd"] },
+    { args: ["--cwd="] },
+    { args: ["--cwd", "--check"] },
+    { args: ["--cwd=--check"] },
+  ])("rejects missing cwd before spawning: $args", async ({ args }) => {
+    const errors: string[] = [];
+    let spawned = false;
+    const exitCodes: number[] = [];
+    const result = await runCodegen(args, {
+      resolveBin: () => {
+        throw new Error("Must not resolve a binary for invalid cwd");
+      },
+      spawn: () => {
+        spawned = true;
+        return new EventEmitter() as unknown as ChildProcess;
+      },
+      stderr: (message) => errors.push(message),
+      setExitCode: (code) => exitCodes.push(code),
+    });
+    expect(result).toBe(1);
+    expect(spawned).toBe(false);
+    expect(errors.join("\n")).toContain("--cwd <path>");
+    expect(exitCodes).toEqual([1]);
+  });
 });

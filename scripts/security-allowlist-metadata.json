@@ -38,6 +38,13 @@
         },
         {
           "kind": "path",
+          "value": "^docs/infrastructure-reviews/3710-di-check-working-directory\\.json$",
+          "owner": "kang-heewon",
+          "reason": "The #3710 infrastructure review records source SHA-256 digests. Gitleaks matched the codegenOpenapi.ts digest under generic-api-key, and recomputing SHA-256 from the tracked source blob produced the same value. The anchored path covers this public evidence record across squash commits. Re-review the entire record by the deadline.",
+          "reviewBy": "2027-01-31"
+        },
+        {
+          "kind": "path",
           "value": "^docs/infrastructure-reviews/clerk-workers-auth-subset\\.json$",
           "owner": "kang-heewon",
           "reason": "Reviewed infrastructure evidence record contains source SHA-256 digests, independently recomputed and equal to tracked files, that generic-api-key misclassifies. Exact file path remains stable after squash merge; this record must contain public evidence only and no credentials. Re-review the entire file by the deadline.",

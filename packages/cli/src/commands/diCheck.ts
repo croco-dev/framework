@@ -7,8 +7,9 @@ import {
   CLI_LEGACY_DIAGNOSTIC_CODES,
   getStableCliDiagnosticCodeForLegacyCode,
 } from "../libs/diagnosticCodes.js";
-import { GLOBAL_OPTIONS } from "./options.js";
+import { DI_CHECK_FILE_OPTIONS, GLOBAL_OPTIONS, isDiCheckOptionValue } from "./options.js";
 import { getCrocoCommandRuntime } from "../libs/cliRuntime.js";
+import { parseWorkingDirectoryInvocation } from "../libs/workingDirectoryInvocation.js";
 
 import type { DependencyGraphManifest } from "@croco/framework-context";
 import type { ModuleGraphManifest } from "@croco/framework-module";
@@ -132,8 +133,22 @@ export async function runDiCheck(
   args: readonly string[],
   options: { readonly io?: Partial<DiCheckIo> } = {},
 ): Promise<number> {
-  const parsed = parseDiCheckArgs(args);
-  const io = { ...createDefaultIo(), ...options.io };
+  return executeDiCheck(args, { ...createDefaultIo(), ...options.io });
+}
+
+export function runDiCheckAtRoot(
+  args: readonly string[],
+  prefixArgs: readonly (readonly string[])[],
+): number {
+  return executeDiCheck(args, createDefaultIo(), prefixArgs);
+}
+
+function executeDiCheck(
+  args: readonly string[],
+  io: DiCheckIo,
+  prefixArgs?: readonly (readonly string[])[],
+): number {
+  const { parsed, cwd = io.cwd } = parseDiCheckInvocation(args, io.cwd, prefixArgs);
 
   if (parsed.kind === "help") {
     printDiCheckHelp(io);
@@ -146,14 +161,16 @@ export async function runDiCheck(
     return 1;
   }
 
-  const manifestPath = resolvePath(parsed.options.manifest, io.cwd);
+  const manifestPath = resolve(cwd, parsed.options.manifest);
   const report = createDiCheckReport(readJsonManifest(manifestPath, io));
   const reportJson = `${JSON.stringify(report, null, 2)}\n`;
 
   if (parsed.options.json) {
     if (parsed.options.out) {
-      writeOutputFile(parsed.options.out, reportJson, io);
-      io.stdout(`Wrote DI graph check report to ${resolvePath(parsed.options.out, io.cwd)}.`);
+      const outputPath = resolve(cwd, parsed.options.out);
+      io.mkdir(dirname(outputPath));
+      io.writeFile(outputPath, reportJson);
+      io.stdout(`Wrote DI graph check report to ${outputPath}.`);
     } else {
       io.stdout(reportJson.trimEnd());
     }
@@ -165,13 +182,91 @@ export async function runDiCheck(
 }
 
 export function parseDiCheckArgs(args: readonly string[]): DiCheckParseResult {
-  if (args.includes("--help") || args.includes("-h")) {
-    return { kind: "help" };
+  return parseDiCheckInvocation(args).parsed;
+}
+
+function parseDiCheckInvocation(
+  args: readonly string[],
+  runtimeCwd?: string,
+  prefixArgs: readonly (readonly string[])[] = [],
+): { readonly parsed: DiCheckParseResult; readonly cwd?: string | undefined } {
+  let cwd = runtimeCwd;
+  let help = false;
+  for (const prefix of prefixArgs) {
+    const invocation = parseDiCheckWorkingDirectory(prefix, runtimeCwd);
+    if ("diagnostic" in invocation) {
+      return { parsed: { kind: "invalid", message: invocation.diagnostic } };
+    }
+    const separator = invocation.args.indexOf("--");
+    const options = separator === -1 ? invocation.args : invocation.args.slice(0, separator);
+    const misplaced = options
+      .map((arg) => arg.split("=")[0] ?? "")
+      .find((arg) => DI_CHECK_FILE_OPTIONS.has(arg) || arg === "--json");
+    if (misplaced) {
+      return { parsed: { kind: "invalid", message: `Pass ${misplaced} after 'di check'.` } };
+    }
+    if (invocation.cwdOptionIndices.size > 0) cwd = invocation.cwd;
+    help ||= options.includes("--help") || options.includes("-h");
   }
 
-  const manifest = getFlagValue(args, "--manifest") ?? getFirstPosition(args);
-  const out = getFlagValue(args, "--out");
+  const invocation = parseDiCheckWorkingDirectory(args, runtimeCwd);
+  if ("diagnostic" in invocation) {
+    return { parsed: { kind: "invalid", message: invocation.diagnostic } };
+  }
 
+  return {
+    parsed: parseDiCheckOptions(args, invocation.cwdOptionIndices, help),
+    cwd: invocation.cwdOptionIndices.size > 0 ? invocation.cwd : cwd,
+  };
+}
+
+function parseDiCheckWorkingDirectory(args: readonly string[], runtimeCwd?: string) {
+  return parseWorkingDirectoryInvocation(args, runtimeCwd, {
+    allowOptionLikeEqualsValue: true,
+    shortOptions: ["-h"],
+  });
+}
+
+function parseDiCheckOptions(
+  args: readonly string[],
+  cwdOptionIndices: ReadonlySet<number>,
+  help: boolean,
+): DiCheckParseResult {
+  const separator = args.indexOf("--");
+  const endOfOptions = separator === -1 ? args.length : separator;
+  let positional: string | undefined;
+  let explicitManifest: string | undefined;
+  let out: string | null = null;
+  let json = false;
+  for (let index = 0; index < endOfOptions; index++) {
+    const arg = args[index];
+    if (!arg || cwdOptionIndices.has(index)) continue;
+    if (DI_CHECK_FILE_OPTIONS.has(arg)) {
+      const value = args[index + 1];
+      if (!isDiCheckOptionValue(value)) {
+        return {
+          kind: "invalid",
+          message:
+            arg === "--out"
+              ? "[CROCO_CLI_MISSING_VALUE] Missing report output path. Pass --out <path>."
+              : "[CROCO_CLI_MISSING_VALUE] Missing DI graph manifest. Pass --manifest <path>.",
+        };
+      }
+      if (arg === "--manifest") explicitManifest ??= value;
+      else out ??= value;
+      index++;
+    } else if (arg === "--help" || arg === "-h") {
+      help = true;
+    } else if (arg === "--json") {
+      json = true;
+    } else if (!arg.startsWith("-")) {
+      positional ??= arg;
+    }
+  }
+
+  if (help) return { kind: "help" };
+
+  const manifest = explicitManifest ?? positional ?? args[endOfOptions + 1];
   if (!manifest) {
     return {
       kind: "invalid",
@@ -184,7 +279,7 @@ export function parseDiCheckArgs(args: readonly string[]): DiCheckParseResult {
     options: {
       manifest,
       out,
-      json: args.includes("--json") || out !== null,
+      json: json || out !== null,
     },
   };
 }
@@ -353,54 +448,15 @@ function formatSourceLocation(sourceLocation: DiCheckDiagnostic["sourceLocation"
 }
 
 function printDiCheckHelp(io: DiCheckIo): void {
-  io.stdout(`Usage: croco di check --manifest <path> [--json] [--out <path>]
-       croco di check <path> [--json] [--out <path>]
+  io.stdout(`Usage: croco di check --manifest <path> [--cwd <path>] [--json] [--out <path>]
+       croco di check <path> [--cwd <path>] [--json] [--out <path>]
 
 Options:
   --manifest <path>  DI or module graph manifest JSON to validate
+  --cwd <path>       Working directory for manifest and report paths
   --json             Print a machine-readable DI check report
   --out <path>       Write the machine-readable DI check report
   --help, -h         Show this help message`);
-}
-
-function writeOutputFile(path: string, content: string, io: DiCheckIo): void {
-  const resolvedPath = resolvePath(path, io.cwd);
-  io.mkdir(dirname(resolvedPath));
-  io.writeFile(resolvedPath, content);
-}
-
-function resolvePath(path: string, cwd: string): string {
-  return resolve(cwd, path);
-}
-
-function getFlagValue(args: readonly string[], flag: string): string | null {
-  const index = args.indexOf(flag);
-  const value = index >= 0 ? args[index + 1] : undefined;
-
-  return value && !value.startsWith("--") ? value : null;
-}
-
-function getFirstPosition(args: readonly string[]): string | null {
-  const valueFlags = new Set(["--manifest", "--out"]);
-
-  for (let index = 0; index < args.length; index += 1) {
-    const arg = args[index];
-
-    if (!arg) {
-      continue;
-    }
-
-    if (valueFlags.has(arg)) {
-      index += 1;
-      continue;
-    }
-
-    if (!arg.startsWith("-")) {
-      return arg;
-    }
-  }
-
-  return null;
 }
 
 function asRecord(value: unknown): Readonly<Record<string, unknown>> | null {

@@ -15,7 +15,7 @@ import {
   migrateArgumentsAreValid,
   migrateOptionConsumesNextArgument,
 } from "./migrate.js";
-import { GLOBAL_OPTIONS } from "./options.js";
+import { DI_CHECK_FILE_OPTIONS, GLOBAL_OPTIONS, isDiCheckOptionValue } from "./options.js";
 
 type LoadedCommand = Awaited<Extract<SubCommandsDef[string], Promise<unknown>>>;
 type CommandLoader = () => Promise<LoadedCommand>;
@@ -43,6 +43,19 @@ export async function runCroco(
   const rawArgs = normalizeContractsDiffRootArgs(normalizeMigrateRootArgs(argv));
 
   try {
+    const diIndex = findDiCheckCommandIndex(argv, "di", 0);
+    if (diIndex !== undefined) {
+      const checkIndex = findDiCheckCommandIndex(argv, "check", diIndex + 1);
+      if (checkIndex !== undefined) {
+        const { runDiCheckAtRoot } = await import("./diCheck.js");
+        const prefixArgs = [argv.slice(0, diIndex), argv.slice(diIndex + 1, checkIndex)];
+        const result = runWithCrocoCommandRuntime(runtime, () =>
+          runDiCheckAtRoot(argv.slice(checkIndex + 1), prefixArgs),
+        );
+        return toRunResult(result);
+      }
+    }
+
     if (rawArgs.includes("--help") || rawArgs.includes("-h")) {
       const helpCommandIndex = findRootCommandIndex(rawArgs);
       const helpArgs = helpCommandIndex === undefined ? [] : rawArgs.slice(helpCommandIndex);
@@ -282,6 +295,34 @@ function normalizeContractsDiffRootArgs(rawArgs: readonly string[]): string[] {
 
 function findRootMigrateIndex(rawArgs: readonly string[]): number | undefined {
   return findCommandIndex(rawArgs, 0, (argument) => argument === "migrate");
+}
+
+function findDiCheckCommandIndex(
+  args: readonly string[],
+  command: "di" | "check",
+  startIndex: number,
+): number | undefined {
+  let optionsEnded = false;
+  let possibleCommand: number | undefined;
+  for (let index = startIndex; index < args.length; index++) {
+    const arg = args[index];
+    if (!arg) continue;
+    if (arg === "--") {
+      optionsEnded = true;
+      continue;
+    }
+    if (!optionsEnded && (arg === "--cwd" || DI_CHECK_FILE_OPTIONS.has(arg))) {
+      const value = args[index + 1];
+      if (isDiCheckOptionValue(value)) {
+        // If no command follows the value, validate the ambiguous prefix at this boundary.
+        if (value === command) possibleCommand ??= index + 1;
+        index++;
+      }
+      continue;
+    }
+    if (!arg.startsWith("-")) return arg === command ? index : possibleCommand;
+  }
+  return possibleCommand;
 }
 
 function findRootCommandIndex(rawArgs: readonly string[]): number | undefined {
