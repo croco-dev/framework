@@ -218,6 +218,9 @@ describe("Public page contracts", () => {
     "USD 37.<svg><desc>50</desc></svg>",
     "USD 37.<svg><defs><text>50</text></defs></svg>",
     "USD 37.<svg><symbol><text>50</text></symbol></svg>",
+    "USD 37.<datalist><option>50</option></datalist>",
+    "USD 37.<iframe>50</iframe>",
+    "USD 37.<title>50</title>",
   ])("rejects price text %s that does not match the declared facts", (price) => {
     expect(validate(html.replace(">USD 37.50</p>", `>${price}</p>`))).toMatchObject({
       state: "partial",

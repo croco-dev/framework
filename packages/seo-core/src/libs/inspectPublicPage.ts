@@ -37,7 +37,7 @@ function elements(node: Node): Element[] {
   );
 }
 
-// SVG definitions and metadata have no direct representation in the parsed document.
+// SVG definitions and metadata are not rendered directly.
 const NON_RENDERED_SVG_ELEMENTS = new Set([
   "clipPath",
   "defs",
@@ -53,15 +53,20 @@ const NON_RENDERED_SVG_ELEMENTS = new Set([
   "title",
 ]);
 
+// HTML elements whose descendants do not supply visible text in the initial document.
+const NON_RENDERED_HTML_ELEMENTS = new Set(["datalist", "iframe", "noembed", "noframes", "rp"]);
+
 function hidden(node: Node): boolean {
   return (
     "tagName" in node &&
     (["script", "style", "template"].includes(node.tagName) ||
       (node.namespaceURI === parse5Html.NS.SVG && NON_RENDERED_SVG_ELEMENTS.has(node.tagName)) ||
       (node.namespaceURI === parse5Html.NS.HTML &&
-        (node.tagName === "dialog"
-          ? attr(node, "open") === undefined
-          : attr(node, "popover") !== undefined)) ||
+        (NON_RENDERED_HTML_ELEMENTS.has(node.tagName) ||
+          (node.tagName === "title" && node.parentNode?.nodeName !== "head") ||
+          (node.tagName === "dialog"
+            ? attr(node, "open") === undefined
+            : attr(node, "popover") !== undefined))) ||
       attr(node, "hidden") !== undefined ||
       /(?:display\s*:\s*none|visibility\s*:\s*hidden)/i.test(attr(node, "style") ?? ""))
   );
