@@ -1,5 +1,5 @@
 import { Container, MetadataStorage } from "@croco/framework-context";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DomainEvent } from "../libs/DomainEvent";
 import type { EventBus } from "../libs/EventBus";
 import { EventBusConfig } from "../libs/EventBusConfig";
@@ -167,6 +167,63 @@ describe("EventBusConfig", () => {
       await config.start({ handlers: [], resolver: new DefaultHandlerResolver() });
 
       expect(secondBus.subscriptions).toHaveLength(1);
+    });
+
+    it("should restore detached handlers after a bus switch fails partway through", async () => {
+      const config = new EventBusConfig();
+      const otherConfig = new EventBusConfig();
+      const firstBus = new MockEventBus();
+      const secondBus = new MockEventBus();
+      const otherBus = new MockEventBus();
+      const startOptions = { handlers: [], resolver: new DefaultHandlerResolver() };
+      const first = { eventName: TestEvent.eventName, handlerClass: TestHandler };
+      const second = { eventName: TestEvent.eventName, handlerClass: AnotherHandler };
+
+      config.setEventBus(firstBus);
+      config.subscribe(first);
+      config.subscribe(second);
+      await config.start(startOptions);
+      otherConfig.setEventBus(otherBus);
+      otherConfig.subscribe(first);
+      await otherConfig.start(startOptions);
+
+      const unsubscribe = firstBus.unsubscribe.bind(firstBus);
+      const failure = new Error("Second subscription could not be detached");
+      const unsubscribeSpy = vi.spyOn(firstBus, "unsubscribe");
+      unsubscribeSpy.mockImplementation((subscription) => {
+        if (subscription.handlerClass === AnotherHandler) {
+          throw failure;
+        }
+        unsubscribe(subscription);
+      });
+
+      expect(() => config.setEventBus(secondBus)).toThrow(failure);
+      expect(config.getEventBus()).toBe(firstBus);
+      expect(firstBus.subscriptions.map(({ handlerClass }) => handlerClass)).toEqual([
+        AnotherHandler,
+      ]);
+      expect(secondBus.subscriptions).toEqual([]);
+      expect(config.isStarted()).toBe(false);
+
+      await config.start(startOptions);
+
+      expect(firstBus.subscriptions).toHaveLength(2);
+      expect(firstBus.subscriptions.map(({ handlerClass }) => handlerClass)).toEqual(
+        expect.arrayContaining([TestHandler, AnotherHandler]),
+      );
+      expect(config.isStarted()).toBe(true);
+
+      unsubscribeSpy.mockRestore();
+      config.setEventBus(secondBus);
+      await config.start(startOptions);
+
+      expect(firstBus.subscriptions).toEqual([]);
+      expect(secondBus.subscriptions).toHaveLength(2);
+      expect(secondBus.subscriptions.map(({ handlerClass }) => handlerClass)).toEqual(
+        expect.arrayContaining([TestHandler, AnotherHandler]),
+      );
+      expect(otherBus.subscriptions.map(({ handlerClass }) => handlerClass)).toEqual([TestHandler]);
+      expect(otherConfig.isStarted()).toBe(true);
     });
 
     it("should resolve subscriptions again after event bus is updated and restarted", async () => {
