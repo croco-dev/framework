@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { InvalidRetentionMovementProblem } from "../libs/problems/MetricsProblems";
-import { RetentionCalculator } from "../libs/RetentionCalculator";
-import type { MRRMovement } from "../types";
+import { InvalidRetentionMovementProblem, RetentionCalculator } from "../index";
+import type { LogoChurnInput, MRRMovement } from "../index";
 
 describe("RetentionCalculator", () => {
   let calculator!: RetentionCalculator;
@@ -201,7 +200,60 @@ describe("RetentionCalculator", () => {
     });
   });
 
+  describe("calculateLogoChurn", () => {
+    it.each([
+      ["10 churned and 20 new", 10, 10],
+      ["5 churned and 15 new", 5, 5],
+      ["no churn and 10 new", 0, 0],
+      ["all churned and 110 new", 100, 100],
+    ])(
+      "uses the starting cohort with 100 starting and 110 ending customers (%s)",
+      async (_scenario, churnedStartingCustomers, expected) => {
+        await expect(
+          calculator.calculateLogoChurn({ startingCustomers: 100, churnedStartingCustomers }),
+        ).resolves.toBe(expected);
+      },
+    );
+
+    it.each([
+      [0, 0],
+      [-1, 0],
+      [NaN, 0],
+      [100, -1],
+      [100, 1.5],
+      [100, Infinity],
+      [100, 101],
+    ])(
+      "returns null for an unusable cohort (%s starting, %s churned)",
+      async (startingCustomers, churnedStartingCustomers) => {
+        await expect(
+          calculator.calculateLogoChurn({ startingCustomers, churnedStartingCustomers }),
+        ).resolves.toBeNull();
+      },
+    );
+
+    it("returns null to legacy JavaScript callers with only the starting and ending totals", async () => {
+      // @ts-expect-error The positional signature is no longer valid in TypeScript.
+      await expect(calculator.calculateLogoChurn(100, 110)).resolves.toBeNull();
+    });
+  });
+
   describe("calculateRetention: 모든 메트릭 한 번에 계산", () => {
+    it("uses distinct starting cohort losses when customers churn repeatedly or reactivate", async () => {
+      // Of four starting customers, one churns twice and ends inactive, one churns and
+      // reactivates before period end, one churns once, and one stays active.
+      const input: LogoChurnInput = { startingCustomers: 4, churnedStartingCustomers: 2 };
+
+      await expect(calculator.calculateRetention(100000, createMovement(), input)).resolves.toEqual(
+        {
+          logoChurn: 50,
+          grr: 95,
+          nrr: 100,
+          revenueChurn: 3,
+        },
+      );
+    });
+
     it("should return partial retention metrics when logo churn data is unavailable", async () => {
       const startingMRR = 100000;
       const movement = createMovement({
@@ -221,7 +273,7 @@ describe("RetentionCalculator", () => {
       });
     });
 
-    it("should calculate logo churn when customer counts are provided", async () => {
+    it("should calculate logo churn when starting-cohort counts are provided", async () => {
       const startingMRR = 100000;
       const movement = createMovement({
         new: { amount: 15000, currency: "USD" },
@@ -232,7 +284,10 @@ describe("RetentionCalculator", () => {
         net: { amount: 19000, currency: "USD" },
       });
 
-      const result = await calculator.calculateRetention(startingMRR, movement, 100, 95);
+      const result = await calculator.calculateRetention(startingMRR, movement, {
+        startingCustomers: 100,
+        churnedStartingCustomers: 5,
+      });
 
       expect(result.grr).toBe(95);
       expect(result.nrr).toBe(103);
@@ -240,36 +295,16 @@ describe("RetentionCalculator", () => {
       expect(result.revenueChurn).toBe(3);
     });
 
-    it("should return 0 logo churn when no customers churned", async () => {
-      const startingMRR = 100000;
-      const movement = createMovement({
-        new: { amount: 15000, currency: "USD" },
-        expansion: { amount: 8000, currency: "USD" },
-        contraction: { amount: 2000, currency: "USD" },
-        churned: { amount: 3000, currency: "USD" },
-        reactivation: { amount: 1000, currency: "USD" },
-        net: { amount: 19000, currency: "USD" },
+    it("preserves revenue metrics for callers using the legacy positional totals", async () => {
+      const movement = createMovement();
+      // @ts-expect-error The positional signature is no longer valid in TypeScript.
+      const retention = await calculator.calculateRetention(100000, movement, 100, 95);
+      expect(retention).toEqual({
+        grr: 95,
+        nrr: 100,
+        logoChurn: null,
+        revenueChurn: 3,
       });
-
-      const result = await calculator.calculateRetention(startingMRR, movement, 100, 100);
-
-      expect(result.logoChurn).toBe(0);
-    });
-
-    it("should return null logo churn when starting customers is 0", async () => {
-      const startingMRR = 100000;
-      const movement = createMovement({
-        new: { amount: 15000, currency: "USD" },
-        expansion: { amount: 8000, currency: "USD" },
-        contraction: { amount: 2000, currency: "USD" },
-        churned: { amount: 3000, currency: "USD" },
-        reactivation: { amount: 1000, currency: "USD" },
-        net: { amount: 19000, currency: "USD" },
-      });
-
-      const result = await calculator.calculateRetention(startingMRR, movement, 0, 0);
-
-      expect(result.logoChurn).toBeNull();
     });
   });
 
@@ -417,7 +452,7 @@ describe("RetentionCalculator", () => {
       });
     });
 
-    it("should return full retention results with logo churn when customer counts provided", async () => {
+    it("should return full retention results with logo churn when cohort counts are provided", async () => {
       const startingMRR = 50000;
       const movement = createMovement({
         new: { amount: 10000, currency: "USD" },
@@ -428,7 +463,10 @@ describe("RetentionCalculator", () => {
         net: { amount: 11500, currency: "USD" },
       });
 
-      const result = await calculator.calculateRetention(startingMRR, movement, 50, 45);
+      const result = await calculator.calculateRetention(startingMRR, movement, {
+        startingCustomers: 50,
+        churnedStartingCustomers: 5,
+      });
 
       expect(result.grr).toBe(85);
       expect(result.nrr).toBe(100);

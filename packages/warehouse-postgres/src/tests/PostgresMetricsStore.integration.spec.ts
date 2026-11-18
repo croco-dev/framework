@@ -433,15 +433,16 @@ describe.skipIf(!realResourcesEnabled).each(["PostgreSQL", "TimescaleDB"] as con
       ).resolves.toEqual([movement, second]);
     });
 
-    it("calculates retention from the requested tenant's numeric database rows", async () => {
+    it("calculates tenant revenue retention without deriving logo churn from database totals", async () => {
       const [store] = stores();
       const from = new Date("2026-03-01T00:00:00.000Z");
       const to = new Date("2026-04-01T00:00:00.000Z");
+      const baselineDate = new Date("2026-02-28T00:00:00.000Z");
       const endDate = new Date("2026-03-31T00:00:00.000Z");
       await store.recordSnapshot(
         "tenant-1",
-        { date: from, activeCustomers: 100, totalMRR: { amount: 100000, currency: "USD" } },
-        from,
+        { date: baselineDate, activeCustomers: 100, totalMRR: { amount: 100000, currency: "USD" } },
+        baselineDate,
       );
       await store.recordSnapshot(
         "tenant-1",
@@ -466,7 +467,7 @@ describe.skipIf(!realResourcesEnabled).each(["PostgreSQL", "TimescaleDB"] as con
       await expect(
         store.getRetentionMetrics("tenant-1", { from, to, granularity: "month" }),
       ).resolves.toEqual({
-        logoChurn: 5,
+        logoChurn: null,
         revenueChurn: 3,
         grr: 95,
         nrr: 103,
@@ -542,7 +543,7 @@ describe.skipIf(!realResourcesEnabled).each(["PostgreSQL", "TimescaleDB"] as con
           to: new Date("2026-04-01T00:00:00.000Z"),
           granularity: "month",
         }),
-      ).resolves.toEqual({ logoChurn: 0, revenueChurn: 0, grr: 100, nrr: 100 });
+      ).resolves.toEqual({ logoChurn: null, revenueChurn: 0, grr: 100, nrr: 100 });
     });
 
     it("returns neutral retention when the tenant has no baseline", async () => {
@@ -553,7 +554,7 @@ describe.skipIf(!realResourcesEnabled).each(["PostgreSQL", "TimescaleDB"] as con
           to: new Date("2026-04-01T00:00:00.000Z"),
           granularity: "month",
         }),
-      ).resolves.toEqual({ logoChurn: 0, revenueChurn: 0, grr: 100, nrr: 100 });
+      ).resolves.toEqual({ logoChurn: null, revenueChurn: 0, grr: 100, nrr: 100 });
     });
 
     it("deduplicates concurrent legacy-key deliveries across separate pool connections", async () => {

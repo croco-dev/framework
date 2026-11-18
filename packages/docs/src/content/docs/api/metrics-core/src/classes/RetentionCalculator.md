@@ -79,31 +79,26 @@ InvalidRetentionMovementProblem when churn or contraction is negative or non-fin
 
 ### calculateLogoChurn()
 
-> **calculateLogoChurn**(`startingCustomers`, `endingCustomers`): `Promise`\<`number` \| `null`\>
+> **calculateLogoChurn**(`input`): `Promise`\<`number` \| `null`\>
 
-Calculate Logo Churn Rate (customer churn rate based on number of customers).
+Calculate logo churn for the starting customer cohort.
 
-Formula: (Starting Customers - Ending Customers) / Starting Customers \* 100
+Count each lost starting customer once. Customers who reactivate and are active at
+the period end stay in the cohort. Customers acquired during the period do not enter it.
 
 #### Parameters
 
-##### startingCustomers
+##### input
 
-`number`
+[`LogoChurnInput`](/api/metrics-core/src/type-aliases/logochurninput/)
 
-Number of customers at start of period
-
-##### endingCustomers
-
-`number`
-
-Number of customers at end of period
+Cohort counts as non-negative safe integers
 
 #### Returns
 
 `Promise`\<`number` \| `null`\>
 
-Logo Churn as percentage, or null if starting customers is zero
+Logo churn as a percentage, or null for empty or unusable cohort counts
 
 ---
 
@@ -139,7 +134,7 @@ NRR as percentage (can be >100%), or null if starting MRR is zero
 
 ### calculateRetention()
 
-> **calculateRetention**(`startingMRR`, `movement`, `startingCustomers?`, `endingCustomers?`): `Promise`\<\{ `grr`: `number` \| `null`; `logoChurn`: `number` \| `null`; `nrr`: `number` \| `null`; `revenueChurn`: `number` \| `null`; \}\>
+> **calculateRetention**(`startingMRR`, `movement`, `logoChurnInput?`): `Promise`\<\{ `grr`: `number` \| `null`; `logoChurn`: `number` \| `null`; `nrr`: `number` \| `null`; `revenueChurn`: `number` \| `null`; \}\>
 
 Calculate all retention metrics at once.
 
@@ -157,23 +152,17 @@ MRR at the start of the period
 
 MRR movement data with finite, non-negative churn and contraction amounts
 
-##### startingCustomers?
+##### logoChurnInput?
 
-`number`
+[`LogoChurnInput`](/api/metrics-core/src/type-aliases/logochurninput/)
 
-Number of customers at start (optional, for logo churn)
-
-##### endingCustomers?
-
-`number`
-
-Number of customers at end (optional, for logo churn)
+Optional evidence for logo churn from the starting cohort
 
 #### Returns
 
 `Promise`\<\{ `grr`: `number` \| `null`; `logoChurn`: `number` \| `null`; `nrr`: `number` \| `null`; `revenueChurn`: `number` \| `null`; \}\>
 
-Complete retention metrics
+Retention metrics with null logo churn when cohort evidence is unavailable
 
 #### Throws
 

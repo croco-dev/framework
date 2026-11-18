@@ -196,9 +196,8 @@ export class PostgresMetricsStore extends MetricsRepository {
   }
 
   async getRetentionMetrics(tenantId: string, period: Period): Promise<RetentionMetrics> {
-    const [startingSnapshot, endingSnapshot, movements] = await Promise.all([
+    const [startingSnapshot, movements] = await Promise.all([
       this.getLatestSnapshotOnOrBefore(tenantId, period.from),
-      this.getLatestSnapshotOnOrBefore(tenantId, new Date(period.to.getTime() - 1)),
       this.getMRRHistory(tenantId, period),
     ]);
 
@@ -214,7 +213,7 @@ export class PostgresMetricsStore extends MetricsRepository {
     ]);
 
     return {
-      logoChurn: this.calculateLogoChurn(startingSnapshot, endingSnapshot),
+      logoChurn: null,
       revenueChurn: revenueChurn ?? 0,
       grr: grr ?? 100,
       nrr: nrr ?? 100,
@@ -265,22 +264,6 @@ export class PostgresMetricsStore extends MetricsRepository {
     }
 
     return totals;
-  }
-
-  private calculateLogoChurn(
-    startingSnapshot: MetricsSnapshot | null,
-    endingSnapshot: MetricsSnapshot | null,
-  ): number {
-    if (!startingSnapshot || !endingSnapshot || startingSnapshot.activeCustomers === 0) {
-      return 0;
-    }
-
-    const churnedCustomers = Math.max(
-      startingSnapshot.activeCustomers - endingSnapshot.activeCustomers,
-      0,
-    );
-
-    return (churnedCustomers / startingSnapshot.activeCustomers) * 100;
   }
 }
 

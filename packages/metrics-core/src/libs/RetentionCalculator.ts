@@ -2,8 +2,10 @@ import type { MRRMovement, Percentage } from "../types";
 import { InvalidRetentionMovementProblem } from "./problems/MetricsProblems";
 
 export type LogoChurnInput = {
+  /** Distinct customers active at the start of the period. */
   startingCustomers: number;
-  endingCustomers: number;
+  /** Distinct starting customers who churned in the period and are inactive at its end. */
+  churnedStartingCustomers: number;
 };
 
 export class RetentionCalculator {
@@ -68,24 +70,31 @@ export class RetentionCalculator {
   }
 
   /**
-   * Calculate Logo Churn Rate (customer churn rate based on number of customers).
+   * Calculate logo churn for the starting customer cohort.
    *
-   * Formula: (Starting Customers - Ending Customers) / Starting Customers * 100
+   * Count each lost starting customer once. Customers who reactivate and are active at
+   * the period end stay in the cohort. Customers acquired during the period do not enter it.
    *
-   * @param startingCustomers - Number of customers at start of period
-   * @param endingCustomers - Number of customers at end of period
-   * @returns Logo Churn as percentage, or null if starting customers is zero
+   * @param input - Cohort counts as non-negative safe integers
+   * @returns Logo churn as a percentage, or null for empty or unusable cohort counts
    */
-  async calculateLogoChurn(
-    startingCustomers: number,
-    endingCustomers: number,
-  ): Promise<Percentage | null> {
-    if (startingCustomers === 0) {
+  async calculateLogoChurn(input: LogoChurnInput): Promise<Percentage | null> {
+    if (!input || typeof input !== "object") {
       return null;
     }
 
-    const churnedCustomers = Math.max(startingCustomers - endingCustomers, 0);
-    return (churnedCustomers / startingCustomers) * 100;
+    const { startingCustomers, churnedStartingCustomers } = input;
+    if (
+      !Number.isSafeInteger(startingCustomers) ||
+      startingCustomers <= 0 ||
+      !Number.isSafeInteger(churnedStartingCustomers) ||
+      churnedStartingCustomers < 0 ||
+      churnedStartingCustomers > startingCustomers
+    ) {
+      return null;
+    }
+
+    return (churnedStartingCustomers / startingCustomers) * 100;
   }
 
   /**
@@ -93,16 +102,14 @@ export class RetentionCalculator {
    *
    * @param startingMRR - MRR at the start of the period
    * @param movement - MRR movement data with finite, non-negative churn and contraction amounts
-   * @param startingCustomers - Number of customers at start (optional, for logo churn)
-   * @param endingCustomers - Number of customers at end (optional, for logo churn)
-   * @returns Complete retention metrics
+   * @param logoChurnInput - Optional evidence for logo churn from the starting cohort
+   * @returns Retention metrics with null logo churn when cohort evidence is unavailable
    * @throws InvalidRetentionMovementProblem when churn or contraction is negative or non-finite
    */
   async calculateRetention(
     startingMRR: number,
     movement: MRRMovement,
-    startingCustomers?: number,
-    endingCustomers?: number,
+    logoChurnInput?: LogoChurnInput,
   ): Promise<{
     grr: Percentage | null;
     nrr: Percentage | null;
@@ -115,10 +122,8 @@ export class RetentionCalculator {
       this.calculateChurn(startingMRR, movement, "revenue"),
     ]);
 
-    let logoChurn: Percentage | null = null;
-    if (startingCustomers !== undefined && endingCustomers !== undefined) {
-      logoChurn = await this.calculateLogoChurn(startingCustomers, endingCustomers);
-    }
+    const logoChurn =
+      logoChurnInput === undefined ? null : await this.calculateLogoChurn(logoChurnInput);
 
     return {
       grr,
