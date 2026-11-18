@@ -38,8 +38,10 @@ Live PostgreSQL coverage runs with `pnpm test:live` when
 `REFERRALS_TEST_DATABASE_URL` is set; the default `pnpm test` runs only the
 offline contract checks.
 
-Recovery pages require UTF-8 server encoding so each cursor identifies one
-stored attribution ID. With another encoding, the paged API raises
+Recovery pages require a UTF-8 database and client session so each cursor
+identifies one stored attribution ID. The store checks both encodings and
+reads the page on the same connection through the application's transaction
+boundary. With another encoding, the paged API raises
 `ReferralRecoveryPagingUnsupportedProblem`. The existing array-returning
 reads remain available.
 

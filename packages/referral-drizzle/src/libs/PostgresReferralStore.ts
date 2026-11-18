@@ -336,7 +336,7 @@ export class PostgresReferralStore implements ReferralStore {
     return run("list referral attributions", () => listAttributionsWith(this.database, filter));
   }
 
-  /** Lists recovery pages on PostgreSQL databases with UTF-8 server encoding. */
+  /** Lists recovery pages on a UTF-8 PostgreSQL database and client session. */
   async listAttributionsPage(filter: ListAttributionsPageFilter): Promise<ReferralAttributionPage> {
     return run("list referral attribution page", async () => {
       const limit = assertLimit(filter.limit, 100);
@@ -356,16 +356,34 @@ export class PostgresReferralStore implements ReferralStore {
           ...(filter.recipient ? Object.values(subjectIdentity(filter.recipient)) : []),
         ].filter((value) => value !== undefined),
       );
-      const { rows } = await this.database.execute(sql`
-        SELECT pg_catalog.getdatabaseencoding() AS encoding
-      `);
-      if (rows[0]?.encoding !== "UTF8") {
-        throw new ReferralRecoveryPagingUnsupportedProblem();
-      }
-      const candidates = await listAttributionsWith(this.database, filter, {
-        limit: limit + 1,
-        scope: filter.scope ?? filter.referrer ?? filter.recipient,
-        after: filter.after,
+      const requestedStates = filter.states;
+      const states = ATTRIBUTION_STATES.filter(
+        (state) => requestedStates === undefined || requestedStates.includes(state),
+      );
+      // Bind the checked filters before taking a connection from the pool.
+      const query =
+        states.length === 0
+          ? undefined
+          : attributionListQuery(
+              { ...filter, states },
+              {
+                limit: limit + 1,
+                scope: filter.scope ?? filter.referrer ?? filter.recipient,
+                after: filter.after,
+              },
+            );
+      const candidates = await this.database.transaction(async (executor) => {
+        const { rows } = await executor.execute(sql`
+          SELECT pg_catalog.getdatabaseencoding() AS server_encoding,
+            pg_catalog.pg_client_encoding() AS client_encoding
+        `);
+        const encoding = rows[0];
+        if (encoding?.server_encoding !== "UTF8" || encoding.client_encoding !== "UTF8") {
+          throw new ReferralRecoveryPagingUnsupportedProblem();
+        }
+        if (query === undefined) return [];
+        const result = await executor.execute(query);
+        return result.rows.map(reviveAttributionWithKey);
       });
       const attributions = candidates.slice(0, limit);
       return {
@@ -417,15 +435,17 @@ export class PostgresReferralStore implements ReferralStore {
 async function listAttributionsWith(
   executor: ReferralPgExecutor,
   filter: ListAttributionsFilter,
-  page?: Pick<ListAttributionsPageFilter, "scope" | "after"> & { readonly limit: number },
 ): Promise<readonly ReferralAttribution[]> {
+  const result = await executor.execute(attributionListQuery(filter));
+  return result.rows.map(({ document }) => reviveAttribution(document));
+}
+
+function attributionListQuery(
+  filter: ListAttributionsFilter,
+  page?: Pick<ListAttributionsPageFilter, "scope" | "after"> & { readonly limit: number },
+): SQL {
   const limit = page?.limit ?? assertLimit(filter.limit, 100);
-  const requestedStates = filter.states;
-  const states =
-    page && requestedStates !== undefined
-      ? ATTRIBUTION_STATES.filter((state) => requestedStates.includes(state))
-      : (requestedStates ?? ATTRIBUTION_STATES);
-  if (page && states.length === 0) return [];
+  const states = filter.states ?? ATTRIBUTION_STATES;
   const stateList = sql.join(
     states.map((state) => sql`${state}`),
     sql`, `,
@@ -475,22 +495,20 @@ async function listAttributionsWith(
       ${scopeClause}
   `;
   if (!page) {
-    const result = await executor.execute(sql`
+    return sql`
       SELECT document ${matchingAttributions}
       ORDER BY created_at, attribution_id LIMIT ${limit}
-    `);
-    return result.rows.map(({ document }) => reviveAttribution(document));
+    `;
   }
 
   const indexKey = sql`attribution_id COLLATE pg_catalog."C"`;
   const cursorClause =
     page.after === undefined ? sql.empty() : sql`AND ${indexKey} > ${page.after}::text`;
-  const result = await executor.execute(sql`
+  return sql`
     SELECT attribution_id, document ${matchingAttributions}
     ${cursorClause}
     ORDER BY ${indexKey} LIMIT ${limit}
-  `);
-  return result.rows.map(reviveAttributionWithKey);
+  `;
 }
 
 async function listBenefitIntentsWith(

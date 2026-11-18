@@ -84,6 +84,49 @@ describe("PostgresReferralStore", () => {
     expect(seen).toHaveLength(0);
   });
 
+  it("binds a recovery request before waiting for a pooled connection", async () => {
+    const seen: { sql: string; params: unknown[] }[] = [];
+    const delegate = database([], seen);
+    const store = new PostgresReferralStore({
+      ...delegate,
+      transaction: async (work) => {
+        await Promise.resolve();
+        return work({
+          execute: (query) =>
+            dialect.sqlToQuery(query).sql.includes("pg_client_encoding()")
+              ? Promise.resolve({
+                  rows: [{ server_encoding: "UTF8", client_encoding: "UTF8" }],
+                })
+              : delegate.execute(query),
+        });
+      },
+    });
+    const scope = { appId: "shop", environment: "production", tenantId: "tenant-first" };
+    const filter = {
+      scope,
+      referrer: { ...scope, kind: "customer", id: "referrer-first" },
+      after: "cursor-first",
+    };
+    const pending = store.listAttributionsPage(filter);
+    scope.tenantId = "tenant-second";
+    filter.referrer.id = "referrer-second";
+    filter.after = "cursor-second";
+
+    await expect(pending).resolves.toEqual({ attributions: [], nextCursor: null });
+    expect(seen).toHaveLength(1);
+    expect(seen[0]?.params).toContain(JSON.stringify({ ...scope, tenantId: "tenant-first" }));
+    expect(seen[0]?.params).toContain(
+      JSON.stringify({
+        ...scope,
+        tenantId: "tenant-first",
+        kind: "customer",
+        id: "referrer-first",
+      }),
+    );
+    expect(seen[0]?.params).toContain("cursor-first");
+    expect(JSON.stringify(seen[0]?.params)).not.toContain("-second");
+  });
+
   it("counts subject receipts against the family cycle with a bounded query", async () => {
     const seen: { sql: string; params: unknown[] }[] = [];
     const db: ReferralPgDatabase = {

@@ -62,7 +62,7 @@
       "classification": "durable-provider",
       "reason": "Read bounded PostgreSQL recovery pages behind an exclusive ID boundary and use an ordered index on UTF-8 databases.",
       "files": {
-        "packages/referral-drizzle/src/libs/PostgresReferralStore.ts": "28422b964ee14273116cc2721073a592820d4c1920c543fb85eaf12c8d511620"
+        "packages/referral-drizzle/src/libs/PostgresReferralStore.ts": "af46c73d05d65d1c1f57046c940e2d3708c3472d8899170f544c6b20cde8f9c8"
       },
       "catalogRuntimes": ["node", "lambda"],
       "profiles": {
@@ -72,7 +72,7 @@
           "providers": ["@croco/referral-drizzle"],
           "constraints": [
             "Requires the existing referral schema and a Node PostgreSQL connection pool.",
-            "Recovery paging requires UTF-8 server encoding for a lossless ID order. The host can apply the optional index through its migration owner. The index build blocks attribution table writes."
+            "Recovery paging requires a UTF-8 database and client session pinned by the application transaction boundary. The host can apply the optional index through its migration owner. The index build blocks attribution table writes."
           ],
           "references": [
             "packages/referral-drizzle/src/libs/PostgresReferralStore.ts",
@@ -87,7 +87,7 @@
           "providers": ["@croco/referral-drizzle"],
           "constraints": [
             "Supply the existing referral schema and a bounded pool. Await the page query before returning the invocation.",
-            "Recovery paging requires UTF-8 server encoding for a lossless ID order. The host can apply the optional index through its migration owner. The index build blocks attribution table writes."
+            "Recovery paging requires a UTF-8 database and client session pinned by the application transaction boundary. The host can apply the optional index through its migration owner. The index build blocks attribution table writes."
           ],
           "references": [
             "packages/referral-drizzle/src/libs/PostgresReferralStore.ts",
@@ -115,7 +115,7 @@
       "classification": "pure-contract",
       "reason": "Include the referral recovery capability error in the generated Problem registry.",
       "files": {
-        "packages/problems-core/src/generated/problem-code-registry.ts": "55931b2d02bea05f0f882eee9887c01659581e28076d009dd1229ff64542a631"
+        "packages/problems-core/src/generated/problem-code-registry.ts": "23154ac0bd2664128e4955c7375ed90a140dbd671353b1c3c0e1279fd188e66b"
       },
       "catalogRuntimes": [],
       "profiles": {

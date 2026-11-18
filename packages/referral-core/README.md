@@ -151,7 +151,7 @@ beginning can find it. Recovery queries only read attributions. The caller
 uses the existing qualification, fulfillment, and reconciliation operations.
 
 Custom stores can opt in by implementing `listAttributionsPage`. The
-PostgreSQL adapter supports pages with UTF-8 server encoding. Calling the
+PostgreSQL adapter supports pages with UTF-8 database and client encodings. Calling the
 paged operation without that capability raises
 `ReferralRecoveryPagingUnsupportedProblem`. The array-returning
 `recoverPendingAttributions` stays available to existing callers.

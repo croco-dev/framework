@@ -396,6 +396,26 @@ describe.skipIf(!url)("PostgreSQL referral budgets and attribution recovery", ()
     });
   });
 
+  it("rejects an incompatible client encoding on the connection that would read a page", async ({
+    skip,
+  }) => {
+    await withStores(async (pool) => {
+      skip(!(await hasUtf8Encoding(pool)), "Requires a UTF-8 database and a mismatched client");
+      const delegate = database(pool);
+      const store = new PostgresReferralStore({
+        ...delegate,
+        transaction: (work) =>
+          delegate.transaction(async (executor) => {
+            await executor.execute(sql`SET LOCAL client_encoding = 'LATIN1'`);
+            return work(executor);
+          }),
+      });
+      await expect(store.listAttributionsPage({ after: "cursor-é" })).rejects.toMatchObject({
+        code: "referral-core/recovery-paging-unsupported",
+      });
+    });
+  });
+
   it("preserves Unicode cursor order through the recovery index upgrade and rollback", async ({
     skip,
   }) => {
@@ -462,16 +482,25 @@ describe.skipIf(!url)("PostgreSQL referral budgets and attribution recovery", ()
         ),
       );
       let plan = "";
+      const delegate = database(pool);
       const indexedStore = new PostgresReferralStore({
-        ...database(pool),
-        execute: async (statement) => {
-          const { sql: query, params } = dialect.sqlToQuery(statement);
-          if (query.includes("FROM croco_referral_attributions")) {
-            const explain = await pool.query(`EXPLAIN (ANALYZE, TIMING OFF) ${query}`, params);
-            plan = explain.rows.map((row) => row["QUERY PLAN"]).join("\n");
-          }
-          return pool.query(query, params);
-        },
+        ...delegate,
+        transaction: (work) =>
+          delegate.transaction((executor) =>
+            work({
+              execute: async (statement) => {
+                if (
+                  dialect.sqlToQuery(statement).sql.includes("FROM croco_referral_attributions")
+                ) {
+                  const explain = await executor.execute(
+                    sql`EXPLAIN (ANALYZE, TIMING OFF) ${statement}`,
+                  );
+                  plan = explain.rows.map((row) => row["QUERY PLAN"]).join("\n");
+                }
+                return executor.execute(statement);
+              },
+            }),
+          ),
       });
       expect(await indexedStore.listAttributionsPage(filter)).toEqual(before);
       expect(plan).toMatch(

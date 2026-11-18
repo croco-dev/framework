@@ -219,7 +219,7 @@ Counts all matching claims, stored qualifications, and fulfilled states in one r
 
 > **listAttributionsPage**(`filter`): `Promise`\<[`ReferralAttributionPage`](/api/referral-core/src/type-aliases/referralattributionpage/)\>
 
-Lists recovery pages on PostgreSQL databases with UTF-8 server encoding.
+Lists recovery pages on a UTF-8 PostgreSQL database and client session.
 
 #### Parameters
 
