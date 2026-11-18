@@ -359,6 +359,13 @@ function readAuditMetadataEntry(
   const reason = readRequiredString(entry, "reason", pointer, violations);
   const reviewDate = readReviewDate(entry, pointer, today, violations);
 
+  if (entry.scope !== undefined && entry.scope !== "workspace") {
+    violations.push({
+      message: `${pointer}.scope must be workspace when specified`,
+      recovery: "Use workspace for an exception that only applies to workspace installations.",
+    });
+  }
+
   if (!id) {
     return [];
   }

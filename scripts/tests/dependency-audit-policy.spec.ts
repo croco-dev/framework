@@ -1,4 +1,6 @@
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 
@@ -19,6 +21,78 @@ describe("dependency-audit-policy.mts", () => {
       rmSync(repo, { force: true, recursive: true });
     }
   });
+
+  it("applies the backports to every locked picomatch instance while the advisory is excepted", () => {
+    const workspace = parse(readFileSync(join(repositoryRoot, "pnpm-workspace.yaml"), "utf-8")) as {
+      readonly auditConfig?: { readonly ignoreGhsas?: readonly string[] };
+    };
+    if (!workspace.auditConfig?.ignoreGhsas?.includes("GHSA-fc5q-39xc-vjpf")) {
+      return;
+    }
+
+    const lockfile = parseAllDocuments(
+      readFileSync(join(repositoryRoot, "pnpm-lock.yaml"), "utf-8"),
+    )
+      .at(-1)
+      ?.toJS() as {
+      readonly patchedDependencies: Readonly<Record<string, string>>;
+      readonly snapshots: Readonly<Record<string, unknown>>;
+    };
+    const patchedVersions = ["picomatch@2.3.2", "picomatch@4.0.7"];
+    expect(patchedVersions.map((version) => lockfile.patchedDependencies[version])).toEqual([
+      expect.stringMatching(/^[a-f0-9]{64}$/),
+      expect.stringMatching(/^[a-f0-9]{64}$/),
+    ]);
+    expect(Object.keys(lockfile.snapshots).filter((key) => key.startsWith("picomatch@"))).toEqual(
+      patchedVersions.map(
+        (version) => `${version}(patch_hash=${lockfile.patchedDependencies[version]})`,
+      ),
+    );
+  });
+
+  it.each(["anymatch", "ts-morph"] as const)(
+    "bounds repeated wildcard matching in the picomatch installed for %s",
+    (consumer) => {
+      const requireFrom = (manifest: string) => createRequire(realpathSync(manifest));
+      const requireFromProtocolCodegen = requireFrom(
+        join(repositoryRoot, "packages/protocol-codegen/package.json"),
+      );
+      const requireFromMorph = requireFrom(
+        requireFromProtocolCodegen.resolve("ts-morph/package.json"),
+      );
+      const requireFromMorphCommon = requireFrom(
+        requireFromMorph.resolve("@ts-morph/common/package.json"),
+      );
+      const requireFromConsumer = requireFrom(
+        consumer === "anymatch"
+          ? join(repositoryRoot, "node_modules/.pnpm/node_modules/anymatch/package.json")
+          : requireFromMorphCommon.resolve("tinyglobby/package.json"),
+      );
+      const installedMatcher = requireFromConsumer.resolve("picomatch");
+
+      const match = `
+        const assert = require("node:assert/strict");
+        const { isMatch, makeRe } = require(process.argv[1]);
+        const adversarialInput = "a".repeat(48);
+        for (const [pattern, suffix] of [
+          ["+(*)", "/"], ["+(*a)", "!"], ["*(*a)", "!"], ["+(a*)", "/"],
+          ["+(*a|b)", "!"], ["+(@(*a))", "!"], ["+(!(b))c", "!"],
+          ["+([ab]|[ac]|z*)c", "!"], ["+(@(a|aa)|z*)c", "!"],
+        ]) {
+          assert.equal(isMatch(adversarialInput + suffix, pattern), false, pattern);
+        }
+        assert.equal(isMatch("aaa", "+(*a)"), true);
+        assert.equal(isMatch("ab", "+(*a)"), false);
+        assert.equal(isMatch("src/file.ts", "src/**/*.ts"), true);
+        assert.equal(isMatch("src/file.ts", "src/**/*.js"), false);
+        assert.equal(isMatch("foobar", "+(foo|bar)"), true);
+        assert.equal(isMatch("bbza", "+(b|z*)"), true);
+        const literalFallback = "+([ab]|[ac]|z*)c";
+        assert.equal(makeRe(literalFallback).test(literalFallback), true);
+      `;
+      execFileSync(process.execPath, ["-e", match, installedMatcher], { timeout: 2_000 });
+    },
+  );
 
   it("keeps every transitive nanoid resolution on the first patched 3.x release", () => {
     const workspace = parse(readFileSync(join(repositoryRoot, "pnpm-workspace.yaml"), "utf-8")) as {
@@ -715,6 +789,68 @@ describe("dependency-audit-policy.mts", () => {
       expect.objectContaining({
         classification: "generated-app",
         directDependency: "vite",
+      }),
+    ]);
+  });
+
+  it("does not apply a workspace-only exception to the same advisory in a generated template", () => {
+    const repo = createRuntimeRepo();
+    const ghsa = "GHSA-2352-2352-2352";
+    const templatePath = "packages/create-croco-app/templates/addons/web";
+    writeFile(
+      repo,
+      `${templatePath}/package.json.hbs`,
+      JSON.stringify({
+        name: "{{scope}}/web",
+        version: "0.1.0",
+        private: true,
+        dependencies: { "runtime-lib": "1.0.0" },
+      }),
+    );
+    writeMetadata(repo, {
+      schemaVersion: 1,
+      audit: {
+        ignoreGhsas: [
+          {
+            id: ghsa,
+            owner: "build-security",
+            reason: "Workspace installations apply a backport.",
+            reviewBy: "2027-01-31",
+            scope: "workspace",
+          },
+        ],
+      },
+    });
+    writeAudit(repo, [
+      advisory({ ghsa, path: "packages__runtime-core>runtime-lib>bad", severity: "high" }),
+    ]);
+    writeAuditFile(repo, "template-audit.json", [
+      advisory({
+        ghsa,
+        path: "packages__create-croco-app__templates__addons__web>runtime-lib>bad",
+        severity: "high",
+      }),
+    ]);
+
+    const result = runDependencyAuditPolicy({
+      rootDir: repo,
+      today: "2026-11-18",
+      auditJsonPath: "audit.json",
+      templateAuditJsonPath: "template-audit.json",
+    });
+
+    expect(result.exitCode).toBe(1);
+    expect(result.advisoryFindings).toContainEqual(
+      expect.objectContaining({
+        importerPath: "packages/runtime-core",
+        metadataStatus: "reviewed",
+      }),
+    );
+    expect(result.blockingFindings).toEqual([
+      expect.objectContaining({
+        classification: "generated-app",
+        importerPath: templatePath,
+        metadataStatus: "missing",
       }),
     ]);
   });
