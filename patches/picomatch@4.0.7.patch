@@ -497,7 +497,16 @@ diff --git a/lib/parse.js b/lib/parse.js
 +
    while (state.brackets > 0) {
      if (opts.strictBrackets === true) throw new SyntaxError(syntaxError('closing', ']'));
-@@ -1325,4 +1746,30 @@
+@@ -1320,9 +1741,38 @@
+
+     for (const token of state.tokens) {
+-      state.output += token.output != null ? token.output : token.value;
++      // A repeat rewrite can force a rebuild after adjacent text tokens
++      // have been merged. Preserve the emitted source while it is still valid.
++      const source = state.rewritten === true ? tokenSource(token) : undefined;
++      state.output += source === undefined ? (token.output != null ? token.output : token.value) : source;
+
+       if (token.suffix) {
          state.output += token.suffix;
        }
 +    }

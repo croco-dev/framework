@@ -95,6 +95,15 @@ describe("dependency-audit-policy.mts", () => {
         const literalFallback = "+([ab]|[ac]|z*)c";
         assert.equal(makeRe(literalFallback).test(literalFallback), true);
 
+        const dottedPrefix = "a.b+(x*|y*)";
+        const dottedPrefixRe = makeRe(dottedPrefix);
+        assert.equal(dottedPrefixRe.test(dottedPrefix), true);
+        assert.equal(dottedPrefixRe.test("ab+(x*|y*)"), false);
+        assert.equal(dottedPrefixRe.test("aXb+(x*|y*)"), false);
+        const dottedClassRe = makeRe("a.b+([[:alpha:]]*)");
+        assert.equal(dottedClassRe.test("a.bxyz"), true);
+        assert.equal(dottedClassRe.test("aXbxyz"), false);
+
         const quotedPrefix = '+("src/"!(b))';
         const quotedPrefixRe = makeRe(quotedPrefix);
         assert.equal(quotedPrefixRe.test(quotedPrefix), true);
