@@ -23,7 +23,7 @@ title: "ExperimentReviewVariantView"
 
 ### estimate
 
-> `readonly` **estimate**: `number`
+> `readonly` **estimate**: `number` \| `null`
 
 ---
 

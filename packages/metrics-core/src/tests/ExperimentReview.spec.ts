@@ -79,6 +79,66 @@ function makeDataset(overrides: Partial<ExperimentDatasetInput> = {}): Experimen
 }
 
 describe("ExperimentReview", () => {
+  it.each(["unit", "cluster"] as const)(
+    "reports an undefined %s mean without usable outcomes",
+    (randomizationUnit) => {
+      const dataset = makeDataset();
+      const assignments = dataset.assignments
+        .filter(({ unitId }) => ["control-0", "control-1", "treatment-0"].includes(unitId))
+        .map((row) => ({ ...row, clusterId: row.variantId }));
+      const review = summarizeExperiment({
+        ...dataset,
+        plan: { ...dataset.plan, outcomeKind: "mean", randomizationUnit },
+        assignments,
+        exposures: assignments.map(({ unitId }) => ({ unitId, exposed: true })),
+        outcomes: [
+          { unitId: "control-0", value: null, complete: true },
+          { unitId: "control-1", value: 4, complete: false },
+          { unitId: "treatment-0", value: 0, complete: true },
+        ],
+        sliceAttribute: "tier",
+      });
+
+      expect(review.primary.control).toMatchObject({
+        estimate: null,
+        availability: "complete",
+        funnel: { outcomeObserved: 0 },
+      });
+      expect(review.conditional.control?.estimate).toBeNull();
+      expect(review.slices?.cells["control::free"]?.estimate).toBeNull();
+      expect(review.primary.treatment?.estimate).toBe(0);
+      expect(review.conditional.treatment?.estimate).toBe(0);
+      expect(review.slices?.cells["treatment::free"]?.estimate).toBe(0);
+      expect(review.quality.find(({ kind }) => kind === "coverage")?.result).toBe("warning");
+    },
+  );
+
+  it("keeps primary mean coverage complete when an exposed subgroup and slice have no usable outcomes", () => {
+    const dataset = makeDataset();
+    const review = summarizeExperiment({
+      ...dataset,
+      plan: { ...dataset.plan, outcomeKind: "mean" },
+      assignments: [
+        { unitId: "control-0", variantId: "control", attributes: { tier: "free" } },
+        { unitId: "control-1", variantId: "control", attributes: { tier: "paid" } },
+        { unitId: "treatment-0", variantId: "treatment", attributes: { tier: "paid" } },
+      ],
+      exposures: [{ unitId: "control-1", exposed: true }],
+      outcomes: [
+        { unitId: "control-0", value: 0, complete: true },
+        { unitId: "control-1", value: null, complete: true },
+        { unitId: "treatment-0", value: 3, complete: true },
+      ],
+      sliceAttribute: "tier",
+    });
+
+    expect(review.primary.control?.estimate).toBe(0);
+    expect(review.conditional.control?.estimate).toBeNull();
+    expect(review.slices?.cells["control::free"]?.estimate).toBe(0);
+    expect(review.slices?.cells["control::paid"]?.estimate).toBeNull();
+    expect(review.quality.find(({ kind }) => kind === "coverage")?.result).toBe("pass_signal");
+  });
+
   it("keeps the randomized denominator while exposure is partial", () => {
     const review = summarizeExperiment(makeDataset());
     expect(review.primary.control?.n).toBe(100);

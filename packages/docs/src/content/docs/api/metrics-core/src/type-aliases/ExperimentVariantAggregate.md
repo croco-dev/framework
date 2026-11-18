@@ -23,7 +23,7 @@ title: "ExperimentVariantAggregate"
 
 ### estimate
 
-> `readonly` **estimate**: `number`
+> `readonly` **estimate**: `number` \| `null`
 
 ---
 

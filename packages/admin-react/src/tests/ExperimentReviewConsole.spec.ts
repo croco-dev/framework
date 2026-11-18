@@ -72,12 +72,16 @@ function makeDataset(): ExperimentDatasetInput {
   };
 }
 
-async function readySnapshot(dataset = makeDataset()): Promise<ExperimentReviewSnapshot> {
+async function readySnapshot(
+  dataset = makeDataset(),
+  sliceAttribute?: string,
+): Promise<ExperimentReviewSnapshot> {
   const source: ExperimentReviewSource = {
     requiredPermissions: ["experiments:read"],
     load: async () => ({
       kind: "ready",
       dataset,
+      ...(sliceAttribute === undefined ? {} : { sliceAttribute }),
       generatedAt: new Date("2026-09-08T00:00:00.000Z"),
     }),
   };
@@ -93,6 +97,36 @@ async function readySnapshot(dataset = makeDataset()): Promise<ExperimentReviewS
 }
 
 describe("ExperimentReviewConsole", () => {
+  it("displays undefined means separately from observed zeros", async () => {
+    const dataset = makeDataset();
+    const snapshot = await readySnapshot(
+      {
+        ...dataset,
+        plan: { ...dataset.plan, outcomeKind: "mean" },
+        outcomes: [
+          { unitId: "control-0", value: null, complete: true },
+          { unitId: "treatment-0", value: 0, complete: true },
+        ],
+      },
+      "tier",
+    );
+    const markup = renderToStaticMarkup(
+      h(ExperimentReviewConsole, {
+        state: { kind: "ready", snapshot, grantedPermissions: ["experiments:read"], actions: [] },
+      }),
+    );
+
+    expect(snapshot.variants.map(({ estimate }) => estimate)).toEqual([null, 0]);
+    expect(snapshot.conditional.map(({ estimate }) => estimate)).toEqual([null, 0]);
+    expect(snapshot.slices?.cells.map(({ estimate }) => estimate)).toEqual([null, 0]);
+    expect(markup).toContain("control · n=100 · estimate unavailable");
+    expect(markup).toContain("treatment · n=100 · estimate 0");
+    expect(markup).toContain("control · exposed 80 · nExposed 80 · estimate unavailable");
+    expect(markup).toContain("treatment · exposed 60 · nExposed 60 · estimate 0");
+    expect(markup).toContain("control · free · assigned 100 · n=100 · estimate unavailable");
+    expect(markup).toContain("treatment · free · assigned 100 · n=100 · estimate 0");
+  });
+
   it("shows why SMD is unavailable when groups have different constant values", async () => {
     const dataset = makeDataset();
     const snapshot = await readySnapshot({
