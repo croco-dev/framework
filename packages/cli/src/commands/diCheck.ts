@@ -133,8 +133,22 @@ export async function runDiCheck(
   args: readonly string[],
   options: { readonly io?: Partial<DiCheckIo> } = {},
 ): Promise<number> {
-  const io = { ...createDefaultIo(), ...options.io };
-  const { parsed, cwd = io.cwd } = parseDiCheckInvocation(args, io.cwd);
+  return executeDiCheck(args, { ...createDefaultIo(), ...options.io });
+}
+
+export function runDiCheckAtRoot(
+  args: readonly string[],
+  prefixArgs: readonly (readonly string[])[],
+): number {
+  return executeDiCheck(args, createDefaultIo(), prefixArgs);
+}
+
+function executeDiCheck(
+  args: readonly string[],
+  io: DiCheckIo,
+  prefixArgs?: readonly (readonly string[])[],
+): number {
+  const { parsed, cwd = io.cwd } = parseDiCheckInvocation(args, io.cwd, prefixArgs);
 
   if (parsed.kind === "help") {
     printDiCheckHelp(io);
@@ -171,27 +185,52 @@ export function parseDiCheckArgs(args: readonly string[]): DiCheckParseResult {
   return parseDiCheckInvocation(args).parsed;
 }
 
-export function parseDiCheckWorkingDirectory(args: readonly string[], runtimeCwd?: string) {
+function parseDiCheckInvocation(
+  args: readonly string[],
+  runtimeCwd?: string,
+  prefixArgs: readonly (readonly string[])[] = [],
+): { readonly parsed: DiCheckParseResult; readonly cwd?: string | undefined } {
+  let cwd = runtimeCwd;
+  for (const prefix of prefixArgs) {
+    const invocation = parseDiCheckWorkingDirectory(prefix, runtimeCwd);
+    if ("diagnostic" in invocation) {
+      return { parsed: { kind: "invalid", message: invocation.diagnostic } };
+    }
+    const separator = invocation.args.indexOf("--");
+    const options = separator === -1 ? invocation.args : invocation.args.slice(0, separator);
+    const misplaced = options
+      .map((arg) => arg.split("=")[0])
+      .find((arg) => arg === "--out" || arg === "--manifest" || arg === "--json");
+    if (misplaced) {
+      return { parsed: { kind: "invalid", message: `Pass ${misplaced} after 'di check'.` } };
+    }
+    if (invocation.cwdOptionIndices.size > 0) cwd = invocation.cwd;
+  }
+
+  const invocation = parseDiCheckWorkingDirectory(args, runtimeCwd);
+  if ("diagnostic" in invocation) {
+    return { parsed: { kind: "invalid", message: invocation.diagnostic } };
+  }
+
+  if (hasDiCheckHelp(args) || prefixArgs.some(hasDiCheckHelp)) {
+    return { parsed: { kind: "help" } };
+  }
+
+  return {
+    parsed: parseDiCheckOptions(args, invocation.cwdOptionIndices),
+    cwd: invocation.cwdOptionIndices.size > 0 ? invocation.cwd : cwd,
+  };
+}
+
+function parseDiCheckWorkingDirectory(args: readonly string[], runtimeCwd?: string) {
   return parseWorkingDirectoryInvocation(args, runtimeCwd, {
     allowOptionLikeEqualsValue: true,
     shortOptions: ["-h"],
   });
 }
 
-function parseDiCheckInvocation(
-  args: readonly string[],
-  runtimeCwd?: string,
-): { readonly parsed: DiCheckParseResult; readonly cwd?: string | undefined } {
-  const invocation = parseDiCheckWorkingDirectory(args, runtimeCwd);
-  if ("diagnostic" in invocation) {
-    return { parsed: { kind: "invalid", message: invocation.diagnostic } };
-  }
-
-  if (args.includes("--help") || args.includes("-h")) {
-    return { parsed: { kind: "help" } };
-  }
-
-  return { parsed: parseDiCheckOptions(args, invocation.cwdOptionIndices), cwd: invocation.cwd };
+function hasDiCheckHelp(args: readonly string[]): boolean {
+  return args.includes("--help") || args.includes("-h");
 }
 
 function parseDiCheckOptions(
@@ -200,6 +239,13 @@ function parseDiCheckOptions(
 ): DiCheckParseResult {
   const manifest = getFlagValue(args, "--manifest") ?? getFirstPosition(args, cwdOptionIndices);
   const out = getFlagValue(args, "--out");
+
+  if (out === null && args.includes("--out")) {
+    return {
+      kind: "invalid",
+      message: "[CROCO_CLI_MISSING_VALUE] Missing report output path. Pass --out <path>.",
+    };
+  }
 
   if (!manifest) {
     return {

@@ -8,8 +8,8 @@
       "files": {
         "packages/cli/src/commands/codegenOpenapi.ts": "4e7ca71b254be0391427e2001ad2515b581975fec43eed44421f847cb1a96e6d",
         "packages/cli/src/commands/codegenRpc.ts": "198b00e28f50aa3a713e0d84ad6c1488554e41eadb6de9a4b45a096277739aa0",
-        "packages/cli/src/commands/diCheck.ts": "a0344a9e5e0756a8d9b85fd530f4fce7f608d90fdba20cda5cdaba6aaaa1620c",
-        "packages/cli/src/commands/root.ts": "b793c7f10db014fae861e0172ff24470f5611fb26da13f6dee0eec376f4be1c8",
+        "packages/cli/src/commands/diCheck.ts": "c3cf7793f8446eecd4f2f577f1e465b4bb277a6d9ebf459d7aab668b39ff5e4b",
+        "packages/cli/src/commands/root.ts": "24929fa343f76c83f2ab4a28e7f77cf502518fefbaccea7ffd6b04cd45180241",
         "packages/cli/src/libs/codegenInvocation.ts": "deleted",
         "packages/cli/src/libs/workingDirectoryInvocation.ts": "44627db06bd1eb4e5278f6bc0bc3413f515893f6d0f082c4dcdf2227fd16d0e4"
       },

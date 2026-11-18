@@ -43,18 +43,22 @@ export async function runCroco(
   const rawArgs = normalizeContractsDiffRootArgs(normalizeMigrateRootArgs(argv));
 
   try {
+    const diIndex = findDiCheckCommandIndex(argv, "di", 0);
+    if (diIndex !== undefined) {
+      const checkIndex = findDiCheckCommandIndex(argv, "check", diIndex + 1);
+      if (checkIndex !== undefined) {
+        const { runDiCheckAtRoot } = await import("./diCheck.js");
+        const prefixArgs = [argv.slice(0, diIndex), argv.slice(diIndex + 1, checkIndex)];
+        const result = runWithCrocoCommandRuntime(runtime, () =>
+          runDiCheckAtRoot(argv.slice(checkIndex + 1), prefixArgs),
+        );
+        return toRunResult(result);
+      }
+    }
+
     if (rawArgs.includes("--help") || rawArgs.includes("-h")) {
       const helpCommandIndex = findRootCommandIndex(rawArgs);
       const helpArgs = helpCommandIndex === undefined ? [] : rawArgs.slice(helpCommandIndex);
-      const leafIndex = helpArgs[0] === "di" ? findHelpSubCommandIndex(helpArgs, 1) : -1;
-      if (helpArgs[leafIndex] === "check") {
-        const { parseDiCheckWorkingDirectory } = await import("./diCheck.js");
-        const invocation = parseDiCheckWorkingDirectory(helpArgs.slice(leafIndex + 1), runtime.cwd);
-        if ("diagnostic" in invocation) {
-          runtime.stderr(invocation.diagnostic);
-          runtime.setExitCode(1);
-        }
-      }
       runtime.stdout(`${await renderHelpUsage(command, helpArgs)}\n`);
       return toRunResult(runtime.getExitCode());
     }
@@ -293,8 +297,30 @@ function findRootMigrateIndex(rawArgs: readonly string[]): number | undefined {
   return findCommandIndex(rawArgs, 0, (argument) => argument === "migrate");
 }
 
-function findRootCommandIndex(rawArgs: readonly string[]): number | undefined {
-  for (let index = 0; index < rawArgs.length; index++) {
+function findDiCheckCommandIndex(
+  args: readonly string[],
+  command: "di" | "check",
+  startIndex: number,
+): number | undefined {
+  const separator = args.indexOf("--", startIndex);
+  const index =
+    separator === -1
+      ? findRootCommandIndex(args, startIndex)
+      : (findRootCommandIndex(args, startIndex, separator) ??
+        args.findIndex((arg, offset) => offset > separator && !arg.startsWith("-")));
+  if (index !== undefined && args[index] === command) return index;
+
+  // Preserve Citty's fallback command boundary so a missing prefix --cwd value can be reported.
+  const positional = args.findIndex((arg, offset) => offset >= startIndex && !arg.startsWith("-"));
+  return args[positional] === command ? positional : undefined;
+}
+
+function findRootCommandIndex(
+  rawArgs: readonly string[],
+  startIndex = 0,
+  endIndex = rawArgs.length,
+): number | undefined {
+  for (let index = startIndex; index < endIndex; index++) {
     const argument = rawArgs[index];
     if (argument === undefined) {
       continue;
@@ -439,10 +465,6 @@ function bindCommandHook<T extends ArgsDef>(
   return (context) => runWithCrocoCommandRuntime(runtime, () => hook(context));
 }
 
-function findHelpSubCommandIndex(rawArgs: readonly string[], startIndex = 0): number {
-  return rawArgs.findIndex((argument, index) => index >= startIndex && !argument.startsWith("-"));
-}
-
 async function renderHelpUsage<T extends ArgsDef>(
   command: CommandDef<T>,
   rawArgs: readonly string[],
@@ -450,7 +472,7 @@ async function renderHelpUsage<T extends ArgsDef>(
 ): Promise<string> {
   const subCommands = await resolveValue(command.subCommands);
   if (subCommands !== undefined && Object.keys(subCommands).length > 0) {
-    const subCommandIndex = findHelpSubCommandIndex(rawArgs);
+    const subCommandIndex = rawArgs.findIndex((argument) => !argument.startsWith("-"));
     const subCommandName = rawArgs[subCommandIndex];
     const subCommand =
       subCommandName === undefined ? undefined : await resolveValue(subCommands[subCommandName]);
