@@ -29970,6 +29970,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "InvalidRevenueCarryingCapacityMetricProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/MetricsProblems",
+              "declarationKind": "class"
+            },
+            {
               "name": "InvalidUserCarryingCapacityMetricProblem",
               "exportKind": "named",
               "source": "./libs/problems/MetricsProblems",

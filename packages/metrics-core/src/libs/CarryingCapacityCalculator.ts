@@ -5,6 +5,7 @@ import {
   CarryingCapacitySimulationProblem,
   CarryingCapacityTenantRequiredProblem,
   InvalidCarryingCapacityConfigProblem,
+  InvalidRevenueCarryingCapacityMetricProblem,
   InvalidUserCarryingCapacityMetricProblem,
 } from "./problems/MetricsProblems";
 
@@ -44,7 +45,7 @@ export type SimulationConfig = {
  * Carrying Capacity measures the maximum sustainable scale given current inflow and churn rates.
  *
  * User CC: Maximum users sustainable = Daily New Users / Daily Churn Rate
- * Revenue CC: Maximum MRR sustainable = Monthly New MRR / (1 - NRR)
+ * Revenue CC: Maximum MRR sustainable = Monthly New MRR / (1 - Monthly Net Retention)
  *
  * @example
  * ```typescript
@@ -123,8 +124,13 @@ export class CarryingCapacityCalculator {
   /**
    * Calculate Revenue Carrying Capacity.
    *
-   * @formula Capacity = Monthly New MRR / (1 - NRR)
-   * @returns Revenue CC result, or null if NRR = 100% (infinite capacity)
+   * @formula Capacity = Monthly New MRR / (1 - (Period NRR / 100) ^ (1 / lookbackMonths))
+   * @description Convert the observed period NRR to the constant monthly retention that compounds
+   * to the same result. MRR history and retention share a rolling local-time window from
+   * Date.setMonth(now.getMonth() - lookbackMonths) to the calculation instant. Current MRR uses
+   * the snapshot at local midnight. Daily diagnostics divide monthly inflow and churn by 30.
+   * @returns Revenue CC result, or null if period NRR is at least 100% (no finite capacity ceiling)
+   * @throws InvalidRevenueCarryingCapacityMetricProblem when NRR is negative or non-finite, or capacity is non-finite
    */
   async calculateRevenueCC(config: RevenueCCConfig): Promise<CCResult | null> {
     const { lookbackMonths, tenantId } = config;
@@ -151,17 +157,28 @@ export class CarryingCapacityCalculator {
       granularity: "month",
     });
 
-    const churnFactor = 1 - retention.nrr / 100;
-    if (churnFactor <= 0) {
+    const { nrr } = retention;
+    if (!Number.isFinite(nrr) || nrr < 0) {
+      throw new InvalidRevenueCarryingCapacityMetricProblem("nrr", nrr);
+    }
+    if (nrr >= 100) {
       return null;
     }
 
-    const capacity = monthlyNewMRR / churnFactor;
+    // Keep precision near 100% and avoid dividing tiny positive NRR values down to zero.
+    const logPeriodRetention =
+      nrr >= 50 ? Math.log1p((nrr - 100) / 100) : Math.log(nrr) - Math.log(100);
+    const monthlyChurnRate = -Math.expm1(logPeriodRetention / lookbackMonths);
+    const capacity = monthlyNewMRR / monthlyChurnRate;
+    if (!Number.isFinite(capacity)) {
+      throw new InvalidRevenueCarryingCapacityMetricProblem("capacity", capacity);
+    }
+
     const snapshot = await this.metricsRepository.getSnapshot(tenantId, this.toSnapshotDate(now));
     const current = snapshot?.totalMRR.amount ?? 0;
 
     const dailyInflow = monthlyNewMRR / 30;
-    const dailyChurnRate = churnFactor / 30;
+    const dailyChurnRate = monthlyChurnRate / 30;
 
     return this.buildCCResult(capacity, current, dailyInflow, dailyChurnRate);
   }

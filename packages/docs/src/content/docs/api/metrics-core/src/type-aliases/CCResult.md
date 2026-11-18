@@ -7,19 +7,11 @@ title: "CCResult"
 
 > **CCResult** = `object`
 
-Cohort Capacity result for user and revenue capacity planning.
+Carrying capacity result for user and revenue planning.
 
 ## Formula
 
 Headroom % = ((Capacity - Current) / Capacity) \* 100
-
-## Formula
-
-Daily Churn Rate = 1 - NRR (monthly)
-
-## Formula
-
-Daily Inflow = New MRR per day (for revenue) or New Users per day (for users)
 
 ## Properties
 
@@ -43,7 +35,7 @@ Current count (users or MRR)
 
 > **dailyChurnRate**: `number`
 
-Daily churn rate (0-1, derived from NRR)
+NRR-derived churn per day. Revenue capacity reports monthly churn divided by 30.
 
 ---
 

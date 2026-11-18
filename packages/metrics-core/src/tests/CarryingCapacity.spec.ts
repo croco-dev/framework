@@ -250,7 +250,64 @@ describe("CarryingCapacityCalculator", () => {
       },
     );
 
-    it("should calculate Revenue CC correctly with monthly new MRR=30000, NRR=98%", async () => {
+    it.each([
+      [1, 90, 0.1],
+      [3, 72.9, 0.1],
+      [6, 53.1441, 0.1],
+      [6, 26.2144, 0.2],
+    ])(
+      "should calculate monthly capacity for a %s-month lookback with %s%% NRR",
+      async (lookbackMonths, nrr, monthlyChurn) => {
+        vi.useFakeTimers();
+        const now = new Date(2026, 6, 15, 12);
+        vi.setSystemTime(now);
+        try {
+          const [movement] = mockMovements;
+          vi.mocked(mockMetricsRepository.getMRRHistory).mockResolvedValue(
+            Array.from({ length: lookbackMonths }, () => ({
+              ...movement,
+              new: { amount: 10000, currency: "USD" },
+            })),
+          );
+          vi.mocked(mockMetricsRepository.getRetentionMetrics).mockResolvedValue({
+            logoChurn: 0,
+            revenueChurn: 100 - nrr,
+            grr: nrr,
+            nrr,
+          });
+
+          const result = await calculator.calculateRevenueCC({
+            lookbackMonths,
+            tenantId: TENANT_ID,
+          });
+
+          expect(result?.capacity).toBeCloseTo(10000 / monthlyChurn);
+          expect(result?.dailyInflow).toBeCloseTo(10000 / 30);
+          expect(result?.dailyChurnRate).toBeCloseTo(monthlyChurn / 30, 10);
+          const period = {
+            from: new Date(2026, 6 - lookbackMonths, 15, 12),
+            to: now,
+            granularity: "month",
+          };
+          expect(mockMetricsRepository.getMRRHistory).toHaveBeenCalledExactlyOnceWith(
+            TENANT_ID,
+            period,
+          );
+          expect(mockMetricsRepository.getRetentionMetrics).toHaveBeenCalledExactlyOnceWith(
+            TENANT_ID,
+            period,
+          );
+          expect(mockMetricsRepository.getSnapshot).toHaveBeenCalledExactlyOnceWith(
+            TENANT_ID,
+            new Date(2026, 6, 15),
+          );
+        } finally {
+          vi.useRealTimers();
+        }
+      },
+    );
+
+    it("should calculate Revenue CC and headroom for a single month", async () => {
       vi.spyOn(mockMetricsRepository, "getMRRHistory").mockResolvedValue(mockMovements);
       vi.spyOn(mockMetricsRepository, "getRetentionMetrics").mockResolvedValue({
         logoChurn: 2,
@@ -265,14 +322,14 @@ describe("CarryingCapacityCalculator", () => {
       });
 
       const result = await calculator.calculateRevenueCC({
-        lookbackMonths: 2,
+        lookbackMonths: 1,
         tenantId: TENANT_ID,
       });
 
       expect(result).not.toBeNull();
       if (!result) return;
 
-      const monthlyNewMRR = (30000 + 35000) / 2;
+      const monthlyNewMRR = 30000 + 35000;
       const expectedCapacity = monthlyNewMRR / 0.02;
       expect(result.capacity).toBeCloseTo(expectedCapacity, 0);
       expect(result.current).toBe(500000);
@@ -283,13 +340,13 @@ describe("CarryingCapacityCalculator", () => {
       );
     });
 
-    it("should return null when NRR is 100% (infinite capacity)", async () => {
+    it.each([100, 110])("should return null when NRR is %s%%", async (nrr) => {
       vi.spyOn(mockMetricsRepository, "getMRRHistory").mockResolvedValue(mockMovements);
       vi.spyOn(mockMetricsRepository, "getRetentionMetrics").mockResolvedValue({
         logoChurn: 0,
         revenueChurn: 0,
         grr: 100,
-        nrr: 100,
+        nrr,
       });
 
       const result = await calculator.calculateRevenueCC({
@@ -299,6 +356,63 @@ describe("CarryingCapacityCalculator", () => {
 
       expect(result).toBeNull();
     });
+
+    it("should treat zero NRR as complete revenue loss", async () => {
+      vi.mocked(mockMetricsRepository.getMRRHistory).mockResolvedValue(mockMovements);
+      vi.mocked(mockMetricsRepository.getRetentionMetrics).mockResolvedValue({
+        logoChurn: 100,
+        revenueChurn: 100,
+        grr: 0,
+        nrr: 0,
+      });
+
+      const result = await calculator.calculateRevenueCC({
+        lookbackMonths: 2,
+        tenantId: TENANT_ID,
+      });
+
+      expect(result?.capacity).toBe(32500);
+      expect(result?.dailyChurnRate).toBeCloseTo(1 / 30, 10);
+    });
+
+    it("should retain a finite ceiling for NRR just below 100%", async () => {
+      vi.mocked(mockMetricsRepository.getMRRHistory).mockResolvedValue(mockMovements);
+      vi.mocked(mockMetricsRepository.getRetentionMetrics).mockResolvedValue({
+        logoChurn: 0,
+        revenueChurn: 0,
+        grr: 100,
+        nrr: 99.99999999999999,
+      });
+
+      const result = await calculator.calculateRevenueCC({
+        lookbackMonths: 6,
+        tenantId: TENANT_ID,
+      });
+
+      expect(Number.isFinite(result?.capacity)).toBe(true);
+      expect(result?.dailyChurnRate).toBeGreaterThan(0);
+    });
+
+    it.each([-1, Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY])(
+      "should reject invalid Revenue CC NRR %s before reading the snapshot",
+      async (nrr) => {
+        vi.mocked(mockMetricsRepository.getMRRHistory).mockResolvedValue(mockMovements);
+        vi.mocked(mockMetricsRepository.getRetentionMetrics).mockResolvedValue({
+          logoChurn: 0,
+          revenueChurn: 0,
+          grr: 100,
+          nrr,
+        });
+
+        await expect(
+          calculator.calculateRevenueCC({ lookbackMonths: 2, tenantId: TENANT_ID }),
+        ).rejects.toMatchObject({
+          code: "metrics-core/invalid-revenue-carrying-capacity-metric",
+          extensions: { field: "nrr", receivedValue: String(nrr), retryable: false },
+        });
+        expect(mockMetricsRepository.getSnapshot).not.toHaveBeenCalled();
+      },
+    );
 
     it("should handle missing snapshot (current = 0)", async () => {
       vi.spyOn(mockMetricsRepository, "getMRRHistory").mockResolvedValue(mockMovements);
@@ -311,18 +425,39 @@ describe("CarryingCapacityCalculator", () => {
       vi.spyOn(mockMetricsRepository, "getSnapshot").mockResolvedValue(null);
 
       const result = await calculator.calculateRevenueCC({
-        lookbackMonths: 2,
+        lookbackMonths: 1,
         tenantId: TENANT_ID,
       });
 
       expect(result).not.toBeNull();
       if (!result) return;
 
-      const monthlyNewMRR = (30000 + 35000) / 2;
+      const monthlyNewMRR = 30000 + 35000;
       const expectedCapacity = monthlyNewMRR / 0.02;
 
       expect(result.current).toBe(0);
       expect(result.headroom).toBeCloseTo(expectedCapacity, 0);
+    });
+
+    it("should report a typed error when revenue capacity overflows", async () => {
+      const [movement] = mockMovements;
+      vi.mocked(mockMetricsRepository.getMRRHistory).mockResolvedValue([
+        { ...movement, new: { amount: Number.MAX_VALUE, currency: "USD" } },
+      ]);
+      vi.mocked(mockMetricsRepository.getRetentionMetrics).mockResolvedValue({
+        logoChurn: 50,
+        revenueChurn: 50,
+        grr: 50,
+        nrr: 50,
+      });
+
+      await expect(
+        calculator.calculateRevenueCC({ lookbackMonths: 1, tenantId: TENANT_ID }),
+      ).rejects.toMatchObject({
+        code: "metrics-core/invalid-revenue-carrying-capacity-metric",
+        extensions: { field: "capacity", receivedValue: "Infinity", retryable: false },
+      });
+      expect(mockMetricsRepository.getSnapshot).not.toHaveBeenCalled();
     });
   });
 

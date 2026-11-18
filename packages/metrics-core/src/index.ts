@@ -90,6 +90,7 @@ export {
   CarryingCapacityTenantRequiredProblem,
   GrossMarginRequiredProblem,
   InvalidCarryingCapacityConfigProblem,
+  InvalidRevenueCarryingCapacityMetricProblem,
   InvalidUserCarryingCapacityMetricProblem,
   InvalidRetentionMovementProblem,
   MixedCurrencyMRRProblem,

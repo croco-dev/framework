@@ -62,6 +62,23 @@ export class InvalidUserCarryingCapacityMetricProblem extends Problem {
   }
 }
 
+export class InvalidRevenueCarryingCapacityMetricProblem extends Problem {
+  readonly code = "metrics-core/invalid-revenue-carrying-capacity-metric";
+  readonly category = ProblemCategory.ValidationError;
+
+  constructor(field: "nrr" | "capacity", value: number) {
+    const receivedValue = String(value);
+    super(
+      "metrics-core/invalid-revenue-carrying-capacity-metric",
+      ProblemCategory.ValidationError,
+      `Revenue carrying capacity requires finite non-negative NRR and finite capacity. '${field}' was ${receivedValue}.`,
+      {
+        extensions: { field, receivedValue, retryable: false },
+      },
+    );
+  }
+}
+
 export class RetentionMetricsUnavailableProblem extends Problem {
   readonly code = "metrics-core/retention-metrics-unavailable";
   readonly category = ProblemCategory.NotImplemented;

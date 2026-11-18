@@ -3762,6 +3762,16 @@ const recoveryMetadataByCategory = {
 } as const satisfies Record<ProblemCategory, ProblemRecoveryMetadata>;
 
 const recoveryMetadataByCode = {
+  "metrics-core/invalid-revenue-carrying-capacity-metric": recovery({
+    cause:
+      "The selected revenue metrics contain invalid net retention or yield a non-finite capacity.",
+    userAction: "Ask the application operator to check the revenue metrics before retrying.",
+    operatorAction:
+      "Use the reported field to inspect the tenant's period NRR or new MRR movements. Correct the source metrics before recalculating capacity.",
+    retryability: "not-retryable",
+    redactionPolicy: "public",
+    severity: "info",
+  }),
   INVITATION_RATE_LIMIT_UNAVAILABLE: recovery({
     cause:
       "The invitation store could not atomically check the tenant quota and persist a creation.",
