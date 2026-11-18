@@ -346,6 +346,18 @@ export type ListAttributionsFilter = {
   readonly limit?: number;
 };
 
+export type ListAttributionsPageFilter = ListAttributionsFilter & {
+  readonly scope?: ReferralScope;
+  /** Resume strictly after this attribution ID in Unicode code point order. */
+  readonly after?: string;
+};
+
+export type ReferralAttributionPage = {
+  readonly attributions: readonly ReferralAttribution[];
+  /** Pass this value as `after` with the same filters. Null ends the sweep. */
+  readonly nextCursor: string | null;
+};
+
 export type ListBenefitIntentsFilter = {
   readonly attributionId?: string;
   readonly side?: ReferralBenefitSide;

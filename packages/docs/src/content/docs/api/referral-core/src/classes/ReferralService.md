@@ -293,6 +293,24 @@ Lists pending attributions so restarts can resume qualification and benefits.
 
 ---
 
+### recoverPendingAttributionsPage()
+
+> **recoverPendingAttributionsPage**(`input?`): `Promise`\<[`ReferralAttributionPage`](/api/referral-core/src/type-aliases/referralattributionpage/)\>
+
+Lists a live page of recoverable attributions for an application-owned sweep.
+
+#### Parameters
+
+##### input?
+
+[`ListAttributionsPageFilter`](/api/referral-core/src/type-aliases/listattributionspagefilter/) = `{}`
+
+#### Returns
+
+`Promise`\<[`ReferralAttributionPage`](/api/referral-core/src/type-aliases/referralattributionpage/)\>
+
+---
+
 ### registerProgram()
 
 > **registerProgram**(`input`): `Promise`\<\{ `created`: `boolean`; `program`: [`ReferralProgramDefinition`](/api/referral-core/src/type-aliases/referralprogramdefinition/); \}\>

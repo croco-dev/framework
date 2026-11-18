@@ -1,6 +1,6 @@
 {
   "version": "croco.problem-code-registry.v1",
-  "problemCount": 1187,
+  "problemCount": 1188,
   "problems": [
     {
       "code": "ACCESS_DENIED",
@@ -28795,6 +28795,36 @@
       ]
     },
     {
+      "code": "referral-core/recovery-paging-unsupported",
+      "category": "NotImplemented",
+      "status": 501,
+      "title": "Not Implemented",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#referral-core-recovery-paging-unsupported",
+      "recovery": {
+        "cause": "The requested capability is not supported by this runtime or adapter.",
+        "userAction": "Use a supported capability or choose an adapter/runtime that provides it.",
+        "operatorAction": "Check runtime capability declarations and provider maturity documentation.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "public",
+        "telemetry": {
+          "eventName": "croco.problem.info",
+          "severity": "info",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/referral-core/src/libs/problems.ts",
+          "line": 245,
+          "column": 1,
+          "kind": "problem-class"
+        }
+      ]
+    },
+    {
       "code": "referral-core/self-referral",
       "category": "BusinessRuleViolation",
       "status": 422,
@@ -28878,7 +28908,7 @@
       "sources": [
         {
           "file": "packages/referral-drizzle/src/libs/PostgresReferralStore.ts",
-          "line": 47,
+          "line": 50,
           "column": 1,
           "kind": "problem-class"
         }

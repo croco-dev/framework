@@ -19,6 +19,7 @@ import {
   ReferralProgramNotFoundProblem,
   ReferralQualificationEvidenceInvalidProblem,
   ReferralQualificationRejectedProblem,
+  ReferralRecoveryPagingUnsupportedProblem,
   ReferralSelfReferralProblem,
   ReferralSubjectLimitReachedProblem,
   ReferralTenantMismatchProblem,
@@ -29,9 +30,11 @@ import type {
   CreateReferralLinkResult,
   FulfillReferralBenefitsInput,
   ListAttributionsFilter,
+  ListAttributionsPageFilter,
   ListBenefitIntentsFilter,
   QualifyReferralAttributionInput,
   ReferralAttribution,
+  ReferralAttributionPage,
   ReferralAuditEntry,
   ReferralBenefitIntent,
   ReferralBenefitIntentStatus,
@@ -69,6 +72,15 @@ const CONFIRMED_CHAIN_STATES: readonly ReferralAttribution["state"][] = [
   "benefits-pending",
   "benefits-partial",
   "fulfilled",
+];
+
+const RECOVERABLE_ATTRIBUTION_STATES: readonly ReferralAttribution["state"][] = [
+  "claimed",
+  "held",
+  "qualified",
+  "benefits-pending",
+  "benefits-partial",
+  "indeterminate",
 ];
 
 const TERMINAL_BENEFIT_STATES: readonly ReferralBenefitIntentStatus[] = [
@@ -750,16 +762,22 @@ export class ReferralService {
     readonly limit?: number;
   }): Promise<readonly ReferralAttribution[]> {
     return this.store.listAttributions({
-      states: [
-        "claimed",
-        "held",
-        "qualified",
-        "benefits-pending",
-        "benefits-partial",
-        "indeterminate",
-      ],
+      states: RECOVERABLE_ATTRIBUTION_STATES,
       limit: input?.limit ?? 100,
     });
+  }
+
+  /** Lists a live page of recoverable attributions for an application-owned sweep. */
+  async recoverPendingAttributionsPage(
+    input: ListAttributionsPageFilter = {},
+  ): Promise<ReferralAttributionPage> {
+    if (!this.store.listAttributionsPage) {
+      throw new ReferralRecoveryPagingUnsupportedProblem();
+    }
+    const states = RECOVERABLE_ATTRIBUTION_STATES.filter(
+      (state) => input.states === undefined || input.states.includes(state),
+    );
+    return this.store.listAttributionsPage({ ...input, states });
   }
 
   /** Funnel counts keep share intent separate from confirmed acquisition and payout. */

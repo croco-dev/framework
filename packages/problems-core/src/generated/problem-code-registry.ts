@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export type CrocoProblemRegistry = {
   readonly version: "croco.problem-code-registry.v1";
-  readonly problemCount: 1187;
+  readonly problemCount: 1188;
   readonly problems: readonly [
     {
       readonly code: "ACCESS_DENIED";
@@ -26952,6 +26952,34 @@ export type CrocoProblemRegistry = {
       ];
     },
     {
+      readonly code: "referral-core/recovery-paging-unsupported";
+      readonly category: "NotImplemented";
+      readonly status: 501;
+      readonly title: "Not Implemented";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#referral-core-recovery-paging-unsupported";
+      readonly recovery: {
+        readonly cause: "The requested capability is not supported by this runtime or adapter.";
+        readonly userAction: "Use a supported capability or choose an adapter/runtime that provides it.";
+        readonly operatorAction: "Check runtime capability declarations and provider maturity documentation.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/referral-core/src/libs/problems.ts";
+          readonly line: 245;
+          readonly column: 1;
+          readonly kind: "problem-class";
+        },
+      ];
+    },
+    {
       readonly code: "referral-core/self-referral";
       readonly category: "BusinessRuleViolation";
       readonly status: 422;
@@ -27029,7 +27057,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/referral-drizzle/src/libs/PostgresReferralStore.ts";
-          readonly line: 47;
+          readonly line: 50;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -33550,7 +33578,7 @@ export type CrocoProblemRegistry = {
 
 export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 1187,
+  problemCount: 1188,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -63642,6 +63670,38 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       ],
     },
     {
+      code: "referral-core/recovery-paging-unsupported",
+      category: "NotImplemented",
+      status: 501,
+      title: "Not Implemented",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#referral-core-recovery-paging-unsupported",
+      recovery: {
+        cause: "The requested capability is not supported by this runtime or adapter.",
+        userAction: "Use a supported capability or choose an adapter/runtime that provides it.",
+        operatorAction:
+          "Check runtime capability declarations and provider maturity documentation.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/referral-core/src/libs/problems.ts",
+          line: 245,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
       code: "referral-core/self-referral",
       category: "BusinessRuleViolation",
       status: 422,
@@ -63729,7 +63789,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/referral-drizzle/src/libs/PostgresReferralStore.ts",
-          line: 47,
+          line: 50,
           column: 1,
           kind: "problem-class",
         },

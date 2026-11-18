@@ -489,6 +489,28 @@ First-valid lookup: the earliest claimed attribution for a recipient in a family
 
 ---
 
+### listAttributionsPage()
+
+> **listAttributionsPage**(`filter`): `Promise`\<[`ReferralAttributionPage`](/api/referral-core/src/type-aliases/referralattributionpage/)\>
+
+Live keyset scan ordered by immutable attribution ID in Unicode code point order.
+
+#### Parameters
+
+##### filter
+
+[`ListAttributionsPageFilter`](/api/referral-core/src/type-aliases/listattributionspagefilter/)
+
+#### Returns
+
+`Promise`\<[`ReferralAttributionPage`](/api/referral-core/src/type-aliases/referralattributionpage/)\>
+
+#### Implementation of
+
+[`ReferralStore`](/api/referral-core/src/interfaces/referralstore/).[`listAttributionsPage`](/api/referral-core/src/interfaces/referralstore/#listattributionspage)
+
+---
+
 ### listAudits()
 
 > **listAudits**(): `Promise`\<readonly [`ReferralAuditEntry`](/api/referral-core/src/type-aliases/referralauditentry/)[]\>

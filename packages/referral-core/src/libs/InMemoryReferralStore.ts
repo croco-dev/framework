@@ -1,5 +1,7 @@
 import { addReferralAmounts, compareReferralAmounts, subtractReferralAmounts } from "./amounts";
+import { assertReferralScope, assertReferralSubject, sameReferralScope } from "./ReferralProgram";
 import {
+  InvalidReferralProgramProblem,
   ReferralAttributionNotFoundProblem,
   ReferralAttributionStateConflictProblem,
   ReferralBudgetExhaustedProblem,
@@ -11,15 +13,18 @@ import { assertReferralLimit, stableReferralFingerprint } from "./ReferralStore"
 import type { ReferralStore, ReferralTx } from "./ReferralStore";
 import type {
   ListAttributionsFilter,
+  ListAttributionsPageFilter,
   ListBenefitIntentsFilter,
   ListReferralLinksFilter,
   ReferralAttribution,
+  ReferralAttributionPage,
   ReferralAuditEntry,
   ReferralBenefitIntent,
   ReferralBenefitIntentStatus,
   ReferralFunnelCounts,
   ReferralLink,
   ReferralProgramDefinition,
+  ReferralScope,
   ReferralSubject,
 } from "./types";
 
@@ -105,6 +110,17 @@ function matchesSubject(candidate: ReferralSubject, filter: ReferralSubject): bo
   );
 }
 
+function compareAttributionIds(left: string, right: string): number {
+  const rightCharacters = right[Symbol.iterator]();
+  for (const character of left) {
+    const other = rightCharacters.next();
+    if (other.done) return 1;
+    const difference = (character.codePointAt(0) ?? 0) - (other.value.codePointAt(0) ?? 0);
+    if (difference !== 0) return difference;
+  }
+  return rightCharacters.next().done ? 0 : -1;
+}
+
 type ProgramRecord = {
   program: ReferralProgramDefinition;
   fingerprint: string;
@@ -123,6 +139,7 @@ export class InMemoryReferralStore implements ReferralStore, ReferralTx {
     linksByTokenHash: new Map<string, string>(),
     clicks: new Map<string, number>(),
     attributions: new Map<string, ReferralAttribution>(),
+    attributionScopes: new Map<string, ReferralScope>(),
     attributionFingerprints: new Map<string, string>(),
     intents: new Map<string, ReferralBenefitIntent>(),
     intentsByLogicalKey: new Map<string, string>(),
@@ -150,6 +167,7 @@ export class InMemoryReferralStore implements ReferralStore, ReferralTx {
           cloneAttribution(attribution),
         ]),
       ),
+      attributionScopes: new Map(this.state.attributionScopes),
       attributionFingerprints: new Map(this.state.attributionFingerprints),
       intents: new Map([...this.state.intents].map(([key, intent]) => [key, cloneIntent(intent)])),
       intentsByLogicalKey: new Map(this.state.intentsByLogicalKey),
@@ -283,7 +301,7 @@ export class InMemoryReferralStore implements ReferralStore, ReferralTx {
 
   async getAttribution(attributionId: string): Promise<ReferralAttribution | null> {
     const attribution = this.state.attributions.get(attributionId);
-    return attribution ? cloneAttribution(attribution) : null;
+    return attribution ? cloneAttribution({ ...attribution, id: attributionId }) : null;
   }
 
   async getFirstAttributionForRecipient(
@@ -324,6 +342,7 @@ export class InMemoryReferralStore implements ReferralStore, ReferralTx {
       return { created: false, attribution: cloneAttribution(existing) };
     }
     this.state.attributions.set(attribution.id, cloneAttribution(attribution));
+    this.state.attributionScopes.set(attribution.id, { ...attribution.scope });
     this.state.attributionFingerprints.set(attribution.id, fingerprint);
     return { created: true, attribution: cloneAttribution(attribution) };
   }
@@ -497,7 +516,52 @@ export class InMemoryReferralStore implements ReferralStore, ReferralTx {
   async listAttributions(filter: ListAttributionsFilter): Promise<readonly ReferralAttribution[]> {
     const limit = assertReferralLimit(filter.limit, 100);
     const result: ReferralAttribution[] = [];
-    for (const attribution of this.state.attributions.values()) {
+    for (const [, attribution] of this.matchingAttributions(filter)) {
+      result.push(cloneAttribution(attribution));
+      if (result.length >= limit) break;
+    }
+    return result;
+  }
+
+  async listAttributionsPage(filter: ListAttributionsPageFilter): Promise<ReferralAttributionPage> {
+    const limit = assertReferralLimit(filter.limit, 100);
+    if (filter.scope !== undefined) assertReferralScope(filter.scope);
+    if (filter.referrer !== undefined) assertReferralSubject(filter.referrer);
+    if (filter.recipient !== undefined) assertReferralSubject(filter.recipient);
+    const after = filter.after;
+    if (after !== undefined && typeof after !== "string") {
+      throw new InvalidReferralProgramProblem("recovery page cursor must be a string");
+    }
+    const scope = filter.scope ?? filter.referrer ?? filter.recipient;
+    const matching = [...this.matchingAttributions(filter, scope)]
+      .filter(([id]) => after === undefined || compareAttributionIds(id, after) > 0)
+      .sort(([leftId], [rightId]) => compareAttributionIds(leftId, rightId));
+    const attributions = matching
+      .slice(0, limit)
+      .map(([id, attribution]) => cloneAttribution({ ...attribution, id }));
+    return {
+      attributions,
+      nextCursor: matching.length > limit ? (attributions.at(-1)?.id ?? null) : null,
+    };
+  }
+
+  private *matchingAttributions(
+    filter: ListAttributionsFilter,
+    scope?: ReferralScope,
+  ): Iterable<readonly [string, ReferralAttribution]> {
+    for (const entry of this.state.attributions) {
+      const [id, attribution] = entry;
+      if (scope !== undefined) {
+        const storedScope = this.state.attributionScopes.get(id);
+        if (
+          !storedScope ||
+          !sameReferralScope(storedScope, scope) ||
+          !sameReferralScope(attribution.scope, scope) ||
+          !sameReferralScope(attribution.referrer, scope) ||
+          (attribution.recipient && !sameReferralScope(attribution.recipient, scope))
+        )
+          continue;
+      }
       if (filter.programId !== undefined && attribution.programId !== filter.programId) continue;
       if (filter.familyId !== undefined && attribution.familyId !== filter.familyId) continue;
       if (
@@ -516,10 +580,8 @@ export class InMemoryReferralStore implements ReferralStore, ReferralTx {
         continue;
       }
       if (filter.states !== undefined && !filter.states.includes(attribution.state)) continue;
-      result.push(cloneAttribution(attribution));
-      if (result.length >= limit) break;
+      yield entry;
     }
-    return result;
   }
 
   async listBenefitIntents(

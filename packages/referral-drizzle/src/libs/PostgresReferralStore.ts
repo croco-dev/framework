@@ -3,12 +3,9 @@ import type { SQL } from "drizzle-orm";
 import { Problem, ProblemCategory } from "@croco/problems-core";
 import {
   addReferralAmounts,
+  assertReferralScope,
+  assertReferralSubject,
   compareReferralAmounts,
-  stableReferralFingerprint,
-  subtractReferralAmounts,
-  ZERO_REFERRAL_AMOUNT,
-} from "@croco/referral-core";
-import {
   InvalidReferralProgramProblem,
   ReferralAttributionNotFoundProblem,
   ReferralAttributionStateConflictProblem,
@@ -17,12 +14,18 @@ import {
   ReferralLinkNotFoundProblem,
   ReferralProgramConflictProblem,
   ReferralProgramNotFoundProblem,
+  stableReferralFingerprint,
+  subtractReferralAmounts,
+  ZERO_REFERRAL_AMOUNT,
 } from "@croco/referral-core";
+
 import type {
   ListAttributionsFilter,
+  ListAttributionsPageFilter,
   ListBenefitIntentsFilter,
   ListReferralLinksFilter,
   ReferralAttribution,
+  ReferralAttributionPage,
   ReferralAttributionState,
   ReferralAuditEntry,
   ReferralBenefitIntent,
@@ -118,6 +121,16 @@ function reviveAttribution(document: unknown): ReferralAttribution {
   };
 }
 
+function reviveAttributionWithKey(row: Record<string, unknown>): ReferralAttribution {
+  if (typeof row.attribution_id !== "string") {
+    throw new ReferralPersistenceProblem(
+      "read referral attribution",
+      new Error("stored attribution ID is not text"),
+    );
+  }
+  return { ...reviveAttribution(row.document), id: row.attribution_id };
+}
+
 function reviveProgram(document: unknown): ReferralProgramDefinition {
   const program = document as ReferralProgramDefinition;
   return {
@@ -158,6 +171,31 @@ function assertLimit(limit: number | undefined, fallback: number): number {
 function recipientKey(recipient: ReferralSubject | undefined): string | null {
   if (!recipient) return null;
   return `${recipient.appId}|${recipient.environment}|${recipient.tenantId}|${recipient.kind}|${recipient.id}`;
+}
+
+function scopeIdentity({
+  appId,
+  environment,
+  tenantId,
+}: NonNullable<ListAttributionsPageFilter["scope"]>) {
+  return { appId, environment, tenantId };
+}
+
+function subjectIdentity(subject: ReferralSubject): ReferralSubject {
+  return { ...scopeIdentity(subject), kind: subject.kind, id: subject.id };
+}
+
+function assertReferralQueryText(values: readonly unknown[]): void {
+  if (
+    values.some(
+      (value) =>
+        typeof value !== "string" || value.includes("\0") || /[\uD800-\uDFFF]/u.test(value),
+    )
+  ) {
+    throw new InvalidReferralProgramProblem(
+      "referral attribution queries require valid PostgreSQL text",
+    );
+  }
 }
 
 function isUniqueViolation(error: unknown): boolean {
@@ -245,11 +283,12 @@ export class PostgresReferralStore implements ReferralStore {
 
   async getAttribution(attributionId: string): Promise<ReferralAttribution | null> {
     return run("read referral attribution", async () => {
+      assertReferralQueryText([attributionId]);
       const result = await this.database.execute(sql`
-        SELECT document FROM croco_referral_attributions WHERE attribution_id = ${attributionId}
+        SELECT attribution_id, document FROM croco_referral_attributions WHERE attribution_id = ${attributionId}
       `);
       const row = result.rows[0];
-      return row ? reviveAttribution(row.document) : null;
+      return row ? reviveAttributionWithKey(row) : null;
     });
   }
 
@@ -296,6 +335,38 @@ export class PostgresReferralStore implements ReferralStore {
     return run("list referral attributions", () => listAttributionsWith(this.database, filter));
   }
 
+  async listAttributionsPage(filter: ListAttributionsPageFilter): Promise<ReferralAttributionPage> {
+    return run("list referral attribution page", async () => {
+      const limit = assertLimit(filter.limit, 100);
+      if (filter.scope !== undefined) assertReferralScope(filter.scope);
+      if (filter.referrer !== undefined) assertReferralSubject(filter.referrer);
+      if (filter.recipient !== undefined) assertReferralSubject(filter.recipient);
+      assertReferralQueryText(
+        [
+          filter.programId,
+          filter.familyId,
+          filter.benefitCycleId,
+          filter.after,
+          filter.scope?.appId,
+          filter.scope?.environment,
+          filter.scope?.tenantId,
+          ...(filter.referrer ? Object.values(subjectIdentity(filter.referrer)) : []),
+          ...(filter.recipient ? Object.values(subjectIdentity(filter.recipient)) : []),
+        ].filter((value) => value !== undefined),
+      );
+      const rows = await listAttributionsWith(this.database, filter, {
+        limit: limit + 1,
+        scope: filter.scope ?? filter.referrer ?? filter.recipient,
+        after: filter.after,
+      });
+      const attributions = rows.slice(0, limit);
+      return {
+        attributions,
+        nextCursor: rows.length > limit ? (attributions.at(-1)?.id ?? null) : null,
+      };
+    });
+  }
+
   async listLinks(filter: ListReferralLinksFilter): Promise<readonly ReferralLink[]> {
     return run("list referral links", async () => {
       const limit = assertLimit(filter.limit, 100);
@@ -338,9 +409,11 @@ export class PostgresReferralStore implements ReferralStore {
 async function listAttributionsWith(
   executor: ReferralPgExecutor,
   filter: ListAttributionsFilter,
+  page?: Pick<ListAttributionsPageFilter, "scope" | "after"> & { readonly limit: number },
 ): Promise<readonly ReferralAttribution[]> {
-  const limit = assertLimit(filter.limit, 100);
-  const states = filter.states ?? [...ATTRIBUTION_STATES];
+  const limit = page?.limit ?? assertLimit(filter.limit, 100);
+  const states = filter.states ?? ATTRIBUTION_STATES;
+  if (page && states.length === 0) return [];
   const stateList = sql.join(
     states.map((state) => sql`${state}`),
     sql`, `,
@@ -348,20 +421,59 @@ async function listAttributionsWith(
   const programId: string | null = filter.programId ?? null;
   const familyId: string | null = filter.familyId ?? null;
   const cycleId: string | null = filter.benefitCycleId ?? null;
-  const referrerJson: string | null = filter.referrer ? JSON.stringify(filter.referrer) : null;
-  const recipientJson: string | null = filter.recipient ? JSON.stringify(filter.recipient) : null;
+  const serializeSubject = page
+    ? (subject: ReferralSubject) => JSON.stringify(subjectIdentity(subject))
+    : JSON.stringify;
+  const referrerJson = filter.referrer ? serializeSubject(filter.referrer) : null;
+  const recipientJson = filter.recipient ? serializeSubject(filter.recipient) : null;
+  const subjectMatchOperator = page ? sql`@>` : sql`=`;
+  // A state update can replace the document while retaining the original indexed fields.
+  const fields = page
+    ? {
+        program: sql`(document->>'programId')`,
+        family: sql`(document->>'familyId')`,
+        cycle: sql`(document->>'benefitCycleId')`,
+        referrer: sql`(document->'referrer')`,
+        recipient: sql`(document->'recipient')`,
+      }
+    : {
+        program: sql`program_id`,
+        family: sql`family_id`,
+        cycle: sql`benefit_cycle_id`,
+        referrer: sql`referrer`,
+        recipient: sql`recipient`,
+      };
+  const scopeJson =
+    page?.scope === undefined ? undefined : JSON.stringify(scopeIdentity(page.scope));
+  const scopeClause =
+    scopeJson !== undefined
+      ? sql`AND scope @> ${scopeJson}::jsonb
+          AND (document->'scope') @> ${scopeJson}::jsonb
+          AND (document->'referrer') @> ${scopeJson}::jsonb
+          AND (document->>'recipient' IS NULL OR (document->'recipient') @> ${scopeJson}::jsonb)`
+      : sql.empty();
+  const after = page?.after;
+  const attributionKey = sql`convert_to(attribution_id, 'UTF8')`;
+  const cursorClause =
+    after === undefined ? sql.empty() : sql`AND ${attributionKey} > convert_to(${after}, 'UTF8')`;
+  const order = page ? attributionKey : sql`created_at, attribution_id`;
+  const selection = page ? sql`attribution_id, document` : sql`document`;
   const result = await executor.execute(sql`
-    SELECT document FROM croco_referral_attributions
-    WHERE (${programId}::text IS NULL OR program_id = ${programId})
-      AND (${familyId}::text IS NULL OR family_id = ${familyId})
-      AND (${cycleId}::text IS NULL OR benefit_cycle_id = ${cycleId})
+    SELECT ${selection} FROM croco_referral_attributions
+    WHERE (${programId}::text IS NULL OR ${fields.program} = ${programId})
+      AND (${familyId}::text IS NULL OR ${fields.family} = ${familyId})
+      AND (${cycleId}::text IS NULL OR ${fields.cycle} = ${cycleId})
       AND state IN (${stateList})
-      AND (${referrerJson}::jsonb IS NULL OR referrer = ${referrerJson}::jsonb)
-      AND (${recipientJson}::jsonb IS NULL OR recipient = ${recipientJson}::jsonb)
-    ORDER BY created_at, attribution_id
+      AND (${referrerJson}::jsonb IS NULL OR ${fields.referrer} ${subjectMatchOperator} ${referrerJson}::jsonb)
+      AND (${recipientJson}::jsonb IS NULL OR ${fields.recipient} ${subjectMatchOperator} ${recipientJson}::jsonb)
+      ${scopeClause}
+      ${cursorClause}
+    ORDER BY ${order}
     LIMIT ${limit}
   `);
-  return result.rows.map((row) => reviveAttribution(row.document));
+  return page
+    ? result.rows.map(reviveAttributionWithKey)
+    : result.rows.map(({ document }) => reviveAttribution(document));
 }
 
 async function listBenefitIntentsWith(
@@ -539,11 +651,12 @@ class PostgresReferralTx implements ReferralTx {
 
   async getAttribution(attributionId: string): Promise<ReferralAttribution | null> {
     return run("read referral attribution", async () => {
+      assertReferralQueryText([attributionId]);
       const result = await this.executor.execute(sql`
-        SELECT document FROM croco_referral_attributions WHERE attribution_id = ${attributionId} FOR UPDATE
+        SELECT attribution_id, document FROM croco_referral_attributions WHERE attribution_id = ${attributionId} FOR UPDATE
       `);
       const row = result.rows[0];
-      return row ? reviveAttribution(row.document) : null;
+      return row ? reviveAttributionWithKey(row) : null;
     });
   }
 
@@ -889,13 +1002,7 @@ class PostgresReferralTx implements ReferralTx {
         [...states].map((state) => sql`${state}`),
         sql`, `,
       );
-      const subjectJson = JSON.stringify({
-        appId: subject.appId,
-        environment: subject.environment,
-        tenantId: subject.tenantId,
-        kind: subject.kind,
-        id: subject.id,
-      });
+      const subjectJson = JSON.stringify(subjectIdentity(subject));
       const result = await this.executor.execute(sql`
         SELECT COUNT(*) AS total FROM croco_referral_attributions
         WHERE family_id = ${familyId}
