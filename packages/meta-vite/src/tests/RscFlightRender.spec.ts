@@ -1,7 +1,9 @@
+import { fileURLToPath } from "node:url";
 import { createElement } from "react";
 import { renderToString } from "react-dom/server";
 import { createFromReadableStream } from "react-server-dom-webpack/client";
 import { describe, expect, it } from "vitest";
+import { createNodeHandler } from "../libs/providers/node";
 import { RenderServer } from "../libs/render/renderServer";
 import {
   RSC_CLIENT_MANIFEST_VERSION,
@@ -159,6 +161,78 @@ describe("rsc real Flight path", () => {
     const htmlResponse = await server.handle(new Request("https://example.com/rsc-basic"));
     expect(htmlResponse.status).toBe(200);
     expect(htmlResponse.headers.get("content-type")).toContain("text/html");
+  });
+
+  it("serves a Unicode page and its Flight refresh through the Node adapter", async () => {
+    const path = "/%EB%AC%B8%EC%84%9C";
+    const server = createServer([
+      {
+        ...rscRoute("/문서"),
+        componentRef: `${fileURLToPath(new URL("./fixtures/rsc-basic/nodeContext.mjs", import.meta.url))}#default`,
+      },
+    ]);
+    const adapter = createNodeHandler((request, context) => server.handle(request, context));
+
+    const html = await adapter.fetch(new Request(`https://example.com${path}?locale=ko`));
+    expect(html.status).toBe(200);
+    expect(await html.text()).toContain(`platform=node;path=${path};locale=ko`);
+
+    const flight = await adapter.fetch(
+      new Request(`https://example.com${path}.rsc?locale=en`, {
+        headers: { "x-croco-rsc-client-manifest": RSC_CLIENT_MANIFEST_VERSION },
+      }),
+    );
+    expect(flight.status).toBe(200);
+    expect(flight.headers.get("content-type")).toContain("text/x-component");
+    const element = await decodeOfficialFlight(await flight.text());
+    expect(renderToString(element as never)).toContain(`platform=node;path=${path}.rsc;locale=en`);
+
+    const stale = await adapter.fetch(
+      new Request(`https://example.com${path}.rsc`, {
+        headers: { "x-croco-rsc-client-manifest": "stale-manifest" },
+      }),
+    );
+    expect(stale.status).toBe(400);
+    expect(await stale.json()).toMatchObject({
+      route: "/문서",
+      code: "meta-vite/rsc-client-manifest-mismatch",
+    });
+  });
+
+  it.each(["/docs", "/문서"])("prefers the registered %s.rsc route to its base", async (path) => {
+    const server = createServer([rscRoute(path), rscRoute(`${path}.rsc`)], async (routePath) =>
+      flightStream(`0:${JSON.stringify(routePath)}\n`),
+    );
+    const response = await server.handle(
+      new Request(`https://example.com${path}.rsc`, {
+        headers: { "x-croco-rsc-client-manifest": RSC_CLIENT_MANIFEST_VERSION },
+      }),
+    );
+    expect(response.status).toBe(200);
+    expect(await response.text()).toBe(`0:${JSON.stringify(`${path}.rsc`)}\n`);
+  });
+
+  it("does not treat an escaped separator as a path separator in Flight refresh URLs", async () => {
+    const server = createServer([rscRoute("/docs/page")], async () => flightStream(HTML_FLIGHT));
+    const response = await server.handle(
+      new Request("https://example.com/docs%2Fpage.rsc", {
+        headers: { "x-croco-rsc-client-manifest": RSC_CLIENT_MANIFEST_VERSION },
+      }),
+    );
+    expect(response.status).toBe(404);
+  });
+
+  it.each([
+    ["/docs", 200],
+    ["/문서", 404],
+  ])("preserves the non-RSC suffix lookup for %s", async (path, suffixStatus) => {
+    const server = createServer([
+      { path, component: () => createElement("main", null, "Server-rendered page") },
+    ]);
+    expect((await server.handle(new Request(`https://example.com${path}`))).status).toBe(200);
+    expect((await server.handle(new Request(`https://example.com${path}.rsc`))).status).toBe(
+      suffixStatus,
+    );
   });
 
   it("rejects a Flight request without the client manifest header instead of mixing builds", async () => {
