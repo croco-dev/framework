@@ -42,8 +42,9 @@ const { createNodeHandler, createNodeComposedHandler } = await import(
 const { RouteRegistry } = await import(pathToFileURL(join(evidenceDir, "routeRegistry.mjs")).href);
 const { defineRoute } = await import(pathToFileURL(join(evidenceDir, "defineRoute.mjs")).href);
 const componentRef = `${fileURLToPath(new URL("../src/tests/fixtures/rsc-basic/nodeContext.mjs", import.meta.url))}#default`;
+const paths = ["/standalone", "/composed", "/composed/문서"];
 const registry = new RouteRegistry();
-for (const path of ["/standalone", "/composed"]) {
+for (const path of paths) {
   registry.register(defineRoute({ path, mode: "rsc", componentRef, component: () => null }));
 }
 const renderer = new RenderServer(registry.compile());
@@ -82,18 +83,19 @@ try {
   page.on("console", (message) => {
     if (message.type() === "error") errors.push(message.text());
   });
-  for (const path of ["/standalone", "/composed"]) {
-    await page.setExtraHTTPHeaders({ "x-tenant": `tenant${path}` });
+  for (const path of paths) {
+    const encodedPath = encodeURI(path);
+    await page.setExtraHTTPHeaders({ "x-tenant": `tenant${encodedPath}` });
     const response = await page.goto(`http://127.0.0.1:${server.address().port}${path}?locale=ko`);
     assert.equal(response.status(), 200);
     assert.equal(
       await page.locator("#node-context").textContent(),
-      `platform=node;path=${path};locale=ko;tenant=tenant${path}`,
+      `platform=node;path=${encodedPath};locale=ko;tenant=tenant${encodedPath}`,
     );
     await page.setExtraHTTPHeaders({});
-    const flight = await page.evaluate(async (pathname) => {
+    const flight = await page.evaluate(async () => {
       const version = document.querySelector('meta[name="croco:rsc-client-manifest"]').content;
-      const response = await fetch(`${pathname}.rsc?locale=en`, {
+      const response = await fetch(`${location.pathname}.rsc?locale=en`, {
         headers: {
           accept: "text/x-component",
           "x-croco-rsc-client-manifest": version,
@@ -105,18 +107,18 @@ try {
         type: response.headers.get("content-type"),
         body: await response.text(),
       };
-    }, path);
+    });
     assert.equal(flight.status, 200);
     assert.match(flight.type, /text\/x-component/);
     assert.ok(
-      flight.body.includes(`platform=node;path=${path}.rsc;locale=en;tenant=refresh-tenant`),
+      flight.body.includes(`platform=node;path=${encodedPath}.rsc;locale=en;tenant=refresh-tenant`),
       flight.body,
     );
     assert.equal(
       await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth),
       false,
     );
-    const screenshot = join(evidenceDir, `${path.slice(1)}.png`);
+    const screenshot = join(evidenceDir, `${path.slice(1).replaceAll("/", "-")}.png`);
     await page.screenshot({ path: screenshot, fullPage: true });
     console.log(JSON.stringify({ path, viewport: "1280x720", html: 200, flight: 200, screenshot }));
   }

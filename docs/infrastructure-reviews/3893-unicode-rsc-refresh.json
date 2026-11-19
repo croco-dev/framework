@@ -1,0 +1,64 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "meta-vite",
+      "classification": "protocol-render",
+      "reason": "Resolve encoded Flight suffix aliases for RSC pages and keep explicit routes ahead of aliases. The request path stays encoded and the matched RSC route still enforces the client manifest.",
+      "files": {
+        "packages/meta-vite/src/libs/render/renderServer.ts": "efbc6079569ff2f021e8968c9b1b47b891bf9741558278166e4a26ae40774a13"
+      },
+      "catalogRuntimes": ["node", "lambda", "cloudflare-workers", "browser"],
+      "profiles": {
+        "kubernetes": {
+          "result": "supported",
+          "reason": "The local Node fetch adapter and default Flight encoder serve the Unicode page and its refresh. The test decodes the refresh payload and verifies the response to a stale manifest.",
+          "providers": [
+            "@croco/meta-vite/createNodeHandler",
+            "@croco/meta-vite/createNodeComposedHandler"
+          ],
+          "constraints": [
+            "The default encoder needs Node child_process and matching React Flight dependencies.",
+            "Route matching requires no storage or host lifecycle changes.",
+            "The host test runs locally without a Kubernetes deployment."
+          ],
+          "references": [
+            "packages/meta-vite/src/libs/providers/node.ts",
+            "packages/meta-vite/src/tests/RscFlightRender.spec.ts",
+            "packages/meta-vite/scripts/verify-node-rsc-context.mjs"
+          ],
+          "evidence": {
+            "kind": "host-runtime",
+            "runtime": "node",
+            "path": "packages/meta-vite/src/tests/RscFlightRender.spec.ts",
+            "testName": "rsc real Flight path serves a Unicode page and its Flight refresh through the Node adapter",
+            "sha256": "34d4b2ce51ff1fed19ef18982246846886c9ea5b73cc6eae6887263cf80f5c19"
+          }
+        },
+        "aws-lambda": {
+          "result": "unverified",
+          "reason": "The route matcher is shared, while the Lambda adapter provides invocation context that the default isolated Flight encoder does not accept.",
+          "providers": ["@croco/meta-vite/createLambdaHandler"],
+          "constraints": ["Flight execution with an injected encoder was not exercised on Lambda."],
+          "references": [
+            "packages/meta-vite/src/libs/providers/lambda.ts",
+            "packages/meta-vite/src/libs/rsc/isolatedEncode.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "unsupported",
+          "host": "workers",
+          "reason": "The default isolated Flight encoder needs Node child_process and does not accept Workers bindings or executionContext.",
+          "providers": ["@croco/meta-vite/createCloudflareHandler"],
+          "constraints": [
+            "The fix supplies no Workers encoder and has no Node Container verification."
+          ],
+          "references": [
+            "packages/meta-vite/src/libs/providers/cloudflare.ts",
+            "packages/meta-vite/src/libs/rsc/isolatedEncode.ts"
+          ]
+        }
+      }
+    }
+  ]
+}

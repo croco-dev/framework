@@ -703,23 +703,19 @@ export class RenderServer {
 
   private findRoute(request: Request): RenderRouteIR | undefined {
     const { pathname } = new URL(request.url);
-    const direct = this.routes.find((route) => route.path === pathname);
-
-    if (direct) {
+    const direct =
+      this.routes.find((route) => route.path === pathname) ??
+      this.routes.find((route) => encodePagePath(route.path) === pathname);
+    if (direct || !pathname.endsWith(".rsc")) {
       return direct;
     }
 
-    // Client navigation/refresh path: the same route serves both HTML and
-    // Flight (`/page.rsc`), so strip the suffix before matching.
-    if (pathname.endsWith(".rsc")) {
-      const base = pathname.slice(0, -".rsc".length) || "/";
-
-      return this.routes.find((route) => route.path === base);
-    }
-
-    // The request URL carries the percent-encoded spelling of a Unicode path,
-    // so match on the encoded form rather than the raw route path.
-    return this.routes.find((route) => encodePagePath(route.path) === pathname);
+    // Keep exact base matches and resolve encoded Flight aliases for RSC pages.
+    const base = pathname.slice(0, -".rsc".length) || "/";
+    return (
+      this.routes.find((route) => route.path === base) ??
+      this.routes.find((route) => route.mode === "rsc" && encodePagePath(route.path) === base)
+    );
   }
 
   private createComponentProps(
