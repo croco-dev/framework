@@ -90,23 +90,20 @@ export async function loadRscBuild(options: LoadRscBuildOptions): Promise<RscBui
   };
 }
 
-// The worker runs from TypeScript source inside the workspace and from the
-// published `dist` build otherwise; `files` publishes only `dist`.
+// The worker sits next to the package entry: `src/libs/rsc/rscBuildWorker.mts`
+// beside `src/index.ts` in the workspace (Node strips its types), and
+// `dist/libs/rsc/rscBuildWorker.mjs` beside `dist/index.js` when published.
 function resolveWorkerFile(anchors: readonly string[]): string {
   for (const anchor of anchors) {
-    let packageRoot: string;
+    let entryDir: string;
     try {
-      packageRoot = dirname(
-        createRequire(join(anchor, "package.json")).resolve("@croco/meta-vite/package.json"),
-      );
+      entryDir = dirname(createRequire(join(anchor, "package.json")).resolve("@croco/meta-vite"));
     } catch {
       continue; // this anchor does not see the package; the next one may
     }
-    const candidates = [
-      join(packageRoot, "src", "libs", "rsc", "rscBuildWorker.mts"),
-      join(packageRoot, "dist", "libs", "rsc", "rscBuildWorker.mjs"),
-    ];
-    const file = candidates.find((candidate) => existsSync(candidate));
+    const file = ["rscBuildWorker.mts", "rscBuildWorker.mjs"]
+      .map((name) => join(entryDir, "libs", "rsc", name))
+      .find((candidate) => existsSync(candidate));
     if (file) {
       return file;
     }

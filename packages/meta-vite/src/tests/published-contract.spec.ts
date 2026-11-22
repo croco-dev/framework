@@ -307,8 +307,6 @@ describe("published @croco/meta-vite contract", () => {
           import: "./dist/libs/rsc/flightBrowser.entry.mjs",
           require: "./dist/libs/rsc/flightBrowser.entry.js",
         });
-        // The RSC build loader finds its worker file from the package root.
-        expect(packedManifest.exports?.["./package.json"]).toBe("./package.json");
         for (const [subpath, file] of [
           ["./rsc/server", "serverEntry"],
           ["./rsc/ssr", "ssrEntry"],

@@ -4021,7 +4021,8 @@ const recoveryMetadataByCode = {
     severity: "error",
   }),
   "meta-vite/node-request-origin-mismatch": recovery({
-    cause: "The request names an origin other than the one this Node server was configured to answer for.",
+    cause:
+      "The request names an origin other than the one this Node server was configured to answer for.",
     userAction: "Request the page through the site's public address.",
     operatorAction:
       "Check that the proxy forwards the public Host header and that the configured origin matches the address clients use.",

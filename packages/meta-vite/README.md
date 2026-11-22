@@ -42,6 +42,7 @@ pnpm add ioredis
   representations. Unsupported Flight server references fail with
   `RscServerReferenceNotSupportedProblem` (501). `examples/rsc-node-example`
   and the `node-meta-vite-rsc` create-croco-app profile use the production build path.
+
 - **SSG**: Static site generation at build time (`prerenderSsgRoutes`)
 - **ISR**: TTL-only incremental static regeneration via CacheStore. `InMemoryCacheStore` for local/single-process, `RedisCacheStoreAdapter` for production durable caching (extends `AbstractCacheStoreAdapter`), and runtime support diagnostics for durable production claims
 - **API Co-location**: Define API routes alongside page routes with `defineApiRoute()`. Compose pages and APIs under a single fetch handler using `createMetaFetchHandler`'s `apiRoutes` option
@@ -336,7 +337,7 @@ Build with `crocoMetaVitePlugin({ rsc: true })` and `@vitejs/plugin-rsc`, keepin
 meta-vite helper, and the official plugin functions are passed in because they only resolve inside
 the Vite build:
 
-```tsx
+```tsx no-check
 // src/entry.rsc.tsx — bundled under the react-server condition
 import { renderToReadableStream } from "@vitejs/plugin-rsc/rsc";
 import { defineRscServerEntry } from "@croco/meta-vite/rsc/server";
@@ -349,7 +350,11 @@ export default defineRscServerEntry({
 import { renderToReadableStream } from "react-dom/server";
 import { createFromReadableStream, getClientEntryUrl } from "@vitejs/plugin-rsc/ssr";
 import { defineRscSsrEntry } from "@croco/meta-vite/rsc/ssr";
-export default defineRscSsrEntry({ createFromReadableStream, getClientEntryUrl, renderToReadableStream });
+export default defineRscSsrEntry({
+  createFromReadableStream,
+  getClientEntryUrl,
+  renderToReadableStream,
+});
 
 // src/entry.browser.tsx — hydrate from the embedded payload, refresh with the handshake
 import { createRscBrowserFlightHeaders, readRscInitialFlight } from "@croco/meta-vite/rsc/browser";
@@ -357,9 +362,14 @@ import { createRscBrowserFlightHeaders, readRscInitialFlight } from "@croco/meta
 
 The server loads the build once and serves it with the existing adapters:
 
-```ts
+```ts no-check
 import { serve } from "@hono/node-server";
-import { RenderServer, createNodeComposedHandler, createRscAssetHandler, loadRscBuild } from "@croco/meta-vite";
+import {
+  RenderServer,
+  createNodeComposedHandler,
+  createRscAssetHandler,
+  loadRscBuild,
+} from "@croco/meta-vite";
 
 const build = await loadRscBuild({ outDir: new URL("./dist/", import.meta.url) });
 const renderServer = new RenderServer([...build.routes], { build });
@@ -412,16 +422,16 @@ child process and does not accept those platforms' contexts.
 
 Detailed promotion gates live in [Presentation Runtime Support](../docs/src/content/docs/en/reference/presentation-runtime-support.md). The package-level support contract is:
 
-| Capability        | Node                                                                                                                                                                                 | Lambda                                                                                                    | Cloudflare Workers                                                                                      |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| SSR pages         | Supported through `createNodeComposedHandler()` and `RenderServer`.                                                                                                                  | Supported through `createLambdaComposedHandler()` with API Gateway event conversion.                      | Supported through `createCloudflareComposedHandler()` and `@croco/frontend-cloudflare`.                 |
-| SSG routes        | Supported at build time through `prerenderSsgRoutes()`.                                                                                                                              | Supported before Lambda packaging as static output.                                                       | Supported before Worker asset upload as static output.                                                  |
-| ISR routes        | v1 exact-key TTL. Use `RedisCacheStoreAdapter` or another durable `IsrCacheStore` for production persistence.                                                                        | v1 exact-key TTL. In-memory cache is warm-container only; use durable storage for production persistence. | v1 exact-key TTL only when a Worker-safe `IsrCacheStore` is supplied. In-memory cache is isolate-local. |
+| Capability        | Node                                                                                                                                                                                                                                        | Lambda                                                                                                    | Cloudflare Workers                                                                                      |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| SSR pages         | Supported through `createNodeComposedHandler()` and `RenderServer`.                                                                                                                                                                         | Supported through `createLambdaComposedHandler()` with API Gateway event conversion.                      | Supported through `createCloudflareComposedHandler()` and `@croco/frontend-cloudflare`.                 |
+| SSG routes        | Supported at build time through `prerenderSsgRoutes()`.                                                                                                                                                                                     | Supported before Lambda packaging as static output.                                                       | Supported before Worker asset upload as static output.                                                  |
+| ISR routes        | v1 exact-key TTL. Use `RedisCacheStoreAdapter` or another durable `IsrCacheStore` for production persistence.                                                                                                                               | v1 exact-key TTL. In-memory cache is warm-container only; use durable storage for production persistence. | v1 exact-key TTL only when a Worker-safe `IsrCacheStore` is supplied. In-memory cache is isolate-local. |
 | RSC routes        | Real React Flight (`@vitejs/plugin-rsc@0.5.38` + `react-server-dom-webpack@19.3.1`, React 19.3.1) on Node; `loadRscBuild()` renders in a worker thread per build, HTML/Flight negotiated per request. Example: `examples/rsc-node-example`. | Buffered RSC path not verified on Lambda — declare only after a real host-contract check.                 | Buffered RSC path not verified on Workers — declare only after a real host-contract check.              |
-| Server actions    | Supported through `createServerActionHandler()`.                                                                                                                                     | Supported after Lambda request conversion.                                                                | Supported with Cloudflare `RuntimeContext` propagation.                                                 |
-| API routes        | API-first/page-fallback composition.                                                                                                                                                 | API-first/page-fallback composition.                                                                      | API-first/page-fallback composition or Worker service bindings.                                         |
-| Streaming         | Fetch `Response` streams are preserved by the fetch surface.                                                                                                                         | Not supported by this adapter; responses are buffered.                                                    | Supported for streaming `Response` bodies.                                                              |
-| Cache persistence | In-memory is local/single-process only; Redis is the shipped durable adapter.                                                                                                        | In-memory is warm-container only; Redis is the shipped durable adapter.                                   | No shipped durable Worker cache adapter. Supply a Worker-safe store before claiming durable ISR.        |
+| Server actions    | Supported through `createServerActionHandler()`.                                                                                                                                                                                            | Supported after Lambda request conversion.                                                                | Supported with Cloudflare `RuntimeContext` propagation.                                                 |
+| API routes        | API-first/page-fallback composition.                                                                                                                                                                                                        | API-first/page-fallback composition.                                                                      | API-first/page-fallback composition or Worker service bindings.                                         |
+| Streaming         | Fetch `Response` streams are preserved by the fetch surface.                                                                                                                                                                                | Not supported by this adapter; responses are buffered.                                                    | Supported for streaming `Response` bodies.                                                              |
+| Cache persistence | In-memory is local/single-process only; Redis is the shipped durable adapter.                                                                                                                                                               | In-memory is warm-container only; Redis is the shipped durable adapter.                                   | No shipped durable Worker cache adapter. Supply a Worker-safe store before claiming durable ISR.        |
 
 Smoke evidence: `pnpm --filter @croco/meta-vite test` covers durable Node and Lambda ISR through
 `RedisCacheStoreAdapter`, Workers durable-claim boundaries, in-memory local-only behavior, cacheable

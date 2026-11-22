@@ -132,7 +132,7 @@ const CASE_TEST_PATH_PREFIXES = {
     "base-ddd/libs/shared/utils-env/",
     "addons/graphql-standalone/apps/graphql-api/",
   ],
-  "meta-vite-node-rsc": ["base-ddd/libs/shared/utils-env/"],
+  "meta-vite-node-rsc": [],
   "meta-vite-fullstack-workers": ["base-ddd/libs/shared/utils-env/"],
   "production-app-starter": ["spa-be-split/apps/", "spa-be-split/tests/journeys/"],
   "kubernetes-node-api": ["spa-be-split/apps/"],

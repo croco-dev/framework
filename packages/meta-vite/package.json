@@ -33,7 +33,6 @@
         "import": "./dist/index.mjs",
         "require": "./dist/index.js"
       },
-      "./package.json": "./package.json",
       "./isr/adapters": {
         "types": {
           "import": "./dist/libs/isr/adapters/index.d.mts",

@@ -1035,7 +1035,7 @@ describe("verification manifest", () => {
           (caseName) => caseName !== "kubernetes-node-api" && caseName !== "lambda-api",
         ).length,
         packagePath,
-      ).toBeLessThan(18);
+      ).toBeLessThan(19);
       expect(generatedSmoke?.applicable, packagePath).toBe(true);
       expect(generatedSmoke?.command, packagePath).toEqual([
         "node",

@@ -29018,17 +29018,6 @@
           "typeExports": []
         },
         {
-          "exportPath": "./package.json",
-          "kind": "asset",
-          "assetKind": "json",
-          "targets": [
-            {
-              "conditions": [],
-              "target": "./package.json"
-            }
-          ]
-        },
-        {
           "exportPath": "./rsc/browser",
           "kind": "code",
           "targets": [
