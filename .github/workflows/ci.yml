@@ -587,33 +587,6 @@ jobs:
           path: ci-reports/coverage/core-warning/report.md
           if-no-files-found: warn
 
-  cancel-superseded-runs:
-    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    permissions:
-      actions: write
-    steps:
-      - name: Force-cancel superseded pull request runs
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-          HEAD_BRANCH: ${{ github.head_ref }}
-        run: |
-          superseded=$(gh api --method GET "repos/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/runs" \
-            -f event=pull_request -f branch="$HEAD_BRANCH" -F per_page=100 \
-            --jq ".workflow_runs[] | select(.id < ${GITHUB_RUN_ID} and .status != \"completed\" and .head_repository.full_name == \"${GITHUB_REPOSITORY}\") | .id")
-          for run_id in $superseded; do
-            echo "Force-cancelling superseded CI run ${run_id}"
-            if ! gh api --method POST "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/force-cancel"; then
-              status=$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}" --jq .status)
-              if [ "$status" != "completed" ]; then
-                echo "::error::Superseded CI run ${run_id} is still ${status} after force-cancel failed."
-                exit 1
-              fi
-            fi
-          done
-
   changes:
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -1794,6 +1767,33 @@ jobs:
           fail: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  cancel-superseded-runs:
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: write
+    steps:
+      - name: Force-cancel superseded pull request runs
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_BRANCH: ${{ github.head_ref }}
+        run: |
+          superseded=$(gh api --method GET "repos/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/runs" \
+            -f event=pull_request -f branch="$HEAD_BRANCH" -F per_page=100 \
+            --jq ".workflow_runs[] | select(.id < ${GITHUB_RUN_ID} and .status != \"completed\" and .head_repository.full_name == \"${GITHUB_REPOSITORY}\") | .id")
+          for run_id in $superseded; do
+            echo "Force-cancelling superseded CI run ${run_id}"
+            if ! gh api --method POST "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/force-cancel"; then
+              status=$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}" --jq .status)
+              if [ "$status" != "completed" ]; then
+                echo "::error::Superseded CI run ${run_id} is still ${status} after force-cancel failed."
+                exit 1
+              fi
+            fi
+          done
 
   turbo-cache:
     if: github.event_name == 'push' && github.ref == 'refs/heads/trunk'
