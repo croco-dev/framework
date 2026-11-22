@@ -9,6 +9,7 @@ import {
   composeRscClientManifestVersion,
 } from "../libs/rsc/flight";
 import { loadRscBuild } from "../libs/rsc/loadRscBuild";
+import { RscFlightEncodeAbortedProblem } from "../libs/rsc/isolatedEncode";
 import { RscBuildValueUnsupportedProblem } from "../libs/rsc/plainData";
 import {
   RscBuildActionNotFoundProblem,
@@ -23,10 +24,13 @@ const SERVER_ENTRY = `const state = { renders: 0, aborted: 0 };
 const encoder = new TextEncoder();
 export default {
   version: ${JSON.stringify(RSC_SERVER_ENTRY_VERSION)},
-  routes: [{ path: "/", head: () => ({ title: "Worker" }) }, { path: "/pending" }],
+  routes: [{ path: "/", head: () => ({ title: "Worker" }) }, { path: "/pending" }, { path: "/slow-shell" }],
   renderFlight({ route, request, context, signal }) {
     state.renders += 1;
     signal.addEventListener("abort", () => { state.aborted += 1; });
+    if (route === "/slow-shell") {
+      return new ReadableStream({ start() {} });
+    }
     if (route === "/pending") {
       return new ReadableStream({ start(controller) { controller.enqueue(encoder.encode("0:pending\\n")); } });
     }
@@ -130,6 +134,7 @@ describe("RSC build worker", () => {
     expect(build.routes.map((route) => [route.path, route.head?.()])).toEqual([
       ["/", { title: "Worker" }],
       ["/pending", undefined],
+      ["/slow-shell", undefined],
     ]);
     expect(await textOf(build.renderFlight(renderInput("/", { tenant: "a" })))).toBe("0:/:a:r1\n");
 
@@ -162,6 +167,32 @@ describe("RSC build worker", () => {
     controller.abort();
 
     await eventually(async () => (await workerState(build)).aborted === 1);
+  });
+
+  it("settles the caller when the request aborts before the document shell is ready", async () => {
+    const build = await loadFakeBuild("app");
+    const controller = new AbortController();
+    const document = build.renderDocument(
+      renderInput("/slow-shell", { signal: controller.signal }),
+    );
+
+    controller.abort();
+
+    await expect(document).rejects.toThrow(RscFlightEncodeAbortedProblem);
+  });
+
+  it("errors a pending Flight read when the request aborts mid-stream", async () => {
+    const build = await loadFakeBuild("app");
+    const controller = new AbortController();
+    const reader = build
+      .renderFlight(renderInput("/pending", { signal: controller.signal }))
+      .getReader();
+    await reader.read();
+
+    const next = reader.read();
+    controller.abort();
+
+    await expect(next).rejects.toThrow(RscFlightEncodeAbortedProblem);
   });
 
   it("stops the document render inside the worker when the HTML consumer cancels", async () => {

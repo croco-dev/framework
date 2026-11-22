@@ -1,5 +1,6 @@
 import { Worker } from "node:worker_threads";
 import { Problem, ProblemCategory } from "@croco/problems-core";
+import { RscFlightEncodeAbortedProblem } from "./isolatedEncode";
 import { assertRscPlainData } from "./plainData";
 import type { RuntimeContext } from "../render/types";
 import type { RscDocumentRender, RscRenderRequest, RscServerActionOptions } from "./buildEntry";
@@ -227,9 +228,15 @@ function createClient(worker: Worker, ready: RscWorkerReady): RscBuildWorkerClie
       wakePull?.();
       wakePull = undefined;
     };
+    // The worker stops answering a cancelled render, so the host side settles
+    // here; otherwise a caller awaiting the shell or the next row would wait forever.
     const onAbort = (): void => {
+      const entry = pending.get(id);
       pending.delete(id);
       send({ type: "cancel", id, reason: "aborted" });
+      if (entry?.kind === "render") {
+        entry.onError(new RscFlightEncodeAbortedProblem(input.route));
+      }
     };
 
     const stream = new ReadableStream<Uint8Array>({

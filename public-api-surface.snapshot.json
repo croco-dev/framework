@@ -27819,12 +27819,6 @@
               "declarationKind": "const"
             },
             {
-              "name": "RSC_INITIAL_FLIGHT_ELEMENT_ID",
-              "exportKind": "named",
-              "source": "./libs/rsc/flight",
-              "declarationKind": "const"
-            },
-            {
               "name": "RSC_MANIFEST_ELEMENT_ID",
               "exportKind": "named",
               "source": "./libs/rsc/flight",
