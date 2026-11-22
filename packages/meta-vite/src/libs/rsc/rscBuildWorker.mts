@@ -53,11 +53,11 @@ function serializeError(error: unknown): RscSerializedError {
 }
 
 function toRequest(serialized: RscSerializedRequest, signal: AbortSignal): Request {
-  return new Request(serialized.url, {
-    method: serialized.method,
-    headers: serialized.headers.map(([name, value]) => [name, value]),
-    signal,
-  });
+  const headers = new Headers();
+  for (const [name, value] of serialized.headers) {
+    headers.append(name, value);
+  }
+  return new Request(serialized.url, { method: serialized.method, headers, signal });
 }
 
 async function readText(reader: ReadableStreamDefaultReader<Uint8Array>): Promise<string> {
