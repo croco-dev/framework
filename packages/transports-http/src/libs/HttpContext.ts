@@ -3,6 +3,19 @@ import type { Context as HonoContext } from "hono";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import type { CrocoHttpContext, CrocoRequest, CrocoResponse } from "./types";
 
+// Response headers can be replaced without replacing the body. Only mark streams created from
+// known buffered bytes, since a Fetch Response does not expose how its body was constructed.
+const bufferedResponseBodies = new WeakSet<ReadableStream>();
+
+export function markBufferedResponse(response: Response): Response {
+  if (response.body) bufferedResponseBodies.add(response.body);
+  return response;
+}
+
+export function isBufferedResponse(response: Response): boolean {
+  return response.body !== null && bufferedResponseBodies.has(response.body);
+}
+
 /**
  * Hono 컨텍스트를 Croco 전용 HTTP 컨텍스트 인터페이스로 감싸는 어댑터입니다.
  */
@@ -76,7 +89,7 @@ export class HttpContext implements CrocoHttpContext, ProtocolHttpContext {
   text(body: string, status: number = 200): Response {
     this.res.status = status;
     this.bufferedResponseBody = toBufferedBytes(body);
-    return this.raw.text(body, status as Parameters<HonoContext["text"]>[1]);
+    return markBufferedResponse(this.raw.text(body, status as Parameters<HonoContext["text"]>[1]));
   }
 
   jsonResponse<T>(body: T, status: number = 200): Response {
@@ -84,12 +97,16 @@ export class HttpContext implements CrocoHttpContext, ProtocolHttpContext {
     const serializedBody = JSON.stringify(body);
     if (typeof serializedBody !== "string") {
       this.bufferedResponseBody = null;
-      return this.raw.json(body, status as Parameters<HonoContext["json"]>[1]);
+      return markBufferedResponse(
+        this.raw.json(body, status as Parameters<HonoContext["json"]>[1]),
+      );
     }
     this.bufferedResponseBody = toBufferedBytes(serializedBody);
-    return this.raw.newResponse(serializedBody, status as ContentfulStatusCode, {
-      "Content-Type": "application/json",
-    });
+    return markBufferedResponse(
+      this.raw.newResponse(serializedBody, status as ContentfulStatusCode, {
+        "Content-Type": "application/json",
+      }),
+    );
   }
 
   redirect(url: string, status: number = 302): Response {

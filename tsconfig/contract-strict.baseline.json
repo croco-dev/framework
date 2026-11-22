@@ -613,7 +613,7 @@
     {
       "packageName": "@croco/transports-http",
       "file": "packages/transports-http/src/libs/CrocoRouteRegistrar.ts",
-      "line": 106,
+      "line": 105,
       "column": 9,
       "code": "TS2379",
       "message": "Argument of type '{ requestId: string; inspectionId: string | undefined; traceId: string | undefined; spanId: string | undefined; traceFlags: string | number | undefined; runtime: RuntimeContext; runtimeInspector: RuntimeInspector | undefined; }' is not assignable to parameter of type 'RequestContext' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -621,7 +621,7 @@
     {
       "packageName": "@croco/transports-http",
       "file": "packages/transports-http/src/libs/CrocoRouteRegistrar.ts",
-      "line": 570,
+      "line": 573,
       "column": 7,
       "code": "TS2375",
       "message": "Type '{ platform: \"cloudflare-workers\"; abortSignal: AbortSignal; env: Record<string, unknown> | undefined; native: { executionContext: { waitUntil: (promise: Promise<unknown>) => void; }; }; waitUntil: ...; capabilities: ...; }' is not assignable to type 'RuntimeContextInit' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -629,7 +629,7 @@
     {
       "packageName": "@croco/transports-http",
       "file": "packages/transports-http/src/libs/CrocoRouteRegistrar.ts",
-      "line": 760,
+      "line": 763,
       "column": 7,
       "code": "TS2379",
       "message": "Argument of type '{ inspectionId: string | undefined; status: number; outcome: \"failed\" | \"succeeded\"; details: { traceId: unknown; telemetryDegraded: {}; error: { name: string; message: string; } | undefined; }; }' is not assignable to parameter of type 'RuntimeInspectorRequestFinish' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -637,7 +637,7 @@
     {
       "packageName": "@croco/transports-http",
       "file": "packages/transports-http/src/libs/CrocoRouteRegistrar.ts",
-      "line": 83,
+      "line": 82,
       "column": 9,
       "code": "TS2379",
       "message": "Argument of type '{ requestId: string; method: string; path: string; route: string; url: string; headers: Record<string, string>; query: Record<string, string | string[]>; runtime: Record<string, unknown>; trace: Record<...> | undefined; }' is not assignable to parameter of type 'RuntimeInspectorRequestStart' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -701,15 +701,7 @@
     {
       "packageName": "@croco/transports-http",
       "file": "packages/transports-http/src/libs/middleware/telemetry.ts",
-      "line": 295,
-      "column": 3,
-      "code": "TS2322",
-      "message": "Type '{ name: string; message: string; stack: string | undefined; }' is not assignable to type 'Exception'."
-    },
-    {
-      "packageName": "@croco/transports-http",
-      "file": "packages/transports-http/src/libs/middleware/telemetry.ts",
-      "line": 47,
+      "line": 49,
       "column": 31,
       "code": "TS2345",
       "message": "Argument of type 'string | undefined' is not assignable to parameter of type 'string'."
@@ -717,7 +709,7 @@
     {
       "packageName": "@croco/transports-http",
       "file": "packages/transports-http/src/libs/middleware/telemetry.ts",
-      "line": 51,
+      "line": 53,
       "column": 31,
       "code": "TS2345",
       "message": "Argument of type 'string | undefined' is not assignable to parameter of type 'string'."
@@ -725,7 +717,7 @@
     {
       "packageName": "@croco/transports-http",
       "file": "packages/transports-http/src/libs/middleware/telemetry.ts",
-      "line": 55,
+      "line": 57,
       "column": 30,
       "code": "TS2345",
       "message": "Argument of type 'string | undefined' is not assignable to parameter of type 'string'."
@@ -733,23 +725,23 @@
     {
       "packageName": "@croco/transports-http",
       "file": "packages/transports-http/src/libs/middleware/telemetry.ts",
-      "line": 60,
-      "column": 5,
-      "code": "TS2322",
-      "message": "Type 'string | undefined' is not assignable to type 'string'."
-    },
-    {
-      "packageName": "@croco/transports-http",
-      "file": "packages/transports-http/src/libs/middleware/telemetry.ts",
-      "line": 61,
-      "column": 5,
-      "code": "TS2322",
-      "message": "Type 'string | undefined' is not assignable to type 'string'."
-    },
-    {
-      "packageName": "@croco/transports-http",
-      "file": "packages/transports-http/src/libs/middleware/telemetry.ts",
       "line": 62,
+      "column": 5,
+      "code": "TS2322",
+      "message": "Type 'string | undefined' is not assignable to type 'string'."
+    },
+    {
+      "packageName": "@croco/transports-http",
+      "file": "packages/transports-http/src/libs/middleware/telemetry.ts",
+      "line": 63,
+      "column": 5,
+      "code": "TS2322",
+      "message": "Type 'string | undefined' is not assignable to type 'string'."
+    },
+    {
+      "packageName": "@croco/transports-http",
+      "file": "packages/transports-http/src/libs/middleware/telemetry.ts",
+      "line": 64,
       "column": 33,
       "code": "TS2345",
       "message": "Argument of type 'string | undefined' is not assignable to parameter of type 'string'."

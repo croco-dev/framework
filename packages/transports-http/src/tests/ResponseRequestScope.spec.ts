@@ -3,6 +3,13 @@ import { once } from "node:events";
 import { request as httpRequest } from "node:http";
 import type { AddressInfo } from "node:net";
 import { serve } from "@hono/node-server";
+import { context, SpanStatusCode, trace } from "@opentelemetry/api";
+import { AsyncLocalStorageContextManager } from "@opentelemetry/context-async-hooks";
+import {
+  BasicTracerProvider,
+  InMemorySpanExporter,
+  SimpleSpanProcessor,
+} from "@opentelemetry/sdk-trace-base";
 import { CrocoLambdaAdapter } from "../libs/CrocoLambdaAdapter";
 import type { LambdaEvent, LambdaContext } from "../libs/types";
 import {
@@ -13,10 +20,30 @@ import {
 } from "@croco/framework-context";
 import type { ILogger } from "@croco/framework-context";
 import { Hono } from "hono";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { CrocoRouteRegistrar } from "../libs/CrocoRouteRegistrar";
 import { ErrorHandler } from "../libs/ErrorHandler";
 import { runWithResponseRequestScope } from "../libs/ResponseRequestScope";
+import { compressionMiddleware } from "../libs/middleware/CompressionMiddleware";
+import type { CrocoHttpContext, MiddlewareFunction } from "../libs/types";
+
+const exporter = new InMemorySpanExporter();
+const tracerProvider = new BasicTracerProvider({
+  spanProcessors: [new SimpleSpanProcessor(exporter)],
+});
+
+beforeAll(() => {
+  context.setGlobalContextManager(new AsyncLocalStorageContextManager().enable());
+  trace.setGlobalTracerProvider(tracerProvider);
+});
+
+beforeEach(() => exporter.reset());
+
+afterAll(async () => {
+  context.disable();
+  trace.disable();
+  await tracerProvider.shutdown();
+});
 
 const logger: ILogger = {
   info() {},
@@ -37,18 +64,33 @@ class RequestResource {
   }
 }
 
-function fixture(handler: () => Response | Promise<Response>, method = "GET") {
+function fixture(
+  handler: (ctx: CrocoHttpContext) => unknown,
+  method = "GET",
+  middlewares: MiddlewareFunction[] = [],
+) {
   const hono = new Hono();
-  new CrocoRouteRegistrar(hono, new ErrorHandler(logger), [], logger).register(
+  new CrocoRouteRegistrar(hono, new ErrorHandler(logger), middlewares, logger).register(
     {
       method,
       path: "/stream",
       methodName: "stream",
-      handler: async () => handler(),
+      handler: async (ctx) => handler(ctx),
     },
     { registerHeadAsGet: method === "HEAD" },
   );
   return hono;
+}
+
+function requestSpan(method = "GET") {
+  const spans = exporter
+    .getFinishedSpans()
+    .filter((span) => span.name === `HTTP ${method} /stream`);
+  expect(spans).toHaveLength(1);
+  expect(spans[0]?.events.filter((event) => event.name === "croco.http.request.end")).toHaveLength(
+    1,
+  );
+  return spans[0];
 }
 
 function deferred() {
@@ -96,6 +138,7 @@ describe("response request scope", () => {
           {
             async pull(controller) {
               await gate.promise;
+              trace.getTracer("test").startSpan("late pull").end();
               lateResource = Container.get(RequestResource);
               lateRequestId = Context.getRequestId();
               controller.enqueue(new TextEncoder().encode("finished"));
@@ -108,11 +151,58 @@ describe("response request scope", () => {
     });
     const response = await app.request("/stream", { headers: { "x-request-id": "lazy-read" } });
     expect(resource?.disposals).toBe(0);
+    expect(exporter.getFinishedSpans()).toHaveLength(0);
     gate.resolve();
     expect(await response.text()).toBe("finished");
     expect(lateResource).toBe(resource);
     expect(lateRequestId).toBe("lazy-read");
     expect(resource?.disposals).toBe(1);
+    const span = requestSpan();
+    const pull = exporter.getFinishedSpans().find((finished) => finished.name === "late pull");
+    expect(pull?.spanContext().traceId).toBe(span?.spanContext().traceId);
+    expect(pull?.parentSpanContext?.spanId).toBe(span?.spanContext().spanId);
+  });
+
+  it("ends buffered response spans before the response body is consumed", async () => {
+    const app = fixture(async (ctx) => ctx.jsonResponse({ ready: true }, 201));
+    const response = await app.request("/stream");
+
+    const span = requestSpan();
+    expect(span?.attributes["http.status_code"]).toBe(201);
+    expect(span?.status.code).toBe(SpanStatusCode.UNSET);
+    expect(await response.json()).toEqual({ ready: true });
+    requestSpan();
+  });
+
+  it.each(["read", "cancel"] as const)(
+    "keeps a native Response span open until the body is consumed by %s",
+    async (action) => {
+      const app = fixture(() => new Response("native body", { status: 202 }));
+      const response = await app.request("/stream");
+
+      expect(response.status).toBe(202);
+      expect(exporter.getFinishedSpans()).toHaveLength(0);
+      if (action === "read") {
+        expect(await response.text()).toBe("native body");
+      } else {
+        await response.body?.cancel();
+      }
+      const span = requestSpan();
+      expect(span?.attributes["http.status_code"]).toBe(202);
+      expect(span?.status.code).toBe(SpanStatusCode.UNSET);
+    },
+  );
+
+  it("ends the span before consuming a buffered response compressed by middleware", async () => {
+    const app = fixture(() => ({ message: "buffered" }), "GET", [
+      compressionMiddleware({ threshold: 1, encodings: ["gzip"] }),
+    ]);
+    const response = await app.request("/stream", { headers: { "accept-encoding": "gzip" } });
+
+    expect(response.headers.get("content-encoding")).toBe("gzip");
+    expect(requestSpan()?.attributes["http.status_code"]).toBe(200);
+    await response.arrayBuffer();
+    requestSpan();
   });
 });
 
@@ -151,6 +241,7 @@ describe("response scope terminal paths", () => {
         new ReadableStream(
           {
             cancel(reason) {
+              trace.getTracer("test").startSpan("late cancel").end();
               cancellationResource = Container.get(RequestResource);
               cancellationReason = reason;
             },
@@ -166,6 +257,10 @@ describe("response scope terminal paths", () => {
     expect(cancellationResource).toBe(resource);
     expect(cancellationReason).toBe("consumer stopped");
     expect(resource?.disposals).toBe(1);
+    const span = requestSpan();
+    const cancel = exporter.getFinishedSpans().find((finished) => finished.name === "late cancel");
+    expect(cancel?.parentSpanContext?.spanId).toBe(span?.spanContext().spanId);
+    expect(span?.status.code).toBe(SpanStatusCode.UNSET);
   });
 
   it("retains providers until asynchronous cancellation finishes while a read is pending", async () => {
@@ -255,6 +350,65 @@ describe("response scope terminal paths", () => {
     const response = await app.request("/stream");
     await expect(response.text()).rejects.toBe(failure);
     expect(resource?.disposals).toBe(1);
+    expect(response.status).toBe(200);
+    const span = requestSpan();
+    expect(span?.attributes["http.status_code"]).toBe(200);
+    expect(span?.status.code).toBe(SpanStatusCode.ERROR);
+    expect(span?.events.filter((event) => event.name === "exception")).toEqual([
+      expect.objectContaining({
+        attributes: expect.objectContaining({ "exception.message": "source failed" }),
+      }),
+    ]);
+  });
+
+  it("preserves the original rejection when a stream error cannot be formatted", async () => {
+    const failure: unknown = Object.create(null);
+    const source = new ReadableStream(
+      {
+        pull(controller) {
+          controller.error(failure);
+        },
+      },
+      { highWaterMark: 0 },
+    );
+    const app = fixture(() => new Response(source, { status: 201 }));
+    const response = await app.request("/stream");
+
+    await expect(response.text()).rejects.toBe(failure);
+    expect(source.locked).toBe(false);
+    const span = requestSpan();
+    expect(span?.attributes["http.status_code"]).toBe(201);
+    expect(span?.status.code).toBe(SpanStatusCode.ERROR);
+    expect(span?.events.find((event) => event.name === "exception")?.attributes).toMatchObject({
+      "exception.type": "NonErrorThrown",
+      "exception.message": "Response body failure reason could not be formatted",
+    });
+  });
+
+  it("traces the streaming Response thrown by a handler without changing its HTTP status", async () => {
+    const failure = new Error("thrown response failed");
+    const app = fixture(() => {
+      throw new Response(
+        new ReadableStream(
+          {
+            pull(controller) {
+              controller.error(failure);
+            },
+          },
+          { highWaterMark: 0 },
+        ),
+        { status: 409 },
+      );
+    });
+    const response = await app.request("/stream");
+    expect(response.status).toBe(409);
+    expect(exporter.getFinishedSpans()).toHaveLength(0);
+    await expect(response.text()).rejects.toBe(failure);
+
+    const span = requestSpan();
+    expect(span?.attributes["http.status_code"]).toBe(409);
+    expect(span?.status.code).toBe(SpanStatusCode.ERROR);
+    expect(span?.events.map((event) => event.name)).toContain("croco.http.response.thrown");
   });
 
   it("aborts a pending read without waiting for an uncooperative source", async () => {
@@ -284,6 +438,9 @@ describe("response scope terminal paths", () => {
     await expect(body).rejects.toBe("disconnect");
     expect(resource?.disposals).toBe(1);
     gate.resolve();
+    const span = requestSpan();
+    expect(span?.status.code).toBe(SpanStatusCode.ERROR);
+    expect(span?.events.filter((event) => event.name === "exception")).toHaveLength(1);
   });
 
   it.each([false, true])(
@@ -468,6 +625,7 @@ describe("response scope terminal paths", () => {
     const response = await app.request("/stream", { method });
     expect(response.body).toBeNull();
     expect(resource?.disposals).toBe(1);
+    expect(requestSpan(method)?.status.code).toBe(SpanStatusCode.UNSET);
     if (method === "HEAD") expect(cancelled).toBe(true);
   });
 
@@ -481,6 +639,7 @@ describe("response scope terminal paths", () => {
     expect(response.status).toBe(500);
     expect(resource?.disposals).toBe(1);
     expect((await response.json()).status).toBe(500);
+    expect(requestSpan()?.attributes["http.status_code"]).toBe(500);
   });
 
   it("keeps overlapping consumers in their own request scopes", async () => {
@@ -569,6 +728,7 @@ describe("response scope terminal paths", () => {
         expect(chunk.toString()).toBe("connected");
         response.pause();
         expect(resource?.disposals).toBe(0);
+        expect(exporter.getFinishedSpans()).toHaveLength(0);
         if (terminal === "complete") {
           const completed = once(response, "end");
           gate.resolve();
@@ -580,6 +740,7 @@ describe("response scope terminal paths", () => {
         await ended.promise;
         await vi.waitFor(() => expect(source?.locked).toBe(false));
         expect(resource?.disposals).toBe(1);
+        requestSpan();
       } finally {
         gate.resolve();
         client.destroy();
@@ -600,6 +761,7 @@ describe("response scope terminal paths", () => {
             pull(controller) {
               expect(Container.get(RequestResource)).toBe(resource);
               expect(resource?.disposals).toBe(0);
+              expect(exporter.getFinishedSpans()).toHaveLength(0);
               controller.enqueue(new TextEncoder().encode("lambda-complete"));
               controller.close();
             },
@@ -648,13 +810,14 @@ describe("response scope terminal paths", () => {
       fail() {},
       succeed() {},
     };
-    const handler = new CrocoLambdaAdapter(app).createHandler({
-      flush() {
-        expect(resource?.disposals).toBe(1);
-      },
+    const flush = vi.fn(() => {
+      expect(resource?.disposals).toBe(1);
+      requestSpan();
     });
+    const handler = new CrocoLambdaAdapter(app).createHandler({ flush });
     const result = await handler(event, context);
     expect(result.body).toBe("lambda-complete");
     expect(resource?.disposals).toBe(1);
+    expect(flush).toHaveBeenCalledOnce();
   });
 });

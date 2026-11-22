@@ -1,0 +1,110 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "transports-http",
+      "classification": "runtime-adapter",
+      "reason": "Keep the HTTP server span active across response body reads and cancellation, and record terminal body failures with the original HTTP response status.",
+      "files": {
+        "packages/transports-http/src/libs/CrocoRouteRegistrar.ts": "43bc7257fac78c4947adb1d80bd1fa64116e8581bb1c412782e80258621c1504",
+        "packages/transports-http/src/libs/HttpContext.ts": "8047b194915066cb1d80be171c31ee59358ed65f5fb0f5dba492dd4e02fc458e",
+        "packages/transports-http/src/libs/ResponseRequestScope.ts": "e6de5e207c76f77a0881f83748b8d1a626878da17bfd7de4a3b5fee6a462ed4c",
+        "packages/transports-http/src/libs/middleware/CompressionMiddleware.ts": "90c806c6ea1ea431179607ea7e9850ae1ca94d80838d6c5a04fc72d0984c609f",
+        "packages/transports-http/src/libs/middleware/telemetry.ts": "3620b5d1ef5e6b3766cce154bf79bc593004e0840004d2c4fae0307dc7f11699"
+      },
+      "catalogRuntimes": ["node", "lambda"],
+      "profiles": {
+        "kubernetes": {
+          "result": "supported",
+          "reason": "The Node HTTP fixture verifies that the server span remains active for streaming and is exported on success or disconnect.",
+          "providers": ["@croco/transports-http", "@hono/node-server"],
+          "constraints": [
+            "The host consumes or cancels the response body, or aborts the request.",
+            "The fixture runs the Node HTTP path locally without a Kubernetes deployment."
+          ],
+          "references": [
+            "packages/transports-http/src/libs/ResponseRequestScope.ts",
+            "packages/transports-http/src/libs/middleware/telemetry.ts",
+            "packages/transports-http/src/tests/ResponseRequestScope.spec.ts"
+          ],
+          "evidence": {
+            "kind": "host-runtime",
+            "runtime": "node",
+            "path": "packages/transports-http/src/tests/ResponseRequestScope.spec.ts",
+            "testName": "response scope terminal paths keeps Node response providers alive until disconnect",
+            "sha256": "f20728481975a15193f78349f28ad36a08129695ca63fac3946a7afe592f7d50"
+          }
+        },
+        "aws-lambda": {
+          "result": "conditional",
+          "reason": "The Lambda adapter buffers the response to completion before the invocation flush callback. The local handler fixture observes the finished span at that boundary.",
+          "providers": ["@croco/transports-http/CrocoLambdaAdapter"],
+          "constraints": [
+            "The response is buffered through the API Gateway adapter before flush.",
+            "The fixture uses a local API Gateway v2 event without a live AWS invocation."
+          ],
+          "references": [
+            "packages/transports-http/src/libs/ResponseRequestScope.ts",
+            "packages/transports-http/src/tests/ResponseRequestScope.spec.ts",
+            "packages/transports-http/src/libs/CrocoLambdaAdapter.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "unsupported",
+          "host": "workers",
+          "reason": "The HTTP transport catalog lists Node and Lambda. The response scope uses the existing Node async context path.",
+          "providers": [],
+          "constraints": [
+            "Workers isolate and Cloudflare Node Container paths were not exercised."
+          ],
+          "references": [
+            "packages/transports-http/src/libs/ResponseRequestScope.ts",
+            "packages/transports-http/src/libs/middleware/telemetry.ts",
+            "docs/package-catalog.json"
+          ]
+        }
+      }
+    },
+    {
+      "package": "problems-core",
+      "classification": "internal-pure-refactor",
+      "reason": "Generated Problem registry coordinates follow the HTTP registrar source. The updated locations point to the existing Problem declarations.",
+      "files": {
+        "packages/problems-core/src/generated/problem-code-registry.ts": "0046b1bf5f7b760a006b92ee1c31b86c1ecf722ac6405d16d6877100d455ec6a"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Only generated source-location metadata changes; there is no host capability, storage or lifecycle behavior change.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "docs/problem-code-registry.json"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Only generated source-location metadata changes; there is no host capability, storage or lifecycle behavior change.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "docs/problem-code-registry.json"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Only generated source-location metadata changes; there is no host capability, storage or lifecycle behavior change.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "docs/problem-code-registry.json"
+          ]
+        }
+      }
+    }
+  ]
+}

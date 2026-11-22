@@ -1119,7 +1119,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/transports-http/src/libs/CrocoRouteRegistrar.ts";
-          readonly line: 377;
+          readonly line: 380;
           readonly column: 12;
           readonly kind: "problem-factory";
         },
@@ -1147,7 +1147,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/transports-http/src/libs/CrocoRouteRegistrar.ts";
-          readonly line: 282;
+          readonly line: 285;
           readonly column: 15;
           readonly kind: "problem-factory";
         },
@@ -31691,7 +31691,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/transports-http/src/libs/CrocoRouteRegistrar.ts";
-          readonly line: 255;
+          readonly line: 258;
           readonly column: 15;
           readonly kind: "problem-factory";
         },
@@ -35037,7 +35037,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/transports-http/src/libs/CrocoRouteRegistrar.ts",
-          line: 377,
+          line: 380,
           column: 12,
           kind: "problem-factory",
         },
@@ -35068,7 +35068,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/transports-http/src/libs/CrocoRouteRegistrar.ts",
-          line: 282,
+          line: 285,
           column: 15,
           kind: "problem-factory",
         },
@@ -69275,7 +69275,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/transports-http/src/libs/CrocoRouteRegistrar.ts",
-          line: 255,
+          line: 258,
           column: 15,
           kind: "problem-factory",
         },
