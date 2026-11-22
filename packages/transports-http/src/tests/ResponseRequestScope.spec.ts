@@ -174,6 +174,29 @@ describe("response request scope", () => {
     requestSpan();
   });
 
+  it.each([false, true])(
+    "ends the buffered span when middleware reads a clone (compression: %s)",
+    async (withCompression) => {
+      let logged: unknown;
+      const app = fixture(() => ({ ready: true }), "GET", [
+        ...(withCompression ? [compressionMiddleware({ threshold: 1 })] : []),
+        async (_ctx, next) => {
+          const response = await next();
+          if (response instanceof Response) logged = await response.clone().json();
+          return response;
+        },
+      ]);
+      const response = await app.request("/stream");
+
+      expect(logged).toEqual({ ready: true });
+      expect(response.status).toBe(200);
+      expect(response.headers.get("vary")).toBe(withCompression ? "Accept-Encoding" : null);
+      expect(requestSpan()?.status.code).toBe(SpanStatusCode.UNSET);
+      expect(await response.json()).toEqual({ ready: true });
+      requestSpan();
+    },
+  );
+
   it.each(["read", "cancel"] as const)(
     "keeps a native Response span open until the body is consumed by %s",
     async (action) => {

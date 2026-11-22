@@ -1,4 +1,4 @@
-import { markBufferedResponse } from "../HttpContext";
+import { isBufferedResponse, markBufferedResponse } from "../HttpContext";
 import type { MiddlewareFunction } from "../types";
 import { setVaryHeader } from "./VaryHeader";
 
@@ -50,6 +50,8 @@ export const compressionMiddleware = (options: CompressionOptions = {}): Middlew
       statusText: response.statusText,
       headers,
     });
+    if (isBufferedResponse(response)) markBufferedResponse(identityResponse);
+
     const encoding = selectEncoding(acceptEncoding, encodings);
     if (!encoding) return identityResponse;
 

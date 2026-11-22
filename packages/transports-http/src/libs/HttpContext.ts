@@ -3,17 +3,21 @@ import type { Context as HonoContext } from "hono";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import type { CrocoHttpContext, CrocoRequest, CrocoResponse } from "./types";
 
-// Response headers can be replaced without replacing the body. Only mark streams created from
-// known buffered bytes, since a Fetch Response does not expose how its body was constructed.
-const bufferedResponseBodies = new WeakSet<ReadableStream>();
+// A header wrapper can reuse the body stream, and clone() can replace the original response's stream.
+// Remember both identities when Croco creates the body from buffered data.
+const bufferedResponses = new WeakSet<Response | ReadableStream>();
 
 export function markBufferedResponse(response: Response): Response {
-  if (response.body) bufferedResponseBodies.add(response.body);
+  bufferedResponses.add(response);
+  if (response.body) bufferedResponses.add(response.body);
   return response;
 }
 
 export function isBufferedResponse(response: Response): boolean {
-  return response.body !== null && bufferedResponseBodies.has(response.body);
+  return (
+    bufferedResponses.has(response) ||
+    (response.body !== null && bufferedResponses.has(response.body))
+  );
 }
 
 /**
