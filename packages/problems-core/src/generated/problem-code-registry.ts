@@ -20560,7 +20560,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/meta-vite/src/libs/rsc/rscBuildWorkerClient.ts";
-          readonly line: 57;
+          readonly line: 58;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -20644,7 +20644,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/meta-vite/src/libs/rsc/rscBuildWorkerClient.ts";
-          readonly line: 20;
+          readonly line: 21;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -20672,7 +20672,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/meta-vite/src/libs/rsc/rscBuildWorkerClient.ts";
-          readonly line: 43;
+          readonly line: 44;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -56727,7 +56727,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/meta-vite/src/libs/rsc/rscBuildWorkerClient.ts",
-          line: 57,
+          line: 58,
           column: 1,
           kind: "problem-class",
         },
@@ -56822,7 +56822,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/meta-vite/src/libs/rsc/rscBuildWorkerClient.ts",
-          line: 20,
+          line: 21,
           column: 1,
           kind: "problem-class",
         },
@@ -56853,7 +56853,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/meta-vite/src/libs/rsc/rscBuildWorkerClient.ts",
-          line: 43,
+          line: 44,
           column: 1,
           kind: "problem-class",
         },

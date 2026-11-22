@@ -14614,7 +14614,7 @@ Sources:
 
 Sources:
 
-- `packages/meta-vite/src/libs/rsc/rscBuildWorkerClient.ts:57:1` (problem-class)
+- `packages/meta-vite/src/libs/rsc/rscBuildWorkerClient.ts:58:1` (problem-class)
 
 <a id="meta-vite-rsc-build-invalid"></a>
 
@@ -14668,7 +14668,7 @@ Sources:
 
 Sources:
 
-- `packages/meta-vite/src/libs/rsc/rscBuildWorkerClient.ts:20:1` (problem-class)
+- `packages/meta-vite/src/libs/rsc/rscBuildWorkerClient.ts:21:1` (problem-class)
 
 <a id="meta-vite-rsc-build-worker-unavailable"></a>
 
@@ -14686,7 +14686,7 @@ Sources:
 
 Sources:
 
-- `packages/meta-vite/src/libs/rsc/rscBuildWorkerClient.ts:43:1` (problem-class)
+- `packages/meta-vite/src/libs/rsc/rscBuildWorkerClient.ts:44:1` (problem-class)
 
 <a id="meta-vite-rsc-client-build-id-invalid"></a>
 
