@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -87,6 +87,16 @@ describe("loadRscBuild", () => {
     expect(build.routes.map((route) => [route.path, route.mode, route.head?.()])).toEqual([
       ["/", "rsc", { title: "Home" }],
     ]);
+  });
+
+  it("loads entries Vite named index.mjs for an app in a CommonJS package", async () => {
+    const dir = writeLayout();
+    renameSync(join(dir, "rsc", "index.js"), join(dir, "rsc", "index.mjs"));
+    renameSync(join(dir, "ssr", "index.js"), join(dir, "ssr", "index.mjs"));
+
+    const build = await loadRscBuild({ outDir: dir });
+
+    expect(build.routes.map((route) => route.path)).toEqual(["/"]);
   });
 
   it("refuses a build without the client build record", async () => {

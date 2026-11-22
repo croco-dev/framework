@@ -54,18 +54,20 @@ export async function loadRscBuild(options: LoadRscBuildOptions): Promise<RscBui
     typeof options.outDir === "string" ? resolve(options.outDir) : fileURLToPath(options.outDir);
   const clientDir = join(outDir, "client");
   const client = await readClientBuildRecord(join(clientDir, RSC_CLIENT_BUILD_FILE));
-  const server = await importEntry(join(outDir, "rsc", "index.js"));
-  const ssr = await importEntry(join(outDir, "ssr", "index.js"));
+  const serverFile = resolveEntryFile(join(outDir, "rsc"));
+  const ssrFile = resolveEntryFile(join(outDir, "ssr"));
+  const server = await importEntry(serverFile);
+  const ssr = await importEntry(ssrFile);
 
   if (!isRscServerEntry(server)) {
     throw new RscBuildInvalidProblem(
-      join(outDir, "rsc", "index.js"),
+      serverFile,
       "the default export is not created by defineRscServerEntry() from '@croco/meta-vite/rsc/server'",
     );
   }
   if (!isRscSsrEntry(ssr)) {
     throw new RscBuildInvalidProblem(
-      join(outDir, "ssr", "index.js"),
+      ssrFile,
       "the default export is not created by defineRscSsrEntry() from '@croco/meta-vite/rsc/ssr'",
     );
   }
@@ -123,11 +125,21 @@ async function readClientBuildRecord(file: string): Promise<ClientBuildRecord> {
   return { clientManifestVersion };
 }
 
-async function importEntry(file: string): Promise<unknown> {
-  if (!existsSync(file)) {
-    throw new RscBuildInvalidProblem(file, "the built entry is missing; run the Vite build first");
+// Vite writes `index.mjs` instead of `index.js` when the app's package.json is
+// CommonJS, so both names are accepted.
+function resolveEntryFile(environmentDir: string): string {
+  const candidates = [join(environmentDir, "index.js"), join(environmentDir, "index.mjs")];
+  const file = candidates.find((candidate) => existsSync(candidate));
+  if (file === undefined) {
+    throw new RscBuildInvalidProblem(
+      candidates[0] ?? environmentDir,
+      "the built entry is missing; run the Vite build first",
+    );
   }
+  return file;
+}
 
+async function importEntry(file: string): Promise<unknown> {
   // A variable specifier keeps bundlers from inlining the app's build output.
   const specifier: string = pathToFileURL(file).href;
   const module = (await import(/* @vite-ignore */ specifier)) as { default?: unknown };
