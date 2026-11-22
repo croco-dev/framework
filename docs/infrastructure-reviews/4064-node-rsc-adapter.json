@@ -135,7 +135,7 @@
       "classification": "pure-contract",
       "reason": "Regenerates the Problem code registry with recovery metadata for the new meta-vite RSC build and Node origin codes. Registry data only.",
       "files": {
-        "packages/problems-core/src/generated/problem-code-registry.ts": "793f1280df0fbe5e001b8ea571b2a0c1d6f51f834a604a9ca4e11b79aa9ef2e4"
+        "packages/problems-core/src/generated/problem-code-registry.ts": "833fdc0fbc4355a5f66710ddafd6fbf774c924ed108864851ff5fc5a5c217843"
       },
       "catalogRuntimes": [],
       "profiles": {
