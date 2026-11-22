@@ -7,7 +7,7 @@
       "reason": "Adds a Node production path for @vitejs/plugin-rsc builds: loadRscBuild loads each build into a worker thread of its own, RenderServer renders through it, and the Node adapters can pin the origin a server answers for.",
       "files": {
         "packages/meta-vite/package.json": "4ed0c844a8ffa50d10bb19718ae67d6daaae81f42326f80bc141c1063c3f6b02",
-        "packages/meta-vite/src/index.ts": "f7448542674815f86d1d0707db5ac1cbcf595c91042136d454df09b2491230fd",
+        "packages/meta-vite/src/index.ts": "b7dc870d24921030343333d98f37c6e630ac742cd04acbbcaa74bb0d63a4b98a",
         "packages/meta-vite/src/libs/providers/node.ts": "ed29766549a6a45435a4255940dc51b0a62f40715bc336b2d36fa82ebe9963a9",
         "packages/meta-vite/src/libs/render/renderServer.ts": "ea165e634272405bd7bdee2d775a4d1a1b8bb0fede121350bdc933cca33f9286",
         "packages/meta-vite/src/libs/rsc/buildEntry.ts": "5aea20c4f578ee1eaadb84d97fb279896999bac7df519ac87a9c45514f039124",
@@ -18,7 +18,7 @@
         "packages/meta-vite/src/libs/rsc/rscAssets.ts": "a29a99f4ef9d8809f3b827ae8ddaa798e7b41cc7cea2ffbb95ba2833cc61c2e8",
         "packages/meta-vite/src/libs/rsc/rscBuildProtocol.ts": "9347644744b45231ed3cd1a8a363bb8a2d5c598e770c899038cc688a27fc5652",
         "packages/meta-vite/src/libs/rsc/rscBuildWorker.mts": "e5aebfad8d3372c6c14e7a5717ba57cc52d42b5eb22b5ef55675058380475592",
-        "packages/meta-vite/src/libs/rsc/rscBuildWorkerClient.ts": "e550cd15c5750b306ef1649c84b3eb9191bf73db5682aef03fd69eec313e1d6f",
+        "packages/meta-vite/src/libs/rsc/rscBuildWorkerClient.ts": "212cfd72166b602b4eeba2aaa0c34f046ac1815562cf89a6818c064b572e4d8b",
         "packages/meta-vite/src/libs/rsc/serverEntry.ts": "dbb0aca7871a8d435e491416774596f7cb6f18d9fc07c28a781917c7b7de678d",
         "packages/meta-vite/src/libs/rsc/ssrEntry.ts": "34326afd4e9aed05568abc074ab1996ada2e7be6a6c8b23fb203ab3a7da644c9"
       },
