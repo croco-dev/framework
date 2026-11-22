@@ -87,6 +87,7 @@ export async function loadRscBuild(options: LoadRscBuildOptions): Promise<RscBui
     renderDocument: worker.renderDocument,
     invokeAction: worker.invokeAction,
     close: worker.close,
+    closed: worker.closed,
   };
 }
 

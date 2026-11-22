@@ -60,15 +60,16 @@ function toRequest(serialized: RscSerializedRequest, signal: AbortSignal): Reque
   return new Request(serialized.url, { method: serialized.method, headers, signal });
 }
 
-async function readText(reader: ReadableStreamDefaultReader<Uint8Array>): Promise<string> {
-  const decoder = new TextDecoder();
-  let text = "";
+// Flight rows can carry raw bytes (typed arrays, ArrayBuffers), so the payload
+// is embedded as base64 rather than as text that would replace invalid UTF-8.
+async function readBase64(reader: ReadableStreamDefaultReader<Uint8Array>): Promise<string> {
+  const chunks: Uint8Array[] = [];
   for (;;) {
     const { done, value } = await reader.read();
     if (done) {
-      return text + decoder.decode();
+      return Buffer.concat(chunks).toString("base64");
     }
-    text += decoder.decode(value, { stream: true });
+    chunks.push(value);
   }
 }
 
@@ -189,7 +190,7 @@ async function openRender(
   // One branch becomes HTML; the other is embedded after it so the browser
   // hydrates from the same bytes.
   const [htmlBranch, embedBranch] = flight.tee();
-  const embeddedFlight = readText(embedBranch.getReader());
+  const embeddedFlight = readBase64(embedBranch.getReader());
   embeddedFlight.catch(() => undefined);
   render.embeddedFlight = embeddedFlight;
   const html = await entries.ssr.renderHtml({ flight: htmlBranch, signal });

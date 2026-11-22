@@ -21,6 +21,11 @@ const port = Number(process.env["PORT"] ?? 4317);
 // This file runs from `dist/server/server.js`, next to the app's build output.
 const outDir = new URL("../", import.meta.url);
 const build = await loadRscBuild({ outDir });
+// The build renders in a worker; once it stops, the example cannot serve pages.
+void build.closed.then((problem) => {
+  console.error(problem.message);
+  process.exit(1);
+});
 const imagePaths = (await build.invokeAction("imagePaths", null, {
   request: new Request("http://127.0.0.1/"),
 })) as readonly string[];

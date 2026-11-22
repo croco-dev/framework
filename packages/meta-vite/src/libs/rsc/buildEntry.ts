@@ -58,7 +58,8 @@ export type RscServerActionOptions = {
 
 /**
  * Server work that must share module state with rendering, such as a cache the
- * rendered page fills. Input and result cross the worker boundary as plain data.
+ * rendered page fills. Input must be plain data; the result is structured-cloned
+ * back to the host, so return plain data.
  */
 export type RscServerAction = (input: unknown, options: RscServerActionOptions) => unknown;
 
@@ -95,7 +96,7 @@ export type RscRenderRequest = {
 
 export type RscDocumentRender = {
   readonly html: ReadableStream<Uint8Array>;
-  /** The Flight payload the HTML was rendered from, available once the HTML ends. */
+  /** The Flight bytes the HTML was rendered from, base64-encoded, available once the HTML ends. */
   readonly embeddedFlight: () => Promise<string>;
 };
 
@@ -123,4 +124,10 @@ export type RscBuild = {
   ) => Promise<unknown>;
   /** Stops the worker; renders still in flight fail instead of hanging. */
   readonly close: () => Promise<void>;
+  /**
+   * Settles with the reason once the worker stops, whether it exited or was
+   * closed. The build cannot render after that, so a server should exit and
+   * let its supervisor start a fresh one.
+   */
+  readonly closed: Promise<Problem>;
 };

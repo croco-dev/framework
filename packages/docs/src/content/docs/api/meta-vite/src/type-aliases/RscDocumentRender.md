@@ -13,7 +13,7 @@ title: "RscDocumentRender"
 
 > `readonly` **embeddedFlight**: () => `Promise`\<`string`\>
 
-The Flight payload the HTML was rendered from, available once the HTML ends.
+The Flight bytes the HTML was rendered from, base64-encoded, available once the HTML ends.
 
 #### Returns
 

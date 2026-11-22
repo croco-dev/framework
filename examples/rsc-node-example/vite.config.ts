@@ -18,7 +18,7 @@ export default defineConfig({
   plugins: [
     // `rsc: true` enables the Flight environments and makes the plugin record
     // the client build id (`dist/client/croco-rsc-client-build.json`), which
-    // `serve.mjs` uses as the manifest version the browser has to echo back.
+    // `loadRscBuild()` serves as the manifest version the browser has to echo back.
     crocoMetaVitePlugin({ rsc: true }),
     vitePluginRsc({
       entries: {

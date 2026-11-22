@@ -689,6 +689,7 @@ async function finalize(
           options.apiHosting === "standalone",
         nextjsApiClient,
         viteApiClient: options.frontendDeploy === "vite-spa" && hasWebApps,
+        nodeRscWebApp: options.frontendDeploy === "node-meta-vite-rsc" && hasWebApps,
         workerRuntime:
           options.preset === "ddd-vike-fullstack" &&
           options.frontendDeploy === "cloudflare-meta-vite",

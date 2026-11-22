@@ -8,7 +8,8 @@ title: "RscServerAction"
 > **RscServerAction** = (`input`, `options`) => `unknown`
 
 Server work that must share module state with rendering, such as a cache the
-rendered page fills. Input and result cross the worker boundary as plain data.
+rendered page fills. Input must be plain data; the result is structured-cloned
+back to the host, so return plain data.
 
 ## Parameters
 

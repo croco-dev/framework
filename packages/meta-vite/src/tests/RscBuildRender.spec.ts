@@ -107,7 +107,9 @@ function createBuild(
     renderFlight: (input) => server.renderFlight(input),
     renderDocument: async (input) => {
       const [htmlBranch, embedBranch] = server.renderFlight(input).tee();
-      const embedded = textOf(embedBranch);
+      const embedded = new Response(embedBranch)
+        .arrayBuffer()
+        .then((buffer) => Buffer.from(buffer).toString("base64"));
       embedded.catch(() => undefined);
       const html = await renderHtml({ flight: htmlBranch, signal: input.signal });
       const reader = html.getReader();
@@ -131,6 +133,7 @@ function createBuild(
     },
     invokeAction: async () => undefined,
     close: async () => undefined,
+    closed: new Promise(() => undefined),
   };
 }
 

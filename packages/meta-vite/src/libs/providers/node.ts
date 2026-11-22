@@ -8,10 +8,12 @@ type NodeApiHandler = {
 
 export type NodeHandlerOptions = {
   /**
-   * The only origin this server answers for, such as `https://shop.example`.
+   * The public origin this server answers for, such as `https://shop.example`.
    * Node HTTP servers build `request.url` from the client's `Host` header or
-   * an absolute request target, so without it a client chooses the origin a
-   * server component sees. Requests for any other origin get 400.
+   * an absolute request target, so without it a client chooses the authority
+   * a server component sees. Requests for another host get 400; accepted
+   * requests are rewritten to this origin, so a server behind a proxy that
+   * ends TLS still sees its public `https` URL.
    */
   readonly origin?: string;
 };
@@ -49,14 +51,14 @@ export function createNodeHandler(
 
   return {
     fetch: async (request: Request) => {
-      const refused = refuseForeignOrigin(request, expectedOrigin);
-      if (refused) {
-        return refused;
+      const pinned = pinRequestOrigin(request, expectedOrigin);
+      if (pinned instanceof Response) {
+        return pinned;
       }
       const ctx: RuntimeContext = {
         platform: "node",
       };
-      return handler(request, ctx);
+      return handler(pinned, ctx);
     },
   };
 }
@@ -68,43 +70,45 @@ export function createNodeComposedHandler(options: NodeComposedOptions): {
 
   return {
     fetch: async (request: Request) => {
-      const refused = refuseForeignOrigin(request, expectedOrigin);
-      if (refused) {
-        return refused;
+      const pinned = pinRequestOrigin(request, expectedOrigin);
+      if (pinned instanceof Response) {
+        return pinned;
       }
       for (const apiHandler of options.apiHandlers) {
-        if (apiHandler.match(request)) {
-          return apiHandler.handle(request);
+        if (apiHandler.match(pinned)) {
+          return apiHandler.handle(pinned);
         }
       }
 
       const ctx: RuntimeContext = {
         platform: "node",
       };
-      return options.pageHandler(request, ctx);
+      return options.pageHandler(pinned, ctx);
     },
   };
 }
 
-function normalizeOrigin(origin: string | undefined): string | undefined {
-  return origin === undefined ? undefined : new URL(origin).origin;
+function normalizeOrigin(origin: string | undefined): URL | undefined {
+  return origin === undefined ? undefined : new URL(new URL(origin).origin);
 }
 
-function refuseForeignOrigin(
-  request: Request,
-  expectedOrigin: string | undefined,
-): Response | null {
-  if (expectedOrigin === undefined) {
-    return null;
+// Only the host is compared: the server, not the client, decides the scheme
+// (`@hono/node-server` reads it from the socket), so a proxy that ends TLS
+// would otherwise make every request look foreign.
+function pinRequestOrigin(request: Request, expected: URL | undefined): Request | Response {
+  if (expected === undefined) {
+    return request;
   }
-  const received = new URL(request.url).origin;
-  if (received === expectedOrigin) {
-    return null;
+  const url = new URL(request.url);
+  if (url.host !== expected.host) {
+    const problem = new NodeRequestOriginProblem(expected.origin, url.host);
+    return new Response(JSON.stringify({ error: problem.message, code: problem.code }), {
+      status: problem.status,
+      headers: { "content-type": "application/json; charset=utf-8" },
+    });
   }
-
-  const problem = new NodeRequestOriginProblem(expectedOrigin, received);
-  return new Response(JSON.stringify({ error: problem.message, code: problem.code }), {
-    status: problem.status,
-    headers: { "content-type": "application/json; charset=utf-8" },
-  });
+  if (url.protocol === expected.protocol) {
+    return request;
+  }
+  return new Request(new URL(`${url.pathname}${url.search}`, expected), request);
 }

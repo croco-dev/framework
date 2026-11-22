@@ -93,6 +93,23 @@ const scaffoldCases = [
   },
   {
     preset: "ddd-fullstack",
+    expectedVariables: ["DATABASE_URL", "GRAPHQL_AUTH_TOKEN", "HOST", "PUBLIC_ORIGIN"],
+    options: {
+      projectName: "ddd-node-rsc-fullstack-app",
+      scope: "@test",
+      preset: "ddd-fullstack",
+      webApps: ["web"],
+      api: "graphql",
+      apiHosting: "standalone",
+      frontendDeploy: "node-meta-vite-rsc",
+      db: [],
+      agentRules: false,
+      installDeps: false,
+      initGit: false,
+    },
+  },
+  {
+    preset: "ddd-fullstack",
     expectedVariables: ["DATABASE_URL", "NEXT_PUBLIC_API_URL"],
     options: {
       projectName: "ddd-nextjs-meta-vite-fullstack-app",

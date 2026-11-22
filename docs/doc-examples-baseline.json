@@ -1839,21 +1839,21 @@
       "file": "packages/meta-vite/README.md",
       "blockIndex": 11,
       "language": "typescript",
-      "openingLine": 484,
+      "openingLine": 493,
       "reason": "Legacy authored docs block is not yet isolated for documentation typechecking."
     },
     {
       "file": "packages/meta-vite/README.md",
       "blockIndex": 12,
       "language": "typescript",
-      "openingLine": 560,
+      "openingLine": 569,
       "reason": "Legacy authored docs block is not yet isolated for documentation typechecking."
     },
     {
       "file": "packages/meta-vite/README.md",
       "blockIndex": 13,
       "language": "typescript",
-      "openingLine": 615,
+      "openingLine": 624,
       "reason": "Legacy authored docs block is not yet isolated for documentation typechecking."
     },
     {

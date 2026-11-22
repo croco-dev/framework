@@ -327,8 +327,11 @@ live AWS deployment certification.
 
 - **Node**: `createNodeComposedHandler({ apiHandlers, pageHandler, origin })` — Returns `{ fetch }` for `@hono/node-server` or Node.js `http.createServer`.
   Node HTTP servers build `request.url` from the client's `Host` header or an absolute request target.
-  Pass `origin` (also accepted by `createNodeHandler(handler, { origin })`) so any other origin is
-  refused with `meta-vite/node-request-origin-mismatch` (400) instead of reaching your components.
+  Pass the public `origin` (also accepted by `createNodeHandler(handler, { origin })`): a request for
+  another host is refused with `meta-vite/node-request-origin-mismatch` (400) instead of reaching your
+  components, and an accepted request is rewritten to that origin. Only the host is compared, because
+  the server decides the scheme from its socket, so a proxy that ends TLS can forward plain HTTP while
+  components still see `https://…`. Health probes must send the public host.
 
 ### Node RSC production build
 
@@ -393,13 +396,19 @@ cross that thread boundary as plain data:
 - Server components receive the request URL, method and headers; the body is not carried.
 - `head()` runs once when the build loads, so route metadata is static per build.
 - The request's abort signal and a cancelled response body stop both the Flight and the HTML render
-  in the worker. A worker that exits fails its in-flight renders with
+  in the worker. A worker that exits fails its in-flight renders and every later render with
   `meta-vite/rsc-build-worker-unavailable`; `build.close()` does the same and stops the worker.
+  `build.closed` settles with that Problem, so a server can exit and let its supervisor restart it.
+- A document request buffers the whole Flight payload in the worker, because the payload is embedded
+  after the HTML; a Flight request streams one chunk per pull. The embedded payload is base64, so
+  binary rows (typed arrays, `ArrayBuffer`) reach the browser unchanged.
+- The build path sets no render deadline of its own; the isolated encoder's 30-second timeout does not
+  apply. Bound slow data sources inside server components.
 
 Server work that must share module state with rendering (a cache the pages fill, an experiment
 bridge) is declared as `actions` in `defineRscServerEntry()` and called with
-`build.invokeAction(name, input, { request, context })`. Input must be plain data and the result is
-structured-cloned. Unknown names fail with `meta-vite/rsc-build-action-not-found`; a throwing action
+`build.invokeAction(name, input, { request, context })`. Input must be plain data; the result is
+structured-cloned without that check, so return plain data. Unknown names fail with `meta-vite/rsc-build-action-not-found`; a throwing action
 or render fails with `meta-vite/rsc-build-worker-failed`, whose response carries only the code.
 
 `loadRscBuild()` fails at startup with `meta-vite/rsc-build-invalid` when an entry or the client

@@ -20504,7 +20504,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/meta-vite/src/libs/providers/node.ts";
-          readonly line: 24;
+          readonly line: 26;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -56666,7 +56666,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/meta-vite/src/libs/providers/node.ts",
-          line: 24,
+          line: 26,
           column: 1,
           kind: "problem-class",
         },

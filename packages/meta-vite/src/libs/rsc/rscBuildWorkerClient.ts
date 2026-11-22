@@ -106,6 +106,7 @@ export type RscBuildWorkerClient = {
     options: RscServerActionOptions,
   ) => Promise<unknown>;
   readonly close: () => Promise<void>;
+  readonly closed: Promise<Problem>;
 };
 
 const READY_TIMEOUT_MS = 30_000;
@@ -175,8 +176,15 @@ function createClient(worker: Worker, ready: RscWorkerReady): RscBuildWorkerClie
   let nextId = 1;
   let unavailable: RscBuildWorkerUnavailableProblem | undefined;
 
+  let markClosed!: (problem: Problem) => void;
+  const closed = new Promise<Problem>((resolve) => {
+    markClosed = resolve;
+  });
   const failAll = (problem: RscBuildWorkerUnavailableProblem): void => {
-    unavailable ??= problem;
+    if (!unavailable) {
+      unavailable = problem;
+      markClosed(problem);
+    }
     for (const entry of pending.values()) {
       if (entry.kind === "render") {
         entry.onError(problem);
@@ -301,7 +309,15 @@ function createClient(worker: Worker, ready: RscWorkerReady): RscBuildWorkerClie
       await render.started;
       return {
         html: render.stream,
-        embeddedFlight: async () => (await render.embeddedFlight) ?? "",
+        embeddedFlight: async () => {
+          const flight = await render.embeddedFlight;
+          if (flight === undefined) {
+            throw new RscBuildWorkerFailedProblem("render", input.route, {
+              message: "the worker ended a document render without its Flight payload",
+            });
+          }
+          return flight;
+        },
       };
     },
     invokeAction: async (name, input, options) => {
@@ -324,6 +340,7 @@ function createClient(worker: Worker, ready: RscWorkerReady): RscBuildWorkerClie
         });
       });
     },
+    closed,
     close: async () => {
       failAll(new RscBuildWorkerUnavailableProblem("the build was closed"));
       await worker.terminate();

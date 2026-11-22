@@ -111,3 +111,38 @@ describe("createNodeHandler", () => {
     expect(handler).not.toHaveBeenCalled();
   });
 });
+
+describe("origin pinning behind a proxy", () => {
+  it("accepts the configured host over plain HTTP and hands on the public https URL with the body", async () => {
+    const seen: { url: string; body: string }[] = [];
+    const adapter = createNodeComposedHandler({
+      origin: "https://shop.example",
+      apiHandlers: [],
+      pageHandler: async (request) => {
+        seen.push({ url: request.url, body: await request.text() });
+        return new Response("page");
+      },
+    });
+
+    // A proxy that ended TLS forwards the public Host over plain HTTP.
+    const response = await adapter.fetch(
+      new Request("http://shop.example/products/orbit?tab=1", { method: "POST", body: "form" }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(seen).toEqual([{ url: "https://shop.example/products/orbit?tab=1", body: "form" }]);
+  });
+
+  it("refuses another host even when the scheme matches", async () => {
+    const adapter = createNodeHandler(async () => new Response("page"), {
+      origin: "https://shop.example",
+    });
+
+    const response = await adapter.fetch(new Request("https://10.0.0.7:3000/"));
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toMatchObject({
+      code: "meta-vite/node-request-origin-mismatch",
+    });
+  });
+});

@@ -155,10 +155,11 @@ export type RscEncoderRenderOptions = {
 
 export type RscBuildRenderOptions = {
   /**
-   * A production build from `loadRscBuild()`. RSC routes render in this
-   * process through the built `rsc` and `ssr` entries, and the document loads
-   * the build's client entry. The build also fixes the client manifest
-   * version, so the encoder options cannot be combined with it.
+   * A production build from `loadRscBuild()`. RSC routes render in the
+   * build's worker thread through the built `rsc` and `ssr` entries, and the
+   * document loads the build's client entry, so the runtime context must be
+   * plain data. The build also fixes the client manifest version, so the
+   * encoder options cannot be combined with it.
    */
   readonly build: RscBuild;
   readonly encodeFlight?: never;
@@ -316,7 +317,7 @@ export function readRscInitialFlight(
   if (typeof payload !== "string") {
     return null;
   }
-  const bytes = new TextEncoder().encode(payload);
+  const bytes = Uint8Array.from(atob(payload), (character) => character.charCodeAt(0));
   return new ReadableStream<Uint8Array>({
     start(controller) {
       controller.enqueue(bytes);
@@ -326,12 +327,13 @@ export function readRscInitialFlight(
 }
 
 /**
- * Body tail of a document rendered from a production build: the Flight payload
- * the HTML came from, then the client entry that hydrates it.
+ * Body tail of a document rendered from a production build: the Flight bytes
+ * the HTML came from (base64, so binary rows survive), then the client entry
+ * that hydrates it.
  */
-export function createRscDocumentTail(flight: string, clientEntryUrl: string): string {
+export function createRscDocumentTail(flightBase64: string, clientEntryUrl: string): string {
   return (
-    `<script type="application/json" id="${RSC_INITIAL_FLIGHT_ELEMENT_ID}">${serializeRscManifestJson(flight)}</script>` +
+    `<script type="application/json" id="${RSC_INITIAL_FLIGHT_ELEMENT_ID}">${serializeRscManifestJson(flightBase64)}</script>` +
     `<script type="module" src="${escapeRscHtml(clientEntryUrl)}"></script>`
   );
 }

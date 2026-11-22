@@ -14578,7 +14578,7 @@ Sources:
 
 Sources:
 
-- `packages/meta-vite/src/libs/providers/node.ts:24:1` (problem-class)
+- `packages/meta-vite/src/libs/providers/node.ts:26:1` (problem-class)
 
 <a id="meta-vite-personalized-fragment-invalid"></a>
 

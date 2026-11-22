@@ -7,6 +7,7 @@ import {
   RSC_CLIENT_BUILD_FILE,
   RSC_FLIGHT_VERSION,
   composeRscClientManifestVersion,
+  readRscInitialFlight,
 } from "../libs/rsc/flight";
 import { loadRscBuild } from "../libs/rsc/loadRscBuild";
 import { RscFlightEncodeAbortedProblem } from "../libs/rsc/isolatedEncode";
@@ -24,10 +25,13 @@ const SERVER_ENTRY = `const state = { renders: 0, aborted: 0 };
 const encoder = new TextEncoder();
 export default {
   version: ${JSON.stringify(RSC_SERVER_ENTRY_VERSION)},
-  routes: [{ path: "/", head: () => ({ title: "Worker" }) }, { path: "/pending" }, { path: "/slow-shell" }],
+  routes: [{ path: "/", head: () => ({ title: "Worker" }) }, { path: "/pending" }, { path: "/slow-shell" }, { path: "/binary" }],
   renderFlight({ route, request, context, signal }) {
     state.renders += 1;
     signal.addEventListener("abort", () => { state.aborted += 1; });
+    if (route === "/binary") {
+      return new ReadableStream({ start(controller) { controller.enqueue(new Uint8Array([0x30, 0x3a, 0xff, 0xfe, 0x00, 0x0a])); controller.close(); } });
+    }
     if (route === "/slow-shell") {
       return new ReadableStream({ start() {} });
     }
@@ -135,12 +139,28 @@ describe("RSC build worker", () => {
       ["/", { title: "Worker" }],
       ["/pending", undefined],
       ["/slow-shell", undefined],
+      ["/binary", undefined],
     ]);
     expect(await textOf(build.renderFlight(renderInput("/", { tenant: "a" })))).toBe("0:/:a:r1\n");
 
     const document = await build.renderDocument(renderInput("/", { tenant: "b" }));
     expect(await textOf(document.html)).toBe("<p>0:/:b:r1</p>");
-    expect(await document.embeddedFlight()).toBe("0:/:b:r1\n");
+    expect(Buffer.from(await document.embeddedFlight(), "base64").toString()).toBe("0:/:b:r1\n");
+  });
+
+  it("embeds Flight bytes that are not valid UTF-8 without changing them", async () => {
+    const build = await loadFakeBuild("app");
+    const document = await build.renderDocument(renderInput("/binary"));
+    await textOf(document.html);
+
+    const embedded = await document.embeddedFlight();
+    const stream = readRscInitialFlight({
+      getElementById: () => ({ textContent: JSON.stringify(embedded) }),
+    });
+
+    expect([...new Uint8Array(await new Response(stream).arrayBuffer())]).toEqual([
+      0x30, 0x3a, 0xff, 0xfe, 0x00, 0x0a,
+    ]);
   });
 
   it("refuses context that is not plain data instead of cloning it silently", async () => {
@@ -231,6 +251,7 @@ describe("RSC build worker", () => {
       .catch(() => undefined);
 
     await expect(pending.read()).rejects.toThrow(RscBuildWorkerUnavailableProblem);
+    expect(await crashing.closed).toBeInstanceOf(RscBuildWorkerUnavailableProblem);
     expect(() => crashing.renderFlight(renderInput("/"))).toThrow(RscBuildWorkerUnavailableProblem);
     expect(await textOf(healthy.renderFlight(renderInput("/")))).toBe("0:/:none:r1\n");
   });

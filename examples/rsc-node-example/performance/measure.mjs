@@ -244,7 +244,7 @@ try {
           hydrationReadyMs: performance.getEntriesByName("pdp:hydrated")[0]?.startTime,
           ttfbMs: nav.responseStart,
           htmlBytes: nav.decodedBodySize,
-          flightBytes: new TextEncoder().encode(JSON.parse(initial.textContent)).length,
+          flightBytes: atob(JSON.parse(initial.textContent)).length,
           jsBytes: bytes((r) => new URL(r.name).pathname.endsWith(".js")),
           imageBytes: bytes((r) => new URL(r.name).pathname.startsWith("/cdn-cgi/")),
           wireBytes: nav.transferSize + resources.reduce((total, r) => total + r.transferSize, 0),

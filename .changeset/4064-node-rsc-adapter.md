@@ -13,8 +13,9 @@ plugin-rsc registers its module loaders on `globalThis`, so the per-build worker
 apps' builds share one process without resolving each other's modules. The `RuntimeContext` must be
 plain data, the request body is not carried, and `head()` is read once per build. The request's
 abort signal and a cancelled response body stop both renders in the worker, and `build.close()`
-stops the worker and fails renders still in flight. The document embeds the Flight
-bytes its HTML came from and loads the build's client entry, so client islands hydrate without a
+stops the worker and fails renders still in flight. `build.closed` settles when the worker stops for
+any reason, so a server can exit and be restarted instead of failing every later request. The document embeds the Flight
+bytes its HTML came from (base64, so binary rows survive) and loads the build's client entry, so client islands hydrate without a
 second render and refresh through the existing manifest handshake. Both representations are sent with
 `cache-control: private, no-store`. `createRscAssetHandler(build)` serves the hashed client bundle.
 
@@ -31,9 +32,11 @@ an `RscRenderOptions` value and then adds `encodeFlight` must type that value as
 without a build. It still starts one child process per request and cannot decode client islands.
 
 `createNodeHandler(handler, { origin })` and `createNodeComposedHandler({ origin, ... })` can pin the
-origin a Node server answers for. Node HTTP servers build `request.url` from the client's `Host` header
-or an absolute request target, so other origins are now refused with
-`meta-vite/node-request-origin-mismatch` (400) before routing. Without `origin`, behavior is unchanged.
+public origin a Node server answers for. Node HTTP servers build `request.url` from the client's `Host`
+header or an absolute request target, so requests for another host are now refused with
+`meta-vite/node-request-origin-mismatch` (400) before routing, and accepted requests are rewritten to
+the configured origin. Only the host is compared, so a proxy that ends TLS can forward plain HTTP.
+Without `origin`, behavior is unchanged.
 
 New Problem codes with recovery metadata:
 
@@ -48,5 +51,5 @@ New Problem codes with recovery metadata:
 
 `create-croco-app` adds `--frontend-deploy node-meta-vite-rsc` for `ddd-fullstack`. It generates
 `apps/<web>` as a React Server Components app served by Node through these APIs, with `build`, `start`
-and `rsc:smoke` scripts. `examples/rsc-node-example` now runs on the same adapter instead of its own
+and `rsc:smoke` scripts; its `.env.example` lists `HOST` and `PUBLIC_ORIGIN`. `examples/rsc-node-example` now runs on the same adapter instead of its own
 server.

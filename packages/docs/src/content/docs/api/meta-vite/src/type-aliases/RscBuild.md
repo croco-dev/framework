@@ -53,6 +53,16 @@ Stops the worker; renders still in flight fail instead of hanging.
 
 ---
 
+### closed
+
+> `readonly` **closed**: `Promise`\<[`Problem`](/api/problems-core/src/classes/problem/)\>
+
+Settles with the reason once the worker stops, whether it exited or was
+closed. The build cannot render after that, so a server should exit and
+let its supervisor start a fresh one.
+
+---
+
 ### invokeAction
 
 > `readonly` **invokeAction**: (`name`, `input`, `options`) => `Promise`\<`unknown`\>
