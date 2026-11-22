@@ -17,7 +17,7 @@
         "packages/meta-vite/src/libs/rsc/plainData.ts": "09e2ccc1ec571e24f2022250fb73a239bc75041f50227b6e04494bcd5c5a51e9",
         "packages/meta-vite/src/libs/rsc/rscAssets.ts": "a29a99f4ef9d8809f3b827ae8ddaa798e7b41cc7cea2ffbb95ba2833cc61c2e8",
         "packages/meta-vite/src/libs/rsc/rscBuildProtocol.ts": "9347644744b45231ed3cd1a8a363bb8a2d5c598e770c899038cc688a27fc5652",
-        "packages/meta-vite/src/libs/rsc/rscBuildWorker.mts": "e5aebfad8d3372c6c14e7a5717ba57cc52d42b5eb22b5ef55675058380475592",
+        "packages/meta-vite/src/libs/rsc/rscBuildWorker.mts": "b7b6cbac160c5c3c085d98c49417a42ca2db782686c4c338fd2a987e29f5097a",
         "packages/meta-vite/src/libs/rsc/rscBuildWorkerClient.ts": "212cfd72166b602b4eeba2aaa0c34f046ac1815562cf89a6818c064b572e4d8b",
         "packages/meta-vite/src/libs/rsc/serverEntry.ts": "dbb0aca7871a8d435e491416774596f7cb6f18d9fc07c28a781917c7b7de678d",
         "packages/meta-vite/src/libs/rsc/ssrEntry.ts": "34326afd4e9aed05568abc074ab1996ada2e7be6a6c8b23fb203ab3a7da644c9"
