@@ -14,6 +14,8 @@
     "performance/**/*.tsx",
     "performance/**/*.ts",
     "performance/profile.mjs",
-    "vite.config.ts"
+    "vite.config.ts",
+    "server.ts",
+    "vite.server.config.ts"
   ]
 }

@@ -1,7 +1,7 @@
 // The browser bundle imports the Flight negotiation contract from the
 // browser entrypoint: the package root is a server entry (Node builtins), so
 // only this subpath can be bundled for the client.
-import { createRscBrowserFlightHeaders } from "@croco/meta-vite/rsc/browser";
+import { createRscBrowserFlightHeaders, readRscInitialFlight } from "@croco/meta-vite/rsc/browser";
 import { hydrateRoot } from "react-dom/client";
 import type { Root } from "react-dom/client";
 import { createFromReadableStream, createFromFetch } from "@vitejs/plugin-rsc/browser";
@@ -54,17 +54,10 @@ async function hydrate() {
   if (!outlet) {
     return;
   }
-  const initial = document.getElementById("pdp-initial-flight");
-  const node = initial
-    ? await createFromReadableStream(
-        new ReadableStream({
-          start(controller) {
-            controller.enqueue(new TextEncoder().encode(JSON.parse(initial.textContent ?? '""')));
-            controller.close();
-          },
-        }),
-      )
-    : await loadFlightNode();
+  // The document embeds the Flight bytes its HTML was rendered from, so the
+  // first render hydrates from those instead of fetching the route again.
+  const initial = readRscInitialFlight();
+  const node = initial ? await createFromReadableStream(initial) : await loadFlightNode();
   root = hydrateRoot(outlet, node as never);
   document.querySelector("[data-testid=refresh]")?.addEventListener("click", () => {
     void refresh();

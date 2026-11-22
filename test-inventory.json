@@ -3816,6 +3816,12 @@
       "owner": "@croco/meta-vite"
     },
     {
+      "path": "packages/meta-vite/src/tests/LoadRscBuild.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/meta-vite"
+    },
+    {
       "path": "packages/meta-vite/src/tests/NodeRscContext.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -3847,6 +3853,18 @@
     },
     {
       "path": "packages/meta-vite/src/tests/RenderServerPublicHead.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/meta-vite"
+    },
+    {
+      "path": "packages/meta-vite/src/tests/RscAssetHandler.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/meta-vite"
+    },
+    {
+      "path": "packages/meta-vite/src/tests/RscBuildRender.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/meta-vite"

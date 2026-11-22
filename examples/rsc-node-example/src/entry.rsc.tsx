@@ -1,5 +1,7 @@
 import React, { Suspense } from "react";
 import { renderToReadableStream } from "@vitejs/plugin-rsc/rsc";
+import { defineRscServerEntry } from "@croco/meta-vite/rsc/server";
+import type { RenderRouteComponentProps } from "@croco/meta-vite";
 import Counter from "./Counter";
 import { productPage } from "../performance/Pdp";
 export { resetLabCache, imagePath, exposeLab } from "../performance/runtime";
@@ -29,15 +31,15 @@ function RscPage() {
   );
 }
 
-export default async function handler(request: Request): Promise<Response> {
-  if (new URL(request.url).pathname.startsWith("/products/")) {
-    const { node } = await productPage(request);
-    return new Response(renderToReadableStream(node), {
-      headers: { "content-type": "text/x-component; charset=utf-8" },
-    });
-  }
-  const stream = renderToReadableStream(<RscPage />);
-  return new Response(stream, {
-    headers: { "content-type": "text/x-component; charset=utf-8" },
-  });
+async function ProductPage({ request }: RenderRouteComponentProps) {
+  const { node } = await productPage(request);
+  return node;
 }
+
+export default defineRscServerEntry({
+  renderToReadableStream,
+  routes: [
+    { path: "/", component: RscPage, head: () => ({ title: "RSC Node Example" }) },
+    { path: "/products/orbit", component: ProductPage, head: () => ({ title: "Orbit print" }) },
+  ],
+});

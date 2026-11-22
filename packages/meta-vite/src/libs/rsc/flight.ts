@@ -2,6 +2,7 @@ import { Problem, ProblemCategory } from "@croco/problems-core";
 import type { HeadMetadata } from "../routes/head";
 import type { RenderRouteComponentProps, RenderRouteIR } from "../routes/types";
 import type { RuntimeContext } from "../render/types";
+import type { RscBuild } from "./buildEntry";
 
 export const RSC_FLIGHT_CONTENT_TYPE = "text/x-component" as const;
 
@@ -22,6 +23,13 @@ export const RSC_CLIENT_MANIFEST_HEADER = "x-croco-rsc-client-manifest" as const
  * manifest version the document was rendered with.
  */
 export const RSC_MANIFEST_ELEMENT_ID = "croco-rsc-manifest" as const;
+
+/**
+ * Element id of the JSON block that carries the Flight payload a document was
+ * rendered from, so the browser hydrates from the same bytes instead of
+ * fetching and rendering the route a second time.
+ */
+export const RSC_INITIAL_FLIGHT_ELEMENT_ID = "croco-rsc-initial-flight" as const;
 
 /**
  * Name of the file `crocoMetaVitePlugin` writes into the client build output.
@@ -131,7 +139,7 @@ export type RscFlightRequest = {
   readonly serverReference: string | null;
 };
 
-export type RscRenderOptions = {
+export type RscEncoderRenderOptions = {
   readonly encodeFlight?: RscFlightEncoder;
   readonly clientManifestVersion?: string;
   /**
@@ -142,7 +150,23 @@ export type RscRenderOptions = {
    * `clientManifestVersion` wins.
    */
   readonly clientBuildId?: string;
+  readonly build?: never;
 };
+
+export type RscBuildRenderOptions = {
+  /**
+   * A production build from `loadRscBuild()`. RSC routes render in this
+   * process through the built `rsc` and `ssr` entries, and the document loads
+   * the build's client entry. The build also fixes the client manifest
+   * version, so the encoder options cannot be combined with it.
+   */
+  readonly build: RscBuild;
+  readonly encodeFlight?: never;
+  readonly clientManifestVersion?: never;
+  readonly clientBuildId?: never;
+};
+
+export type RscRenderOptions = RscEncoderRenderOptions | RscBuildRenderOptions;
 
 export function parseRscFlightRequest(request: Request): RscFlightRequest {
   const url = new URL(request.url);
@@ -196,6 +220,7 @@ export function resolveRscClientManifestVersion(options: RscRenderOptions): stri
   // An explicit version wins: an app that composes its own build identifier
   // (or pins a protocol generation) must not have it recomputed.
   return (
+    options.build?.clientManifestVersion ??
     options.clientManifestVersion ??
     (options.clientBuildId
       ? composeRscClientManifestVersion(options.clientBuildId)
@@ -271,6 +296,44 @@ export function readRscClientManifestVersion(doc: RscManifestDocument): string |
   }
 
   return readMetaManifestVersion(doc);
+}
+
+/**
+ * The Flight payload the current document was rendered from, as the stream the
+ * official browser decoder reads. Returns null when the document carries none,
+ * and the caller then fetches the route's Flight representation instead.
+ */
+export function readRscInitialFlight(
+  doc?: Pick<RscManifestDocument, "getElementById">,
+): ReadableStream<Uint8Array> | null {
+  const documentRef = doc ?? (typeof document === "undefined" ? undefined : document);
+  const text = documentRef?.getElementById(RSC_INITIAL_FLIGHT_ELEMENT_ID)?.textContent;
+  if (!text) {
+    return null;
+  }
+
+  const payload: unknown = JSON.parse(text);
+  if (typeof payload !== "string") {
+    return null;
+  }
+  const bytes = new TextEncoder().encode(payload);
+  return new ReadableStream<Uint8Array>({
+    start(controller) {
+      controller.enqueue(bytes);
+      controller.close();
+    },
+  });
+}
+
+/**
+ * Body tail of a document rendered from a production build: the Flight payload
+ * the HTML came from, then the client entry that hydrates it.
+ */
+export function createRscDocumentTail(flight: string, clientEntryUrl: string): string {
+  return (
+    `<script type="application/json" id="${RSC_INITIAL_FLIGHT_ELEMENT_ID}">${serializeRscManifestJson(flight)}</script>` +
+    `<script type="module" src="${escapeRscHtml(clientEntryUrl)}"></script>`
+  );
 }
 
 function readMetaManifestVersion(doc: RscManifestDocument): string | null {

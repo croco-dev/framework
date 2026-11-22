@@ -16,7 +16,7 @@ import {
 import { defineRoute } from "../libs/routes/defineRoute";
 import { RouteRegistry } from "../libs/routes/routeRegistry";
 import type { PageRouteDefinition } from "../libs/routes/types";
-import type { RscRenderOptions } from "../libs/rsc/flight";
+import type { RscEncoderRenderOptions } from "../libs/rsc/flight";
 import {
   RscFlightEncodeFailedProblem,
   RscFlightEncodeTimeoutProblem,
@@ -81,7 +81,7 @@ function emptyFlightStream(): ReadableStream<Uint8Array> {
 function createServer(
   routes: PageRouteDefinition[],
   encodeFlight?: (routePath: string) => Promise<ReadableStream<Uint8Array>>,
-  rscOptions: RscRenderOptions = {},
+  rscOptions: RscEncoderRenderOptions = {},
 ): RenderServer {
   const registry = new RouteRegistry();
 

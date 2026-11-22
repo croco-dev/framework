@@ -17,7 +17,9 @@
   "exports": {
     ".": "./src/index.ts",
     "./package.json": "./package.json",
-    "./rsc/browser": "./src/libs/rsc/flightBrowser.entry.ts"
+    "./rsc/browser": "./src/libs/rsc/flightBrowser.entry.ts",
+    "./rsc/server": "./src/libs/rsc/serverEntry.ts",
+    "./rsc/ssr": "./src/libs/rsc/ssrEntry.ts"
   },
   "publishConfig": {
     "main": "./dist/index.js",
@@ -54,12 +56,28 @@
         },
         "import": "./dist/libs/rsc/flightBrowser.entry.mjs",
         "require": "./dist/libs/rsc/flightBrowser.entry.js"
+      },
+      "./rsc/server": {
+        "types": {
+          "import": "./dist/libs/rsc/serverEntry.d.mts",
+          "require": "./dist/libs/rsc/serverEntry.d.ts"
+        },
+        "import": "./dist/libs/rsc/serverEntry.mjs",
+        "require": "./dist/libs/rsc/serverEntry.js"
+      },
+      "./rsc/ssr": {
+        "types": {
+          "import": "./dist/libs/rsc/ssrEntry.d.mts",
+          "require": "./dist/libs/rsc/ssrEntry.d.ts"
+        },
+        "import": "./dist/libs/rsc/ssrEntry.mjs",
+        "require": "./dist/libs/rsc/ssrEntry.js"
       }
     },
     "access": "public"
   },
   "scripts": {
-    "build": "tsup src/index.ts src/libs/isr/adapters/index.ts src/libs/rsc/flightEncode.entry.ts src/libs/rsc/flightBrowser.entry.ts --format esm,cjs --minify --clean --dts --external vite --external react --external react-dom --external 'react-dom/*' --external 'react-server-dom-webpack/*' --external '@croco/cache-core' --external '@croco/problems-core' --external '@vitejs/plugin-rsc' --external '@vitejs/plugin-rsc/*'",
+    "build": "tsup src/index.ts src/libs/isr/adapters/index.ts src/libs/rsc/flightEncode.entry.ts src/libs/rsc/flightBrowser.entry.ts src/libs/rsc/serverEntry.ts src/libs/rsc/ssrEntry.ts --format esm,cjs --minify --clean --dts --external vite --external react --external react-dom --external 'react-dom/*' --external 'react-server-dom-webpack/*' --external '@croco/cache-core' --external '@croco/problems-core' --external '@vitejs/plugin-rsc' --external '@vitejs/plugin-rsc/*'",
     "test": "vitest run --exclude src/tests/published-contract.spec.ts",
     "test:evidence": "pnpm run test --maxWorkers=1 --reporter=json --outputFile=.turbo/croco-test-evidence.json",
     "test:published": "vitest run src/tests/published-contract.spec.ts",

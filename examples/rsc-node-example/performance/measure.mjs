@@ -37,7 +37,7 @@ async function digestTree(directory, hash = createHash("sha256")) {
 }
 const artifactHash = await digestTree(join(app, "dist"));
 await digestTree(join(here, "catalog"), artifactHash);
-artifactHash.update(await readFile(join(app, "serve.mjs")));
+artifactHash.update(await readFile(join(app, "server.ts")));
 artifactHash.update(await readFile(join(here, "profile.mjs")));
 const artifactSha256 = artifactHash.digest("hex");
 const sourceRevision = execFileSync("git", ["rev-parse", "HEAD"], {
@@ -56,7 +56,7 @@ for (const name of [
   );
   dependencyVersions[manifest.name] = `${manifest.version}@${sourceRevision}`;
 }
-const server = spawn(process.execPath, ["serve.mjs"], {
+const server = spawn(process.execPath, ["dist/server/server.js"], {
   cwd: app,
   env: { ...process.env, NODE_ENV: "production", PORT: "0" },
   stdio: ["ignore", "pipe", "pipe"],
@@ -87,16 +87,25 @@ try {
       }
     });
   });
-  const invalidTargetStatus = await new Promise((resolveStatus, reject) => {
-    httpGet(origin, { path: "//127.0.0.1:9/products/orbit?configuration=baseline" }, (response) => {
-      response.resume();
-      response.on("end", () => resolveStatus(response.statusCode));
-    }).on("error", reject);
-  });
+  const statusFor = (path) =>
+    new Promise((resolveStatus, reject) => {
+      httpGet(origin, { path }, (response) => {
+        response.resume();
+        response.on("end", () => resolveStatus(response.statusCode));
+      }).on("error", reject);
+    });
+  const invalidTargetStatus = await statusFor(
+    "http://127.0.0.1:9/products/orbit?configuration=baseline",
+  );
   assert.equal(
     invalidTargetStatus,
     400,
-    "Network-path targets must not change internal fetch origins",
+    "Absolute request targets must not change internal fetch origins",
+  );
+  assert.equal(
+    await statusFor("//127.0.0.1:9/products/orbit?configuration=baseline"),
+    404,
+    "Network-path targets must stay paths on the server origin, never another origin",
   );
   const clientBuild = JSON.parse(
     await readFile(join(app, "dist/client/croco-rsc-client-build.json"), "utf8"),
@@ -229,7 +238,7 @@ try {
         const resources = performance.getEntriesByType("resource");
         const bytes = (select) =>
           resources.filter(select).reduce((total, r) => total + r.decodedBodySize, 0);
-        const initial = document.getElementById("pdp-initial-flight");
+        const initial = document.getElementById("croco-rsc-initial-flight");
         return {
           ...window.pdpLab,
           hydrationReadyMs: performance.getEntriesByName("pdp:hydrated")[0]?.startTime,
