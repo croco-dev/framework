@@ -12,15 +12,6 @@ import {
   loadRscBuild,
 } from "@croco/meta-vite";
 
-type LabModule = {
-  readonly exposeLab: (
-    request: Request,
-    input: { receipt: string; displayInstanceId: string; occurredAt: string },
-  ) => Promise<void>;
-  readonly resetLabCache: () => Promise<void>;
-  readonly imagePath: (width: number) => string;
-};
-
 type ApiHandler = {
   readonly match: (request: Request) => boolean;
   readonly handle: (request: Request) => Promise<Response>;
@@ -30,9 +21,9 @@ const port = Number(process.env["PORT"] ?? 4317);
 // This file runs from `dist/server/server.js`, next to the app's build output.
 const outDir = new URL("../", import.meta.url);
 const build = await loadRscBuild({ outDir });
-// The lab hooks are named exports of the same rsc module `loadRscBuild` loaded,
-// so they share its module state.
-const lab = (await import(new URL("rsc/index.js", outDir).href)) as LabModule;
+const imagePaths = (await build.invokeAction("imagePaths", null, {
+  request: new Request("http://127.0.0.1/"),
+})) as readonly string[];
 
 const EXPOSE_FIELDS = ["receipt", "displayInstanceId", "occurredAt"] as const;
 
@@ -84,7 +75,7 @@ function parseExposeInput(
 
 function labImage(request: Request): Response {
   const url = new URL(request.url);
-  if (![400, 800, 1200].some((width) => url.pathname === lab.imagePath(width))) {
+  if (!imagePaths.includes(url.pathname)) {
     return empty(404);
   }
   const width = Number(/width=(\d+)/.exec(url.pathname)?.[1] ?? 800);
@@ -131,18 +122,19 @@ const labHandlers: ApiHandler[] = [
       return empty(400);
     }
     try {
-      await lab.exposeLab(
-        new Request(request.url, { headers: { cookie: request.headers.get("cookie") ?? "" } }),
-        input,
-      );
+      await build.invokeAction("exposeLab", input, {
+        request: new Request(request.url, {
+          headers: { cookie: request.headers.get("cookie") ?? "" },
+        }),
+      });
     } catch {
       // The lab bridge refuses an unknown or replayed receipt.
       return empty(403);
     }
     return empty(204, { "cache-control": "private, no-store" });
   }),
-  route("POST", "/lab/reset", async () => {
-    await lab.resetLabCache();
+  route("POST", "/lab/reset", async (request) => {
+    await build.invokeAction("resetLabCache", null, { request });
     return empty(204);
   }),
   route(

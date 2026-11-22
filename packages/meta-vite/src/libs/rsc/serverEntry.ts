@@ -12,7 +12,7 @@ import { RSC_SERVER_ENTRY_VERSION, RscRouteNotInBuildProblem } from "./buildEntr
 import type { ComponentType } from "react";
 import type { HeadMetadata } from "../routes/head";
 import type { RenderRouteComponentProps } from "../routes/types";
-import type { RscFlightRenderInput, RscServerEntry } from "./buildEntry";
+import type { RscFlightRenderInput, RscServerAction, RscServerEntry } from "./buildEntry";
 
 export type RscServerRouteDefinition = {
   readonly path: string;
@@ -27,6 +27,8 @@ export type RscFlightRenderToReadableStream = (
 
 export type RscServerEntryOptions = {
   readonly routes: readonly RscServerRouteDefinition[];
+  /** Server work that shares module state with rendering; see `RscBuild.invokeAction`. */
+  readonly actions?: Readonly<Record<string, RscServerAction>>;
   /** `renderToReadableStream` from `@vitejs/plugin-rsc/rsc`. */
   readonly renderToReadableStream: RscFlightRenderToReadableStream;
 };
@@ -37,6 +39,7 @@ export function defineRscServerEntry(options: RscServerEntryOptions): RscServerE
   return {
     version: RSC_SERVER_ENTRY_VERSION,
     routes: options.routes.map(({ path, head }) => (head ? { path, head } : { path })),
+    ...(options.actions ? { actions: options.actions } : {}),
     renderFlight(input: RscFlightRenderInput) {
       const component = components.get(input.route);
       if (!component) {
@@ -52,4 +55,9 @@ export function defineRscServerEntry(options: RscServerEntryOptions): RscServerE
 }
 
 export { RSC_SERVER_ENTRY_VERSION } from "./buildEntry";
-export type { RscFlightRenderInput, RscServerEntry } from "./buildEntry";
+export type {
+  RscFlightRenderInput,
+  RscServerAction,
+  RscServerActionOptions,
+  RscServerEntry,
+} from "./buildEntry";

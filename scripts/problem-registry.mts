@@ -3983,6 +3983,43 @@ const recoveryMetadataByCode = {
     redactionPolicy: "operator-only",
     severity: "error",
   }),
+  "meta-vite/rsc-build-value-unsupported": recovery({
+    cause:
+      "A runtime context or action input bound for the RSC build worker is not plain data, so structured clone would change it silently.",
+    userAction: "Do not retry unchanged: the same value is refused again.",
+    operatorAction:
+      "Read the path extension and pass primitives, arrays or plain objects instead of functions, class instances, getters or cyclic values.",
+    retryability: "not-retryable",
+    redactionPolicy: "operator-only",
+    severity: "error",
+  }),
+  "meta-vite/rsc-build-worker-failed": recovery({
+    cause: "A render or action threw inside the RSC build worker.",
+    userAction: "Retry later; the operator has to fix the failing server code first.",
+    operatorAction:
+      "Read the operation, target and workerMessage extensions, fix the server component or action, and redeploy the build.",
+    retryability: "conditional",
+    redactionPolicy: "operator-only",
+    severity: "error",
+  }),
+  "meta-vite/rsc-build-worker-unavailable": recovery({
+    cause: "The RSC build worker exited or was closed, so the build cannot render.",
+    userAction: "Retry after the server restarts.",
+    operatorAction:
+      "Check the worker exit reason in the extensions and the server logs, then restart the server; loadRscBuild starts a new worker.",
+    retryability: "conditional",
+    redactionPolicy: "operator-only",
+    severity: "error",
+  }),
+  "meta-vite/rsc-build-action-not-found": recovery({
+    cause: "The host called an action that the built rsc entry does not declare.",
+    userAction: "Do not retry: the action does not exist in this build.",
+    operatorAction:
+      "Declare the action in defineRscServerEntry({ actions }) and rebuild, or fix the name passed to invokeAction.",
+    retryability: "not-retryable",
+    redactionPolicy: "operator-only",
+    severity: "error",
+  }),
   "meta-vite/node-request-origin-mismatch": recovery({
     cause: "The request names an origin other than the one this Node server was configured to answer for.",
     userAction: "Request the page through the site's public address.",

@@ -19,18 +19,29 @@ pnpm add ioredis
 ## Features
 
 - **SSR**: Server-side rendering with React 19, head metadata injection, XSS-safe HTML shell
-- **`rsc` mode (real React Flight)**: official `@vitejs/plugin-rsc` encoder
-  (`react-server-dom-webpack/server.node` in an isolated `react-server`
-  child process) → `RenderServer.handleRsc()` decodes with the official
-  `react-server-dom-webpack/client` decoder and renders HTML with
-  `react-dom/server`. HTML (`/page`) and Flight (`/page.rsc` or
+- **`rsc` mode (real React Flight)**: two render paths share one negotiation contract.
+  - **Production build (recommended on Node)**: `loadRscBuild()` loads a
+    `@vitejs/plugin-rsc` build into a worker thread of its own, and `RenderServer`
+    renders through the built `rsc` and `ssr` entries there. One worker serves every
+    request for that build; no process is spawned per request. Client islands
+    hydrate from the Flight bytes embedded in the document, and both
+    representations are sent with `cache-control: private, no-store`. See
+    [Node RSC production build](#node-rsc-production-build).
+  - **Isolated encoder (routes with `componentRef`, no build passed)**: the official encoder
+    (`react-server-dom-webpack/server.node`) runs in a `react-server` child
+    process **per request**; `RenderServer.handleRsc()` decodes with
+    `react-server-dom-webpack/client` and renders HTML with `react-dom/server`.
+    It cannot decode client islands (unresolved client references fail with 400)
+    and refuses host context beyond `{ platform: "node" }`.
+
+  HTML (`/page`) and Flight (`/page.rsc` or
   `Accept: text/x-component`) are negotiated on one path with distinct
   representations (`text/html` vs `text/x-component`) and manifest-version
   headers; mismatched client manifests fail with
   `RscClientManifestMismatchProblem` (400) instead of mixing
   representations. Unsupported Flight server references fail with
-  `RscServerReferenceNotSupportedProblem` (501). See
-  `examples/rsc-node-example` for the Node production-build proof.
+  `RscServerReferenceNotSupportedProblem` (501). `examples/rsc-node-example`
+  and the `node-meta-vite-rsc` create-croco-app profile use the production build path.
 - **SSG**: Static site generation at build time (`prerenderSsgRoutes`)
 - **ISR**: TTL-only incremental static regeneration via CacheStore. `InMemoryCacheStore` for local/single-process, `RedisCacheStoreAdapter` for production durable caching (extends `AbstractCacheStoreAdapter`), and runtime support diagnostics for durable production claims
 - **API Co-location**: Define API routes alongside page routes with `defineApiRoute()`. Compose pages and APIs under a single fetch handler using `createMetaFetchHandler`'s `apiRoutes` option
@@ -313,7 +324,79 @@ use base64 without changing their bytes. API Gateway REST APIs must configure bi
 for binary delivery. This buffered contract does not provide Lambda response streaming or establish
 live AWS deployment certification.
 
-- **Node**: `createNodeComposedHandler({ apiHandlers, pageHandler })` — Returns `{ fetch }` for `@hono/node-server` or Node.js `http.createServer`.
+- **Node**: `createNodeComposedHandler({ apiHandlers, pageHandler, origin })` — Returns `{ fetch }` for `@hono/node-server` or Node.js `http.createServer`.
+  Node HTTP servers build `request.url` from the client's `Host` header or an absolute request target.
+  Pass `origin` (also accepted by `createNodeHandler(handler, { origin })`) so any other origin is
+  refused with `meta-vite/node-request-origin-mismatch` (400) instead of reaching your components.
+
+### Node RSC production build
+
+Build with `crocoMetaVitePlugin({ rsc: true })` and `@vitejs/plugin-rsc`, keeping its default
+`dist/rsc`, `dist/ssr` and `dist/client` layout and the root Vite `base`. Each entry uses a
+meta-vite helper, and the official plugin functions are passed in because they only resolve inside
+the Vite build:
+
+```tsx
+// src/entry.rsc.tsx — bundled under the react-server condition
+import { renderToReadableStream } from "@vitejs/plugin-rsc/rsc";
+import { defineRscServerEntry } from "@croco/meta-vite/rsc/server";
+export default defineRscServerEntry({
+  renderToReadableStream,
+  routes: [{ path: "/", component: HomePage, head: () => ({ title: "Home" }) }],
+});
+
+// src/entry.ssr.tsx
+import { renderToReadableStream } from "react-dom/server";
+import { createFromReadableStream, getClientEntryUrl } from "@vitejs/plugin-rsc/ssr";
+import { defineRscSsrEntry } from "@croco/meta-vite/rsc/ssr";
+export default defineRscSsrEntry({ createFromReadableStream, getClientEntryUrl, renderToReadableStream });
+
+// src/entry.browser.tsx — hydrate from the embedded payload, refresh with the handshake
+import { createRscBrowserFlightHeaders, readRscInitialFlight } from "@croco/meta-vite/rsc/browser";
+```
+
+The server loads the build once and serves it with the existing adapters:
+
+```ts
+import { serve } from "@hono/node-server";
+import { RenderServer, createNodeComposedHandler, createRscAssetHandler, loadRscBuild } from "@croco/meta-vite";
+
+const build = await loadRscBuild({ outDir: new URL("./dist/", import.meta.url) });
+const renderServer = new RenderServer([...build.routes], { build });
+const app = createNodeComposedHandler({
+  origin: "https://shop.example",
+  apiHandlers: [createRscAssetHandler(build)],
+  pageHandler: (request, context) => renderServer.handle(request, context),
+});
+serve({ fetch: app.fetch, port: 3000 });
+```
+
+Each build runs in a worker thread of its own. plugin-rsc registers its module loaders on
+`globalThis`, so builds of different apps loaded into one thread would resolve each other's client
+components; separate workers keep apps apart, and one process can serve several builds. Values
+cross that thread boundary as plain data:
+
+- Pass server-validated values (tenant, user, experiment decisions) through the `RuntimeContext`
+  argument of `renderServer.handle()`, never from client headers. The context must be plain data
+  (primitives, arrays, plain objects); a function, class instance, getter or cycle is refused with
+  `meta-vite/rsc-build-value-unsupported` instead of being cloned into something else.
+- Server components receive the request URL, method and headers; the body is not carried.
+- `head()` runs once when the build loads, so route metadata is static per build.
+- The request's abort signal and a cancelled response body stop both the Flight and the HTML render
+  in the worker. A worker that exits fails its in-flight renders with
+  `meta-vite/rsc-build-worker-unavailable`; `build.close()` does the same and stops the worker.
+
+Server work that must share module state with rendering (a cache the pages fill, an experiment
+bridge) is declared as `actions` in `defineRscServerEntry()` and called with
+`build.invokeAction(name, input, { request, context })`. Input must be plain data and the result is
+structured-cloned. Unknown names fail with `meta-vite/rsc-build-action-not-found`; a throwing action
+or render fails with `meta-vite/rsc-build-worker-failed`, whose response carries only the code.
+
+`loadRscBuild()` fails at startup with `meta-vite/rsc-build-invalid` when an entry or the client
+build record is missing, an entry was not created by the helpers, the record does not match its
+build id, or the SSR build references a client entry the client build does not contain (client and
+server built separately). `RenderServer` refuses to start with `meta-vite/rsc-route-not-in-build`
+when a host `rsc` route is not declared by the build.
 
 The default isolated RSC encoder forwards the Node adapters' platform-only context
 (`{ platform: "node" }`) to the server component alongside its request. URL, method and headers
@@ -334,7 +417,7 @@ Detailed promotion gates live in [Presentation Runtime Support](../docs/src/cont
 | SSR pages         | Supported through `createNodeComposedHandler()` and `RenderServer`.                                                                                                                  | Supported through `createLambdaComposedHandler()` with API Gateway event conversion.                      | Supported through `createCloudflareComposedHandler()` and `@croco/frontend-cloudflare`.                 |
 | SSG routes        | Supported at build time through `prerenderSsgRoutes()`.                                                                                                                              | Supported before Lambda packaging as static output.                                                       | Supported before Worker asset upload as static output.                                                  |
 | ISR routes        | v1 exact-key TTL. Use `RedisCacheStoreAdapter` or another durable `IsrCacheStore` for production persistence.                                                                        | v1 exact-key TTL. In-memory cache is warm-container only; use durable storage for production persistence. | v1 exact-key TTL only when a Worker-safe `IsrCacheStore` is supplied. In-memory cache is isolate-local. |
-| RSC routes        | Real React Flight (`@vitejs/plugin-rsc@0.5.38` + `react-server-dom-webpack@19.3.1`, React 19.3.1) on Node; HTML/Flight negotiated per request. Example: `examples/rsc-node-example`. | Buffered RSC path not verified on Lambda — declare only after a real host-contract check.                 | Buffered RSC path not verified on Workers — declare only after a real host-contract check.              |
+| RSC routes        | Real React Flight (`@vitejs/plugin-rsc@0.5.38` + `react-server-dom-webpack@19.3.1`, React 19.3.1) on Node; `loadRscBuild()` renders in a worker thread per build, HTML/Flight negotiated per request. Example: `examples/rsc-node-example`. | Buffered RSC path not verified on Lambda — declare only after a real host-contract check.                 | Buffered RSC path not verified on Workers — declare only after a real host-contract check.              |
 | Server actions    | Supported through `createServerActionHandler()`.                                                                                                                                     | Supported after Lambda request conversion.                                                                | Supported with Cloudflare `RuntimeContext` propagation.                                                 |
 | API routes        | API-first/page-fallback composition.                                                                                                                                                 | API-first/page-fallback composition.                                                                      | API-first/page-fallback composition or Worker service bindings.                                         |
 | Streaming         | Fetch `Response` streams are preserved by the fetch surface.                                                                                                                         | Not supported by this adapter; responses are buffered.                                                    | Supported for streaming `Response` bodies.                                                              |
@@ -419,10 +502,14 @@ Recovery diagnostics:
 - **Vite >=6.4.3 <7**: Requires the Vite 6 Environment API and the patched Windows filesystem deny behavior.
 - **ISR non-durable by default**: InMemoryCacheStore is local/dev/single-process. Production Redis ISR uses the optional `ioredis` peer and the `@croco/meta-vite/isr/adapters` entrypoint.
 - **Cloudflare streaming**: Cloudflare Workers support streaming Response bodies, but InMemory ISR is not durable across Worker isolates.
-- **RSC scope**: Node production-build path is proven by `examples/rsc-node-example`
-  (server-only data + interactive client island + async Suspense boundary; secret-leak
-  check in its README). Workers/Lambda RSC support stays undeclared until verified
-  against a real host contract.
+- **RSC scope**: the Node production-build path (`loadRscBuild()`) is checked by a packed-tarball
+  consumer that builds an app, serves it over HTTP and drives it in a production browser (async
+  Suspense boundary, client island, Flight refresh, server-only value absent from the client build),
+  and by a Node host test that serves two separately built apps from one process. The isolated
+  encoder spawns one child process per request and stays the default only for routes rendered
+  without a build. Workers/Lambda RSC support stays undeclared until verified against a real host
+  contract. A custom Vite `base` and non-default environment output directories are not supported
+  by `loadRscBuild()` yet.
 - **RSC dev mode**: RSC routes require full reload during development. HMR-based RSC updates are deferred.
 
 ## Diagnostics

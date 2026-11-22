@@ -11,12 +11,12 @@ import { defineRscServerEntry } from "../libs/rsc/serverEntry";
 import { defineRscSsrEntry } from "../libs/rsc/ssrEntry";
 import type { RenderRouteComponentProps, RenderRouteIR } from "../libs/routes/types";
 import type { RuntimeContext } from "../libs/render/types";
-import type { RscBuild } from "../libs/rsc/buildEntry";
+import type { RscBuild, RscSsrEntry } from "../libs/rsc/buildEntry";
 
 const MANIFEST_VERSION = "croco.meta-vite.rsc-client-manifest.v1.build-a";
 const CLIENT_ENTRY = "/assets/index-abc123.js";
 
-type TenantEnv = { readonly tenant: string; readonly lookup: () => string };
+type TenantEnv = { readonly tenant: string };
 
 type FlightSource = {
   readonly signals: AbortSignal[];
@@ -44,13 +44,13 @@ async function textOf(stream: ReadableStream<Uint8Array>): Promise<string> {
 // representation.
 function TenantPage(props: RenderRouteComponentProps): string {
   const env = props.context?.env as TenantEnv | undefined;
-  return `page:${new URL(props.request.url).pathname}:${env?.lookup() ?? "no-context"}`;
+  return `page:${new URL(props.request.url).pathname}:${env ? `tenant-${env.tenant}` : "no-context"}`;
 }
 
 function createBuild(
   source: FlightSource = { signals: [], cancelled: [] },
   overrides: {
-    readonly renderHtml?: RscBuild["ssr"]["renderHtml"];
+    readonly renderHtml?: RscSsrEntry["renderHtml"];
     readonly flight?: (text: string) => ReadableStream<Uint8Array>;
   } = {},
 ): RscBuild {
@@ -90,6 +90,9 @@ function createBuild(
     },
   });
 
+  const renderHtml = overrides.renderHtml ?? ssr.renderHtml;
+
+  // Stands in for the build's worker: the same entries, called in process.
   return {
     routes: server.routes.map((route) => ({
       path: route.path,
@@ -100,13 +103,39 @@ function createBuild(
     clientManifestVersion: MANIFEST_VERSION,
     clientEntryUrl: CLIENT_ENTRY,
     clientDir: "/unused",
-    server,
-    ssr: overrides.renderHtml ? { ...ssr, renderHtml: overrides.renderHtml } : ssr,
+    actions: [],
+    renderFlight: (input) => server.renderFlight(input),
+    renderDocument: async (input) => {
+      const [htmlBranch, embedBranch] = server.renderFlight(input).tee();
+      const embedded = textOf(embedBranch);
+      embedded.catch(() => undefined);
+      const html = await renderHtml({ flight: htmlBranch, signal: input.signal });
+      const reader = html.getReader();
+      return {
+        html: new ReadableStream<Uint8Array>({
+          async pull(controller) {
+            const { done, value } = await reader.read();
+            if (done) {
+              controller.close();
+            } else {
+              controller.enqueue(value);
+            }
+          },
+          cancel(reason) {
+            source.cancelled.push(reason);
+            return reader.cancel(reason);
+          },
+        }),
+        embeddedFlight: () => embedded,
+      };
+    },
+    invokeAction: async () => undefined,
+    close: async () => undefined,
   };
 }
 
 function tenantContext(tenant: string): RuntimeContext {
-  const env: TenantEnv = { tenant, lookup: () => `tenant-${tenant}` };
+  const env: TenantEnv = { tenant };
   return { platform: "node", env };
 }
 
@@ -167,7 +196,7 @@ describe("RenderServer with a production RSC build", () => {
     expect(await response.json()).toMatchObject({ code: "meta-vite/rsc-client-manifest-mismatch" });
   });
 
-  it("passes live host context in process and keeps concurrent tenants and apps apart", async () => {
+  it("passes the request context and keeps concurrent tenants and builds apart", async () => {
     const appA = createBuild();
     const appB = createBuild();
     const serverA = new RenderServer([...appA.routes], { build: appA });
@@ -203,7 +232,7 @@ describe("RenderServer with a production RSC build", () => {
     expect(source.signals.every((signal) => signal.aborted)).toBe(true);
   });
 
-  it("cancels the Flight render when the document consumer goes away", async () => {
+  it("cancels the document render when the consumer goes away", async () => {
     const source: FlightSource = { signals: [], cancelled: [] };
     const build = createBuild(source, {
       // The payload never finishes, as with a Suspense boundary that is still
@@ -214,11 +243,17 @@ describe("RenderServer with a production RSC build", () => {
             controller.enqueue(new TextEncoder().encode(`0:"${text}"\n`));
           },
         }),
-      // React resolves the root row and starts the shell before the payload
-      // ends; reading one row stands in for that.
+      // React streams the shell while a boundary is still pending, so the
+      // HTML stays open as well until the consumer leaves.
       renderHtml: async ({ flight }) => {
         const { value } = await flight.getReader().read();
-        return streamOf(`<p>${new TextDecoder().decode(value)}</p>`);
+        return new ReadableStream<Uint8Array>({
+          start(controller) {
+            controller.enqueue(
+              new TextEncoder().encode(`<p>${new TextDecoder().decode(value)}</p>`),
+            );
+          },
+        });
       },
     });
     const server = new RenderServer([...build.routes], { build });
@@ -244,6 +279,20 @@ describe("RenderServer with a production RSC build", () => {
 
     expect(response.status).toBe(500);
     expect(body).not.toContain("secret connection string");
+  });
+
+  it("refuses a Flight server reference before rendering the build", async () => {
+    const source: FlightSource = { signals: [], cancelled: [] };
+    const build = createBuild(source);
+    const server = new RenderServer([...build.routes], { build });
+
+    const response = await server.handle(flightRequest("/.rsc?serverReference=action-1"));
+
+    expect(response.status).toBe(501);
+    expect(await response.json()).toMatchObject({
+      code: "meta-vite/rsc-server-reference-unsupported",
+    });
+    expect(source.signals).toHaveLength(0);
   });
 
   it("answers an undeclared path with the existing 404 document", async () => {

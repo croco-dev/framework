@@ -6,16 +6,22 @@
 
 Serve `@vitejs/plugin-rsc` production builds on Node through the public meta-vite adapter (#4064).
 
-`loadRscBuild({ outDir })` loads a production build into the server process and validates it at
-startup. Pass the result to `new RenderServer(build.routes, { build })`. RSC routes then render
-through the built `rsc` and `ssr` entries without a child process, live `RuntimeContext` values reach
-server components, and the request's abort signal stops both renders. The document embeds the Flight
+`loadRscBuild({ outDir })` loads a production build into a worker thread of its own and validates
+it at startup. Pass the result to `new RenderServer(build.routes, { build })`. RSC routes then render
+through the built `rsc` and `ssr` entries in that worker, with no process spawned per request.
+plugin-rsc registers its module loaders on `globalThis`, so the per-build worker is what lets several
+apps' builds share one process without resolving each other's modules. The `RuntimeContext` must be
+plain data, the request body is not carried, and `head()` is read once per build. The request's
+abort signal and a cancelled response body stop both renders in the worker, and `build.close()`
+stops the worker and fails renders still in flight. The document embeds the Flight
 bytes its HTML came from and loads the build's client entry, so client islands hydrate without a
 second render and refresh through the existing manifest handshake. Both representations are sent with
 `cache-control: private, no-store`. `createRscAssetHandler(build)` serves the hashed client bundle.
 
 The build's entries use two new subpaths: `defineRscServerEntry()` from `@croco/meta-vite/rsc/server`
 and `defineRscSsrEntry()` from `@croco/meta-vite/rsc/ssr`. The official plugin functions are passed in.
+Server work that shares module state with rendering is declared as `actions` and called with
+`build.invokeAction(name, input, { request, context })`.
 `@croco/meta-vite/rsc/browser` adds `readRscInitialFlight()`.
 
 `RscRenderOptions` is now a union of `RscEncoderRenderOptions` and `RscBuildRenderOptions`: a `build`
@@ -35,6 +41,10 @@ New Problem codes with recovery metadata:
 - `meta-vite/rsc-route-not-in-build`: a host `rsc` route that the build does not declare. It is
   `not-retryable`, because no retry can repair a deployment mismatch.
 - `meta-vite/node-request-origin-mismatch`.
+- `meta-vite/rsc-build-value-unsupported`: a context or action input that is not plain data.
+- `meta-vite/rsc-build-worker-failed`: a render or action that threw in the build's worker.
+- `meta-vite/rsc-build-worker-unavailable`: a worker that exited or was closed.
+- `meta-vite/rsc-build-action-not-found`: an action name the build does not declare.
 
 `create-croco-app` adds `--frontend-deploy node-meta-vite-rsc` for `ddd-fullstack`. It generates
 `apps/<web>` as a React Server Components app served by Node through these APIs, with `build`, `start`

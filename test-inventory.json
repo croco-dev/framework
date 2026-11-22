@@ -3870,6 +3870,12 @@
       "owner": "@croco/meta-vite"
     },
     {
+      "path": "packages/meta-vite/src/tests/RscBuildWorker.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/meta-vite"
+    },
+    {
       "path": "packages/meta-vite/src/tests/RscFlightRender.spec.ts",
       "lane": "fast",
       "qualifiers": [],

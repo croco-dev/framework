@@ -85,6 +85,7 @@ const buildTargets: readonly BuildTarget[] = [
       join(packageDir, "dist", "libs", "isr", "adapters", "index.d.mts"),
       join(packageDir, "dist", "libs", "rsc", "serverEntry.mjs"),
       join(packageDir, "dist", "libs", "rsc", "ssrEntry.mjs"),
+      join(packageDir, "dist", "libs", "rsc", "rscBuildWorker.mjs"),
     ],
   },
 ];
@@ -306,6 +307,8 @@ describe("published @croco/meta-vite contract", () => {
           import: "./dist/libs/rsc/flightBrowser.entry.mjs",
           require: "./dist/libs/rsc/flightBrowser.entry.js",
         });
+        // The RSC build loader finds its worker file from the package root.
+        expect(packedManifest.exports?.["./package.json"]).toBe("./package.json");
         for (const [subpath, file] of [
           ["./rsc/server", "serverEntry"],
           ["./rsc/ssr", "ssrEntry"],

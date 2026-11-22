@@ -1,16 +1,20 @@
 import { existsSync, statSync } from "node:fs";
 import { readFile } from "node:fs/promises";
-import { join, relative, resolve, sep } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { createRequire } from "node:module";
+import { dirname, join, relative, resolve, sep } from "node:path";
+import { fileURLToPath } from "node:url";
 import { Problem, ProblemCategory } from "@croco/problems-core";
 import {
   RSC_CLIENT_BUILD_FILE,
   RSC_FLIGHT_VERSION,
   composeRscClientManifestVersion,
 } from "./flight";
-import { isRscServerEntry, isRscSsrEntry } from "./buildEntry";
+import { RSC_SERVER_ENTRY_VERSION, RSC_SSR_ENTRY_VERSION } from "./buildEntry";
+import { startRscBuildWorker } from "./rscBuildWorkerClient";
+import type { HeadMetadata } from "../routes/head";
 import type { RenderRouteIR } from "../routes/types";
-import type { RscBuild, RscServerEntry } from "./buildEntry";
+import type { RscBuild } from "./buildEntry";
+import type { RscWorkerRoute } from "./rscBuildProtocol";
 
 /**
  * A production build cannot be served: an artifact is missing, has the wrong
@@ -44,10 +48,10 @@ type ClientBuildRecord = {
 };
 
 /**
- * Loads a `@vitejs/plugin-rsc` production build into this process. Each
- * environment was bundled with its own React conditions at build time, so the
- * `rsc` and `ssr` entries run side by side without a child process. Every
- * artifact is checked here so a stale or partial build fails at startup.
+ * Loads a `@vitejs/plugin-rsc` production build into a worker thread of its
+ * own. plugin-rsc registers its module loaders on `globalThis`, so builds of
+ * different apps must not share a thread. Every artifact is checked before the
+ * promise resolves, so a stale or partial build fails at startup.
  */
 export async function loadRscBuild(options: LoadRscBuildOptions): Promise<RscBuild> {
   const outDir =
@@ -56,31 +60,61 @@ export async function loadRscBuild(options: LoadRscBuildOptions): Promise<RscBui
   const client = await readClientBuildRecord(join(clientDir, RSC_CLIENT_BUILD_FILE));
   const serverFile = resolveEntryFile(join(outDir, "rsc"));
   const ssrFile = resolveEntryFile(join(outDir, "ssr"));
-  const server = await importEntry(serverFile);
-  const ssr = await importEntry(ssrFile);
 
-  if (!isRscServerEntry(server)) {
-    throw new RscBuildInvalidProblem(
-      serverFile,
-      "the default export is not created by defineRscServerEntry() from '@croco/meta-vite/rsc/server'",
-    );
+  const worker = await startRscBuildWorker(resolveWorkerFile([outDir, process.cwd()]), {
+    serverFile,
+    ssrFile,
+    serverEntryVersion: RSC_SERVER_ENTRY_VERSION,
+    ssrEntryVersion: RSC_SSR_ENTRY_VERSION,
+  });
+  if ("type" in worker) {
+    throw new RscBuildInvalidProblem(worker.artifact, worker.reason);
   }
-  if (!isRscSsrEntry(ssr)) {
-    throw new RscBuildInvalidProblem(
-      ssrFile,
-      "the default export is not created by defineRscSsrEntry() from '@croco/meta-vite/rsc/ssr'",
-    );
+  try {
+    assertClientEntryBuilt(clientDir, worker.clientEntryUrl);
+  } catch (error) {
+    await worker.close();
+    throw error;
   }
-  assertClientEntryBuilt(clientDir, ssr.clientEntryUrl);
 
   return {
-    routes: toRenderRoutes(server),
+    routes: toRenderRoutes(worker.routes),
     clientManifestVersion: client.clientManifestVersion,
-    clientEntryUrl: ssr.clientEntryUrl,
+    clientEntryUrl: worker.clientEntryUrl,
     clientDir,
-    server,
-    ssr,
+    actions: worker.actions,
+    renderFlight: worker.renderFlight,
+    renderDocument: worker.renderDocument,
+    invokeAction: worker.invokeAction,
+    close: worker.close,
   };
+}
+
+// The worker runs from TypeScript source inside the workspace and from the
+// published `dist` build otherwise; `files` publishes only `dist`.
+function resolveWorkerFile(anchors: readonly string[]): string {
+  for (const anchor of anchors) {
+    let packageRoot: string;
+    try {
+      packageRoot = dirname(
+        createRequire(join(anchor, "package.json")).resolve("@croco/meta-vite/package.json"),
+      );
+    } catch {
+      continue; // this anchor does not see the package; the next one may
+    }
+    const candidates = [
+      join(packageRoot, "src", "libs", "rsc", "rscBuildWorker.mts"),
+      join(packageRoot, "dist", "libs", "rsc", "rscBuildWorker.mjs"),
+    ];
+    const file = candidates.find((candidate) => existsSync(candidate));
+    if (file) {
+      return file;
+    }
+  }
+  throw new RscBuildInvalidProblem(
+    "@croco/meta-vite",
+    "the RSC build worker entry cannot be resolved from the build directory or the working directory",
+  );
 }
 
 async function readClientBuildRecord(file: string): Promise<ClientBuildRecord> {
@@ -139,13 +173,6 @@ function resolveEntryFile(environmentDir: string): string {
   return file;
 }
 
-async function importEntry(file: string): Promise<unknown> {
-  // A variable specifier keeps bundlers from inlining the app's build output.
-  const specifier: string = pathToFileURL(file).href;
-  const module = (await import(/* @vite-ignore */ specifier)) as { default?: unknown };
-  return module.default;
-}
-
 // The SSR build records the hashed client entry it was compiled against. When
 // that file is absent, `client/` came from another build and the browser would
 // load a bundle that cannot resolve this build's client references.
@@ -173,11 +200,12 @@ function assertClientEntryBuilt(clientDir: string, clientEntryUrl: string): void
   }
 }
 
-function toRenderRoutes(server: RscServerEntry): RenderRouteIR[] {
-  return server.routes.map((route) => ({
+// `head()` ran once in the worker, so each route answers that metadata.
+function toRenderRoutes(routes: readonly RscWorkerRoute[]): RenderRouteIR[] {
+  return routes.map((route) => ({
     path: route.path,
     mode: "rsc",
-    ...(route.head ? { head: route.head } : {}),
+    ...(route.head ? { head: (): HeadMetadata => route.head ?? {} } : {}),
     componentLoader: () =>
       Promise.reject(
         new RscBuildInvalidProblem(

@@ -27849,9 +27849,33 @@
               "declarationKind": "class"
             },
             {
+              "name": "RscBuildActionNotFoundProblem",
+              "exportKind": "named",
+              "source": "./libs/rsc/rscBuildWorkerClient",
+              "declarationKind": "class"
+            },
+            {
               "name": "RscBuildInvalidProblem",
               "exportKind": "named",
               "source": "./libs/rsc/loadRscBuild",
+              "declarationKind": "class"
+            },
+            {
+              "name": "RscBuildValueUnsupportedProblem",
+              "exportKind": "named",
+              "source": "./libs/rsc/plainData",
+              "declarationKind": "class"
+            },
+            {
+              "name": "RscBuildWorkerFailedProblem",
+              "exportKind": "named",
+              "source": "./libs/rsc/rscBuildWorkerClient",
+              "declarationKind": "class"
+            },
+            {
+              "name": "RscBuildWorkerUnavailableProblem",
+              "exportKind": "named",
+              "source": "./libs/rsc/rscBuildWorkerClient",
               "declarationKind": "class"
             },
             {
@@ -28709,6 +28733,11 @@
               "source": "./libs/rsc/ssrDecode"
             },
             {
+              "name": "RscDocumentRender",
+              "exportKind": "named",
+              "source": "./libs/rsc/buildEntry"
+            },
+            {
               "name": "RscEncoderRenderOptions",
               "exportKind": "named",
               "source": "./libs/rsc/flight"
@@ -28747,6 +28776,21 @@
               "name": "RscRenderOptions",
               "exportKind": "named",
               "source": "./libs/rsc/flight"
+            },
+            {
+              "name": "RscRenderRequest",
+              "exportKind": "named",
+              "source": "./libs/rsc/buildEntry"
+            },
+            {
+              "name": "RscServerAction",
+              "exportKind": "named",
+              "source": "./libs/rsc/buildEntry"
+            },
+            {
+              "name": "RscServerActionOptions",
+              "exportKind": "named",
+              "source": "./libs/rsc/buildEntry"
             },
             {
               "name": "RscServerEntry",
@@ -28974,6 +29018,17 @@
           "typeExports": []
         },
         {
+          "exportPath": "./package.json",
+          "kind": "asset",
+          "assetKind": "json",
+          "targets": [
+            {
+              "conditions": [],
+              "target": "./package.json"
+            }
+          ]
+        },
+        {
           "exportPath": "./rsc/browser",
           "kind": "code",
           "targets": [
@@ -29142,6 +29197,16 @@
             },
             {
               "name": "RscFlightRenderInput",
+              "exportKind": "named",
+              "source": "./buildEntry"
+            },
+            {
+              "name": "RscServerAction",
+              "exportKind": "named",
+              "source": "./buildEntry"
+            },
+            {
+              "name": "RscServerActionOptions",
               "exportKind": "named",
               "source": "./buildEntry"
             },

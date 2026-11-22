@@ -60,11 +60,14 @@ Missing durable ISR configuration is not treated as a silent production success:
 | `CROCO_META_VITE_ISR_LOCAL_CACHE_ONLY`    | A deployment requires durable ISR while using a local process, warm-container, or isolate cache. | Use `RedisCacheStoreAdapter` on Node/Lambda, or a durable runtime-safe store for Workers.   |
 | `CROCO_META_VITE_ISR_WORKER_STORE_UNSAFE` | A Cloudflare Workers durable ISR claim uses a store profile that is not marked Worker-safe.      | Supply a Worker-safe `IsrCacheStore` backed by Worker-compatible bindings and mark it safe. |
 
-The `rsc` mode is real React Flight on the Node production path
-(`examples/rsc-node-example`): the official `@vitejs/plugin-rsc` encoder runs in
-an isolated `react-server` child process, `RenderServer` decodes with the official
-client decoder and renders HTML with `react-dom/server`, and HTML vs Flight are
-negotiated on one path with distinct representations and manifest-version headers.
+The `rsc` mode is real React Flight on Node. The recommended production path loads a
+`@vitejs/plugin-rsc` build with `loadRscBuild()` and passes it to `RenderServer`: the built `rsc` and
+`ssr` entries render in a worker thread per build, client islands hydrate from the Flight bytes
+embedded in the document, and plain-data `RuntimeContext` values reach server components
+(`examples/rsc-node-example` and the `node-meta-vite-rsc` create-croco-app profile). Routes rendered
+without a build use the isolated encoder, which starts one `react-server` child process per request
+and cannot decode client islands. Both paths negotiate HTML vs Flight on one path with distinct
+representations and manifest-version headers.
 Route manifests retain the requested mode and RSC requirement and report the Flight
 implementation as a capability. SSR pages with declared deferred regions report
 `streaming-response` and render through the shell-first streaming path; shell status decisions

@@ -42,18 +42,31 @@ export type RscFlightRenderInput = {
   readonly route: string;
   readonly request: Request;
   /**
-   * The context the host resolved for this request. It is passed in process,
-   * so live host values reach the server component unchanged.
+   * The context the host resolved for this request. It crosses into the
+   * build's worker thread, so it holds plain data only.
    */
   readonly context?: RuntimeContext;
   /** Aborts the Flight render when the caller disconnects. */
   readonly signal: AbortSignal;
 };
 
+export type RscServerActionOptions = {
+  /** URL, method and headers of the request the host received. */
+  readonly request: Request;
+  readonly context?: RuntimeContext;
+};
+
+/**
+ * Server work that must share module state with rendering, such as a cache the
+ * rendered page fills. Input and result cross the worker boundary as plain data.
+ */
+export type RscServerAction = (input: unknown, options: RscServerActionOptions) => unknown;
+
 export type RscServerEntry = {
   readonly version: typeof RSC_SERVER_ENTRY_VERSION;
   readonly routes: readonly RscBuildRoute[];
   readonly renderFlight: (input: RscFlightRenderInput) => ReadableStream<Uint8Array>;
+  readonly actions?: Readonly<Record<string, RscServerAction>>;
 };
 
 export type RscHtmlRenderInput = {
@@ -68,9 +81,28 @@ export type RscSsrEntry = {
   readonly renderHtml: (input: RscHtmlRenderInput) => Promise<ReadableStream<Uint8Array>>;
 };
 
+/** One render the host asks a build for. */
+export type RscRenderRequest = {
+  /** Path of the route the host matched. */
+  readonly route: string;
+  /** The page request; URL, method and headers reach the server component, the body does not. */
+  readonly request: Request;
+  /** Plain data only: anything else is refused before the render starts. */
+  readonly context?: RuntimeContext;
+  /** Stops the render in the build's worker when it aborts. */
+  readonly signal: AbortSignal;
+};
+
+export type RscDocumentRender = {
+  readonly html: ReadableStream<Uint8Array>;
+  /** The Flight payload the HTML was rendered from, available once the HTML ends. */
+  readonly embeddedFlight: () => Promise<string>;
+};
+
 /**
- * A validated production build: the built `rsc` and `ssr` entries loaded into
- * this process, plus the client build they were compiled against.
+ * A validated production build, loaded into a worker thread of its own. Each
+ * build has its own module state, so builds of different apps can run in one
+ * process without resolving each other's modules.
  */
 export type RscBuild = {
   /** One `rsc`-mode route per route the built `rsc` entry declares. */
@@ -79,30 +111,16 @@ export type RscBuild = {
   readonly clientEntryUrl: string;
   /** Absolute path of the client build output (`<outDir>/client`). */
   readonly clientDir: string;
-  readonly server: RscServerEntry;
-  readonly ssr: RscSsrEntry;
+  /** Names of the actions the built `rsc` entry declares. */
+  readonly actions: readonly string[];
+  readonly renderFlight: (input: RscRenderRequest) => ReadableStream<Uint8Array>;
+  /** Resolves once the document shell can render, so early failures can still set the status. */
+  readonly renderDocument: (input: RscRenderRequest) => Promise<RscDocumentRender>;
+  readonly invokeAction: (
+    name: string,
+    input: unknown,
+    options: RscServerActionOptions,
+  ) => Promise<unknown>;
+  /** Stops the worker; renders still in flight fail instead of hanging. */
+  readonly close: () => Promise<void>;
 };
-
-export function isRscServerEntry(value: unknown): value is RscServerEntry {
-  if (typeof value !== "object" || value === null) {
-    return false;
-  }
-  const entry = value as Partial<Record<keyof RscServerEntry, unknown>>;
-  return (
-    entry.version === RSC_SERVER_ENTRY_VERSION &&
-    Array.isArray(entry.routes) &&
-    typeof entry.renderFlight === "function"
-  );
-}
-
-export function isRscSsrEntry(value: unknown): value is RscSsrEntry {
-  if (typeof value !== "object" || value === null) {
-    return false;
-  }
-  const entry = value as Partial<Record<keyof RscSsrEntry, unknown>>;
-  return (
-    entry.version === RSC_SSR_ENTRY_VERSION &&
-    typeof entry.clientEntryUrl === "string" &&
-    typeof entry.renderHtml === "function"
-  );
-}
