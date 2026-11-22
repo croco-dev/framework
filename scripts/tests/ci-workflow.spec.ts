@@ -432,6 +432,9 @@ describe("Phase B cacheable verification shadow", () => {
     expect(workflowJob("core-verification")).toContain(
       "PLAYWRIGHT_BROWSERS_PATH: /home/runner/.cache/ms-playwright",
     );
+    expect(workflowJob("package-artifacts")).toContain(
+      "PLAYWRIGHT_BROWSERS_PATH: /home/runner/.cache/ms-playwright",
+    );
     const cacheableJobs = [
       ...producerJobs.map((jobId) => workflowJob(jobId)),
       workflowJob("split-validation-shadow"),
@@ -948,6 +951,7 @@ describe("CI verification profile contract", () => {
       "benchmark.yml:benchmark",
       "ci.yml:core-verification",
       "ci.yml:generated-apps",
+      "ci.yml:package-artifacts",
       "ci.yml:turbo-cache",
       "ci.yml:validate",
       "release.yml:release",
