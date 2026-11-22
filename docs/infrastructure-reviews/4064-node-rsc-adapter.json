@@ -4,25 +4,29 @@
     {
       "package": "meta-vite",
       "classification": "runtime-adapter",
-      "reason": "Adds a Node production path for @vitejs/plugin-rsc builds: loadRscBuild loads the built rsc and ssr entries in process, RenderServer renders through them, and the Node adapters can pin the origin a server answers for.",
+      "reason": "Adds a Node production path for @vitejs/plugin-rsc builds: loadRscBuild loads each build into a worker thread of its own, RenderServer renders through it, and the Node adapters can pin the origin a server answers for.",
       "files": {
-        "packages/meta-vite/package.json": "05c9d88d6fb7079e90eb760befe1bf137dd04163450cea16a8049aff1ad5b325",
-        "packages/meta-vite/src/index.ts": "c1e3a7f7f730bb5cb98fbe51ef662ee1b4f41bdd44b047c03bff774a9af8e273",
+        "packages/meta-vite/package.json": "7db24744afd5c1d7e11a207c5412b363ed6009c77acdf06335d8329dee945964",
+        "packages/meta-vite/src/index.ts": "f7448542674815f86d1d0707db5ac1cbcf595c91042136d454df09b2491230fd",
         "packages/meta-vite/src/libs/providers/node.ts": "ed29766549a6a45435a4255940dc51b0a62f40715bc336b2d36fa82ebe9963a9",
-        "packages/meta-vite/src/libs/render/renderServer.ts": "76863ca81319562d80a49a52925f8ce7f36ba3d1757dbbb27205e7e636552b0d",
-        "packages/meta-vite/src/libs/rsc/buildEntry.ts": "185647296df5a4b2212642e1f7d4d7a79110e32343fd1745f0127593b0d78065",
+        "packages/meta-vite/src/libs/render/renderServer.ts": "ea165e634272405bd7bdee2d775a4d1a1b8bb0fede121350bdc933cca33f9286",
+        "packages/meta-vite/src/libs/rsc/buildEntry.ts": "5aea20c4f578ee1eaadb84d97fb279896999bac7df519ac87a9c45514f039124",
         "packages/meta-vite/src/libs/rsc/flight.ts": "f42351231e3cc844596a10e2cf6d4af0ae82c4fff345fae9ca624656807c4250",
         "packages/meta-vite/src/libs/rsc/flightBrowser.entry.ts": "785eeebf8f682ea436f4841ba9cda4004483d1f8275753e825ec898e7bdc23f3",
-        "packages/meta-vite/src/libs/rsc/loadRscBuild.ts": "b5042eb4bd4a6a580e7559ab212bc52b5901028c1aae17802c6a4207366513e2",
+        "packages/meta-vite/src/libs/rsc/loadRscBuild.ts": "6a5ce6d1a60471cdc90cc73c1cf80dd5f911f01c8344ac78b9bcbc986c87633a",
+        "packages/meta-vite/src/libs/rsc/plainData.ts": "09e2ccc1ec571e24f2022250fb73a239bc75041f50227b6e04494bcd5c5a51e9",
         "packages/meta-vite/src/libs/rsc/rscAssets.ts": "a29a99f4ef9d8809f3b827ae8ddaa798e7b41cc7cea2ffbb95ba2833cc61c2e8",
-        "packages/meta-vite/src/libs/rsc/serverEntry.ts": "15f7aa7e1699e2a5b194aabc32f75e36f504333cff219804f05105ecd06a72f8",
+        "packages/meta-vite/src/libs/rsc/rscBuildProtocol.ts": "9347644744b45231ed3cd1a8a363bb8a2d5c598e770c899038cc688a27fc5652",
+        "packages/meta-vite/src/libs/rsc/rscBuildWorker.mts": "e5aebfad8d3372c6c14e7a5717ba57cc52d42b5eb22b5ef55675058380475592",
+        "packages/meta-vite/src/libs/rsc/rscBuildWorkerClient.ts": "e550cd15c5750b306ef1649c84b3eb9191bf73db5682aef03fd69eec313e1d6f",
+        "packages/meta-vite/src/libs/rsc/serverEntry.ts": "dbb0aca7871a8d435e491416774596f7cb6f18d9fc07c28a781917c7b7de678d",
         "packages/meta-vite/src/libs/rsc/ssrEntry.ts": "34326afd4e9aed05568abc074ab1996ada2e7be6a6c8b23fb203ab3a7da644c9"
       },
       "catalogRuntimes": ["node", "lambda", "cloudflare-workers", "browser"],
       "profiles": {
         "kubernetes": {
           "result": "supported",
-          "reason": "A Vite build of the RSC fixture is served by @hono/node-server through createNodeComposedHandler, RenderServer and loadRscBuild, answering HTML, Flight, client assets, a stale manifest and a forged Host header over real HTTP.",
+          "reason": "Two separately built Vite RSC fixtures are served from one Node process by @hono/node-server through createNodeComposedHandler, RenderServer and loadRscBuild, answering HTML, Flight, client assets, a stale manifest, a forged Host header and per-tenant requests over real HTTP.",
           "providers": [
             "@croco/meta-vite/loadRscBuild",
             "@croco/meta-vite/RenderServer",
@@ -30,6 +34,7 @@
             "@croco/meta-vite/createRscAssetHandler"
           ],
           "constraints": [
+            "Each build runs in a node:worker_threads worker; runtime context and action input must be plain data.",
             "Requires the @vitejs/plugin-rsc default dist/rsc, dist/ssr and dist/client layout and the root Vite base.",
             "The build and the server must use the same NODE_ENV.",
             "Local host-runtime evidence does not certify a deployed Kubernetes cluster."
@@ -45,12 +50,12 @@
             "runtime": "node",
             "path": "packages/meta-vite/src/tests/RscNodeHost.spec.ts",
             "testName": "Node RSC production build host serves a Vite RSC build as HTML, Flight and client assets over a real Node HTTP server",
-            "sha256": "8e57124772d3a9cfbd65532c5444ed8319482572e0735c8ca3d3285bd5c3d7a1"
+            "sha256": "0451f59098bb147616ec0d41c7ddc7239bbb140c0a3dcfc584acc325c2ec0b3a"
           }
         },
         "aws-lambda": {
           "result": "unverified",
-          "reason": "loadRscBuild and the build path run on any Node process, but no Lambda packaging of a plugin-rsc build or buffered Lambda delivery of its HTML and Flight was exercised.",
+          "reason": "loadRscBuild and its worker run on any Node process, but no Lambda packaging of a plugin-rsc build, worker start-up per container, or buffered Lambda delivery of its HTML and Flight was exercised.",
           "providers": ["@croco/meta-vite/createLambdaHandler"],
           "constraints": [
             "No Lambda RSC integration or deployment evidence is claimed.",
@@ -64,10 +69,10 @@
         "cloudflare": {
           "result": "unverified",
           "host": "node-container",
-          "reason": "A Node Container could run the same Node server, but no container host was exercised. Worker isolates are not claimed: loadRscBuild reads the build from the filesystem.",
+          "reason": "A Node Container could run the same Node server, but no container host was exercised. Worker isolates are not claimed: loadRscBuild reads the build from the filesystem and starts node:worker_threads workers.",
           "providers": ["@croco/meta-vite/loadRscBuild"],
           "constraints": [
-            "No Workers isolate support is added; loadRscBuild needs node:fs.",
+            "No Workers isolate support is added; loadRscBuild needs node:fs and node:worker_threads.",
             "No Cloudflare Node Container evidence is claimed."
           ],
           "references": [
@@ -130,7 +135,7 @@
       "classification": "pure-contract",
       "reason": "Regenerates the Problem code registry with recovery metadata for the new meta-vite RSC build and Node origin codes. Registry data only.",
       "files": {
-        "packages/problems-core/src/generated/problem-code-registry.ts": "83d63160242236c9c4fc9e0ff044063954ec23be1bdf4b647ac0da6a2a9d8867"
+        "packages/problems-core/src/generated/problem-code-registry.ts": "793f1280df0fbe5e001b8ea571b2a0c1d6f51f834a604a9ca4e11b79aa9ef2e4"
       },
       "catalogRuntimes": [],
       "profiles": {
