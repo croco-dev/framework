@@ -548,6 +548,26 @@ describe("noninteractive CLI option validation", () => {
     );
   });
 
+  it.each(["graphql", "trpc"])(
+    "rejects the Node RSC web app with Next.js %s API hosting",
+    (api) => {
+      const cliOptions = parseCliOptions("my-fullstack", {
+        preset: "ddd-fullstack",
+        scope: "@test",
+        api,
+        apiHosting: "nextjs",
+        webApps: "web",
+        frontendDeploy: "node-meta-vite-rsc",
+        install: false,
+        git: false,
+      });
+
+      expect(() => normalizeNonInteractiveOptions(cliOptions)).toThrow(
+        "--frontend-deploy node-meta-vite-rsc replaces the web app and cannot host the Next.js API",
+      );
+    },
+  );
+
   it("rejects invalid explicit --db values with actionable messages", () => {
     const cliOptions = parseCliOptions("my-api", {
       preset: "ddd-api",

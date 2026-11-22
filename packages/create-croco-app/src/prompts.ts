@@ -421,11 +421,16 @@ export async function runPrompts(cliArgs: NormalizedGeneratorOptions): Promise<G
             label: "Cloudflare Meta Vite",
             hint: "SSR Worker deployment",
           },
-          {
-            value: "node-meta-vite-rsc",
-            label: "Node Meta Vite RSC",
-            hint: "React Server Components on a Node server",
-          },
+          // The RSC profile replaces apps/web, so it cannot host a Next.js API or a Worker preset.
+          ...(preset === "ddd-fullstack" && apiHosting === "standalone"
+            ? [
+                {
+                  value: "node-meta-vite-rsc" as const,
+                  label: "Node Meta Vite RSC",
+                  hint: "React Server Components on a Node server",
+                },
+              ]
+            : []),
           { value: "vite-spa", label: "Vite SPA", hint: "Browser SPA deployment" },
           { value: "vercel", label: "Vercel", hint: "Vercel platform" },
           { value: "docker", label: "Docker", hint: "Containerized" },

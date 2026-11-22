@@ -215,6 +215,28 @@ describe("RSC build worker", () => {
     await expect(next).rejects.toThrow(RscFlightEncodeAbortedProblem);
   });
 
+  it("refuses a request that was already aborted before the render starts", async () => {
+    const build = await loadFakeBuild("app");
+    const controller = new AbortController();
+    controller.abort();
+
+    expect(() => build.renderFlight(renderInput("/", { signal: controller.signal }))).toThrow(
+      RscFlightEncodeAbortedProblem,
+    );
+    expect((await workerState(build)).renders).toBe(0);
+  });
+
+  it("settles the embedded Flight when the HTML consumer cancels", async () => {
+    const build = await loadFakeBuild("app");
+    const document = await build.renderDocument(renderInput("/pending"));
+    const reader = document.html.getReader();
+    await reader.read();
+
+    await reader.cancel("navigated-away");
+
+    await expect(document.embeddedFlight()).rejects.toThrow(RscFlightEncodeAbortedProblem);
+  });
+
   it("stops the document render inside the worker when the HTML consumer cancels", async () => {
     const build = await loadFakeBuild("app");
     const document = await build.renderDocument(renderInput("/pending"));
@@ -287,6 +309,15 @@ describe("RSC build worker", () => {
     expect(failure).toBeInstanceOf(RscBuildWorkerFailedProblem);
     expect((failure as RscBuildWorkerFailedProblem).message).not.toContain("secret detail");
     await expect(build.invokeAction("echo", new Date(), { request })).rejects.toThrow(
+      RscBuildValueUnsupportedProblem,
+    );
+    const withGetter = [1];
+    Object.defineProperty(withGetter, 0, { get: () => 1, enumerable: true });
+    const withNamed = Object.assign([1], { extra: 2 });
+    await expect(build.invokeAction("echo", withGetter, { request })).rejects.toThrow(
+      RscBuildValueUnsupportedProblem,
+    );
+    await expect(build.invokeAction("echo", withNamed, { request })).rejects.toThrow(
       RscBuildValueUnsupportedProblem,
     );
   });

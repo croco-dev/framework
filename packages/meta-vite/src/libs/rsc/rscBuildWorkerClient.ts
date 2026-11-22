@@ -125,9 +125,7 @@ export async function startRscBuildWorker(
     await worker.terminate();
     return first;
   }
-  // A server keeps the process alive on its own; the worker must not keep a
-  // finished script running.
-  worker.unref();
+  // The worker keeps the process alive until close(), like any open server handle.
   return createClient(worker, first);
 }
 
@@ -214,6 +212,10 @@ function createClient(worker: Worker, ready: RscWorkerReady): RscBuildWorkerClie
 
   const openRender = (mode: RscRenderMode, input: RscRenderRequest): OpenedRender => {
     assertAvailable();
+    // An abort listener does not fire for a signal that is already aborted.
+    if (input.signal.aborted) {
+      throw new RscFlightEncodeAbortedProblem(input.route);
+    }
     assertContext(input.context);
     const id = nextId++;
     let started!: { resolve: () => void; reject: (problem: Problem) => void };
@@ -293,6 +295,10 @@ function createClient(worker: Worker, ready: RscWorkerReady): RscBuildWorkerClie
         input.signal.removeEventListener("abort", onAbort);
         pending.delete(id);
         send({ type: "cancel", id, reason: String(reason ?? "cancelled") });
+        // The worker no longer answers this render, so nothing else settles these.
+        const cancelled = new RscFlightEncodeAbortedProblem(input.route);
+        started.reject(cancelled);
+        ended.reject(cancelled);
       },
     });
 

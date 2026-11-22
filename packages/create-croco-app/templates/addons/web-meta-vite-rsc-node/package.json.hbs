@@ -4,8 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "NODE_ENV=production vite build && NODE_ENV=production vite build --config vite.server.config.ts",
-    "start": "NODE_ENV=production node dist/server/server.js",
+    "build": "cross-env NODE_ENV=production vite build && cross-env NODE_ENV=production vite build --config vite.server.config.ts",
+    "start": "cross-env NODE_ENV=production node dist/server/server.js",
+    "dev": "pnpm build && pnpm start",
     "rsc:smoke": "node scripts/rsc-smoke.mjs",
     "typecheck": "tsc --noEmit"
   },
@@ -22,6 +23,7 @@
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@vitejs/plugin-rsc": "^0.5.38",
+    "cross-env": "^10.1.0",
     "typescript": "^6.0.3",
     "vite": "^6.4.3"
   }

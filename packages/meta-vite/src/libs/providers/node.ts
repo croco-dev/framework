@@ -100,7 +100,10 @@ function pinRequestOrigin(request: Request, expected: URL | undefined): Request 
     return request;
   }
   const url = new URL(request.url);
-  if (url.host !== expected.host) {
+  // A proxy may keep the public default port (`shop.example:443`) on a plain
+  // HTTP request; reading the authority under the public scheme drops it.
+  const authority = new URL(`${expected.protocol}//${url.host}`).host;
+  if (authority !== expected.host) {
     const problem = new NodeRequestOriginProblem(expected.origin, url.host);
     return new Response(JSON.stringify({ error: problem.message, code: problem.code }), {
       status: problem.status,

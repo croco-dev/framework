@@ -38,7 +38,8 @@ serve(
   (info) => {
     // Requests for another host are refused, so a client's Host header never
     // chooses the URL a server component sees.
-    const origin = publicOrigin ?? `http://${hostname}:${info.port}`;
+    const host = hostname.includes(":") ? `[${hostname}]` : hostname;
+    const origin = publicOrigin ?? `http://${host}:${info.port}`;
     app = createNodeComposedHandler({
       origin,
       apiHandlers: [createRscAssetHandler(build)],

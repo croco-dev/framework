@@ -133,6 +133,18 @@ describe("origin pinning behind a proxy", () => {
     expect(seen).toEqual([{ url: "https://shop.example/products/orbit?tab=1", body: "form" }]);
   });
 
+  it("accepts the public default port that a TLS-terminating proxy kept on the Host header", async () => {
+    const adapter = createNodeHandler(async (request) => new Response(request.url), {
+      origin: "https://shop.example",
+    });
+
+    const accepted = await adapter.fetch(new Request("http://shop.example:443/products"));
+    const otherPort = await adapter.fetch(new Request("http://shop.example:8443/products"));
+
+    expect(await accepted.text()).toBe("https://shop.example/products");
+    expect(otherPort.status).toBe(400);
+  });
+
   it("refuses another host even when the scheme matches", async () => {
     const adapter = createNodeHandler(async () => new Response("page"), {
       origin: "https://shop.example",

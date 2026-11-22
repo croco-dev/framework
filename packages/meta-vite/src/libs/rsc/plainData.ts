@@ -45,11 +45,30 @@ function checkValue(value: unknown, path: string, ancestors: Set<object>): void 
   }
   ancestors.add(object);
   if (Array.isArray(object)) {
-    object.forEach((item, index) => checkValue(item, `${path}[${index}]`, ancestors));
+    checkArray(object, path, ancestors);
   } else {
     checkPlainObject(object, path, ancestors);
   }
   ancestors.delete(object);
+}
+
+function checkArray(array: unknown[], path: string, ancestors: Set<object>): void {
+  if (Object.getPrototypeOf(array) !== Array.prototype) {
+    throw new RscBuildValueUnsupportedProblem(path, "an array subclass is not plain data");
+  }
+  for (const key of Reflect.ownKeys(array)) {
+    if (key === "length") {
+      continue;
+    }
+    const childPath = `${path}[${String(key)}]`;
+    if (typeof key === "symbol" || !/^(0|[1-9]\d*)$/.test(key)) {
+      throw new RscBuildValueUnsupportedProblem(
+        childPath,
+        "a named array property is not plain data",
+      );
+    }
+    checkDataProperty(array, key, childPath, ancestors);
+  }
 }
 
 function checkPlainObject(object: object, path: string, ancestors: Set<object>): void {
@@ -62,13 +81,21 @@ function checkPlainObject(object: object, path: string, ancestors: Set<object>):
     if (typeof key === "symbol") {
       throw new RscBuildValueUnsupportedProblem(childPath, "a symbol key is not plain data");
     }
-    const descriptor = Object.getOwnPropertyDescriptor(object, key);
-    if (!descriptor || !("value" in descriptor)) {
-      throw new RscBuildValueUnsupportedProblem(
-        childPath,
-        "an accessor property is not plain data",
-      );
-    }
-    checkValue(descriptor.value, childPath, ancestors);
+    checkDataProperty(object, key, childPath, ancestors);
   }
+}
+
+// Reading the descriptor instead of the value keeps a getter from running and
+// from answering differently when the value is cloned.
+function checkDataProperty(
+  object: object,
+  key: string,
+  path: string,
+  ancestors: Set<object>,
+): void {
+  const descriptor = Object.getOwnPropertyDescriptor(object, key);
+  if (!descriptor || !("value" in descriptor)) {
+    throw new RscBuildValueUnsupportedProblem(path, "an accessor property is not plain data");
+  }
+  checkValue(descriptor.value, path, ancestors);
 }
