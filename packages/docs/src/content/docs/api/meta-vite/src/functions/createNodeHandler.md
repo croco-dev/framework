@@ -5,7 +5,7 @@ prev: false
 title: "createNodeHandler"
 ---
 
-> **createNodeHandler**(`handler`): `object`
+> **createNodeHandler**(`handler`, `options?`): `object`
 
 Node.js HTTP server adapter.
 Wraps a CrocoFetchHandler for `@hono/node-server`-compatible `serve({ fetch })`.
@@ -15,6 +15,10 @@ Wraps a CrocoFetchHandler for `@hono/node-server`-compatible `serve({ fetch })`.
 ### handler
 
 [`CrocoFetchHandler`](/api/meta-vite/src/type-aliases/crocofetchhandler/)
+
+### options?
+
+[`NodeHandlerOptions`](/api/meta-vite/src/type-aliases/nodehandleroptions/) = `{}`
 
 ## Returns
 

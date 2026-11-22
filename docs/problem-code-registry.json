@@ -1,6 +1,6 @@
 {
   "version": "croco.problem-code-registry.v1",
-  "problemCount": 1189,
+  "problemCount": 1192,
   "problems": [
     {
       "code": "ACCESS_DENIED",
@@ -21874,6 +21874,36 @@
       "sources": []
     },
     {
+      "code": "meta-vite/node-request-origin-mismatch",
+      "category": "BadRequest",
+      "status": 400,
+      "title": "Bad Request",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#meta-vite-node-request-origin-mismatch",
+      "recovery": {
+        "cause": "The request names an origin other than the one this Node server was configured to answer for.",
+        "userAction": "Request the page through the site's public address.",
+        "operatorAction": "Check that the proxy forwards the public Host header and that the configured origin matches the address clients use.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "public",
+        "telemetry": {
+          "eventName": "croco.problem.warning",
+          "severity": "warning",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/meta-vite/src/libs/providers/node.ts",
+          "line": 24,
+          "column": 1,
+          "kind": "problem-class"
+        }
+      ]
+    },
+    {
       "code": "meta-vite/personalized-fragment-invalid",
       "category": "ValidationError",
       "status": 422,
@@ -21904,6 +21934,36 @@
       ]
     },
     {
+      "code": "meta-vite/rsc-build-invalid",
+      "category": "InternalServerError",
+      "status": 500,
+      "title": "Internal Server Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#meta-vite-rsc-build-invalid",
+      "recovery": {
+        "cause": "The RSC production build cannot be served: an entry or the client build record is missing, an entry was not created by the meta-vite helpers, or the client and server outputs come from different builds.",
+        "userAction": "Do not retry: the server refuses to start until the build is replaced.",
+        "operatorAction": "Read the artifact and reason extensions, rebuild client and server together with crocoMetaVitePlugin({ rsc: true }), and deploy the whole dist directory.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "operator-only",
+        "telemetry": {
+          "eventName": "croco.problem.error",
+          "severity": "error",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/meta-vite/src/libs/rsc/loadRscBuild.ts",
+          "line": 20,
+          "column": 1,
+          "kind": "problem-class"
+        }
+      ]
+    },
+    {
       "code": "meta-vite/rsc-client-build-id-invalid",
       "category": "BadRequest",
       "status": 400,
@@ -21927,7 +21987,7 @@
       "sources": [
         {
           "file": "packages/meta-vite/src/libs/rsc/flight.ts",
-          "line": 51,
+          "line": 59,
           "column": 1,
           "kind": "problem-class"
         }
@@ -21957,7 +22017,7 @@
       "sources": [
         {
           "file": "packages/meta-vite/src/libs/rsc/flight.ts",
-          "line": 79,
+          "line": 87,
           "column": 1,
           "kind": "problem-class"
         }
@@ -21987,7 +22047,7 @@
       "sources": [
         {
           "file": "packages/meta-vite/src/libs/rsc/flight.ts",
-          "line": 108,
+          "line": 116,
           "column": 1,
           "kind": "problem-class"
         }
@@ -22167,7 +22227,7 @@
       "sources": [
         {
           "file": "packages/meta-vite/src/libs/rsc/flight.ts",
-          "line": 65,
+          "line": 73,
           "column": 1,
           "kind": "problem-class"
         }
@@ -22204,6 +22264,36 @@
       ]
     },
     {
+      "code": "meta-vite/rsc-route-not-in-build",
+      "category": "InternalServerError",
+      "status": 500,
+      "title": "Internal Server Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#meta-vite-rsc-route-not-in-build",
+      "recovery": {
+        "cause": "A host route is rendered as RSC, but the built rsc entry does not declare that route.",
+        "userAction": "Do not retry: the route cannot render until host routes and the build agree.",
+        "operatorAction": "Declare the route in defineRscServerEntry() and rebuild, or remove it from the routes passed to RenderServer.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "operator-only",
+        "telemetry": {
+          "eventName": "croco.problem.error",
+          "severity": "error",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/meta-vite/src/libs/rsc/buildEntry.ts",
+          "line": 10,
+          "column": 1,
+          "kind": "problem-class"
+        }
+      ]
+    },
+    {
       "code": "meta-vite/rsc-server-reference-unsupported",
       "category": "NotImplemented",
       "status": 501,
@@ -22227,7 +22317,7 @@
       "sources": [
         {
           "file": "packages/meta-vite/src/libs/rsc/flight.ts",
-          "line": 93,
+          "line": 101,
           "column": 1,
           "kind": "problem-class"
         }

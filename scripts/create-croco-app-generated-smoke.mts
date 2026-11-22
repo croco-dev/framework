@@ -1652,6 +1652,62 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
     ],
   },
   {
+    name: "meta-vite-node-rsc",
+    args: [
+      "--preset",
+      "ddd-fullstack",
+      "--scope",
+      "@smoke",
+      "--api",
+      "graphql",
+      "--api-hosting",
+      "standalone",
+      "--web-apps",
+      "web",
+      "--frontend-deploy",
+      "node-meta-vite-rsc",
+      "--no-install",
+      "--no-git",
+    ],
+    runtimeTarget: "node+browser",
+    matrixTargets: ["base-ddd"],
+    validations: [
+      runtimeCapabilityManifestValidation("graphql-node-application"),
+      {
+        label: GRAPHQL_CONTRACT_CHECK_LABEL,
+        packagePath: GRAPHQL_STANDALONE_CONTRACT_PACKAGE_PATH,
+        args: ["contract:check"],
+      },
+      {
+        label: GRAPHQL_CONTRACT_SNAPSHOT_LABEL,
+        packagePath: GRAPHQL_STANDALONE_CONTRACT_PACKAGE_PATH,
+        args: ["contract:snapshot"],
+        paths: [GRAPHQL_CONTRACT_SNAPSHOT_PATH],
+      },
+      {
+        label: "apps/web typecheck",
+        packagePath: ["apps", "web"],
+        args: ["typecheck"],
+      },
+      {
+        label: "apps/web RSC production build",
+        packagePath: ["apps", "web"],
+        args: ["build"],
+        paths: [
+          "dist/rsc/index.js",
+          "dist/ssr/index.js",
+          "dist/client/croco-rsc-client-build.json",
+          "dist/server/server.js",
+        ],
+      },
+      {
+        label: "apps/web Node RSC server smoke",
+        packagePath: ["apps", "web"],
+        args: ["rsc:smoke"],
+      },
+    ],
+  },
+  {
     name: "meta-vite-fullstack-workers",
     args: [
       "--preset",

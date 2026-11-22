@@ -27783,6 +27783,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "NodeRequestOriginProblem",
+              "exportKind": "named",
+              "source": "./libs/providers/node",
+              "declarationKind": "class"
+            },
+            {
               "name": "PersonalizedFragmentProblem",
               "exportKind": "named",
               "source": "./libs/isr/personalizedFragments",
@@ -27813,6 +27819,12 @@
               "declarationKind": "const"
             },
             {
+              "name": "RSC_INITIAL_FLIGHT_ELEMENT_ID",
+              "exportKind": "named",
+              "source": "./libs/rsc/flight",
+              "declarationKind": "const"
+            },
+            {
               "name": "RSC_MANIFEST_ELEMENT_ID",
               "exportKind": "named",
               "source": "./libs/rsc/flight",
@@ -27837,6 +27849,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "RscBuildInvalidProblem",
+              "exportKind": "named",
+              "source": "./libs/rsc/loadRscBuild",
+              "declarationKind": "class"
+            },
+            {
               "name": "RscClientBuildIdProblem",
               "exportKind": "named",
               "source": "./libs/rsc/flight",
@@ -27858,6 +27876,12 @@
               "name": "RscFlightNotAcceptableProblem",
               "exportKind": "named",
               "source": "./libs/rsc/flight",
+              "declarationKind": "class"
+            },
+            {
+              "name": "RscRouteNotInBuildProblem",
+              "exportKind": "named",
+              "source": "./libs/rsc/buildEntry",
               "declarationKind": "class"
             },
             {
@@ -28125,6 +28149,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "createRscAssetHandler",
+              "exportKind": "named",
+              "source": "./libs/rsc/rscAssets",
+              "declarationKind": "function"
+            },
+            {
               "name": "createRscBrowserFlightHeaders",
               "exportKind": "named",
               "source": "./libs/rsc/flight",
@@ -28257,6 +28287,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "loadRscBuild",
+              "exportKind": "named",
+              "source": "./libs/rsc/loadRscBuild",
+              "declarationKind": "function"
+            },
+            {
               "name": "parseRscFlightRequest",
               "exportKind": "named",
               "source": "./libs/rsc/flight",
@@ -28270,6 +28306,12 @@
             },
             {
               "name": "readRscClientManifestVersion",
+              "exportKind": "named",
+              "source": "./libs/rsc/flight",
+              "declarationKind": "function"
+            },
+            {
+              "name": "readRscInitialFlight",
               "exportKind": "named",
               "source": "./libs/rsc/flight",
               "declarationKind": "function"
@@ -28472,6 +28514,11 @@
               "source": "@croco/transports-http/lambda-response"
             },
             {
+              "name": "LoadRscBuildOptions",
+              "exportKind": "named",
+              "source": "./libs/rsc/loadRscBuild"
+            },
+            {
               "name": "MetaDeployTarget",
               "exportKind": "named",
               "source": "./libs/output/outputContract"
@@ -28557,6 +28604,11 @@
               "source": "./libs/build/routeManifest"
             },
             {
+              "name": "NodeHandlerOptions",
+              "exportKind": "named",
+              "source": "./libs/providers/node"
+            },
+            {
               "name": "PageRouteDefinition",
               "exportKind": "named",
               "source": "./libs/routes/types"
@@ -28632,9 +28684,34 @@
               "source": "./libs/routes/types"
             },
             {
+              "name": "RscAssetHandler",
+              "exportKind": "named",
+              "source": "./libs/rsc/rscAssets"
+            },
+            {
+              "name": "RscBuild",
+              "exportKind": "named",
+              "source": "./libs/rsc/buildEntry"
+            },
+            {
+              "name": "RscBuildRenderOptions",
+              "exportKind": "named",
+              "source": "./libs/rsc/flight"
+            },
+            {
+              "name": "RscBuildRoute",
+              "exportKind": "named",
+              "source": "./libs/rsc/buildEntry"
+            },
+            {
               "name": "RscClientManifestLike",
               "exportKind": "named",
               "source": "./libs/rsc/ssrDecode"
+            },
+            {
+              "name": "RscEncoderRenderOptions",
+              "exportKind": "named",
+              "source": "./libs/rsc/flight"
             },
             {
               "name": "RscFlightEncoder",
@@ -28642,9 +28719,19 @@
               "source": "./libs/rsc/flight"
             },
             {
+              "name": "RscFlightRenderInput",
+              "exportKind": "named",
+              "source": "./libs/rsc/buildEntry"
+            },
+            {
               "name": "RscFlightRequest",
               "exportKind": "named",
               "source": "./libs/rsc/flight"
+            },
+            {
+              "name": "RscHtmlRenderInput",
+              "exportKind": "named",
+              "source": "./libs/rsc/buildEntry"
             },
             {
               "name": "RscManifestDocument",
@@ -28662,6 +28749,11 @@
               "source": "./libs/rsc/flight"
             },
             {
+              "name": "RscServerEntry",
+              "exportKind": "named",
+              "source": "./libs/rsc/buildEntry"
+            },
+            {
               "name": "RscSsrCodec",
               "exportKind": "named",
               "source": "./libs/rsc/ssrDecode"
@@ -28675,6 +28767,11 @@
               "name": "RscSsrDecodeResult",
               "exportKind": "named",
               "source": "./libs/rsc/ssrDecode"
+            },
+            {
+              "name": "RscSsrEntry",
+              "exportKind": "named",
+              "source": "./libs/rsc/buildEntry"
             },
             {
               "name": "RuntimeContext",
@@ -28928,6 +29025,12 @@
               "exportKind": "named",
               "source": "./flight",
               "declarationKind": "function"
+            },
+            {
+              "name": "readRscInitialFlight",
+              "exportKind": "named",
+              "source": "./flight",
+              "declarationKind": "function"
             }
           ],
           "typeExports": [
@@ -28979,6 +29082,128 @@
               "name": "RenderRouteIR",
               "exportKind": "named",
               "source": null
+            }
+          ]
+        },
+        {
+          "exportPath": "./rsc/server",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["types", "import"],
+              "target": "./dist/libs/rsc/serverEntry.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
+              "target": "./dist/libs/rsc/serverEntry.d.ts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/libs/rsc/serverEntry.mjs"
+            },
+            {
+              "conditions": ["require"],
+              "target": "./dist/libs/rsc/serverEntry.js"
+            }
+          ],
+          "sourceEntrypoint": "packages/meta-vite/src/libs/rsc/serverEntry.ts",
+          "runtimeExports": [
+            {
+              "name": "defineRscServerEntry",
+              "exportKind": "declaration",
+              "source": null,
+              "declarationKind": "function"
+            },
+            {
+              "name": "RSC_SERVER_ENTRY_VERSION",
+              "exportKind": "named",
+              "source": "./buildEntry",
+              "declarationKind": "const"
+            }
+          ],
+          "typeExports": [
+            {
+              "name": "RscFlightRenderToReadableStream",
+              "exportKind": "declaration",
+              "source": null,
+              "declarationKind": "type"
+            },
+            {
+              "name": "RscServerEntryOptions",
+              "exportKind": "declaration",
+              "source": null,
+              "declarationKind": "type"
+            },
+            {
+              "name": "RscServerRouteDefinition",
+              "exportKind": "declaration",
+              "source": null,
+              "declarationKind": "type"
+            },
+            {
+              "name": "RscFlightRenderInput",
+              "exportKind": "named",
+              "source": "./buildEntry"
+            },
+            {
+              "name": "RscServerEntry",
+              "exportKind": "named",
+              "source": "./buildEntry"
+            }
+          ]
+        },
+        {
+          "exportPath": "./rsc/ssr",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["types", "import"],
+              "target": "./dist/libs/rsc/ssrEntry.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
+              "target": "./dist/libs/rsc/ssrEntry.d.ts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/libs/rsc/ssrEntry.mjs"
+            },
+            {
+              "conditions": ["require"],
+              "target": "./dist/libs/rsc/ssrEntry.js"
+            }
+          ],
+          "sourceEntrypoint": "packages/meta-vite/src/libs/rsc/ssrEntry.ts",
+          "runtimeExports": [
+            {
+              "name": "defineRscSsrEntry",
+              "exportKind": "declaration",
+              "source": null,
+              "declarationKind": "function"
+            },
+            {
+              "name": "RSC_SSR_ENTRY_VERSION",
+              "exportKind": "named",
+              "source": "./buildEntry",
+              "declarationKind": "const"
+            }
+          ],
+          "typeExports": [
+            {
+              "name": "RscSsrEntryOptions",
+              "exportKind": "declaration",
+              "source": null,
+              "declarationKind": "type"
+            },
+            {
+              "name": "RscHtmlRenderInput",
+              "exportKind": "named",
+              "source": "./buildEntry"
+            },
+            {
+              "name": "RscSsrEntry",
+              "exportKind": "named",
+              "source": "./buildEntry"
             }
           ]
         }

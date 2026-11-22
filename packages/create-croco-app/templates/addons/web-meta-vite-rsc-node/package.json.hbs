@@ -1,0 +1,28 @@
+{
+  "name": "{{scope}}/{{webAppName}}",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "NODE_ENV=production vite build && NODE_ENV=production vite build --config vite.server.config.ts",
+    "start": "NODE_ENV=production node dist/server/server.js",
+    "rsc:smoke": "node scripts/rsc-smoke.mjs",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@croco/meta-vite": "workspace:*",
+    "@hono/node-server": "^1.19.17",
+    "hono": "^4.12.34",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
+    "react-server-dom-webpack": "^19.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^24",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-rsc": "^0.5.38",
+    "typescript": "^6.0.3",
+    "vite": "^6.4.3"
+  }
+}

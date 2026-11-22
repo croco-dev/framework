@@ -3964,6 +3964,34 @@ const recoveryMetadataByCode = {
     redactionPolicy: "operator-only",
     severity: "error",
   }),
+  "meta-vite/rsc-build-invalid": recovery({
+    cause:
+      "The RSC production build cannot be served: an entry or the client build record is missing, an entry was not created by the meta-vite helpers, or the client and server outputs come from different builds.",
+    userAction: "Do not retry: the server refuses to start until the build is replaced.",
+    operatorAction:
+      "Read the artifact and reason extensions, rebuild client and server together with crocoMetaVitePlugin({ rsc: true }), and deploy the whole dist directory.",
+    retryability: "not-retryable",
+    redactionPolicy: "operator-only",
+    severity: "error",
+  }),
+  "meta-vite/rsc-route-not-in-build": recovery({
+    cause: "A host route is rendered as RSC, but the built rsc entry does not declare that route.",
+    userAction: "Do not retry: the route cannot render until host routes and the build agree.",
+    operatorAction:
+      "Declare the route in defineRscServerEntry() and rebuild, or remove it from the routes passed to RenderServer.",
+    retryability: "not-retryable",
+    redactionPolicy: "operator-only",
+    severity: "error",
+  }),
+  "meta-vite/node-request-origin-mismatch": recovery({
+    cause: "The request names an origin other than the one this Node server was configured to answer for.",
+    userAction: "Request the page through the site's public address.",
+    operatorAction:
+      "Check that the proxy forwards the public Host header and that the configured origin matches the address clients use.",
+    retryability: "not-retryable",
+    redactionPolicy: "public",
+    severity: "warning",
+  }),
   "meta-vite/rsc-flight-encode-aborted": recovery({
     cause: "The client disconnected before the isolated Flight encoder finished.",
     userAction: "Reload the page to request the route again.",

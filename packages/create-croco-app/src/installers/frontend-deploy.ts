@@ -42,6 +42,11 @@ export function installFrontendDeploy(
     return;
   }
 
+  if (options.frontendDeploy === "node-meta-vite-rsc") {
+    mergeInto(join(TEMPLATES_DIR, "addons", "web-meta-vite-rsc-node"), appTargetDir, vars);
+    return;
+  }
+
   if (options.frontendDeploy === "docker") {
     const dockerTemplateDir = join(TEMPLATES_DIR, "addons", "docker", "web");
     const dockerDir = join(targetDir, resolvedWebAppName);

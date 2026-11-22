@@ -22,6 +22,7 @@ export type GeneratorFrontendDeploy =
   | "vercel"
   | "docker"
   | "cloudflare-meta-vite"
+  | "node-meta-vite-rsc"
   | "vite-spa";
 export type GeneratorUiProfile = "none" | "astryx";
 export type GeneratorDatabase = "postgres" | "mongodb" | "redis";

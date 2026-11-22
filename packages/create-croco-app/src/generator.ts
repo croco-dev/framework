@@ -215,8 +215,7 @@ async function generateProject(
   }
 
   // Step 5: web addon (standalone hosting + web apps)
-  const frontendDeployOwnsWebApp =
-    options.frontendDeploy === "cloudflare-meta-vite" || options.frontendDeploy === "vite-spa";
+  const frontendDeployOwnsWebApp = frontendDeployOwnsWebAppFor(options.frontendDeploy);
   if (
     !isLegacyVikeFullstackPreset &&
     options.apiHosting === "standalone" &&
@@ -674,8 +673,7 @@ async function finalize(
             ? "admin-console"
             : "ddd";
     const hasWebApps = options.webApps.length > 0;
-    const frontendDeployOwnsWebApp =
-      options.frontendDeploy === "cloudflare-meta-vite" || options.frontendDeploy === "vite-spa";
+    const frontendDeployOwnsWebApp = frontendDeployOwnsWebAppFor(options.frontendDeploy);
     const nextjsApiClient =
       options.preset === "ddd-fullstack" &&
       hasWebApps &&
@@ -970,4 +968,14 @@ function runPnpmCommand(
       );
     });
   });
+}
+
+// These profiles generate the whole web app, so the API-specific web addon is
+// not installed next to them.
+function frontendDeployOwnsWebAppFor(frontendDeploy: GeneratorOptions["frontendDeploy"]): boolean {
+  return (
+    frontendDeploy === "cloudflare-meta-vite" ||
+    frontendDeploy === "node-meta-vite-rsc" ||
+    frontendDeploy === "vite-spa"
+  );
 }

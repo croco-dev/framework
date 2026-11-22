@@ -406,6 +406,7 @@ export async function runPrompts(cliArgs: NormalizedGeneratorOptions): Promise<G
     | "vercel"
     | "docker"
     | "cloudflare-meta-vite"
+    | "node-meta-vite-rsc"
     | "vite-spa"
     | undefined;
   if (preset === "ddd-fullstack" || preset === "ddd-vike-fullstack") {
@@ -419,6 +420,11 @@ export async function runPrompts(cliArgs: NormalizedGeneratorOptions): Promise<G
             value: "cloudflare-meta-vite",
             label: "Cloudflare Meta Vite",
             hint: "SSR Worker deployment",
+          },
+          {
+            value: "node-meta-vite-rsc",
+            label: "Node Meta Vite RSC",
+            hint: "React Server Components on a Node server",
           },
           { value: "vite-spa", label: "Vite SPA", hint: "Browser SPA deployment" },
           { value: "vercel", label: "Vercel", hint: "Vercel platform" },
