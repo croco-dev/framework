@@ -30,9 +30,11 @@ env:
   GITLEAKS_IMAGE: ghcr.io/gitleaks/gitleaks:v8.23.0@sha256:b4b81841085b4060054a71155500a340e3d2e2a5995c186546649e3efd80b84e
   CROCO_CACHEABLE_FAILURE_CLASS: ${{ inputs.cacheable_failure_class || 'none' }}
 
+# Required jobs run with always(), so a shared pull request group would hold a new push
+# until the superseded validate finishes. cancel-superseded-runs force-cancels it instead.
 concurrency:
-  group: ci-${{ github.event_name == 'workflow_dispatch' && github.run_id || github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  group: ci-${{ github.event_name == 'push' && github.ref || github.run_id }}
+  cancel-in-progress: false
 
 jobs:
   repository-contracts:
@@ -584,6 +586,33 @@ jobs:
           name: core-coverage-warning-report
           path: ci-reports/coverage/core-warning/report.md
           if-no-files-found: warn
+
+  cancel-superseded-runs:
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: write
+    steps:
+      - name: Force-cancel superseded pull request runs
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_BRANCH: ${{ github.head_ref }}
+        run: |
+          superseded=$(gh api --method GET "repos/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/runs" \
+            -f event=pull_request -f branch="$HEAD_BRANCH" -F per_page=100 \
+            --jq ".workflow_runs[] | select(.id < ${GITHUB_RUN_ID} and .status != \"completed\" and .head_repository.full_name == \"${GITHUB_REPOSITORY}\") | .id")
+          for run_id in $superseded; do
+            echo "Force-cancelling superseded CI run ${run_id}"
+            if ! gh api --method POST "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/force-cancel"; then
+              status=$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}" --jq .status)
+              if [ "$status" != "completed" ]; then
+                echo "::error::Superseded CI run ${run_id} is still ${status} after force-cancel failed."
+                exit 1
+              fi
+            fi
+          done
 
   changes:
     runs-on: ubuntu-latest

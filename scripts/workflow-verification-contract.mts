@@ -28,6 +28,7 @@ export const TRUSTED_GITLEAKS_IMAGE =
   "ghcr.io/gitleaks/gitleaks:v8.23.0@sha256:b4b81841085b4060054a71155500a340e3d2e2a5995c186546649e3efd80b84e";
 const ALLOWED_WRITE_PERMISSIONS = new Set([
   "benchmark-comment.yml:jobs.comment:pull-requests",
+  "ci.yml:jobs.cancel-superseded-runs:actions",
   "release.yml:workflow:id-token",
 ]);
 
@@ -331,6 +332,50 @@ function inspectBenchmarkCommentBoundary(
       ];
 }
 
+function inspectSupersededRunCancellationBoundary(
+  path: string,
+  workflow: Record<string, unknown>,
+): readonly WorkflowPermissionViolation[] {
+  if (workflowName(path) !== "ci.yml") return [];
+
+  const jobs = isPlainRecord(workflow.jobs) ? workflow.jobs : null;
+  const job = isPlainRecord(jobs?.["cancel-superseded-runs"])
+    ? jobs["cancel-superseded-runs"]
+    : null;
+  if (job === null) return [];
+  const permissions = isPlainRecord(job.permissions) ? job.permissions : null;
+  const steps = Array.isArray(job.steps) ? job.steps : [];
+  const cancel = isPlainRecord(steps[0]) ? steps[0] : null;
+  const environment = isPlainRecord(cancel?.env) ? cancel.env : null;
+  const script = typeof cancel?.run === "string" ? cancel.run : "";
+
+  const valid =
+    hasExactKeys(job, ["if", "runs-on", "timeout-minutes", "permissions", "steps"]) &&
+    job.if ===
+      "github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository" &&
+    job["runs-on"] === "ubuntu-latest" &&
+    job["timeout-minutes"] === 5 &&
+    JSON.stringify(permissions) === JSON.stringify({ actions: "write" }) &&
+    steps.length === 1 &&
+    hasExactKeys(cancel, ["name", "shell", "env", "run"]) &&
+    cancel?.name === "Force-cancel superseded pull request runs" &&
+    cancel.shell === "bash" &&
+    hasExactKeys(environment, ["GH_TOKEN", "HEAD_BRANCH"]) &&
+    environment?.GH_TOKEN === "${{ github.token }}" &&
+    environment.HEAD_BRANCH === "${{ github.head_ref }}" &&
+    scriptDigest(script) === "8950fa71dbc5f33f9a22cf7277c685ebd9e79ac6a417cddb0a995609b9a413a6";
+
+  return valid
+    ? []
+    : [
+        {
+          path,
+          reason:
+            "jobs.cancel-superseded-runs actions write access must only force-cancel superseded same-repository pull request runs",
+        },
+      ];
+}
+
 export function findWorkflowPermissionViolations(
   workflows: Readonly<Record<string, string>>,
 ): readonly WorkflowPermissionViolation[] {
@@ -390,6 +435,7 @@ export function findWorkflowPermissionViolations(
     }
 
     violations.push(...inspectBenchmarkCommentBoundary(path, workflow));
+    violations.push(...inspectSupersededRunCancellationBoundary(path, workflow));
 
     if (workflowName(path) === "ci.yml") {
       const changes = workflow.jobs.changes;
