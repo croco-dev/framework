@@ -8,17 +8,17 @@
       "files": {
         "packages/meta-vite/package.json": "4ed0c844a8ffa50d10bb19718ae67d6daaae81f42326f80bc141c1063c3f6b02",
         "packages/meta-vite/src/index.ts": "b7dc870d24921030343333d98f37c6e630ac742cd04acbbcaa74bb0d63a4b98a",
-        "packages/meta-vite/src/libs/providers/node.ts": "ed29766549a6a45435a4255940dc51b0a62f40715bc336b2d36fa82ebe9963a9",
+        "packages/meta-vite/src/libs/providers/node.ts": "7139e14836fb1e03cd19de35275370e38ab9525049dd8e44e03712bf8bc514e7",
         "packages/meta-vite/src/libs/render/renderServer.ts": "ea165e634272405bd7bdee2d775a4d1a1b8bb0fede121350bdc933cca33f9286",
-        "packages/meta-vite/src/libs/rsc/buildEntry.ts": "5aea20c4f578ee1eaadb84d97fb279896999bac7df519ac87a9c45514f039124",
-        "packages/meta-vite/src/libs/rsc/flight.ts": "f42351231e3cc844596a10e2cf6d4af0ae82c4fff345fae9ca624656807c4250",
+        "packages/meta-vite/src/libs/rsc/buildEntry.ts": "73dabcafe62971796d08c1ed968fea723a350bb8fe947f2c5254b4b5d028ea3a",
+        "packages/meta-vite/src/libs/rsc/flight.ts": "0934262097d878150c93b4d603737d4cc1538ec33e625b4b371671844fa28658",
         "packages/meta-vite/src/libs/rsc/flightBrowser.entry.ts": "785eeebf8f682ea436f4841ba9cda4004483d1f8275753e825ec898e7bdc23f3",
-        "packages/meta-vite/src/libs/rsc/loadRscBuild.ts": "1222473b229507bf623dcab6e7a831e14dba3badcca5c50318ac3422e287a5d5",
+        "packages/meta-vite/src/libs/rsc/loadRscBuild.ts": "bb6d341928726a46be137c7ba8f78cb0a53f49eb1a73c0f6ef21ae475f8e6c1b",
         "packages/meta-vite/src/libs/rsc/plainData.ts": "09e2ccc1ec571e24f2022250fb73a239bc75041f50227b6e04494bcd5c5a51e9",
         "packages/meta-vite/src/libs/rsc/rscAssets.ts": "a29a99f4ef9d8809f3b827ae8ddaa798e7b41cc7cea2ffbb95ba2833cc61c2e8",
         "packages/meta-vite/src/libs/rsc/rscBuildProtocol.ts": "9347644744b45231ed3cd1a8a363bb8a2d5c598e770c899038cc688a27fc5652",
-        "packages/meta-vite/src/libs/rsc/rscBuildWorker.mts": "b7b6cbac160c5c3c085d98c49417a42ca2db782686c4c338fd2a987e29f5097a",
-        "packages/meta-vite/src/libs/rsc/rscBuildWorkerClient.ts": "212cfd72166b602b4eeba2aaa0c34f046ac1815562cf89a6818c064b572e4d8b",
+        "packages/meta-vite/src/libs/rsc/rscBuildWorker.mts": "8ea3bba2a68ca60c58161293c448b75a187b2a17f1f6ca0eb082654f881c9044",
+        "packages/meta-vite/src/libs/rsc/rscBuildWorkerClient.ts": "4010396fc732e02cf08d8553aadccfd5572a95fb992f0162d38067cbcef4b716",
         "packages/meta-vite/src/libs/rsc/serverEntry.ts": "dbb0aca7871a8d435e491416774596f7cb6f18d9fc07c28a781917c7b7de678d",
         "packages/meta-vite/src/libs/rsc/ssrEntry.ts": "34326afd4e9aed05568abc074ab1996ada2e7be6a6c8b23fb203ab3a7da644c9"
       },
@@ -35,6 +35,7 @@
           ],
           "constraints": [
             "Each build runs in a node:worker_threads worker; runtime context and action input must be plain data.",
+            "With origin set, health probes must send the public host; a server should exit on build.closed so its supervisor restarts it.",
             "Requires the @vitejs/plugin-rsc default dist/rsc, dist/ssr and dist/client layout and the root Vite base.",
             "The build and the server must use the same NODE_ENV.",
             "Local host-runtime evidence does not certify a deployed Kubernetes cluster."
@@ -88,7 +89,8 @@
       "reason": "Adds --frontend-deploy node-meta-vite-rsc, which writes a Node RSC web app that serves its build through the meta-vite adapter. The CLI itself only writes files.",
       "files": {
         "packages/create-croco-app/src/cli-program.ts": "fc5de008be063c290416b5e2a124c668a3ecbf234b1298350fa1d4910406ba2e",
-        "packages/create-croco-app/src/generator.ts": "7772a7fd54f171e7693906533ece40a588bfb92f2738966bf108aab4b44adb18",
+        "packages/create-croco-app/src/environment-template.ts": "3192fe04031f4b9382aa5f33667921aab901bc7c0866dbcab522725e75c9e543",
+        "packages/create-croco-app/src/generator.ts": "3f5b93fb435054647bc20ecdf288d5bd44e9710d21ab1531f76a26ec38cacd32",
         "packages/create-croco-app/src/installers/frontend-deploy.ts": "6f6506056cf9a97f16bd79f83b273c356f9abd48cdd0ebc8579f211286dc9514",
         "packages/create-croco-app/src/prompts.ts": "c9a5452fa4de41846134ec8063088154be78b98498fef3b288531d0200212df6",
         "packages/create-croco-app/src/supported-options.ts": "6567eb8ca08c7f6b7a11350a1749e96b19eaff25a4459dd8a2ca195211ca057d",
@@ -135,7 +137,7 @@
       "classification": "pure-contract",
       "reason": "Regenerates the Problem code registry with recovery metadata for the new meta-vite RSC build and Node origin codes. Registry data only.",
       "files": {
-        "packages/problems-core/src/generated/problem-code-registry.ts": "833fdc0fbc4355a5f66710ddafd6fbf774c924ed108864851ff5fc5a5c217843"
+        "packages/problems-core/src/generated/problem-code-registry.ts": "fd87394c3718fd2bddcd5d108798aebd214eab08bf3ed457af5f5ef6feca2aec"
       },
       "catalogRuntimes": [],
       "profiles": {
