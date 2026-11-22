@@ -13,8 +13,8 @@ title: "RscFlightRenderInput"
 
 > `readonly` `optional` **context?**: [`RuntimeContext`](/api/meta-vite/src/type-aliases/runtimecontext/)
 
-The context the host resolved for this request. It is passed in process,
-so live host values reach the server component unchanged.
+The context the host resolved for this request. It crosses into the
+build's worker thread, so it holds plain data only.
 
 ---
 

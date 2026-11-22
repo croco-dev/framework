@@ -9,6 +9,12 @@ title: "RscServerEntry"
 
 ## Properties
 
+### actions?
+
+> `readonly` `optional` **actions?**: `Readonly`\<`Record`\<`string`, [`RscServerAction`](/api/meta-vite/src/type-aliases/rscserveraction/)\>\>
+
+---
+
 ### renderFlight
 
 > `readonly` **renderFlight**: (`input`) => `ReadableStream`\<`Uint8Array`\>
