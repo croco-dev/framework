@@ -20,7 +20,12 @@ export function markBufferedResponse(response: Response): Response {
   const body = response.body;
   if (!body) return response;
 
-  if (!bufferedResponses.has(response)) {
+  if (
+    !bufferedResponses.has(response) &&
+    Object.getPrototypeOf(response) === Response.prototype &&
+    !Object.hasOwn(response, "clone") &&
+    Object.isExtensible(response)
+  ) {
     Object.defineProperty(response, "clone", {
       configurable: true,
       writable: true,
@@ -37,6 +42,10 @@ export function isBufferedResponse(response: Response): boolean {
     bufferedResponses.has(response) ||
     (response.body !== null && bufferedResponses.has(response.body))
   );
+}
+
+export function preserveBufferedResponse(response: Response): Response {
+  return isBufferedResponse(response) ? markBufferedResponse(response) : response;
 }
 
 /**

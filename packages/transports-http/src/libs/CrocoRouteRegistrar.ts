@@ -17,7 +17,7 @@ import {
 } from "@croco/problems-core";
 import type { Hono, Context as HonoContext } from "hono";
 import type { ErrorHandler } from "./ErrorHandler";
-import { HttpContext } from "./HttpContext";
+import { HttpContext, preserveBufferedResponse } from "./HttpContext";
 import { runWithResponseRequestScope } from "./ResponseRequestScope";
 import { isMiddlewareShortCircuit } from "./middleware/MiddlewareShortCircuit";
 import { getSecurityMiddlewareExportName } from "./middleware/SecurityMiddlewareMarker";
@@ -305,7 +305,7 @@ export class CrocoRouteRegistrar {
       let downstreamResponse: Response | undefined;
       const middlewareResponse = await middleware(ctx, async () => {
         nextCalled = true;
-        downstreamResponse = await dispatch(nextIndex + 1);
+        downstreamResponse = preserveBufferedResponse(await dispatch(nextIndex + 1));
         return downstreamResponse;
       });
       if (middlewareResponse instanceof Response) {

@@ -249,6 +249,31 @@ describe("response request scope", () => {
     },
   );
 
+  it("ends the buffered span after header rewriting followed by clone logging", async () => {
+    let logged: unknown;
+    const app = fixture(() => ({ ready: true }), "GET", [
+      async (_ctx, next) => {
+        const response = await next();
+        if (response instanceof Response) logged = await response.clone().json();
+        return response;
+      },
+      async (_ctx, next) => {
+        const response = await next();
+        if (!(response instanceof Response)) return response;
+        const headers = new Headers(response.headers);
+        headers.set("X-Forwarded-By", "test-middleware");
+        return new Response(response.body, { status: response.status, headers });
+      },
+    ]);
+    const response = await app.request("/stream");
+
+    expect(logged).toEqual({ ready: true });
+    expect(response.headers.get("x-forwarded-by")).toBe("test-middleware");
+    expect(requestSpan()?.status.code).toBe(SpanStatusCode.UNSET);
+    expect(await response.json()).toEqual({ ready: true });
+    requestSpan();
+  });
+
   it("ends the span before consuming a buffered response compressed by middleware", async () => {
     const app = fixture(() => ({ message: "buffered" }), "GET", [
       compressionMiddleware({ threshold: 1, encodings: ["gzip"] }),

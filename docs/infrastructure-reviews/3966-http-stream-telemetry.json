@@ -6,10 +6,10 @@
       "classification": "runtime-adapter",
       "reason": "Keep the HTTP server span active across response body reads and cancellation, and record terminal body failures with the original HTTP response status.",
       "files": {
-        "packages/transports-http/src/libs/CrocoRouteRegistrar.ts": "43bc7257fac78c4947adb1d80bd1fa64116e8581bb1c412782e80258621c1504",
-        "packages/transports-http/src/libs/HttpContext.ts": "c8f6614855673d2020dfb7e37705e4824f341ee074679dfbb27eb45a6b9c3090",
+        "packages/transports-http/src/libs/CrocoRouteRegistrar.ts": "48526a0065d5adb1927d2b9cfbeb0ea6c84704fae2295da5ca7f7fe082a6399a",
+        "packages/transports-http/src/libs/HttpContext.ts": "25e9f65471c12b4dc20fb129fe230ff338e9bc6f424bf289622125e86e3bbcb1",
         "packages/transports-http/src/libs/ResponseRequestScope.ts": "e6de5e207c76f77a0881f83748b8d1a626878da17bfd7de4a3b5fee6a462ed4c",
-        "packages/transports-http/src/libs/middleware/CompressionMiddleware.ts": "6ecc4f46eae6be416a573e6d5d4b64cb3447b10768638671b87128b1c25b46bd",
+        "packages/transports-http/src/libs/middleware/CompressionMiddleware.ts": "90c806c6ea1ea431179607ea7e9850ae1ca94d80838d6c5a04fc72d0984c609f",
         "packages/transports-http/src/libs/middleware/telemetry.ts": "3620b5d1ef5e6b3766cce154bf79bc593004e0840004d2c4fae0307dc7f11699"
       },
       "catalogRuntimes": ["node", "lambda"],
@@ -32,7 +32,7 @@
             "runtime": "node",
             "path": "packages/transports-http/src/tests/ResponseRequestScope.spec.ts",
             "testName": "response scope terminal paths keeps Node response providers alive until disconnect",
-            "sha256": "e65905956bcc7c50137f8faab9cdc80a1af66e143599074091e95a5a68b78a48"
+            "sha256": "045190ca2cc52651575bac6f0d83d71ecb0e807953efa78fcfd354f27eef5893"
           }
         },
         "aws-lambda": {
