@@ -166,7 +166,7 @@ describe("RSC build worker", () => {
     const decoder = new TextDecoder();
 
     let text = "";
-    while (!text.includes('data-croco-rsc-flight="chunk"')) {
+    while (splitStreamedFlight(text).flight.length === 0) {
       const { done, value } = await reader.read();
       expect(done).toBe(false);
       text += decoder.decode(value, { stream: true });

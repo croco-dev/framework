@@ -43,7 +43,7 @@
             "runtime": "node",
             "path": "packages/meta-vite/src/tests/RscNodeHost.spec.ts",
             "testName": "Node RSC production build host sends the shell, the client entry and the shell's Flight before a held boundary resolves",
-            "sha256": "6a37651c4079d4d1a7ea7d15da4b6bdd0816e30ffaa892bad02efe203265bf6e"
+            "sha256": "d957d26bfbe95c9aa7f673cb20c02d1593d045ce03cf24d68dc1e61d4261db74"
           }
         },
         "aws-lambda": {

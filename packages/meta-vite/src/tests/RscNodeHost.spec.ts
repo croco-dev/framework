@@ -170,7 +170,8 @@ describe("Node RSC production build host", () => {
     }
     const decoder = new TextDecoder();
     let early = "";
-    while (!(early.includes('async=""') && early.includes('data-croco-rsc-flight="chunk"'))) {
+    // HTTP may cut a block anywhere, so read until a whole one has arrived.
+    while (!(early.includes('async=""') && splitStreamedFlight(early).flight.length > 0)) {
       const { done, value } = await reader.read();
       expect(done).toBe(false);
       early += decoder.decode(value, { stream: true });

@@ -1,7 +1,7 @@
 import { RSC_INITIAL_FLIGHT_ATTRIBUTE, RSC_INITIAL_FLIGHT_META_NAME } from "../../libs/rsc/flight";
 
 const BLOCK_PATTERN = new RegExp(
-  `<script type="application/json" ${RSC_INITIAL_FLIGHT_ATTRIBUTE}="(chunk|end)">([\\s\\S]*?)(?:</script>|$)`,
+  `<script type="application/json" ${RSC_INITIAL_FLIGHT_ATTRIBUTE}="(chunk|end)">([\\s\\S]*?)</script>`,
   "g",
 );
 
@@ -14,7 +14,10 @@ export type StreamedFlightParts = {
   readonly blockOffsets: readonly number[];
 };
 
-/** Splits a rendered document into its HTML and the Flight bytes written into it. */
+/**
+ * Splits a rendered document into its HTML and the Flight bytes written into it.
+ * A block whose closing tag has not arrived yet is left in `html`.
+ */
 export function splitStreamedFlight(document: string): StreamedFlightParts {
   const chunks: Buffer[] = [];
   const blockOffsets: number[] = [];
