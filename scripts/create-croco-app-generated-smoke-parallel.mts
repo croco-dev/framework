@@ -13,9 +13,9 @@ export function resolveGeneratedSmokeConcurrency(
   env: NodeJS.ProcessEnv = process.env,
   parallelism: number = availableParallelism(),
 ): number {
-  const configured = env[GENERATED_SMOKE_CONCURRENCY_ENV];
-  if (configured) {
-    const parsed = Number.parseInt(configured, 10);
+  const configured = env[GENERATED_SMOKE_CONCURRENCY_ENV]?.trim();
+  if (configured && /^\d+$/.test(configured)) {
+    const parsed = Number(configured);
     if (Number.isSafeInteger(parsed) && parsed > 0) return parsed;
   }
   return Math.max(1, Math.min(DEFAULT_GENERATED_SMOKE_CONCURRENCY, Math.floor(parallelism / 2)));
@@ -65,8 +65,7 @@ export async function runWithResourceLocks<T>(
         continue;
       }
       for (const lock of locks) heldLocks.add(lock);
-      const execution: Promise<void> = options
-        .run(item)
+      const execution: Promise<void> = startRun(options.run, item)
         .catch((error: unknown) => {
           failure ??= { error };
         })
@@ -84,6 +83,24 @@ export async function runWithResourceLocks<T>(
     launchRunnable();
   }
   if (failure) throw failure.error;
+}
+
+// A worker that exits abnormally may have been killed after writing its result, so only a
+// failed result or a clean exit is trusted.
+export function isTrustedWorkerVerification(
+  exit: { readonly code: number | null; readonly signal: NodeJS.Signals | null },
+  status: string,
+): boolean {
+  return status === "failed" || (exit.code === 0 && exit.signal === null);
+}
+
+// A callback that throws before returning a promise settles like a rejected one.
+function startRun<T>(run: (item: T) => Promise<void>, item: T): Promise<void> {
+  try {
+    return run(item);
+  } catch (error) {
+    return Promise.reject(error);
+  }
 }
 
 export function combineGeneratedSmokeCaseTiming(

@@ -73,6 +73,7 @@ import { assertGeneratedSmokeCaseDependencyMapping } from "./create-croco-app-ge
 import {
   combineGeneratedSmokeCaseTiming,
   generatedSmokeCaseResourceLocks,
+  isTrustedWorkerVerification,
   orderGeneratedSmokeCasesForPool,
   prefixOutputLine,
   resolveGeneratedSmokeConcurrency,
@@ -3060,15 +3061,17 @@ async function verifyPreparedSmokeCaseInWorker(
     },
   );
 
-  if (existsSync(resultPath)) {
-    return readWorkerVerification(readFileSync(resultPath, "utf8"));
+  const resultWritten = existsSync(resultPath);
+  if (resultWritten) {
+    const verification = readWorkerVerification(readFileSync(resultPath, "utf8"));
+    if (isTrustedWorkerVerification(exit, verification.status)) return verification;
   }
   return verificationWithoutWorkerResult(
     prepared,
     new Error(
-      `${caseName} verification worker exited (code ${exit.code}, signal ${exit.signal}) before writing a result${
-        stderrTail.length > 0 ? `:\n${stderrTail.join("\n")}` : ""
-      }`,
+      `${caseName} verification worker exited (code ${exit.code}, signal ${exit.signal}) ${
+        resultWritten ? "after writing a passed result" : "before writing a result"
+      }${stderrTail.length > 0 ? `:\n${stderrTail.join("\n")}` : ""}`,
     ),
   );
 }

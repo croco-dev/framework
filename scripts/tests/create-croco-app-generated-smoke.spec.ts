@@ -1950,6 +1950,9 @@ describe("create-croco-app generated smoke timing", () => {
     expect(readFunctionSource(source, "verifyPreparedSmokeCases")).not.toContain(
       "applySmokeCaseVerification(",
     );
+    expect(readFunctionSource(source, "verifyPreparedSmokeCaseInWorker")).toContain(
+      "if (isTrustedWorkerVerification(exit, verification.status)) return verification;",
+    );
     expect(
       source.match(
         /caseResult\.status = "passed";\n\s+caseResult\.timing = finalizeSmokeCaseTiming\(/g,

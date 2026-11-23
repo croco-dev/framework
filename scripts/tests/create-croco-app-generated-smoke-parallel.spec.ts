@@ -3,6 +3,7 @@ import {
   BROWSER_RESOURCE_LOCK,
   combineGeneratedSmokeCaseTiming,
   generatedSmokeCaseResourceLocks,
+  isTrustedWorkerVerification,
   orderGeneratedSmokeCasesForPool,
   resolveGeneratedSmokeConcurrency,
   runWithResourceLocks,
@@ -68,6 +69,15 @@ describe("resolveGeneratedSmokeConcurrency", () => {
     expect(resolveGeneratedSmokeConcurrency({ CROCO_GENERATED_SMOKE_CONCURRENCY: "0" }, 4)).toBe(2);
     expect(resolveGeneratedSmokeConcurrency({ CROCO_GENERATED_SMOKE_CONCURRENCY: "many" }, 4)).toBe(
       2,
+    );
+    expect(resolveGeneratedSmokeConcurrency({ CROCO_GENERATED_SMOKE_CONCURRENCY: "1.5" }, 4)).toBe(
+      2,
+    );
+    expect(resolveGeneratedSmokeConcurrency({ CROCO_GENERATED_SMOKE_CONCURRENCY: "3x" }, 4)).toBe(
+      2,
+    );
+    expect(resolveGeneratedSmokeConcurrency({ CROCO_GENERATED_SMOKE_CONCURRENCY: " 3 " }, 4)).toBe(
+      3,
     );
   });
 });
@@ -195,6 +205,47 @@ describe("runWithResourceLocks", () => {
     await rejection;
     expect(siblingSettled).toBe(true);
     expect(started).toEqual(["failing", "running"]);
+  });
+
+  it("waits for running items when a callback throws before returning a promise", async () => {
+    const sibling = deferred();
+    let poolSettled = false;
+    const done = runWithResourceLocks(
+      [
+        { name: "running", locks: [] },
+        { name: "throwing", locks: [] },
+      ],
+      {
+        concurrency: 2,
+        locksOf: (item) => item.locks,
+        run: (item) => {
+          if (item.name === "throwing") throw new Error("callback threw synchronously");
+          return sibling.promise;
+        },
+      },
+    ).finally(() => {
+      poolSettled = true;
+    });
+    const rejection = expect(done).rejects.toThrow("callback threw synchronously");
+
+    await flush();
+    expect(poolSettled).toBe(false);
+
+    sibling.resolve();
+    await rejection;
+  });
+});
+
+describe("isTrustedWorkerVerification", () => {
+  it("trusts a passed result only from a worker that exited cleanly", () => {
+    expect(isTrustedWorkerVerification({ code: 0, signal: null }, "passed")).toBe(true);
+    expect(isTrustedWorkerVerification({ code: null, signal: "SIGKILL" }, "passed")).toBe(false);
+    expect(isTrustedWorkerVerification({ code: 1, signal: null }, "passed")).toBe(false);
+  });
+
+  it("keeps a failed result from any worker exit", () => {
+    expect(isTrustedWorkerVerification({ code: null, signal: "SIGKILL" }, "failed")).toBe(true);
+    expect(isTrustedWorkerVerification({ code: 0, signal: null }, "failed")).toBe(true);
   });
 });
 
