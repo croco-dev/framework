@@ -192,7 +192,9 @@ describe("Node RSC production build host", () => {
       expect(beforeRelease.ended).toBe(false);
       expect(new TextDecoder().decode(beforeRelease.flight)).toContain("Packed RSC");
       // Every Flight block follows the whole shell, outside any element React hydrates.
-      expect(early.indexOf("</main>")).toBeLessThan(beforeRelease.blockOffsets[0] ?? -1);
+      const shellEnd = early.indexOf("</main>");
+      expect(shellEnd).toBeGreaterThanOrEqual(0);
+      expect(shellEnd + "</main>".length).toBeLessThanOrEqual(beforeRelease.blockOffsets[0] ?? -1);
 
       await release();
       for (;;) {

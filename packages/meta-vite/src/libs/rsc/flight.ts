@@ -348,6 +348,8 @@ export function readRscInitialFlight(doc?: Document): ReadableStream<Uint8Array>
   let stop = (): void => undefined;
   return new ReadableStream<Uint8Array>({
     start(controller) {
+      const watch = { childList: true, subtree: true, characterData: true };
+      const observer = new MutationObserver(() => drain());
       const finish = (error?: RscInitialFlightIncompleteProblem): void => {
         finished = true;
         stop();
@@ -364,6 +366,12 @@ export function readRscInitialFlight(doc?: Document): ReadableStream<Uint8Array>
         for (const block of waiting ? [waiting, ...unread] : unread) {
           const result = readFlightBlock(block);
           if (result.kind === "pending") {
+            // The block is watched on its own too: if React empties `#root`
+            // before the parser finishes it, its text still arrives, but no
+            // longer inside the observed document.
+            if (waiting !== block) {
+              observer.observe(block, watch);
+            }
             waiting = block;
             return;
           }
@@ -392,8 +400,7 @@ export function readRscInitialFlight(doc?: Document): ReadableStream<Uint8Array>
           finish(new RscInitialFlightIncompleteProblem(blocksRead, "ended-early"));
         }
       };
-      const observer = new MutationObserver(drain);
-      observer.observe(documentRef, { childList: true, subtree: true, characterData: true });
+      observer.observe(documentRef, watch);
       documentRef.addEventListener("DOMContentLoaded", drain);
       stop = () => {
         observer.disconnect();

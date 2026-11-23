@@ -123,6 +123,24 @@ describe("readRscInitialFlight", () => {
     expect((await reader.read()).done).toBe(true);
   });
 
+  it("hands over a detached block as soon as its text completes", async () => {
+    const doc = new StreamedFlightDocument();
+    doc.appendChunk("", '"QUJD');
+    const reader = open(doc);
+    const first = reader.read();
+    expect(await pending(first)).toBe(true);
+    const [partial] = doc.querySelectorAll();
+
+    doc.removeBlocks();
+    expect(await pending(first)).toBe(true);
+    if (partial) {
+      // No later block or document change follows: only the block itself changes.
+      doc.completeDetached(partial, '"QUJDRA=="');
+    }
+
+    expect(new TextDecoder().decode((await first).value)).toBe("ABCD");
+  });
+
   it("fails instead of stalling when a complete block cannot be decoded", async () => {
     const doc = new StreamedFlightDocument();
     doc.appendChunk("", '"%%%"');

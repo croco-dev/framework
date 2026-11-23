@@ -54,6 +54,8 @@ export class StreamedFlightDocument {
   private readonly blocks: Block[] = [];
   private readonly loaded = new Set<() => void>();
   readonly observers = new Set<() => void>();
+  /** Callbacks observing one block directly, keyed by the block. */
+  readonly blockObservers = new Map<object, Set<() => void>>();
 
   constructor(private readonly streamed = true) {}
 
@@ -95,6 +97,17 @@ export class StreamedFlightDocument {
     this.notify();
   }
 
+  /**
+   * Finishes the text of a block that is no longer in the document. Only
+   * observers watching that block see it, as with a detached DOM node.
+   */
+  completeDetached(block: { textContent: string }, text: string): void {
+    block.textContent = text;
+    for (const observer of this.blockObservers.get(block) ?? []) {
+      observer();
+    }
+  }
+
   /** Removes every block, as React does when it empties `#root` to re-render it. */
   removeBlocks(): void {
     this.blocks.length = 0;
@@ -133,12 +146,21 @@ export function mutationObserverFor(doc: StreamedFlightDocument): typeof Mutatio
       this.callback = callback;
     }
 
-    observe(): void {
-      doc.observers.add(this.callback);
+    observe(target: unknown): void {
+      if (target === doc) {
+        doc.observers.add(this.callback);
+        return;
+      }
+      const watchers = doc.blockObservers.get(target as object) ?? new Set<() => void>();
+      watchers.add(this.callback);
+      doc.blockObservers.set(target as object, watchers);
     }
 
     disconnect(): void {
       doc.observers.delete(this.callback);
+      for (const watchers of doc.blockObservers.values()) {
+        watchers.delete(this.callback);
+      }
     }
 
     takeRecords(): [] {
