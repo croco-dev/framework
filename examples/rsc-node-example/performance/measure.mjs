@@ -228,10 +228,12 @@ try {
         );
       }
       initialResponse = await page.goto(url);
+      // React reveals a completed boundary from a hidden container a little
+      // later, so wait until the recommendation is visible, not just present.
       await page.waitForFunction(
         () =>
           document.documentElement.dataset.pdpHydrated &&
-          document.getElementById("recommendation") &&
+          window.pdpLab.recommendationMs !== null &&
           window.pdpLab.heroMs !== null &&
           window.pdpLab.lcpMs !== null,
       );
