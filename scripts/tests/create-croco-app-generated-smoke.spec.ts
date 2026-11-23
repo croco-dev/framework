@@ -1932,7 +1932,27 @@ describe("create-croco-app generated smoke timing", () => {
       "caseResult.timing = finalizeSmokeCaseTiming(caseResult.steps, performance.now());";
 
     expect(source.split(finalizeCall)).toHaveLength(4);
-    expect(source.match(/finalizeSmokeCaseTiming\(/g)).toHaveLength(4);
+    expect(source.match(/finalizeSmokeCaseTiming\(/g)).toHaveLength(5);
+    expect(readFunctionSource(source, "prepareSmokeCase")).toContain(
+      "preparation: finalizeSmokeCaseTiming(caseResult.steps, performance.now()),",
+    );
+    expect(readFunctionSource(source, "applySmokeCaseVerification")).toContain(
+      "caseResult.timing = combineGeneratedSmokeCaseTiming(prepared.preparation, verification.timing);",
+    );
+    expect(readFunctionSource(source, "settleSmokeCaseVerification")).toContain(
+      "recordUnhandledSmokeCaseFailure(report, prepared.caseResult, prepared.projectDir, error);",
+    );
+    expect(
+      readFunctionSource(source, "verifyPreparedSmokeCases").match(
+        /settleSmokeCaseVerification\(/g,
+      ),
+    ).toHaveLength(2);
+    expect(readFunctionSource(source, "verifyPreparedSmokeCases")).not.toContain(
+      "applySmokeCaseVerification(",
+    );
+    expect(readFunctionSource(source, "verifyPreparedSmokeCaseInWorker")).toContain(
+      "if (isTrustedWorkerVerification(exit, verification.status)) return verification;",
+    );
     expect(
       source.match(
         /caseResult\.status = "passed";\n\s+caseResult\.timing = finalizeSmokeCaseTiming\(/g,
