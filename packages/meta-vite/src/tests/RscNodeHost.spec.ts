@@ -170,29 +170,43 @@ describe("Node RSC production build host", () => {
     }
     const decoder = new TextDecoder();
     let early = "";
-    // HTTP may cut a block anywhere, so read until a whole one has arrived.
-    while (!(early.includes('async=""') && splitStreamedFlight(early).flight.length > 0)) {
-      const { done, value } = await reader.read();
-      expect(done).toBe(false);
-      early += decoder.decode(value, { stream: true });
-    }
-
-    const beforeRelease = splitStreamedFlight(early);
-    expect(beforeRelease.html).toContain("holding");
-    expect(beforeRelease.html).not.toContain("held:released");
-    expect(beforeRelease.ended).toBe(false);
-    expect(new TextDecoder().decode(beforeRelease.flight)).toContain("Packed RSC");
-    // Every Flight block follows the whole shell, outside any element React hydrates.
-    expect(early.indexOf("</main>")).toBeLessThan(beforeRelease.blockOffsets[0] ?? -1);
-
-    await primary.build.invokeAction("release", null, { request: new Request(primary.origin) });
     let rest = "";
-    for (;;) {
-      const { done, value } = await reader.read();
-      if (done) {
-        break;
+    let released = false;
+    const release = async (): Promise<void> => {
+      released = true;
+      await primary.build.invokeAction("release", null, { request: new Request(primary.origin) });
+    };
+    // A failed assertion must not leave the held response open: closing the
+    // server waits for it, and the held render keeps the worker busy.
+    try {
+      // HTTP may cut a block anywhere, so read until a whole one has arrived.
+      while (!(early.includes('async=""') && splitStreamedFlight(early).flight.length > 0)) {
+        const { done, value } = await reader.read();
+        expect(done).toBe(false);
+        early += decoder.decode(value, { stream: true });
       }
-      rest += decoder.decode(value, { stream: true });
+
+      const beforeRelease = splitStreamedFlight(early);
+      expect(beforeRelease.html).toContain("holding");
+      expect(beforeRelease.html).not.toContain("held:released");
+      expect(beforeRelease.ended).toBe(false);
+      expect(new TextDecoder().decode(beforeRelease.flight)).toContain("Packed RSC");
+      // Every Flight block follows the whole shell, outside any element React hydrates.
+      expect(early.indexOf("</main>")).toBeLessThan(beforeRelease.blockOffsets[0] ?? -1);
+
+      await release();
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) {
+          break;
+        }
+        rest += decoder.decode(value, { stream: true });
+      }
+    } finally {
+      if (!released) {
+        await release();
+      }
+      await reader.cancel().catch(() => undefined);
     }
 
     const whole = splitStreamedFlight(early + rest);

@@ -111,11 +111,15 @@ export function interleaveFlight(
   let wakeFlight: (() => void) | undefined;
   let nextHtml: Promise<ReadableStreamReadResult<Uint8Array>> | undefined;
   let shellSent = false;
+  let htmlDone = false;
+  let flightDone = false;
 
   const flightRead = (async () => {
     for (;;) {
       const { done, value } = await flightReader.read();
       if (done) {
+        flightDone = true;
+        wakeFlight?.();
         return;
       }
       pendingFlight.push(value);
@@ -144,16 +148,41 @@ export function interleaveFlight(
     void flightReader.cancel(reason).catch(() => undefined);
     await htmlReader.cancel(reason).catch(() => undefined);
   };
-  const finish = async (
+  // The HTML can end before the Flight stream does, for example when a client
+  // component receives a promise that SSR never reads. The finished HTML goes
+  // out at once; later pulls carry the rest of the payload, then the end block.
+  const endHtml = (
     controller: ReadableStreamDefaultController<Uint8Array>,
     head: readonly Uint8Array[],
+  ): void => {
+    htmlDone = true;
+    shellSent = true;
+    const bytes = [...head, ...takeFlight()];
+    if (bytes.length > 0) {
+      controller.enqueue(concat(bytes));
+    }
+  };
+  const pullAfterHtml = async (
+    controller: ReadableStreamDefaultController<Uint8Array>,
   ): Promise<void> => {
+    if (pendingFlight.length === 0 && !flightDone) {
+      await flightArrival();
+    }
+    if (pendingFlight.length > 0) {
+      controller.enqueue(concat(takeFlight()));
+      return;
+    }
+    // Rethrows a Flight failure instead of closing a payload that never ended.
     await flightRead;
-    controller.enqueue(concat([...head, ...takeFlight(), FLIGHT_END_BLOCK]));
+    controller.enqueue(concat([FLIGHT_END_BLOCK]));
     controller.close();
   };
 
   const pull = async (controller: ReadableStreamDefaultController<Uint8Array>): Promise<void> => {
+    if (htmlDone) {
+      await pullAfterHtml(controller);
+      return;
+    }
     if (shellSent && pendingFlight.length > 0) {
       controller.enqueue(concat(takeFlight()));
       return;
@@ -166,7 +195,7 @@ export function interleaveFlight(
     }
     nextHtml = undefined;
     if (first.done) {
-      await finish(controller, []);
+      endHtml(controller, []);
       return;
     }
 
@@ -179,7 +208,7 @@ export function interleaveFlight(
       }
       nextHtml = undefined;
       if (next.done) {
-        await finish(controller, burst);
+        endHtml(controller, burst);
         return;
       }
       burst.push(next.value);

@@ -95,6 +95,34 @@ describe("interleaveFlight", () => {
     });
   }
 
+  it("sends finished HTML before the Flight stream ends", async () => {
+    const html = source();
+    const flight = source();
+    const reader = interleaveFlight(html.stream, flight.stream).getReader();
+    const decoder = new TextDecoder();
+
+    // A client component can hold a promise SSR never reads, so the HTML ends
+    // while a Flight row is still pending.
+    flight.enqueue("0:shell-row\n");
+    html.enqueue("<main>", "shell</main>");
+    html.close();
+
+    const first = splitStreamedFlight(decoder.decode((await reader.read()).value));
+    expect(first.html).toBe("<main>shell</main>");
+    expect(decoder.decode(first.flight)).toBe("0:shell-row\n");
+    expect(first.ended).toBe(false);
+
+    const next = reader.read();
+    flight.enqueue("1:late-row\n");
+    expect(decoder.decode(splitStreamedFlight(decoder.decode((await next).value)).flight)).toBe(
+      "1:late-row\n",
+    );
+
+    flight.close();
+    expect(splitStreamedFlight(decoder.decode((await reader.read()).value)).ended).toBe(true);
+    expect((await reader.read()).done).toBe(true);
+  });
+
   it("holds Flight rows that arrive before the shell until the shell is out", async () => {
     const html = source();
     const flight = source();

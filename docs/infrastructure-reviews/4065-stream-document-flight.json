@@ -12,7 +12,7 @@
         "packages/meta-vite/src/libs/rsc/flight.ts": "154c1463434b3969692c1bf28dfd5965fa523a1d0cc55e201821bd0aed086173",
         "packages/meta-vite/src/libs/rsc/flightBrowser.entry.ts": "9a15cbde4fe6c67faf73de9edb630cedccfe307736d6e767b2299792f652f450",
         "packages/meta-vite/src/libs/rsc/rscBuildProtocol.ts": "352e221e9593bd2bb2bea355f3819321eb60b7dc9c26a172ed37c550f2950d3a",
-        "packages/meta-vite/src/libs/rsc/rscBuildWorker.mts": "6e92b30c8360042e149468b4c6f26b4cc5ab42544c1c9021252d3a24bda033e4",
+        "packages/meta-vite/src/libs/rsc/rscBuildWorker.mts": "76b64b30ccecbf9702190f12952f29ac0085902da8cd5cac6ff063db4efaf992",
         "packages/meta-vite/src/libs/rsc/rscBuildWorkerClient.ts": "6f189420f612c2bfbb2ab7a082dc2a0f8993629d841b00081c598d33b7c7474c",
         "packages/meta-vite/src/libs/rsc/ssrEntry.ts": "2018309eb0799cb2a650c4ec8b3286d1177d513081059a4fdc1736a962742060"
       },
@@ -43,7 +43,7 @@
             "runtime": "node",
             "path": "packages/meta-vite/src/tests/RscNodeHost.spec.ts",
             "testName": "Node RSC production build host sends the shell, the client entry and the shell's Flight before a held boundary resolves",
-            "sha256": "d957d26bfbe95c9aa7f673cb20c02d1593d045ce03cf24d68dc1e61d4261db74"
+            "sha256": "1c0525fa9cf723397a745e70c4f43e5f61737e05e0e85d42cc7a029df48d245f"
           }
         },
         "aws-lambda": {
