@@ -6744,6 +6744,12 @@ importers:
       '@croco/framework-routes':
         specifier: workspace:*
         version: link:../framework-routes
+      '@opentelemetry/context-async-hooks':
+        specifier: ^2.9.0
+        version: 2.9.0(@opentelemetry/api@1.9.0)
+      '@opentelemetry/sdk-trace-base':
+        specifier: ^2.9.0
+        version: 2.9.0(@opentelemetry/api@1.9.0)
       vitest:
         specifier: 4.1.8
         version: 4.1.8(@opentelemetry/api@1.9.0)(@types/node@24.13.2)(@vitest/coverage-v8@4.1.8)(vite@7.3.7(@types/node@24.13.2)(jiti@2.6.1)(terser@5.51.2)(tsx@4.21.0)(yaml@2.9.0))

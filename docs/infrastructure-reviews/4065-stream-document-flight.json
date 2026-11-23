@@ -80,7 +80,7 @@
       "classification": "pure-contract",
       "reason": "Regenerates the Problem code registry with recovery metadata for meta-vite/rsc-initial-flight-incomplete. Registry data only.",
       "files": {
-        "packages/problems-core/src/generated/problem-code-registry.ts": "5c65bea0e3f609ad1a49c75d41aaf16c34ac894f3e0b2e92df6af35f06b56285"
+        "packages/problems-core/src/generated/problem-code-registry.ts": "030c19f97a431e9e46c43c366559f8dead5a38f00c6bbc7e0b298be54bab2ae8"
       },
       "catalogRuntimes": [],
       "profiles": {

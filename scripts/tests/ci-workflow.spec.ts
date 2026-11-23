@@ -272,6 +272,68 @@ describe("workflow token permissions", () => {
   });
 });
 
+describe("superseded pull request run cancellation", () => {
+  const CANCEL_REASON =
+    "jobs.cancel-superseded-runs actions write access must only force-cancel superseded same-repository pull request runs";
+
+  it("grants actions write only to the exact superseded-run cancellation job", () => {
+    expect(findWorkflowPermissionViolations({ "ci.yml": WORKFLOW })).toEqual([]);
+    expect(WORKFLOW).toContain(
+      "    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository\n    runs-on: ubuntu-latest\n    timeout-minutes: 5\n    permissions:\n      actions: write",
+    );
+  });
+
+  it.each([
+    [
+      "a fork pull request trigger",
+      (workflow: string) =>
+        workflow.replace(
+          "    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository\n    runs-on: ubuntu-latest\n    timeout-minutes: 5\n    permissions:\n      actions: write",
+          "    if: github.event_name == 'pull_request'\n    runs-on: ubuntu-latest\n    timeout-minutes: 5\n    permissions:\n      actions: write",
+        ),
+    ],
+    [
+      "a pull request code checkout",
+      (workflow: string) =>
+        workflow.replace(
+          "    steps:\n      - name: Force-cancel superseded pull request runs",
+          "    steps:\n      - name: Checkout\n        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1\n      - name: Force-cancel superseded pull request runs",
+        ),
+    ],
+    [
+      "an additional write scope",
+      (workflow: string) =>
+        workflow.replace(
+          "    permissions:\n      actions: write\n    steps:\n      - name: Force-cancel superseded pull request runs",
+          "    permissions:\n      actions: write\n      contents: read\n    steps:\n      - name: Force-cancel superseded pull request runs",
+        ),
+    ],
+    [
+      "cancellation of newer runs",
+      (workflow: string) =>
+        workflow.replace(
+          "select(.run_number < ${GITHUB_RUN_NUMBER}",
+          "select(.run_number != ${GITHUB_RUN_NUMBER}",
+        ),
+    ],
+    [
+      "cancellation of other repositories' runs",
+      (workflow: string) =>
+        workflow.replace(
+          ' and .head_repository.full_name == \\"${GITHUB_REPOSITORY}\\") | .id',
+          ") | .id",
+        ),
+    ],
+  ])("rejects cancellation boundary drift from %s", (_name, mutate) => {
+    const mutated = mutate(WORKFLOW);
+    expect(mutated).not.toBe(WORKFLOW);
+    expect(findWorkflowPermissionViolations({ "ci.yml": mutated })).toContainEqual({
+      path: "ci.yml",
+      reason: CANCEL_REASON,
+    });
+  });
+});
+
 describe("CI executable supply chain", () => {
   it("pins Gitleaks to a readable version and immutable OCI digest", () => {
     expect(findTrustedGitleaksImageViolations(WORKFLOW)).toEqual([]);
@@ -355,11 +417,11 @@ describe("Phase B cacheable verification shadow", () => {
     );
   });
 
-  it("cancels only pull request runs while giving each manual experiment an independent group", () => {
+  it("queues trunk pushes per ref while pull request and manual runs never wait on another run", () => {
     expect(WORKFLOW).toContain(
-      "group: ci-${{ github.event_name == 'workflow_dispatch' && github.run_id || github.ref }}",
+      "group: ci-${{ github.event_name == 'push' && github.ref || github.run_id }}",
     );
-    expect(WORKFLOW).toContain("cancel-in-progress: ${{ github.event_name == 'pull_request' }}");
+    expect(WORKFLOW).toContain("cancel-in-progress: false");
   });
 
   const producerJobs = [
@@ -605,13 +667,10 @@ describe("CI verification profile contract", () => {
         "env:\n  NODE_OPTIONS: --import ./scripts/bypass.mjs\n  # renovate:",
       ),
       WORKFLOW.replace(
-        "concurrency:\n  group: ci-${{ github.event_name == 'workflow_dispatch' && github.run_id || github.ref }}",
+        "concurrency:\n  group: ci-${{ github.event_name == 'push' && github.ref || github.run_id }}",
         "concurrency:\n  group: ci-global",
       ),
-      WORKFLOW.replace(
-        "cancel-in-progress: ${{ github.event_name == 'pull_request' }}",
-        "cancel-in-progress: true",
-      ),
+      WORKFLOW.replace("cancel-in-progress: false", "cancel-in-progress: true"),
       WORKFLOW.replace(
         "  pull_request:\n    branches:\n      - trunk",
         "  pull_request:\n    branches:\n      - trunk\n    paths:\n      - 'packages/**'",

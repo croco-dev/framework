@@ -1196,7 +1196,7 @@
       "sources": [
         {
           "file": "packages/transports-http/src/libs/CrocoRouteRegistrar.ts",
-          "line": 377,
+          "line": 380,
           "column": 12,
           "kind": "problem-factory"
         }
@@ -1226,7 +1226,7 @@
       "sources": [
         {
           "file": "packages/transports-http/src/libs/CrocoRouteRegistrar.ts",
-          "line": 282,
+          "line": 285,
           "column": 15,
           "kind": "problem-factory"
         }
@@ -33898,7 +33898,7 @@
       "sources": [
         {
           "file": "packages/transports-http/src/libs/CrocoRouteRegistrar.ts",
-          "line": 255,
+          "line": 258,
           "column": 15,
           "kind": "problem-factory"
         }

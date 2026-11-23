@@ -70,6 +70,8 @@
   },
   "devDependencies": {
     "@croco/framework-routes": "workspace:*",
+    "@opentelemetry/context-async-hooks": "^2.9.0",
+    "@opentelemetry/sdk-trace-base": "^2.9.0",
     "vitest": "4.1.8"
   },
   "vitest": {

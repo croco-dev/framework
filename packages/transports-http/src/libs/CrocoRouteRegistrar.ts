@@ -17,7 +17,7 @@ import {
 } from "@croco/problems-core";
 import type { Hono, Context as HonoContext } from "hono";
 import type { ErrorHandler } from "./ErrorHandler";
-import { HttpContext } from "./HttpContext";
+import { HttpContext, preserveBufferedResponse } from "./HttpContext";
 import { runWithResponseRequestScope } from "./ResponseRequestScope";
 import { isMiddlewareShortCircuit } from "./middleware/MiddlewareShortCircuit";
 import { getSecurityMiddlewareExportName } from "./middleware/SecurityMiddlewareMarker";
@@ -62,13 +62,12 @@ export class CrocoRouteRegistrar {
 
   register(route: CompiledRoute, options: RegisterRouteOptions = {}): void {
     const method = route.method.toLowerCase();
-    const telemetry = telemetryMiddleware(route.path);
-    const middlewares = [telemetry, ...this.globalMiddlewares];
+    const globalMiddlewares = [...this.globalMiddlewares];
 
     route.pipelineGraph = describeHttpPipelineGraph({
       ...route.pipelineGraphConfig,
       target: route.pipelineGraphConfig?.target ?? `${route.method.toUpperCase()} ${route.path}`,
-      middlewares,
+      middlewares: [telemetryMiddleware(route.path), ...globalMiddlewares],
     });
 
     const honoHandler = async (c: HonoContext) => {
@@ -105,7 +104,11 @@ export class CrocoRouteRegistrar {
       return runWithResponseRequestScope(
         requestContext,
         c.req.raw,
-        async (releaseAfterFailure) => {
+        async (releaseAfterFailure, observeResponseTrace) => {
+          const middlewares = [
+            telemetryMiddleware(route.path, observeResponseTrace),
+            ...globalMiddlewares,
+          ];
           let middlewareStartedAt: number | undefined;
           try {
             this.recordInspectionEvent(inspector, {
@@ -302,7 +305,7 @@ export class CrocoRouteRegistrar {
       let downstreamResponse: Response | undefined;
       const middlewareResponse = await middleware(ctx, async () => {
         nextCalled = true;
-        downstreamResponse = await dispatch(nextIndex + 1);
+        downstreamResponse = preserveBufferedResponse(await dispatch(nextIndex + 1));
         return downstreamResponse;
       });
       if (middlewareResponse instanceof Response) {

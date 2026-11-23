@@ -17,6 +17,8 @@ import {
 } from "@croco/framework-context";
 import { Problem } from "@croco/problems-core";
 import { HTTP_CONTEXT_KEYS } from "../contextKeys";
+import { isBufferedResponse } from "../HttpContext";
+import type { ResponseTrace } from "../ResponseRequestScope";
 import type { CrocoHttpContext, MiddlewareFunction } from "../types";
 
 export interface TraceParent {
@@ -106,7 +108,7 @@ const headerGetter = {
  * HTTP 요청마다 서버 Span을 생성하고 traceId를 컨텍스트에 저장하는 미들웨어입니다.
  */
 export const telemetryMiddleware =
-  (route: string): MiddlewareFunction =>
+  (route: string, observeResponseTrace?: (trace: ResponseTrace) => void): MiddlewareFunction =>
   async (ctx, next): Promise<void> => {
     let nextCalled = false;
 
@@ -139,20 +141,49 @@ export const telemetryMiddleware =
         "http.target": ctx.req.path,
       });
 
-      return await context.with(trace.setSpan(context.active(), span), async () => {
+      const serverContext = trace.setSpan(context.active(), span);
+      const observeBody = (response: Response | void): boolean => {
+        if (
+          !observeResponseTrace ||
+          !response?.body ||
+          ctx.req.method.toUpperCase() === "HEAD" ||
+          isBufferedResponse(response)
+        ) {
+          return false;
+        }
+        observeResponseTrace({
+          run: (callback) => context.with(serverContext, callback),
+          finish(failure) {
+            try {
+              try {
+                recordHttpCompletion(span, response.status);
+                if (failure) recordResponseBodyFailure(span, failure.error);
+              } finally {
+                endHttpSpan(span, response.status);
+              }
+            } catch (error) {
+              console.warn("[TelemetryMiddleware] Failed to finish response span", {
+                route,
+                errorName: toResponseBodyException(error).name,
+              });
+            }
+          },
+        });
+        return true;
+      };
+
+      return await context.with(serverContext, async () => {
+        let handedOff = false;
         try {
           nextCalled = true;
-          await next();
-
-          recordHttpCompletion(span, ctx.res.status);
+          handedOff = observeBody(await next());
+          if (!handedOff) recordHttpCompletion(span, ctx.res.status);
         } catch (error) {
           recordHttpFailure(span, error, ctx);
+          if (error instanceof Response) handedOff = observeBody(error);
           throw error;
         } finally {
-          span.addEvent("croco.http.request.end", {
-            "http.status_code": ctx.res.status,
-          });
-          span.end();
+          if (!handedOff) endHttpSpan(span, ctx.res.status);
         }
       });
     } catch (error) {
@@ -238,6 +269,34 @@ function recordHttpCompletion(span: Span, status: number): void {
   });
 }
 
+function endHttpSpan(span: Span, status: number): void {
+  try {
+    span.addEvent("croco.http.request.end", { "http.status_code": status });
+  } finally {
+    span.end();
+  }
+}
+
+function recordResponseBodyFailure(span: Span, error: unknown): void {
+  const exception = toResponseBodyException(error);
+  span.recordException(exception);
+  span.setAttribute("croco.failure.kind", "response-body");
+  span.setStatus({ code: SpanStatusCode.ERROR, message: exception.message });
+}
+
+function toResponseBodyException(error: unknown) {
+  try {
+    return error instanceof Error
+      ? toException(error)
+      : { name: "NonErrorThrown", message: String(error) };
+  } catch {
+    return {
+      name: "NonErrorThrown",
+      message: "Response body failure reason could not be formatted",
+    };
+  }
+}
+
 function recordHttpFailure(span: Span, error: unknown, ctx: CrocoHttpContext): void {
   const status = resolveFailureStatus(error);
   ctx.res.status = status;
@@ -291,12 +350,9 @@ function isProblem(error: unknown): error is Problem {
   return error instanceof Problem;
 }
 
-function toException(error: Error): Exception {
-  return {
-    name: error.name,
-    message: error.message,
-    stack: error.stack,
-  };
+function toException(error: Error) {
+  const { name, message, stack } = error;
+  return { name, message, ...(stack === undefined ? {} : { stack }) } satisfies Exception;
 }
 
 function setFailureStatus(span: Span, status: number, message?: string): void {

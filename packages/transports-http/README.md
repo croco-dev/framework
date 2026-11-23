@@ -109,6 +109,11 @@ continue to receive one string.
 `requestId`는 API Gateway `event.requestContext.requestId`를 우선 사용하고 없으면 Lambda
 `awsRequestId`를 사용합니다.
 
+Croco가 생성한 버퍼 응답은 본문을 읽기 전에 span을 종료합니다. 직접 생성한 Fetch `Response`에
+본문이 있으면 읽기 완료, 실패, 취소 또는 요청 중단 시점까지 span을 유지합니다. Fetch 호출자가
+본문을 읽지 않을 때는 본문을 취소해야 span이 종료됩니다. 본문 읽기에 실패하면 span에 실패 원인과
+이미 전송한 HTTP 상태 코드를 기록합니다.
+
 Telemetry 설정 자체가 실패하면 요청은 degraded mode로 계속 처리되지만 `X-Croco-Telemetry-Degraded`
 응답 헤더와 Problem Details의 `telemetry: { degraded: true, reason: "telemetry_setup_failed" }`
 메타데이터로 실패 증거를 남깁니다. 응답에는 안정적인 degradation reason만 직렬화하고 setup exception
