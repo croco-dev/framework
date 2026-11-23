@@ -311,7 +311,10 @@ describe("superseded pull request run cancellation", () => {
     [
       "cancellation of newer runs",
       (workflow: string) =>
-        workflow.replace("select(.id < ${GITHUB_RUN_ID}", "select(.id != ${GITHUB_RUN_ID}"),
+        workflow.replace(
+          "select(.run_number < ${GITHUB_RUN_NUMBER}",
+          "select(.run_number != ${GITHUB_RUN_NUMBER}",
+        ),
     ],
     [
       "cancellation of other repositories' runs",

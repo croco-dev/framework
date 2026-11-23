@@ -363,7 +363,7 @@ function inspectSupersededRunCancellationBoundary(
     hasExactKeys(environment, ["GH_TOKEN", "HEAD_BRANCH"]) &&
     environment?.GH_TOKEN === "${{ github.token }}" &&
     environment.HEAD_BRANCH === "${{ github.head_ref }}" &&
-    scriptDigest(script) === "8950fa71dbc5f33f9a22cf7277c685ebd9e79ac6a417cddb0a995609b9a413a6";
+    scriptDigest(script) === "6255d6f28bf068d2261757ffd8aba456e8de385367fc14ddef92a08d37a0968a";
 
   return valid
     ? []

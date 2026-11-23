@@ -1783,7 +1783,7 @@ jobs:
         run: |
           superseded=$(gh api --method GET "repos/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/runs" \
             -f event=pull_request -f branch="$HEAD_BRANCH" -F per_page=100 \
-            --jq ".workflow_runs[] | select(.id < ${GITHUB_RUN_ID} and .status != \"completed\" and .head_repository.full_name == \"${GITHUB_REPOSITORY}\") | .id")
+            --jq ".workflow_runs[] | select(.run_number < ${GITHUB_RUN_NUMBER} and .status != \"completed\" and .head_repository.full_name == \"${GITHUB_REPOSITORY}\") | .id")
           for run_id in $superseded; do
             echo "Force-cancelling superseded CI run ${run_id}"
             if ! gh api --method POST "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/force-cancel"; then
