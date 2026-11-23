@@ -1,6 +1,7 @@
 import { compareStrings } from "../tooling/compareStrings.mjs";
 import { createHash } from "node:crypto";
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
+import type { ChildProcess } from "node:child_process";
 import {
   closeSync,
   copyFileSync,
@@ -18,6 +19,7 @@ import {
 } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { basename, dirname, extname, isAbsolute, join, relative, resolve, sep } from "node:path";
+import { createInterface } from "node:readline";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { parse as parseYaml } from "yaml";
 import {
@@ -68,6 +70,14 @@ import {
   writePnpmWorkspaceOverrides,
 } from "./create-croco-app-generated-smoke-support.mts";
 import { assertGeneratedSmokeCaseDependencyMapping } from "./create-croco-app-generated-smoke-dependencies.mts";
+import {
+  combineGeneratedSmokeCaseTiming,
+  generatedSmokeCaseResourceLocks,
+  orderGeneratedSmokeCasesForPool,
+  prefixOutputLine,
+  resolveGeneratedSmokeConcurrency,
+  runWithResourceLocks,
+} from "./create-croco-app-generated-smoke-parallel.mts";
 import { inventoryDigest, readTestInventory } from "./test-inventory.mts";
 import { readCompletedPlaywrightPaths, readCompletedVitestPaths } from "./test-lane-runner.mts";
 import type { AppGoal } from "../packages/create-croco-app/src/types.ts";
@@ -660,10 +670,12 @@ const NEXT_IMAGE_DEPENDENCY_VALIDATION: SmokeValidation = {
 
 const commandCaptureMaxBytes = 64 * 1024 * 1024;
 const commandCaptureHeadBytes = 1024 * 1024;
-const smokeCaseOutputBuffers = new Map<
-  string,
-  { stdout: string[]; stderr: string[]; outputTruncated: boolean }
->();
+const GENERATED_SMOKE_WORKER_JOB_ENV = "CROCO_GENERATED_SMOKE_WORKER_JOB";
+// Case verification runs against a single-case report so that inline and worker
+// execution produce the same result shape; only the parent report is written.
+const unpublishedSmokeReports = new WeakSet<GeneratedSmokeReport>();
+type SmokeCaseOutputBuffer = { stdout: string[]; stderr: string[]; outputTruncated: boolean };
+const smokeCaseOutputBuffers = new Map<string, SmokeCaseOutputBuffer>();
 const sourceFileExtensions = new Set([
   ".js",
   ".jsx",
@@ -2576,7 +2588,12 @@ export function getGeneratedGoalSmokeCaseInputs(): readonly {
   });
 }
 
-if (isMainModule()) {
+const generatedSmokeWorkerJobPath = process.env[GENERATED_SMOKE_WORKER_JOB_ENV];
+if (isMainModule() && generatedSmokeWorkerJobPath) {
+  runGeneratedSmokeWorker(generatedSmokeWorkerJobPath);
+}
+
+if (isMainModule() && !generatedSmokeWorkerJobPath) {
   let smokeReport: GeneratedSmokeReport | undefined;
   const activeSmokeRoot = getSmokeRoot();
 
@@ -2663,92 +2680,37 @@ if (isMainModule()) {
     }
 
     const smokeCaseFailures: Error[] = [];
+    const preparedSmokeCases: PreparedSmokeCase[] = [];
 
     for (const smokeCase of selectedSmokeCases) {
       const projectDir = join(activeSmokeRoot, smokeCase.name);
       const caseResult = getSmokeCaseResult(smokeReport, smokeCase.name);
 
       try {
-        runSmokeCaseCommand(
-          smokeReport,
-          caseResult,
-          projectDir,
-          "generate",
-          "node",
-          [cliPath, projectDir, ...smokeCase.args],
-          rootDir,
+        preparedSmokeCases.push(
+          prepareSmokeCase({
+            report: smokeReport,
+            caseResult,
+            smokeCase,
+            projectDir,
+            packDir: join(activeSmokeRoot, "generated-package-packs"),
+            workspacePackageIndex,
+            packedWorkspacePackages,
+            builtWorkspacePackageNames,
+          }),
         );
-        assertGeneratedSmokeCaseDependencyMapping(smokeCase.name, projectDir, rootDir);
-        const generatedSmokeRangeOverrides = prepareLocalWorkspacePackages(
-          smokeReport,
-          caseResult,
-          projectDir,
-          join(activeSmokeRoot, "generated-package-packs"),
-          workspacePackageIndex,
-          packedWorkspacePackages,
-          builtWorkspacePackageNames,
-        );
-        assertGeneratedReadme(projectDir, smokeCase);
-        assertGeneratedNodeRuntimeContract(projectDir, smokeCase);
-        assertGeneratedEnvironmentTemplate(projectDir, smokeCase);
-        assertNoGeneratedSecurityValidationOptOut(projectDir, smokeCase);
-        assertNoGeneratedCredentialLookingValues(projectDir, smokeCase);
-        const installedRangeOverrides = prepareGeneratedSmokeDependencyOverrides(
-          projectDir,
-          smokeCase.name,
-          generatedSmokeRangeOverrides,
-        );
-        runSmokeCaseCommand(
-          smokeReport,
-          caseResult,
-          projectDir,
-          "install",
-          corepackCommand,
-          ["pnpm", "install"],
-          projectDir,
-        );
-        const lockfilePath = join(projectDir, "pnpm-lock.yaml");
-        assertExists(lockfilePath, `${smokeCase.name} did not create a pnpm lockfile`);
-        assertPnpmLockfileUsesLocalTarballOverrides(
-          lockfilePath,
-          smokeCase.name,
-          installedRangeOverrides,
-        );
-        assertExists(
-          join(projectDir, "node_modules"),
-          `${smokeCase.name} did not install dependencies with pnpm`,
-        );
-        runSmokeCaseCommand(
-          smokeReport,
-          caseResult,
-          projectDir,
-          "frozen install",
-          corepackCommand,
-          ["pnpm", "install", "--frozen-lockfile"],
-          projectDir,
-        );
-        for (const validation of smokeCase.validations) {
-          runValidation(projectDir, smokeCase, validation, smokeReport, caseResult);
-        }
-        runSaasMonetizationContractCanaries(projectDir, smokeCase, smokeReport, caseResult);
-        runGeneratedBrowserContractDriftCanaries(projectDir, smokeCase, smokeReport, caseResult);
-        runGraphQLContractDriftCanaries(projectDir, smokeCase, smokeReport, caseResult);
-        const executedGeneratedPaths = new Set(
-          caseResult.steps.flatMap(({ executedTestPaths }) => executedTestPaths),
-        );
-        caseResult.status = "passed";
-        caseResult.timing = finalizeSmokeCaseTiming(caseResult.steps, performance.now());
-        recordGeneratedTestMaterialization(projectDir, executedGeneratedPaths);
-        writeGeneratedSmokeReport(smokeReport);
       } catch (error) {
         recordUnhandledSmokeCaseFailure(smokeReport, caseResult, projectDir, error);
-        smokeCaseFailures.push(error instanceof Error ? error : new Error(toErrorMessage(error)));
-        writeGeneratedSmokeReport(smokeReport);
-        console.error(
-          `create-croco-app-generated-smoke: ${smokeCase.name} failed: ${toErrorMessage(error)}`,
-        );
+        reportSmokeCaseFailure(smokeReport, smokeCase.name, error, smokeCaseFailures);
       }
     }
+
+    await verifyPreparedSmokeCases(
+      smokeReport,
+      preparedSmokeCases,
+      activeSmokeRoot,
+      smokeCaseFailures,
+    );
 
     if (shouldRunRestSpaContracts) {
       try {
@@ -2800,6 +2762,361 @@ function isMainModule(): boolean {
 function getSmokeRoot(): string {
   smokeRoot ??= mkdtempSync(join(tmpdir(), "croco-generated-app-smoke-"));
   return smokeRoot;
+}
+
+type PreparedSmokeCase = {
+  readonly smokeCase: SmokeCase;
+  readonly caseResult: SmokeCaseResult;
+  readonly projectDir: string;
+  readonly installedRangeOverrides: Readonly<Record<string, string>>;
+  readonly preparation: SmokeMatrixCaseTiming;
+};
+
+type SmokeCaseVerification = {
+  readonly steps: SmokeStepResult[];
+  readonly status: SmokeStepStatus;
+  readonly timing: SmokeMatrixCaseTiming;
+  readonly error?: string;
+  readonly artifactBundle?: SmokeCaseArtifactBundle;
+  readonly failureClassification?: SmokeFailureClassification;
+  readonly reportFailure?: string;
+};
+
+type GeneratedSmokeWorkerJob = {
+  readonly caseName: string;
+  readonly projectDir: string;
+  readonly installedRangeOverrides: Readonly<Record<string, string>>;
+  readonly resultPath: string;
+  readonly preparationOutput?: SmokeCaseOutputBuffer;
+};
+
+function prepareSmokeCase(input: {
+  readonly report: GeneratedSmokeReport;
+  readonly caseResult: SmokeCaseResult;
+  readonly smokeCase: SmokeCase;
+  readonly projectDir: string;
+  readonly packDir: string;
+  readonly workspacePackageIndex: ReadonlyMap<string, WorkspacePackage>;
+  readonly packedWorkspacePackages: Map<string, string>;
+  readonly builtWorkspacePackageNames: Set<string>;
+}): PreparedSmokeCase {
+  const { report, caseResult, smokeCase, projectDir } = input;
+  runSmokeCaseCommand(
+    report,
+    caseResult,
+    projectDir,
+    "generate",
+    "node",
+    [cliPath, projectDir, ...smokeCase.args],
+    rootDir,
+  );
+  assertGeneratedSmokeCaseDependencyMapping(smokeCase.name, projectDir, rootDir);
+  const generatedSmokeRangeOverrides = prepareLocalWorkspacePackages(
+    report,
+    caseResult,
+    projectDir,
+    input.packDir,
+    input.workspacePackageIndex,
+    input.packedWorkspacePackages,
+    input.builtWorkspacePackageNames,
+  );
+  assertGeneratedReadme(projectDir, smokeCase);
+  assertGeneratedNodeRuntimeContract(projectDir, smokeCase);
+  assertGeneratedEnvironmentTemplate(projectDir, smokeCase);
+  assertNoGeneratedSecurityValidationOptOut(projectDir, smokeCase);
+  assertNoGeneratedCredentialLookingValues(projectDir, smokeCase);
+  const installedRangeOverrides = prepareGeneratedSmokeDependencyOverrides(
+    projectDir,
+    smokeCase.name,
+    generatedSmokeRangeOverrides,
+  );
+  return {
+    smokeCase,
+    caseResult,
+    projectDir,
+    installedRangeOverrides,
+    preparation: finalizeSmokeCaseTiming(caseResult.steps, performance.now()),
+  };
+}
+
+function createUnpublishedCaseReport(smokeCase: SmokeCase): {
+  readonly report: GeneratedSmokeReport;
+  readonly caseResult: SmokeCaseResult;
+} {
+  const report = createGeneratedSmokeReport([smokeCase], true, undefined, [smokeCase.name]);
+  unpublishedSmokeReports.add(report);
+  return { report, caseResult: getSmokeCaseResult(report, smokeCase.name) };
+}
+
+function toSmokeCaseVerification(
+  report: GeneratedSmokeReport,
+  caseResult: SmokeCaseResult,
+): SmokeCaseVerification {
+  if (!caseResult.timing) {
+    throw new Error(`${caseResult.name} verification finished without case timing`);
+  }
+  return {
+    steps: caseResult.steps,
+    status: caseResult.status,
+    timing: caseResult.timing,
+    error: caseResult.error,
+    artifactBundle: caseResult.artifactBundle,
+    failureClassification: caseResult.failureClassification,
+    reportFailure: report.failure,
+  };
+}
+
+function verifyPreparedSmokeCase(
+  smokeCase: SmokeCase,
+  projectDir: string,
+  installedRangeOverrides: Readonly<Record<string, string>>,
+): SmokeCaseVerification {
+  const { report, caseResult } = createUnpublishedCaseReport(smokeCase);
+  try {
+    runSmokeCaseCommand(
+      report,
+      caseResult,
+      projectDir,
+      "install",
+      corepackCommand,
+      ["pnpm", "install"],
+      projectDir,
+    );
+    const lockfilePath = join(projectDir, "pnpm-lock.yaml");
+    assertExists(lockfilePath, `${smokeCase.name} did not create a pnpm lockfile`);
+    assertPnpmLockfileUsesLocalTarballOverrides(
+      lockfilePath,
+      smokeCase.name,
+      installedRangeOverrides,
+    );
+    assertExists(
+      join(projectDir, "node_modules"),
+      `${smokeCase.name} did not install dependencies with pnpm`,
+    );
+    runSmokeCaseCommand(
+      report,
+      caseResult,
+      projectDir,
+      "frozen install",
+      corepackCommand,
+      ["pnpm", "install", "--frozen-lockfile"],
+      projectDir,
+    );
+    for (const validation of smokeCase.validations) {
+      runValidation(projectDir, smokeCase, validation, report, caseResult);
+    }
+    runSaasMonetizationContractCanaries(projectDir, smokeCase, report, caseResult);
+    runGeneratedBrowserContractDriftCanaries(projectDir, smokeCase, report, caseResult);
+    runGraphQLContractDriftCanaries(projectDir, smokeCase, report, caseResult);
+    caseResult.status = "passed";
+    caseResult.timing = finalizeSmokeCaseTiming(caseResult.steps, performance.now());
+  } catch (error) {
+    recordUnhandledSmokeCaseFailure(report, caseResult, projectDir, error);
+  }
+  return toSmokeCaseVerification(report, caseResult);
+}
+
+function verificationWithoutWorkerResult(
+  prepared: PreparedSmokeCase,
+  error: unknown,
+): SmokeCaseVerification {
+  const { report, caseResult } = createUnpublishedCaseReport(prepared.smokeCase);
+  recordUnhandledSmokeCaseFailure(report, caseResult, prepared.projectDir, error);
+  return toSmokeCaseVerification(report, caseResult);
+}
+
+function applySmokeCaseVerification(
+  report: GeneratedSmokeReport,
+  prepared: PreparedSmokeCase,
+  verification: SmokeCaseVerification,
+  smokeCaseFailures: Error[],
+): void {
+  const { caseResult } = prepared;
+  caseResult.steps.push(...verification.steps);
+  caseResult.status = verification.status;
+  caseResult.timing = combineGeneratedSmokeCaseTiming(prepared.preparation, verification.timing);
+  if (verification.status === "passed") {
+    recordGeneratedTestMaterialization(
+      prepared.projectDir,
+      new Set(verification.steps.flatMap(({ executedTestPaths }) => executedTestPaths)),
+    );
+    writeGeneratedSmokeReport(report);
+    return;
+  }
+  caseResult.error = verification.error;
+  caseResult.artifactBundle = verification.artifactBundle;
+  caseResult.failureClassification = verification.failureClassification;
+  report.status = "failed";
+  report.failure = verification.reportFailure ?? verification.error;
+  report.failureTier ??= caseResult.tier;
+  reportSmokeCaseFailure(
+    report,
+    caseResult.name,
+    new Error(verification.error ?? `${caseResult.name} verification failed`),
+    smokeCaseFailures,
+  );
+}
+
+function reportSmokeCaseFailure(
+  report: GeneratedSmokeReport,
+  caseName: string,
+  error: unknown,
+  smokeCaseFailures: Error[],
+): void {
+  smokeCaseFailures.push(error instanceof Error ? error : new Error(toErrorMessage(error)));
+  writeGeneratedSmokeReport(report);
+  console.error(`create-croco-app-generated-smoke: ${caseName} failed: ${toErrorMessage(error)}`);
+}
+
+async function verifyPreparedSmokeCases(
+  report: GeneratedSmokeReport,
+  preparedSmokeCases: readonly PreparedSmokeCase[],
+  activeSmokeRoot: string,
+  smokeCaseFailures: Error[],
+): Promise<void> {
+  const concurrency = resolveGeneratedSmokeConcurrency();
+  if (concurrency === 1 || preparedSmokeCases.length <= 1) {
+    for (const prepared of preparedSmokeCases) {
+      applySmokeCaseVerification(
+        report,
+        prepared,
+        verifyPreparedSmokeCase(
+          prepared.smokeCase,
+          prepared.projectDir,
+          prepared.installedRangeOverrides,
+        ),
+        smokeCaseFailures,
+      );
+    }
+    return;
+  }
+
+  console.log(
+    `create-croco-app-generated-smoke: verifying ${preparedSmokeCases.length} cases with ${concurrency} workers`,
+  );
+  const locksOf = (prepared: PreparedSmokeCase) =>
+    generatedSmokeCaseResourceLocks(prepared.smokeCase.validations);
+  await runWithResourceLocks(orderGeneratedSmokeCasesForPool(preparedSmokeCases, locksOf), {
+    concurrency,
+    locksOf,
+    run: async (prepared) => {
+      let verification: SmokeCaseVerification;
+      try {
+        verification = await verifyPreparedSmokeCaseInWorker(prepared, activeSmokeRoot);
+      } catch (error) {
+        verification = verificationWithoutWorkerResult(prepared, error);
+      }
+      applySmokeCaseVerification(report, prepared, verification, smokeCaseFailures);
+    },
+  });
+}
+
+async function verifyPreparedSmokeCaseInWorker(
+  prepared: PreparedSmokeCase,
+  activeSmokeRoot: string,
+): Promise<SmokeCaseVerification> {
+  const caseName = prepared.smokeCase.name;
+  const jobPath = join(activeSmokeRoot, `${caseName}.verification-job.json`);
+  const resultPath = join(activeSmokeRoot, `${caseName}.verification-result.json`);
+  const job: GeneratedSmokeWorkerJob = {
+    caseName,
+    projectDir: prepared.projectDir,
+    installedRangeOverrides: prepared.installedRangeOverrides,
+    resultPath,
+    preparationOutput: smokeCaseOutputBuffers.get(caseName),
+  };
+  writeFileSync(jobPath, `${JSON.stringify(job)}\n`);
+
+  const child = spawn(process.execPath, [...process.execArgv, __filename], {
+    cwd: rootDir,
+    env: {
+      ...process.env,
+      [GENERATED_SMOKE_WORKER_JOB_ENV]: jobPath,
+      CROCO_GENERATED_SMOKE_REPORT_DIR: generatedSmokeReportDir,
+    },
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  const stderrTail: string[] = [];
+  forwardPrefixedOutput(child, caseName, stderrTail);
+  const exit = await new Promise<{ code: number | null; signal: NodeJS.Signals | null }>(
+    (resolveExit, rejectExit) => {
+      child.once("error", rejectExit);
+      child.once("close", (code, signal) => resolveExit({ code, signal }));
+    },
+  );
+
+  if (existsSync(resultPath)) {
+    return readWorkerVerification(readFileSync(resultPath, "utf8"));
+  }
+  return verificationWithoutWorkerResult(
+    prepared,
+    new Error(
+      `${caseName} verification worker exited (code ${exit.code}, signal ${exit.signal}) before writing a result${
+        stderrTail.length > 0 ? `:\n${stderrTail.join("\n")}` : ""
+      }`,
+    ),
+  );
+}
+
+function forwardPrefixedOutput(child: ChildProcess, caseName: string, stderrTail: string[]): void {
+  if (child.stdout) {
+    createInterface({ input: child.stdout }).on("line", (line) => {
+      process.stdout.write(`${prefixOutputLine(caseName, line)}\n`);
+    });
+  }
+  if (child.stderr) {
+    createInterface({ input: child.stderr }).on("line", (line) => {
+      process.stderr.write(`${prefixOutputLine(caseName, line)}\n`);
+      stderrTail.push(line);
+      if (stderrTail.length > 40) stderrTail.shift();
+    });
+  }
+}
+
+function readWorkerVerification(source: string): SmokeCaseVerification {
+  const parsed: unknown = JSON.parse(source);
+  if (
+    typeof parsed !== "object" ||
+    parsed === null ||
+    !("timeOrigin" in parsed) ||
+    typeof parsed.timeOrigin !== "number" ||
+    !("verification" in parsed) ||
+    typeof parsed.verification !== "object" ||
+    parsed.verification === null ||
+    !("steps" in parsed.verification) ||
+    !Array.isArray(parsed.verification.steps) ||
+    !("status" in parsed.verification) ||
+    (parsed.verification.status !== "passed" && parsed.verification.status !== "failed")
+  ) {
+    throw new Error("Generated smoke verification worker wrote an unreadable result");
+  }
+  // The result file is written by runGeneratedSmokeWorker from a SmokeCaseVerification.
+  const verification = parsed.verification as SmokeCaseVerification;
+  const clockOffset = parsed.timeOrigin - performance.timeOrigin;
+  return {
+    ...verification,
+    steps: verification.steps.map((step) => ({ ...step, startedAt: step.startedAt + clockOffset })),
+  };
+}
+
+function runGeneratedSmokeWorker(jobPath: string): void {
+  // The job file is written by verifyPreparedSmokeCaseInWorker in the parent process.
+  const job = JSON.parse(readFileSync(jobPath, "utf8")) as GeneratedSmokeWorkerJob;
+  const smokeCase = selectableSmokeCases.find(({ name }) => name === job.caseName);
+  if (!smokeCase) {
+    throw new Error(`Generated smoke worker received unknown case ${job.caseName}`);
+  }
+  // Failure artifacts carry the whole case output, including generate and pack steps from the parent.
+  if (job.preparationOutput) smokeCaseOutputBuffers.set(smokeCase.name, job.preparationOutput);
+  const verification = verifyPreparedSmokeCase(
+    smokeCase,
+    job.projectDir,
+    job.installedRangeOverrides,
+  );
+  writeFileSync(
+    job.resultPath,
+    `${JSON.stringify({ timeOrigin: performance.timeOrigin, verification })}\n`,
+  );
 }
 
 function runGeneratedAppContractGates(report: GeneratedSmokeReport): void {
@@ -2862,6 +3179,7 @@ function createGeneratedSmokeReport(
 }
 
 function writeGeneratedSmokeReport(report: GeneratedSmokeReport): void {
+  if (unpublishedSmokeReports.has(report)) return;
   mkdirSync(generatedSmokeReportDir, { recursive: true });
   refreshGeneratedSmokeReportStatus(report);
 

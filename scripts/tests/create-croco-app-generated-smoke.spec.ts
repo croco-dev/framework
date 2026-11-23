@@ -1932,7 +1932,13 @@ describe("create-croco-app generated smoke timing", () => {
       "caseResult.timing = finalizeSmokeCaseTiming(caseResult.steps, performance.now());";
 
     expect(source.split(finalizeCall)).toHaveLength(4);
-    expect(source.match(/finalizeSmokeCaseTiming\(/g)).toHaveLength(4);
+    expect(source.match(/finalizeSmokeCaseTiming\(/g)).toHaveLength(5);
+    expect(readFunctionSource(source, "prepareSmokeCase")).toContain(
+      "preparation: finalizeSmokeCaseTiming(caseResult.steps, performance.now()),",
+    );
+    expect(readFunctionSource(source, "applySmokeCaseVerification")).toContain(
+      "caseResult.timing = combineGeneratedSmokeCaseTiming(prepared.preparation, verification.timing);",
+    );
     expect(
       source.match(
         /caseResult\.status = "passed";\n\s+caseResult\.timing = finalizeSmokeCaseTiming\(/g,
