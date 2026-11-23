@@ -1,10 +1,12 @@
 # Stream a document's Flight payload with its HTML so the shell hydrates early
 
-Ticket: #4065. Supersedes the document-payload decisions of
-[2026-11-22-4064-node-rsc-build-worker](2026-11-22-4064-node-rsc-build-worker.md).
+Ticket: #4065
 
 ## Context
 
+- This replaces the document-payload decision of
+  [2026-11-22-4064-node-rsc-build-worker](2026-11-22-4064-node-rsc-build-worker.md): a document request no longer
+  buffers the whole Flight payload in the worker and embeds it after the HTML.
 - The #4064 worker buffered a document's whole Flight payload and the host appended it, with a
   `<script type="module">`, after the HTML ended (`rscBuildWorker.mts` `readBase64`, `renderServer.ts`
   `createRscDocumentTail` at `47dbd57`). A pending Suspense boundary keeps that HTML open, so the client
@@ -30,10 +32,14 @@ Ticket: #4065. Supersedes the document-payload decisions of
   longer appends a script or a payload after the HTML. `createRscHtmlShell()` writes
   `<meta name="croco:rsc-initial-flight" content="streamed">` in the head so a client entry that runs
   before the first block still knows the payload is coming.
-- `readRscInitialFlight()` keeps its signature and returns a stream that yields each block once its
-  text is complete (a closing quote, or `null` for the end block), watches the document for later
+- `readRscInitialFlight()` keeps its name and its no-argument call; its optional `doc` parameter now takes a DOM
+  `Document`, because the reader watches the document with a `MutationObserver`. It returns a stream that yields
+  each block once its text is complete (a closing quote, or `null` for the end block), watches the document for later
   blocks, closes at the end block and fails with `meta-vite/rsc-initial-flight-incomplete` if the
-  document finishes without it.
+  document finishes without it or a block cannot be decoded. It tracks blocks by identity, because a hydration
+  mismatch makes React empty `#root`, removing blocks already read, while the parser keeps appending later ones.
+- The built `ssr` entry version becomes `croco.meta-vite.rsc-ssr-entry.v2`, so a build made before this change,
+  whose `ssr` entry does not write the client entry, fails at startup instead of serving pages that never hydrate.
 - `RscDocumentRender` loses `embeddedFlight`; its `html` stream carries the payload.
 
 Alternatives not chosen:

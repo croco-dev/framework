@@ -38,7 +38,11 @@ export function splitStreamedFlight(document: string): StreamedFlightParts {
   };
 }
 
-type Block = { readonly kind: string; readonly text: string };
+type Block = {
+  readonly kind: string;
+  textContent: string;
+  getAttribute(name: string): string | null;
+};
 
 /**
  * The parts of a loading document `readRscInitialFlight` reads, fed by a test
@@ -60,14 +64,9 @@ export class StreamedFlightDocument {
     return { getAttribute: (name) => (name === "content" ? "streamed" : null) };
   }
 
-  querySelectorAll(): readonly {
-    readonly textContent: string;
-    getAttribute(name: string): string | null;
-  }[] {
-    return this.blocks.map((block) => ({
-      textContent: block.text,
-      getAttribute: (name) => (name === RSC_INITIAL_FLIGHT_ATTRIBUTE ? block.kind : null),
-    }));
+  // The same objects on every call, as a DOM returns the same elements.
+  querySelectorAll(): readonly Block[] {
+    return [...this.blocks];
   }
 
   addEventListener(_type: string, listener: () => void): void {
@@ -80,21 +79,34 @@ export class StreamedFlightDocument {
 
   appendChunk(bytes: readonly number[] | string, text?: string): void {
     const payload = typeof bytes === "string" ? bytes : Buffer.from(bytes).toString("base64");
-    this.blocks.push({ kind: "chunk", text: text ?? JSON.stringify(payload) });
-    this.notify();
+    this.append("chunk", text ?? JSON.stringify(payload));
   }
 
   appendEnd(text = "null"): void {
-    this.blocks.push({ kind: "end", text });
-    this.notify();
+    this.append("end", text);
   }
 
   /** Completes the text of the last block, as a parser does when more bytes arrive. */
   completeLast(text: string): void {
-    const last = this.blocks.pop();
+    const last = this.blocks.at(-1);
     if (last) {
-      this.blocks.push({ kind: last.kind, text });
+      last.textContent = text;
     }
+    this.notify();
+  }
+
+  /** Removes every block, as React does when it empties `#root` to re-render it. */
+  removeBlocks(): void {
+    this.blocks.length = 0;
+    this.notify();
+  }
+
+  private append(kind: string, textContent: string): void {
+    this.blocks.push({
+      kind,
+      textContent,
+      getAttribute: (name) => (name === RSC_INITIAL_FLIGHT_ATTRIBUTE ? kind : null),
+    });
     this.notify();
   }
 

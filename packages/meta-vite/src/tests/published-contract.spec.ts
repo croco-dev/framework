@@ -195,7 +195,7 @@ describe("published @croco/meta-vite contract", () => {
             heldContent: null,
             flightRequests: 0,
           },
-          afterRelease: { held: "held:released", counter: "count=1" },
+          afterRelease: { held: "held:released", counter: "count=1", hydrationErrors: [] },
           consoleErrors: [],
           hydrationErrors: [],
           slow: "slow:resolved",
@@ -907,6 +907,9 @@ async function exerciseInBrowser(origin: string): Promise<Record<string, unknown
     const afterRelease = {
       held: await page.textContent("[data-testid=held]"),
       counter: await page.textContent("[data-testid=counter]"),
+      // A recovered mismatch while the boundary was held means React re-rendered
+      // part of the server HTML instead of hydrating it.
+      hydrationErrors: await page.evaluate<string[]>("window.__hydrationErrors ?? []"),
     };
 
     await page.goto(`${origin}/`);

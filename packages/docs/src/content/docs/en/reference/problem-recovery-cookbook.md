@@ -14741,7 +14741,7 @@ Sources:
 
 Sources:
 
-- `packages/meta-vite/src/libs/rsc/flight.ts:138:1` (problem-class)
+- `packages/meta-vite/src/libs/rsc/flight.ts:140:1` (problem-class)
 
 <a id="meta-vite-rsc-encoder-entry-invalid-input"></a>
 
@@ -14860,14 +14860,14 @@ Sources:
 - Retryability: `conditional`
 - Redaction policy: `operator-only`
 - Lifecycle: `active`
-- Cause: The document finished loading before the block that ends its streamed Flight payload, so the response was cut off mid-render.
+- Cause: The browser could not read the document's streamed Flight payload to its end: the document finished loading before the block that ends it (reason ended-early, the response was cut off mid-render), or a block was not a base64 JSON string (reason unreadable-block).
 - User action: Reload the page.
 - Operator action: Check the server logs for an RSC HTML stream failure or a dropped connection on that request; the extensions record how many Flight blocks the browser read.
 - Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
 
 Sources:
 
-- `packages/meta-vite/src/libs/rsc/flight.ts:109:1` (problem-class)
+- `packages/meta-vite/src/libs/rsc/flight.ts:111:1` (problem-class)
 
 <a id="meta-vite-rsc-peer-missing"></a>
 
@@ -14921,7 +14921,7 @@ Sources:
 
 Sources:
 
-- `packages/meta-vite/src/libs/rsc/flight.ts:123:1` (problem-class)
+- `packages/meta-vite/src/libs/rsc/flight.ts:125:1` (problem-class)
 
 <a id="meta-vite-server-action-duplicate-registration"></a>
 

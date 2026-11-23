@@ -28,8 +28,12 @@ export class RscRouteNotInBuildProblem extends Problem {
  */
 export const RSC_SERVER_ENTRY_VERSION = "croco.meta-vite.rsc-server-entry.v1" as const;
 
-/** Marks the default export of a built `ssr` entry. */
-export const RSC_SSR_ENTRY_VERSION = "croco.meta-vite.rsc-ssr-entry.v1" as const;
+/**
+ * Marks the default export of a built `ssr` entry. v2 entries write the client
+ * entry as a React bootstrap module; a v1 build relied on the host appending
+ * it, so loading one now would leave the page without a client entry.
+ */
+export const RSC_SSR_ENTRY_VERSION = "croco.meta-vite.rsc-ssr-entry.v2" as const;
 
 /** The route metadata the host reads from a built `rsc` entry. */
 export type RscBuildRoute = {

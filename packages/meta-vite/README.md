@@ -407,8 +407,9 @@ cross that thread boundary as plain data:
   the shell. The browser entry therefore runs while late boundaries are still pending, and
   `readRscInitialFlight()` hands the decoder each block as the parser reaches it: the shell and its
   client islands hydrate and respond before a slow boundary resolves, and that boundary fills in
-  later without remounting them. A document that ends without the `end` block fails the stream with
-  `meta-vite/rsc-initial-flight-incomplete`. Base64 keeps binary rows (typed arrays, `ArrayBuffer`)
+  later without remounting them. The reader tracks blocks by identity, so a hydration mismatch that
+  makes React empty `#root` does not lose rows. A document that ends without the `end` block, or a
+  block that cannot be decoded, fails the stream with `meta-vite/rsc-initial-flight-incomplete`. Base64 keeps binary rows (typed arrays, `ArrayBuffer`)
   unchanged and cannot close its script element. The blocks are data, not script, so they add no
   CSP requirement; React's own streaming Suspense still writes inline scripts. A Flight request
   streams one chunk per pull.

@@ -5,8 +5,10 @@ prev: false
 title: "RscInitialFlightIncompleteProblem"
 ---
 
-The document finished loading before the block that ends its streamed
-Flight payload, so the response was cut off mid-render.
+The document's streamed Flight payload cannot be read to its end: the
+document finished loading before the block that ends it (`ended-early`, the
+response was cut off mid-render), or a block is not a base64 JSON string
+(`unreadable-block`).
 
 ## Extends
 
@@ -16,13 +18,17 @@ Flight payload, so the response was cut off mid-render.
 
 ### Constructor
 
-> **new RscInitialFlightIncompleteProblem**(`blocksRead`): `RscInitialFlightIncompleteProblem`
+> **new RscInitialFlightIncompleteProblem**(`blocksRead`, `reason`): `RscInitialFlightIncompleteProblem`
 
 #### Parameters
 
 ##### blocksRead
 
 `number`
+
+##### reason
+
+`"ended-early"` \| `"unreadable-block"`
 
 #### Returns
 

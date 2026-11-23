@@ -8,8 +8,8 @@
       "files": {
         "packages/meta-vite/src/index.ts": "66ab0357aa7cc97df7fbac686142ab4887db593ceb246e1f9cd3eb66a9e0653d",
         "packages/meta-vite/src/libs/render/renderServer.ts": "ad471a9b11246d2369e39dbe784d451311a9dc7ac92263055c38abeb3d38b788",
-        "packages/meta-vite/src/libs/rsc/buildEntry.ts": "d7c50e951dbd2ef3f9d2ef1a755961cebe2d5ba1f813e3dff512a209620a66a1",
-        "packages/meta-vite/src/libs/rsc/flight.ts": "17ecd06e3470b6106dce4d07ee2c77be90c200765f5f093e781e3b79cd775fab",
+        "packages/meta-vite/src/libs/rsc/buildEntry.ts": "f3c5ba7f09b35e7a751d04409aa4c7b280fb6d555cbad2325b8cefdca0d02dec",
+        "packages/meta-vite/src/libs/rsc/flight.ts": "154c1463434b3969692c1bf28dfd5965fa523a1d0cc55e201821bd0aed086173",
         "packages/meta-vite/src/libs/rsc/flightBrowser.entry.ts": "9a15cbde4fe6c67faf73de9edb630cedccfe307736d6e767b2299792f652f450",
         "packages/meta-vite/src/libs/rsc/rscBuildProtocol.ts": "352e221e9593bd2bb2bea355f3819321eb60b7dc9c26a172ed37c550f2950d3a",
         "packages/meta-vite/src/libs/rsc/rscBuildWorker.mts": "6e92b30c8360042e149468b4c6f26b4cc5ab42544c1c9021252d3a24bda033e4",
@@ -80,7 +80,7 @@
       "classification": "pure-contract",
       "reason": "Regenerates the Problem code registry with recovery metadata for meta-vite/rsc-initial-flight-incomplete. Registry data only.",
       "files": {
-        "packages/problems-core/src/generated/problem-code-registry.ts": "e068f7d1053ff2b51b0acb444eee53e1571199baaa44a56f5bf01ac57ffb8fbb"
+        "packages/problems-core/src/generated/problem-code-registry.ts": "5c65bea0e3f609ad1a49c75d41aaf16c34ac894f3e0b2e92df6af35f06b56285"
       },
       "catalogRuntimes": [],
       "profiles": {

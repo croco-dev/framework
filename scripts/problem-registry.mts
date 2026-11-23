@@ -4013,7 +4013,7 @@ const recoveryMetadataByCode = {
   }),
   "meta-vite/rsc-initial-flight-incomplete": recovery({
     cause:
-      "The document finished loading before the block that ends its streamed Flight payload, so the response was cut off mid-render.",
+      "The browser could not read the document's streamed Flight payload to its end: the document finished loading before the block that ends it (reason ended-early, the response was cut off mid-render), or a block was not a base64 JSON string (reason unreadable-block).",
     userAction: "Reload the page.",
     operatorAction:
       "Check the server logs for an RSC HTML stream failure or a dropped connection on that request; the extensions record how many Flight blocks the browser read.",

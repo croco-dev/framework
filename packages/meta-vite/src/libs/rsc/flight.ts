@@ -103,19 +103,21 @@ export class RscClientManifestMismatchProblem extends Problem {
 }
 
 /**
- * The document finished loading before the block that ends its streamed
- * Flight payload, so the response was cut off mid-render.
+ * The document's streamed Flight payload cannot be read to its end: the
+ * document finished loading before the block that ends it (`ended-early`, the
+ * response was cut off mid-render), or a block is not a base64 JSON string
+ * (`unreadable-block`).
  */
 export class RscInitialFlightIncompleteProblem extends Problem {
   readonly code = "meta-vite/rsc-initial-flight-incomplete";
   readonly category = ProblemCategory.InternalServerError;
 
-  constructor(blocksRead: number) {
+  constructor(blocksRead: number, reason: "ended-early" | "unreadable-block") {
     super(
       "meta-vite/rsc-initial-flight-incomplete",
       ProblemCategory.InternalServerError,
-      "The document ended before its streamed Flight payload was complete",
-      { extensions: { blocksRead } },
+      "The document's streamed Flight payload could not be read to its end",
+      { extensions: { blocksRead, reason } },
     );
   }
 }
@@ -336,41 +338,58 @@ export function readRscInitialFlight(doc?: Document): ReadableStream<Uint8Array>
     return null;
   }
 
-  let consumed = 0;
+  // Blocks are tracked by identity, not by position: when a hydration mismatch
+  // makes React re-render the root, it empties `#root`, which removes the
+  // blocks already read, and the parser keeps appending later ones there.
+  const read = new WeakSet<Element>();
+  let waiting: Element | undefined;
+  let blocksRead = 0;
   let finished = false;
   let stop = (): void => undefined;
   return new ReadableStream<Uint8Array>({
     start(controller) {
+      const finish = (error?: RscInitialFlightIncompleteProblem): void => {
+        finished = true;
+        stop();
+        if (error) {
+          controller.error(error);
+        } else {
+          controller.close();
+        }
+      };
+      const drainBlocks = (): void => {
+        const unread = Array.from(
+          documentRef.querySelectorAll(`script[${RSC_INITIAL_FLIGHT_ATTRIBUTE}]`),
+        ).filter((block) => !read.has(block) && block !== waiting);
+        for (const block of waiting ? [waiting, ...unread] : unread) {
+          const result = readFlightBlock(block);
+          if (result.kind === "pending") {
+            waiting = block;
+            return;
+          }
+          waiting = undefined;
+          read.add(block);
+          if (result.kind !== "chunk") {
+            finish(
+              result.kind === "end"
+                ? undefined
+                : new RscInitialFlightIncompleteProblem(blocksRead, "unreadable-block"),
+            );
+            return;
+          }
+          blocksRead += 1;
+          controller.enqueue(result.bytes);
+        }
+      };
       const drain = (): void => {
         if (finished) {
           return;
         }
-        const blocks = documentRef.querySelectorAll(`script[${RSC_INITIAL_FLIGHT_ATTRIBUTE}]`);
-        for (; consumed < blocks.length; consumed += 1) {
-          const block = blocks[consumed];
-          // The parser may hand over a block before all of its text arrived.
-          // A payload is complete only once its closing quote (or `null`) is in.
-          const text = block?.textContent ?? "";
-          if (block?.getAttribute(RSC_INITIAL_FLIGHT_ATTRIBUTE) === "end") {
-            if (text !== "null") {
-              break;
-            }
-            finished = true;
-            stop();
-            controller.close();
-            return;
-          }
-          if (text.length < 2 || !text.startsWith('"') || !text.endsWith('"')) {
-            break;
-          }
-          controller.enqueue(decodeBase64(JSON.parse(text) as string));
-        }
-        if (documentRef.readyState !== "loading") {
+        drainBlocks();
+        if (!finished && documentRef.readyState !== "loading") {
           // The document ended without the block that closes the payload: the
           // response was cut off, so late boundaries would wait forever.
-          finished = true;
-          stop();
-          controller.error(new RscInitialFlightIncompleteProblem(consumed));
+          finish(new RscInitialFlightIncompleteProblem(blocksRead, "ended-early"));
         }
       };
       const observer = new MutationObserver(drain);
@@ -387,6 +406,29 @@ export function readRscInitialFlight(doc?: Document): ReadableStream<Uint8Array>
       stop();
     },
   });
+}
+
+type FlightBlock =
+  | { readonly kind: "pending" | "end" | "unreadable" }
+  | { readonly kind: "chunk"; readonly bytes: Uint8Array };
+
+function readFlightBlock(block: Element): FlightBlock {
+  // The parser may hand over a block before all of its text arrived. A payload
+  // is complete only once its closing quote (or `null`) is in.
+  const text = block.textContent ?? "";
+  if (block.getAttribute(RSC_INITIAL_FLIGHT_ATTRIBUTE) === "end") {
+    return { kind: text === "null" ? "end" : "pending" };
+  }
+  if (text.length < 2 || !text.startsWith('"') || !text.endsWith('"')) {
+    return { kind: "pending" };
+  }
+  try {
+    return { kind: "chunk", bytes: decodeBase64(JSON.parse(text) as string) };
+  } catch {
+    // A complete block that is not a base64 JSON string cannot be decoded, and
+    // skipping it would hand the decoder a stream with bytes missing.
+    return { kind: "unreadable" };
+  }
 }
 
 function decodeBase64(payload: string): Uint8Array {

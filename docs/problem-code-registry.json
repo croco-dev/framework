@@ -22167,7 +22167,7 @@
       "sources": [
         {
           "file": "packages/meta-vite/src/libs/rsc/flight.ts",
-          "line": 138,
+          "line": 140,
           "column": 1,
           "kind": "problem-class"
         }
@@ -22360,7 +22360,7 @@
       "title": "Internal Server Error",
       "cookbookPath": "/reference/problem-recovery-cookbook/#meta-vite-rsc-initial-flight-incomplete",
       "recovery": {
-        "cause": "The document finished loading before the block that ends its streamed Flight payload, so the response was cut off mid-render.",
+        "cause": "The browser could not read the document's streamed Flight payload to its end: the document finished loading before the block that ends it (reason ended-early, the response was cut off mid-render), or a block was not a base64 JSON string (reason unreadable-block).",
         "userAction": "Reload the page.",
         "operatorAction": "Check the server logs for an RSC HTML stream failure or a dropped connection on that request; the extensions record how many Flight blocks the browser read.",
         "retryability": "conditional",
@@ -22377,7 +22377,7 @@
       "sources": [
         {
           "file": "packages/meta-vite/src/libs/rsc/flight.ts",
-          "line": 109,
+          "line": 111,
           "column": 1,
           "kind": "problem-class"
         }
@@ -22467,7 +22467,7 @@
       "sources": [
         {
           "file": "packages/meta-vite/src/libs/rsc/flight.ts",
-          "line": 123,
+          "line": 125,
           "column": 1,
           "kind": "problem-class"
         }

@@ -20756,7 +20756,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/meta-vite/src/libs/rsc/flight.ts";
-          readonly line: 138;
+          readonly line: 140;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -20937,7 +20937,7 @@ export type CrocoProblemRegistry = {
       readonly title: "Internal Server Error";
       readonly cookbookPath: "/reference/problem-recovery-cookbook/#meta-vite-rsc-initial-flight-incomplete";
       readonly recovery: {
-        readonly cause: "The document finished loading before the block that ends its streamed Flight payload, so the response was cut off mid-render.";
+        readonly cause: "The browser could not read the document's streamed Flight payload to its end: the document finished loading before the block that ends it (reason ended-early, the response was cut off mid-render), or a block was not a base64 JSON string (reason unreadable-block).";
         readonly userAction: "Reload the page.";
         readonly operatorAction: "Check the server logs for an RSC HTML stream failure or a dropped connection on that request; the extensions record how many Flight blocks the browser read.";
         readonly retryability: "conditional";
@@ -20952,7 +20952,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/meta-vite/src/libs/rsc/flight.ts";
-          readonly line: 109;
+          readonly line: 111;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -21036,7 +21036,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/meta-vite/src/libs/rsc/flight.ts";
-          readonly line: 123;
+          readonly line: 125;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -56977,7 +56977,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/meta-vite/src/libs/rsc/flight.ts",
-          line: 138,
+          line: 140,
           column: 1,
           kind: "problem-class",
         },
@@ -57183,7 +57183,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       cookbookPath: "/reference/problem-recovery-cookbook/#meta-vite-rsc-initial-flight-incomplete",
       recovery: {
         cause:
-          "The document finished loading before the block that ends its streamed Flight payload, so the response was cut off mid-render.",
+          "The browser could not read the document's streamed Flight payload to its end: the document finished loading before the block that ends it (reason ended-early, the response was cut off mid-render), or a block was not a base64 JSON string (reason unreadable-block).",
         userAction: "Reload the page.",
         operatorAction:
           "Check the server logs for an RSC HTML stream failure or a dropped connection on that request; the extensions record how many Flight blocks the browser read.",
@@ -57201,7 +57201,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/meta-vite/src/libs/rsc/flight.ts",
-          line: 109,
+          line: 111,
           column: 1,
           kind: "problem-class",
         },
@@ -57297,7 +57297,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/meta-vite/src/libs/rsc/flight.ts",
-          line: 123,
+          line: 125,
           column: 1,
           kind: "problem-class",
         },

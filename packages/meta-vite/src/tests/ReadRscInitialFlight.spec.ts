@@ -83,6 +83,55 @@ describe("readRscInitialFlight", () => {
     doc.finishLoading();
 
     await expect(next).rejects.toThrow(RscInitialFlightIncompleteProblem);
+    await expect(next).rejects.toMatchObject({
+      extensions: { blocksRead: 1, reason: "ended-early" },
+    });
+    expect(doc.observers.size).toBe(0);
+  });
+
+  it("keeps reading after React empties the root and removes the blocks already read", async () => {
+    const doc = new StreamedFlightDocument();
+    doc.appendChunk([0x30]);
+    const reader = open(doc);
+    expect([...((await reader.read()).value ?? [])]).toEqual([0x30]);
+
+    // A hydration mismatch re-renders the root, which clears `#root`; the
+    // parser then appends the next blocks into the emptied element.
+    doc.removeBlocks();
+    doc.appendChunk([0x31]);
+    doc.appendEnd();
+
+    expect([...((await reader.read()).value ?? [])]).toEqual([0x31]);
+    expect((await reader.read()).done).toBe(true);
+  });
+
+  it("finishes a block the parser was still filling after it leaves the document", async () => {
+    const doc = new StreamedFlightDocument();
+    doc.appendChunk("", '"QUJD');
+    const reader = open(doc);
+    const first = reader.read();
+    expect(await pending(first)).toBe(true);
+    const [partial] = doc.querySelectorAll();
+
+    doc.removeBlocks();
+    if (partial) {
+      partial.textContent = '"QUJDRA=="';
+    }
+    doc.appendEnd();
+
+    expect(new TextDecoder().decode((await first).value)).toBe("ABCD");
+    expect((await reader.read()).done).toBe(true);
+  });
+
+  it("fails instead of stalling when a complete block cannot be decoded", async () => {
+    const doc = new StreamedFlightDocument();
+    doc.appendChunk("", '"%%%"');
+    const reader = open(doc);
+
+    await expect(reader.read()).rejects.toMatchObject({
+      code: "meta-vite/rsc-initial-flight-incomplete",
+      extensions: { blocksRead: 0, reason: "unreadable-block" },
+    });
     expect(doc.observers.size).toBe(0);
   });
 
