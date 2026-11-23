@@ -7,7 +7,7 @@
       "reason": "Keep the HTTP server span active across response body reads and cancellation, and record terminal body failures with the original HTTP response status.",
       "files": {
         "packages/transports-http/src/libs/CrocoRouteRegistrar.ts": "43bc7257fac78c4947adb1d80bd1fa64116e8581bb1c412782e80258621c1504",
-        "packages/transports-http/src/libs/HttpContext.ts": "ab9acb1c7f0b2f97598529afbe5fecca9b56873a4e60d30093ab3745acc6c1ec",
+        "packages/transports-http/src/libs/HttpContext.ts": "c8f6614855673d2020dfb7e37705e4824f341ee074679dfbb27eb45a6b9c3090",
         "packages/transports-http/src/libs/ResponseRequestScope.ts": "e6de5e207c76f77a0881f83748b8d1a626878da17bfd7de4a3b5fee6a462ed4c",
         "packages/transports-http/src/libs/middleware/CompressionMiddleware.ts": "6ecc4f46eae6be416a573e6d5d4b64cb3447b10768638671b87128b1c25b46bd",
         "packages/transports-http/src/libs/middleware/telemetry.ts": "3620b5d1ef5e6b3766cce154bf79bc593004e0840004d2c4fae0307dc7f11699"
@@ -32,7 +32,7 @@
             "runtime": "node",
             "path": "packages/transports-http/src/tests/ResponseRequestScope.spec.ts",
             "testName": "response scope terminal paths keeps Node response providers alive until disconnect",
-            "sha256": "51cdd05bc1a0ea2df5803afe79b2b2e12e25068debcab7e306a1185613bd1f05"
+            "sha256": "e65905956bcc7c50137f8faab9cdc80a1af66e143599074091e95a5a68b78a48"
           }
         },
         "aws-lambda": {
@@ -70,7 +70,7 @@
       "classification": "internal-pure-refactor",
       "reason": "Generated Problem registry coordinates follow the HTTP registrar source. The updated locations point to the existing Problem declarations.",
       "files": {
-        "packages/problems-core/src/generated/problem-code-registry.ts": "0046b1bf5f7b760a006b92ee1c31b86c1ecf722ac6405d16d6877100d455ec6a"
+        "packages/problems-core/src/generated/problem-code-registry.ts": "7d7d25f4dd020d609243731598b29c2e5ed551d3e6852fe7a48932fa230b0db9"
       },
       "catalogRuntimes": [],
       "profiles": {

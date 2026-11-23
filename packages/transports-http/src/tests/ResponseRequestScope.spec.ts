@@ -197,6 +197,39 @@ describe("response request scope", () => {
     },
   );
 
+  it.each(["clone", "headers after identity compression"] as const)(
+    "ends the buffered span before consuming a response forwarded as %s",
+    async (forward) => {
+      const app = fixture(() => ({ ready: true }), "GET", [
+        async (_ctx, next) => {
+          const response = await next();
+          if (!(response instanceof Response)) return response;
+          const clone = response.clone();
+          if (forward === "clone") return clone;
+
+          expect(await clone.json()).toEqual({ ready: true });
+          const headers = new Headers(response.headers);
+          headers.set("X-Forwarded-By", "test-middleware");
+          return new Response(response.body, { status: response.status, headers });
+        },
+        ...(forward === "headers after identity compression"
+          ? [compressionMiddleware({ threshold: 1 })]
+          : []),
+      ]);
+      const response = await app.request("/stream");
+
+      expect(response.status).toBe(200);
+      if (forward === "headers after identity compression") {
+        expect(response.headers.get("vary")).toBe("Accept-Encoding");
+        expect(response.headers.get("x-forwarded-by")).toBe("test-middleware");
+      }
+      const span = requestSpan();
+      expect(span?.status.code).toBe(SpanStatusCode.UNSET);
+      expect(await response.json()).toEqual({ ready: true });
+      requestSpan();
+    },
+  );
+
   it.each(["read", "cancel"] as const)(
     "keeps a native Response span open until the body is consumed by %s",
     async (action) => {

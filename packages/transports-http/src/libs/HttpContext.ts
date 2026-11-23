@@ -3,13 +3,32 @@ import type { Context as HonoContext } from "hono";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import type { CrocoHttpContext, CrocoRequest, CrocoResponse } from "./types";
 
-// A header wrapper can reuse the body stream, and clone() can replace the original response's stream.
-// Remember both identities when Croco creates the body from buffered data.
+// Track both the response and its body so header wrappers can preserve buffered timing.
 const bufferedResponses = new WeakSet<Response | ReadableStream>();
 
+function cloneBufferedResponse(this: Response): Response {
+  const clone = Response.prototype.clone.call(this);
+  if (bufferedResponses.has(this)) {
+    // Fetch tees the body and replaces the stream on the original as well as the clone.
+    markBufferedResponse(this);
+    markBufferedResponse(clone);
+  }
+  return clone;
+}
+
 export function markBufferedResponse(response: Response): Response {
+  const body = response.body;
+  if (!body) return response;
+
+  if (!bufferedResponses.has(response)) {
+    Object.defineProperty(response, "clone", {
+      configurable: true,
+      writable: true,
+      value: cloneBufferedResponse,
+    });
+  }
   bufferedResponses.add(response);
-  if (response.body) bufferedResponses.add(response.body);
+  bufferedResponses.add(body);
   return response;
 }
 
