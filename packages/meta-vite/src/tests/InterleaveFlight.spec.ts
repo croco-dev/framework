@@ -123,6 +123,45 @@ describe("interleaveFlight", () => {
     expect((await reader.read()).done).toBe(true);
   });
 
+  it("fails the document when Flight fails after the HTML ended", async () => {
+    const html = source();
+    const flight = source();
+    const reader = interleaveFlight(html.stream, flight.stream).getReader();
+    html.enqueue("<main>shell</main>");
+    html.close();
+    await reader.read();
+
+    const next = reader.read();
+    flight.error(new Error("flight failed"));
+
+    await expect(next).rejects.toThrow("flight failed");
+  });
+
+  it("fails the document when Flight failed before SSR finished its HTML", async () => {
+    const html = source();
+    const flight = source();
+    const reader = interleaveFlight(html.stream, flight.stream).getReader();
+    flight.enqueue("0:shell-row\n");
+    html.enqueue("<main>shell</main>");
+    await reader.read();
+
+    // SSR can turn a failed boundary into client rendering and still finish.
+    flight.error(new Error("flight failed"));
+    await nextTask();
+    html.enqueue('<div hidden id="S:0">fallback</div>');
+    html.close();
+
+    await expect(
+      (async () => {
+        for (;;) {
+          if ((await reader.read()).done) {
+            return;
+          }
+        }
+      })(),
+    ).rejects.toThrow("flight failed");
+  });
+
   it("holds Flight rows that arrive before the shell until the shell is out", async () => {
     const html = source();
     const flight = source();

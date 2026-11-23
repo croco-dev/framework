@@ -112,14 +112,11 @@ export function interleaveFlight(
   let nextHtml: Promise<ReadableStreamReadResult<Uint8Array>> | undefined;
   let shellSent = false;
   let htmlDone = false;
-  let flightDone = false;
 
   const flightRead = (async () => {
     for (;;) {
       const { done, value } = await flightReader.read();
       if (done) {
-        flightDone = true;
-        wakeFlight?.();
         return;
       }
       pendingFlight.push(value);
@@ -165,14 +162,15 @@ export function interleaveFlight(
   const pullAfterHtml = async (
     controller: ReadableStreamDefaultController<Uint8Array>,
   ): Promise<void> => {
-    if (pendingFlight.length === 0 && !flightDone) {
-      await flightArrival();
+    // Racing the read itself settles this wait when Flight ends or fails, not
+    // only when a row arrives; a failure rejects here and errors the document.
+    if (pendingFlight.length === 0) {
+      await Promise.race([flightArrival(), flightRead]);
     }
     if (pendingFlight.length > 0) {
       controller.enqueue(concat(takeFlight()));
       return;
     }
-    // Rethrows a Flight failure instead of closing a payload that never ended.
     await flightRead;
     controller.enqueue(concat([FLIGHT_END_BLOCK]));
     controller.close();
