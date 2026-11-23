@@ -1,3 +1,4 @@
+import { markBufferedResponse } from "../HttpContext";
 import type { MiddlewareFunction } from "../types";
 import { setVaryHeader } from "./VaryHeader";
 
@@ -73,11 +74,13 @@ export const compressionMiddleware = (options: CompressionOptions = {}): Middlew
       }
     }
 
-    return new Response(toResponseBody(compressed), {
-      status: response.status,
-      statusText: response.statusText,
-      headers,
-    });
+    return markBufferedResponse(
+      new Response(toResponseBody(compressed), {
+        status: response.status,
+        statusText: response.statusText,
+        headers,
+      }),
+    );
   };
 };
 

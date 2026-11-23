@@ -1,18 +1,31 @@
 import { Context } from "@croco/framework-context";
 import type { RequestContext } from "@croco/framework-context";
 
+type ResponseFailure = { readonly error: unknown };
+
+export type ResponseTrace = {
+  run<T>(callback: () => T): T;
+  finish(failure?: ResponseFailure): void;
+};
+
 /** Owns the request scope until the host consumes or abandons the response body. */
 export async function runWithResponseRequestScope(
   context: RequestContext,
   request: Request,
-  handler: (releaseAfterFailure: (error: unknown) => void) => Promise<Response>,
+  handler: (
+    releaseAfterFailure: (error: unknown) => void,
+    observeResponseTrace: (trace: ResponseTrace) => void,
+  ) => Promise<Response>,
   reportCancellationFailure: (error: unknown) => void,
 ): Promise<Response> {
   const scope = Context.createRequestScope(context);
   let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
   let output: ReadableStreamDefaultController<Uint8Array> | undefined;
+  let responseTrace: ResponseTrace | undefined;
   let finished = false;
   let cancelling = false;
+  const runWithTrace = <T>(callback: () => T): T =>
+    responseTrace ? responseTrace.run(callback) : callback();
   const releaseReader = (): void => {
     const responseReader = reader;
     reader = undefined;
@@ -24,16 +37,23 @@ export async function runWithResponseRequestScope(
     reader = undefined;
     cancelling = true;
     try {
-      await scope.run(() => responseReader.cancel(reason));
+      await scope.run(() => runWithTrace(() => responseReader.cancel(reason)));
     } finally {
       responseReader.releaseLock();
     }
   };
-  const finish = (failure?: { readonly error: unknown }): void => {
+  const finish = (failure?: ResponseFailure): void => {
     if (finished) return;
     finished = true;
     request.signal.removeEventListener("abort", abort);
-    scope.dispose(failure);
+    try {
+      scope.dispose(failure);
+    } catch (error) {
+      failure ??= { error };
+      throw error;
+    } finally {
+      responseTrace?.finish(failure);
+    }
   };
   const abort = (): void => {
     const error: unknown = request.signal.reason;
@@ -50,10 +70,18 @@ export async function runWithResponseRequestScope(
       abort();
       request.signal.throwIfAborted();
     }
-    const response = await scope.run(() => handler((error) => finish({ error })));
+    const response = await scope.run(() =>
+      handler(
+        (error) => finish({ error }),
+        (trace) => {
+          responseTrace = trace;
+          if (finished) trace.finish({ error: request.signal.reason });
+        },
+      ),
+    );
     if (finished) {
       if (request.signal.aborted) {
-        await response.body?.cancel(request.signal.reason);
+        await runWithTrace(() => response.body?.cancel(request.signal.reason));
         request.signal.throwIfAborted();
       }
       return response;
@@ -75,7 +103,7 @@ export async function runWithResponseRequestScope(
         },
         async pull(controller) {
           try {
-            const chunk = await scope.run(() => responseReader.read());
+            const chunk = await scope.run(() => runWithTrace(() => responseReader.read()));
             if (finished || cancelling) return;
             if (chunk.done) {
               finish();

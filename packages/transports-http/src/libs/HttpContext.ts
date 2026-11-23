@@ -3,6 +3,51 @@ import type { Context as HonoContext } from "hono";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import type { CrocoHttpContext, CrocoRequest, CrocoResponse } from "./types";
 
+// Track both the response and its body so header wrappers can preserve buffered timing.
+const bufferedResponses = new WeakSet<Response | ReadableStream>();
+
+function cloneBufferedResponse(this: Response): Response {
+  const clone = Response.prototype.clone.call(this);
+  if (bufferedResponses.has(this)) {
+    // Fetch tees the body and replaces the stream on the original as well as the clone.
+    markBufferedResponse(this);
+    markBufferedResponse(clone);
+  }
+  return clone;
+}
+
+export function markBufferedResponse(response: Response): Response {
+  const body = response.body;
+  if (!body) return response;
+
+  if (
+    !bufferedResponses.has(response) &&
+    Object.getPrototypeOf(response) === Response.prototype &&
+    !Object.hasOwn(response, "clone") &&
+    Object.isExtensible(response)
+  ) {
+    Object.defineProperty(response, "clone", {
+      configurable: true,
+      writable: true,
+      value: cloneBufferedResponse,
+    });
+  }
+  bufferedResponses.add(response);
+  bufferedResponses.add(body);
+  return response;
+}
+
+export function isBufferedResponse(response: Response): boolean {
+  return (
+    bufferedResponses.has(response) ||
+    (response.body !== null && bufferedResponses.has(response.body))
+  );
+}
+
+export function preserveBufferedResponse(response: Response): Response {
+  return isBufferedResponse(response) ? markBufferedResponse(response) : response;
+}
+
 /**
  * Hono 컨텍스트를 Croco 전용 HTTP 컨텍스트 인터페이스로 감싸는 어댑터입니다.
  */
@@ -76,7 +121,7 @@ export class HttpContext implements CrocoHttpContext, ProtocolHttpContext {
   text(body: string, status: number = 200): Response {
     this.res.status = status;
     this.bufferedResponseBody = toBufferedBytes(body);
-    return this.raw.text(body, status as Parameters<HonoContext["text"]>[1]);
+    return markBufferedResponse(this.raw.text(body, status as Parameters<HonoContext["text"]>[1]));
   }
 
   jsonResponse<T>(body: T, status: number = 200): Response {
@@ -84,12 +129,16 @@ export class HttpContext implements CrocoHttpContext, ProtocolHttpContext {
     const serializedBody = JSON.stringify(body);
     if (typeof serializedBody !== "string") {
       this.bufferedResponseBody = null;
-      return this.raw.json(body, status as Parameters<HonoContext["json"]>[1]);
+      return markBufferedResponse(
+        this.raw.json(body, status as Parameters<HonoContext["json"]>[1]),
+      );
     }
     this.bufferedResponseBody = toBufferedBytes(serializedBody);
-    return this.raw.newResponse(serializedBody, status as ContentfulStatusCode, {
-      "Content-Type": "application/json",
-    });
+    return markBufferedResponse(
+      this.raw.newResponse(serializedBody, status as ContentfulStatusCode, {
+        "Content-Type": "application/json",
+      }),
+    );
   }
 
   redirect(url: string, status: number = 302): Response {
