@@ -32,8 +32,10 @@ const imagePaths = (await build.invokeAction("imagePaths", null, {
 
 const EXPOSE_FIELDS = ["receipt", "displayInstanceId", "occurredAt"] as const;
 
-let deferredRelease: (() => void) | undefined;
-let deferredGate: Promise<void> | undefined;
+type RecommendationOutcome = "available" | "unavailable";
+
+let deferredRelease: ((outcome: RecommendationOutcome) => void) | undefined;
+let deferredGate: Promise<RecommendationOutcome> | undefined;
 
 function route(
   method: string | undefined,
@@ -99,14 +101,20 @@ const labHandlers: ApiHandler[] = [
     });
     return empty(204);
   }),
-  route("POST", "/lab/resume", async () => {
-    deferredRelease?.();
+  // `?outcome=unavailable` releases the held source as a failure, so the lab
+  // can check a late failure as well as a late success.
+  route("POST", "/lab/resume", async (request) => {
+    const outcome =
+      new URL(request.url).searchParams.get("outcome") === "unavailable"
+        ? "unavailable"
+        : "available";
+    deferredRelease?.(outcome);
     deferredGate = undefined;
     return empty(204);
   }),
   route(undefined, "/lab/recommendation", async () => {
-    await deferredGate;
-    return new Response("Saved inspiration");
+    const outcome = await deferredGate;
+    return outcome === "unavailable" ? empty(503) : new Response("Saved inspiration");
   }),
   route(undefined, "/lab/blocking-fetch", async () => {
     // Intentional, bounded negative control: a real awaited upstream fetch.

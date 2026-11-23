@@ -24,7 +24,8 @@ Ticket: #4064
   existing negotiation, manifest check, Vary, first-row preflight and Problem mapping.
 - The host and the worker exchange Flight and HTML chunks one pull at a time. A Flight request keeps the
   consumer's backpressure across the boundary; a document request buffers the whole Flight payload in the
-  worker, because that payload is embedded after the HTML. Request abort and body cancel stop the render
+  worker, because that payload is embedded after the HTML. (Superseded for documents by
+  [2026-11-23-4065-stream-document-flight](2026-11-23-4065-stream-document-flight.md).) Request abort and body cancel stop the render
   inside the worker and settle the host side.
 - A build exposes `closed`, which settles when its worker stops. The generated app and the example exit on
   it so a supervisor restarts the server, instead of serving 500 for every request from a dead worker.
@@ -75,4 +76,5 @@ Alternatives not chosen:
 - Lambda and Cloudflare Workers support for this path stays unverified; Workers isolates cannot run it
   because it needs `node:fs` and `node:worker_threads`.
 - Routes rendered without a build keep the isolated encoder, which starts one child process per request.
-- Early hydration (#4065) builds on the document's embedded Flight payload and `readRscInitialFlight()`.
+- Early hydration (#4065) replaced the embedded payload with Flight blocks streamed into the HTML; see
+  [2026-11-23-4065-stream-document-flight](2026-11-23-4065-stream-document-flight.md).

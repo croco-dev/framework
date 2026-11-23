@@ -4011,6 +4011,16 @@ const recoveryMetadataByCode = {
     redactionPolicy: "operator-only",
     severity: "error",
   }),
+  "meta-vite/rsc-initial-flight-incomplete": recovery({
+    cause:
+      "The document finished loading before the block that ends its streamed Flight payload, so the response was cut off mid-render.",
+    userAction: "Reload the page.",
+    operatorAction:
+      "Check the server logs for an RSC HTML stream failure or a dropped connection on that request; the extensions record how many Flight blocks the browser read.",
+    retryability: "conditional",
+    redactionPolicy: "operator-only",
+    severity: "error",
+  }),
   "meta-vite/rsc-build-action-not-found": recovery({
     cause: "The host called an action that the built rsc entry does not declare.",
     userAction: "Do not retry: the action does not exist in this build.",

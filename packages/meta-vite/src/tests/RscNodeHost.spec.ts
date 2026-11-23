@@ -12,6 +12,7 @@ import { loadRscBuild } from "../libs/rsc/loadRscBuild";
 import { createRscAssetHandler } from "../libs/rsc/rscAssets";
 import { crocoMetaVitePlugin } from "../libs/vite/crocoMetaVitePlugin";
 import type { ServerType } from "@hono/node-server";
+import { splitStreamedFlight } from "./fixtures/streamedFlightDocument";
 import type { RscBuild } from "../libs/rsc/buildEntry";
 
 const fixtureDir = fileURLToPath(new URL("./fixtures/rsc-node-consumer/", import.meta.url));
@@ -141,8 +142,9 @@ describe("Node RSC production build host", () => {
     expect(page.headers.get("cache-control")).toBe("private, no-store");
     expect(html).toContain("tenant=<!-- -->server-tenant");
     expect(html).toContain("slow:resolved");
-    expect(html).toContain('id="croco-rsc-initial-flight"');
-    const clientEntry = /<script type="module" src="([^"]+)"/.exec(html)?.[1];
+    expect(html).toContain('<meta name="croco:rsc-initial-flight" content="streamed">');
+    expect(splitStreamedFlight(html).ended).toBe(true);
+    const clientEntry = /<script type="module" src="([^"]+)"[^>]* async=""/.exec(html)?.[1];
     expect(clientEntry).toBeDefined();
     expect((await fetch(`${primary.origin}${clientEntry}`)).status).toBe(200);
 
@@ -158,6 +160,44 @@ describe("Node RSC production build host", () => {
     });
     expect(stale.status).toBe(400);
     expect((await fetch(`${primary.origin}/missing`)).status).toBe(404);
+  });
+
+  it("sends the shell, the client entry and the shell's Flight before a held boundary resolves", async () => {
+    const response = await fetch(`${primary.origin}/?hold=1`);
+    const reader = response.body?.getReader();
+    if (!reader) {
+      throw new Error("the document has no body");
+    }
+    const decoder = new TextDecoder();
+    let early = "";
+    while (!(early.includes('async=""') && early.includes('data-croco-rsc-flight="chunk"'))) {
+      const { done, value } = await reader.read();
+      expect(done).toBe(false);
+      early += decoder.decode(value, { stream: true });
+    }
+
+    const beforeRelease = splitStreamedFlight(early);
+    expect(beforeRelease.html).toContain("holding");
+    expect(beforeRelease.html).not.toContain("held:released");
+    expect(beforeRelease.ended).toBe(false);
+    expect(new TextDecoder().decode(beforeRelease.flight)).toContain("Packed RSC");
+    // Every Flight block follows the whole shell, outside any element React hydrates.
+    expect(early.indexOf("</main>")).toBeLessThan(beforeRelease.blockOffsets[0] ?? -1);
+
+    await primary.build.invokeAction("release", null, { request: new Request(primary.origin) });
+    let rest = "";
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) {
+        break;
+      }
+      rest += decoder.decode(value, { stream: true });
+    }
+
+    const whole = splitStreamedFlight(early + rest);
+    expect(whole.html).toContain("held:released");
+    expect(new TextDecoder().decode(whole.flight)).toContain("held:released");
+    expect(whole.ended).toBe(true);
   });
 
   it("refuses a request whose Host header names another origin", async () => {

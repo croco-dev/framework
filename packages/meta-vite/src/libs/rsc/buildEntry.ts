@@ -95,9 +95,11 @@ export type RscRenderRequest = {
 };
 
 export type RscDocumentRender = {
+  /**
+   * The document body. The Flight bytes the HTML is rendered from are written
+   * into it as they arrive, so the browser can hydrate before it ends.
+   */
   readonly html: ReadableStream<Uint8Array>;
-  /** The Flight bytes the HTML was rendered from, base64-encoded, available once the HTML ends. */
-  readonly embeddedFlight: () => Promise<string>;
 };
 
 /**

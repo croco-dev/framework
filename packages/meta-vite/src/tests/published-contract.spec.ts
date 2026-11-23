@@ -169,7 +169,8 @@ describe("published @croco/meta-vite contract", () => {
         expect(html.status).toBe(200);
         expect(html.headers.get("cache-control")).toBe("private, no-store");
         expect(document).toContain("path=<!-- -->/<!-- --> tenant=<!-- -->server-tenant");
-        expect(document).toContain('id="croco-rsc-initial-flight"');
+        expect(document).toContain('<meta name="croco:rsc-initial-flight" content="streamed">');
+        expect(document).toContain('data-croco-rsc-flight="end"');
         expect(document).not.toContain(SERVER_ONLY_TOKEN);
 
         const flight = await fetch(`${origin}/.rsc`, {
@@ -188,6 +189,13 @@ describe("published @croco/meta-vite contract", () => {
 
         const browserState = await exerciseInBrowser(origin);
         expect(browserState).toEqual({
+          whileHeld: {
+            counter: "count=1",
+            heldFallback: "holding",
+            heldContent: null,
+            flightRequests: 0,
+          },
+          afterRelease: { held: "held:released", counter: "count=1" },
           consoleErrors: [],
           hydrationErrors: [],
           slow: "slow:resolved",
@@ -839,7 +847,8 @@ function requestWithHost(origin: string, host: string): Promise<number | undefin
 type BrowserPage = {
   on(event: "console", listener: (message: { type(): string; text(): string }) => void): void;
   on(event: "pageerror", listener: (error: Error) => void): void;
-  goto(url: string): Promise<unknown>;
+  on(event: "request", listener: (request: { url(): string }) => void): void;
+  goto(url: string, options?: { waitUntil?: "commit" | "load" }): Promise<unknown>;
   waitForFunction(expression: string): Promise<unknown>;
   textContent(selector: string): Promise<string | null>;
   click(selector: string): Promise<void>;
@@ -867,6 +876,38 @@ async function exerciseInBrowser(origin: string): Promise<Record<string, unknown
       }
     });
     page.on("pageerror", (error) => consoleErrors.push(error.message));
+    const flightRequests: string[] = [];
+    page.on("request", (request) => {
+      if (new URL(request.url()).pathname.endsWith(".rsc")) {
+        flightRequests.push(request.url());
+      }
+    });
+
+    // A boundary held open on the server: the island must hydrate and respond
+    // before it resolves, from the Flight bytes streamed into the document.
+    await page.goto(`${origin}/?hold=1`, { waitUntil: "commit" });
+    await page.waitForFunction("window.__hydrated === true");
+    await page.click("[data-testid=counter]");
+    await page.waitForFunction(
+      "document.querySelector('[data-testid=counter]')?.textContent === 'count=1'",
+    );
+    const whileHeld = {
+      counter: await page.textContent("[data-testid=counter]"),
+      heldFallback: await page.textContent("[data-testid=held-fallback]"),
+      heldContent: await page.evaluate<string | null>(
+        "document.querySelector('[data-testid=held]')?.textContent ?? null",
+      ),
+      flightRequests: flightRequests.length,
+    };
+    const released = await fetch(`${origin}/release`, { method: "POST" });
+    expect(released.status).toBe(204);
+    await page.waitForFunction(
+      "document.querySelector('[data-testid=held]')?.textContent === 'held:released'",
+    );
+    const afterRelease = {
+      held: await page.textContent("[data-testid=held]"),
+      counter: await page.textContent("[data-testid=counter]"),
+    };
 
     await page.goto(`${origin}/`);
     await page.waitForFunction("window.__hydrated === true");
@@ -887,6 +928,8 @@ async function exerciseInBrowser(origin: string): Promise<Record<string, unknown
     const renderAfter = await page.textContent("[data-testid=render]");
 
     return {
+      whileHeld,
+      afterRelease,
       consoleErrors,
       hydrationErrors: await page.evaluate<string[]>("window.__hydrationErrors ?? []"),
       slow,

@@ -59,6 +59,6 @@ export type RscWorkerMessage =
   | { readonly type: "failed"; readonly artifact: string; readonly reason: string }
   | { readonly type: "started"; readonly id: number }
   | { readonly type: "chunk"; readonly id: number; readonly bytes: Uint8Array }
-  | { readonly type: "end"; readonly id: number; readonly embeddedFlight?: string }
+  | { readonly type: "end"; readonly id: number }
   | { readonly type: "error"; readonly id: number; readonly error: RscSerializedError }
   | { readonly type: "action-result"; readonly id: number; readonly value: unknown };

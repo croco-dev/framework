@@ -29,6 +29,7 @@ export const profile = Object.freeze({
     lcpMs: 600,
     interactionMs: 200,
     hydrationReadyMs: 600,
+    recommendationMs: 600,
   },
 });
 export const configurations = ["baseline", "experiment", "personalization", "combined"];

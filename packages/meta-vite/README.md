@@ -24,7 +24,8 @@ pnpm add ioredis
     `@vitejs/plugin-rsc` build into a worker thread of its own, and `RenderServer`
     renders through the built `rsc` and `ssr` entries there. One worker serves every
     request for that build; no process is spawned per request. Client islands
-    hydrate from the Flight bytes embedded in the document, and both
+    hydrate from the Flight bytes streamed into the document, before late
+    Suspense boundaries resolve, and both
     representations are sent with `cache-control: private, no-store`. See
     [Node RSC production build](#node-rsc-production-build).
   - **Isolated encoder (routes with `componentRef`, no build passed)**: the official encoder
@@ -359,7 +360,7 @@ export default defineRscSsrEntry({
   renderToReadableStream,
 });
 
-// src/entry.browser.tsx — hydrate from the embedded payload, refresh with the handshake
+// src/entry.browser.tsx — hydrate from the streamed payload, refresh with the handshake
 import { createRscBrowserFlightHeaders, readRscInitialFlight } from "@croco/meta-vite/rsc/browser";
 ```
 
@@ -399,9 +400,18 @@ cross that thread boundary as plain data:
   in the worker. A worker that exits fails its in-flight renders and every later render with
   `meta-vite/rsc-build-worker-unavailable`; `build.close()` does the same and stops the worker.
   `build.closed` settles with that Problem, so a server can exit and let its supervisor restart it.
-- A document request buffers the whole Flight payload in the worker, because the payload is embedded
-  after the HTML; a Flight request streams one chunk per pull. The embedded payload is base64, so
-  binary rows (typed arrays, `ArrayBuffer`) reach the browser unchanged.
+- A document request writes its Flight rows into the HTML as they arrive, as base64
+  `<script type="application/json" data-croco-rsc-flight>` blocks placed only between whole React
+  flushes and after the shell, and ends them with an `end` block. `defineRscSsrEntry()` passes the
+  client entry to React as a bootstrap module, which React writes as an `async` script right after
+  the shell. The browser entry therefore runs while late boundaries are still pending, and
+  `readRscInitialFlight()` hands the decoder each block as the parser reaches it: the shell and its
+  client islands hydrate and respond before a slow boundary resolves, and that boundary fills in
+  later without remounting them. A document that ends without the `end` block fails the stream with
+  `meta-vite/rsc-initial-flight-incomplete`. Base64 keeps binary rows (typed arrays, `ArrayBuffer`)
+  unchanged and cannot close its script element. The blocks are data, not script, so they add no
+  CSP requirement; React's own streaming Suspense still writes inline scripts. A Flight request
+  streams one chunk per pull.
 - The build path sets no render deadline of its own; the isolated encoder's 30-second timeout does not
   apply. Bound slow data sources inside server components.
 

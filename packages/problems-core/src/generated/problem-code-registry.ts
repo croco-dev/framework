@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export type CrocoProblemRegistry = {
   readonly version: "croco.problem-code-registry.v1";
-  readonly problemCount: 1196;
+  readonly problemCount: 1197;
   readonly problems: readonly [
     {
       readonly code: "ACCESS_DENIED";
@@ -20700,7 +20700,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/meta-vite/src/libs/rsc/flight.ts";
-          readonly line: 59;
+          readonly line: 63;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -20728,7 +20728,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/meta-vite/src/libs/rsc/flight.ts";
-          readonly line: 87;
+          readonly line: 91;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -20756,7 +20756,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/meta-vite/src/libs/rsc/flight.ts";
-          readonly line: 116;
+          readonly line: 138;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -20924,7 +20924,35 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/meta-vite/src/libs/rsc/flight.ts";
-          readonly line: 73;
+          readonly line: 77;
+          readonly column: 1;
+          readonly kind: "problem-class";
+        },
+      ];
+    },
+    {
+      readonly code: "meta-vite/rsc-initial-flight-incomplete";
+      readonly category: "InternalServerError";
+      readonly status: 500;
+      readonly title: "Internal Server Error";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#meta-vite-rsc-initial-flight-incomplete";
+      readonly recovery: {
+        readonly cause: "The document finished loading before the block that ends its streamed Flight payload, so the response was cut off mid-render.";
+        readonly userAction: "Reload the page.";
+        readonly operatorAction: "Check the server logs for an RSC HTML stream failure or a dropped connection on that request; the extensions record how many Flight blocks the browser read.";
+        readonly retryability: "conditional";
+        readonly redactionPolicy: "operator-only";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.error";
+          readonly severity: "error";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/meta-vite/src/libs/rsc/flight.ts";
+          readonly line: 109;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -21008,7 +21036,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/meta-vite/src/libs/rsc/flight.ts";
-          readonly line: 101;
+          readonly line: 123;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -33802,7 +33830,7 @@ export type CrocoProblemRegistry = {
 
 export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 1196,
+  problemCount: 1197,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -56885,7 +56913,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/meta-vite/src/libs/rsc/flight.ts",
-          line: 59,
+          line: 63,
           column: 1,
           kind: "problem-class",
         },
@@ -56916,7 +56944,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/meta-vite/src/libs/rsc/flight.ts",
-          line: 87,
+          line: 91,
           column: 1,
           kind: "problem-class",
         },
@@ -56949,7 +56977,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/meta-vite/src/libs/rsc/flight.ts",
-          line: 116,
+          line: 138,
           column: 1,
           kind: "problem-class",
         },
@@ -57141,7 +57169,39 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/meta-vite/src/libs/rsc/flight.ts",
-          line: 73,
+          line: 77,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "meta-vite/rsc-initial-flight-incomplete",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#meta-vite-rsc-initial-flight-incomplete",
+      recovery: {
+        cause:
+          "The document finished loading before the block that ends its streamed Flight payload, so the response was cut off mid-render.",
+        userAction: "Reload the page.",
+        operatorAction:
+          "Check the server logs for an RSC HTML stream failure or a dropped connection on that request; the extensions record how many Flight blocks the browser read.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/meta-vite/src/libs/rsc/flight.ts",
+          line: 109,
           column: 1,
           kind: "problem-class",
         },
@@ -57237,7 +57297,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/meta-vite/src/libs/rsc/flight.ts",
-          line: 101,
+          line: 123,
           column: 1,
           kind: "problem-class",
         },

@@ -18,17 +18,24 @@ export type RscSsrEntryOptions = {
   /** `renderToReadableStream` from `react-dom/server`. */
   readonly renderToReadableStream: (
     node: never,
-    options: { readonly signal: AbortSignal },
+    options: { readonly signal: AbortSignal; readonly bootstrapModules: string[] },
   ) => Promise<ReadableStream<Uint8Array>>;
 };
 
 export function defineRscSsrEntry(options: RscSsrEntryOptions): RscSsrEntry {
+  const clientEntryUrl = options.getClientEntryUrl();
   return {
     version: RSC_SSR_ENTRY_VERSION,
-    clientEntryUrl: options.getClientEntryUrl(),
+    clientEntryUrl,
     async renderHtml(input: RscHtmlRenderInput) {
       const node = await options.createFromReadableStream(input.flight);
-      return options.renderToReadableStream(node as never, { signal: input.signal });
+      // React writes bootstrap modules as `async` right after the shell, so the
+      // client entry runs while late boundaries are still streaming instead of
+      // after the whole document, as a deferred module script would.
+      return options.renderToReadableStream(node as never, {
+        signal: input.signal,
+        bootstrapModules: [clientEntryUrl],
+      });
     },
   };
 }
