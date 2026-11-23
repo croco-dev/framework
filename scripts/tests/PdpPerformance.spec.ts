@@ -19,6 +19,7 @@ const baseline = {
   lcpMs: 175,
   interactionMs: 32,
   hydrationReadyMs: 220,
+  recommendationMs: 900,
 };
 describe("PDP performance evidence", () => {
   it("compares measured overhead only under identical artifact and device/cache conditions", () => {
@@ -59,18 +60,23 @@ describe("PDP performance evidence", () => {
       ).toContain(`PDP_BUDGET_EXCEEDED:${key}`);
     },
   );
-  it.each(["ttfbMs", "shellMs", "heroMs", "lcpMs", "interactionMs", "hydrationReadyMs"] as const)(
-    "detects measured %s regression relative to its baseline",
-    (key) => {
-      expect(
-        assess({ ...baseline, [key]: baseline[key] + profile.regression[key] }, baseline).state,
-      ).toBe("passed");
-      expect(
-        assess({ ...baseline, [key]: baseline[key] + profile.regression[key] + 1 }, baseline)
-          .diagnostics,
-      ).toContain(`PDP_REGRESSION:${key}`);
-    },
-  );
+  it.each([
+    "ttfbMs",
+    "shellMs",
+    "heroMs",
+    "lcpMs",
+    "interactionMs",
+    "hydrationReadyMs",
+    "recommendationMs",
+  ] as const)("detects measured %s regression relative to its baseline", (key) => {
+    expect(
+      assess({ ...baseline, [key]: baseline[key] + profile.regression[key] }, baseline).state,
+    ).toBe("passed");
+    expect(
+      assess({ ...baseline, [key]: baseline[key] + profile.regression[key] + 1 }, baseline)
+        .diagnostics,
+    ).toContain(`PDP_REGRESSION:${key}`);
+  });
   it.each([undefined, null, NaN, Infinity, -1])(
     "does not treat missing or invalid LCP %s as zero",
     (lcpMs) => {
