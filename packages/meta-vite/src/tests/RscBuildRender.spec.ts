@@ -3,14 +3,15 @@ import { RenderServer } from "../libs/render/renderServer";
 import { RscRouteNotInBuildProblem } from "../libs/rsc/buildEntry";
 import {
   RSC_CLIENT_MANIFEST_HEADER,
-  RSC_INITIAL_FLIGHT_ELEMENT_ID,
+  RSC_INITIAL_FLIGHT_META_NAME,
   RSC_MANIFEST_ELEMENT_ID,
-  readRscInitialFlight,
 } from "../libs/rsc/flight";
+import { interleaveFlight } from "../libs/rsc/rscBuildWorker.mjs";
 import { defineRscServerEntry } from "../libs/rsc/serverEntry";
 import { defineRscSsrEntry } from "../libs/rsc/ssrEntry";
 import type { RenderRouteComponentProps, RenderRouteIR } from "../libs/routes/types";
 import type { RuntimeContext } from "../libs/render/types";
+import { splitStreamedFlight } from "./fixtures/streamedFlightDocument";
 import type { RscBuild, RscSsrEntry } from "../libs/rsc/buildEntry";
 
 const MANIFEST_VERSION = "croco.meta-vite.rsc-client-manifest.v1.build-a";
@@ -84,9 +85,9 @@ function createBuild(
   const ssr = defineRscSsrEntry({
     getClientEntryUrl: () => CLIENT_ENTRY,
     createFromReadableStream: textOf,
-    renderToReadableStream: async (node, { signal }) => {
+    renderToReadableStream: async (node, { signal, bootstrapModules }) => {
       source.signals.push(signal);
-      return streamOf(`<p>${String(node)}</p>`);
+      return streamOf(`<p>${String(node)}</p>`, ...bootstrapModules.map((url) => `<boot:${url}>`));
     },
   });
 
@@ -107,11 +108,10 @@ function createBuild(
     renderFlight: (input) => server.renderFlight(input),
     renderDocument: async (input) => {
       const [htmlBranch, embedBranch] = server.renderFlight(input).tee();
-      const embedded = new Response(embedBranch)
-        .arrayBuffer()
-        .then((buffer) => Buffer.from(buffer).toString("base64"));
-      embedded.catch(() => undefined);
-      const html = await renderHtml({ flight: htmlBranch, signal: input.signal });
+      const html = interleaveFlight(
+        await renderHtml({ flight: htmlBranch, signal: input.signal }),
+        embedBranch,
+      );
       const reader = html.getReader();
       return {
         html: new ReadableStream<Uint8Array>({
@@ -128,7 +128,6 @@ function createBuild(
             return reader.cancel(reason);
           },
         }),
-        embeddedFlight: () => embedded,
       };
     },
     invokeAction: async () => undefined,
@@ -150,7 +149,7 @@ function flightRequest(path: string, init: RequestInit = {}): Request {
 }
 
 describe("RenderServer with a production RSC build", () => {
-  it("renders the document from the built ssr entry and embeds the same Flight bytes", async () => {
+  it("renders the document from the built ssr entry and streams the same Flight bytes into it", async () => {
     const build = createBuild();
     const server = new RenderServer([...build.routes], { build });
 
@@ -162,15 +161,19 @@ describe("RenderServer with a production RSC build", () => {
     expect(response.headers.get("vary")).toBe("Accept");
     expect(response.headers.get("cache-control")).toBe("private, no-store");
     expect(html).toContain("<title>Build &lt;Home&gt;</title>");
-    expect(html).toContain('<div id="root"><p>0:"page:/:tenant-a"\n</p></div>');
+    expect(html).toContain(`<meta name="${RSC_INITIAL_FLIGHT_META_NAME}" content="streamed">`);
     expect(html).toContain(`id="${RSC_MANIFEST_ELEMENT_ID}"`);
     expect(html).toContain(MANIFEST_VERSION);
-    expect(html).toContain(`<script type="module" src="${CLIENT_ENTRY}"></script></body>`);
 
-    const embedded = new DOMParserLike(html).getElementById(RSC_INITIAL_FLIGHT_ELEMENT_ID);
-    const flight = readRscInitialFlight({ getElementById: () => embedded });
-    expect(flight).not.toBeNull();
-    expect(await textOf(flight ?? streamOf())).toBe('0:"page:/:tenant-a"\n');
+    const parts = splitStreamedFlight(html);
+    // The client entry comes from the ssr entry's bootstrap modules, inside the
+    // streamed body, not from a deferred script after it.
+    expect(parts.html).toContain(
+      `<div id="root"><p>0:"page:/:tenant-a"\n</p><boot:${CLIENT_ENTRY}></div>`,
+    );
+    expect(html).not.toContain('<script type="module"');
+    expect(new TextDecoder().decode(parts.flight)).toBe('0:"page:/:tenant-a"\n');
+    expect(parts.ended).toBe(true);
   });
 
   it("answers a Flight request with the build's manifest version", async () => {
@@ -320,13 +323,3 @@ describe("RenderServer with a production RSC build", () => {
     );
   });
 });
-
-// Enough of a DOM lookup to read one element's text out of the rendered HTML.
-class DOMParserLike {
-  constructor(private readonly html: string) {}
-
-  getElementById(id: string): { textContent: string | null } | null {
-    const match = new RegExp(`<script[^>]*id="${id}"[^>]*>([\\s\\S]*?)</script>`).exec(this.html);
-    return match ? { textContent: match[1] ?? null } : null;
-  }
-}

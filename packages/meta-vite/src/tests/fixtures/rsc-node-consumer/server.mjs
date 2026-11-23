@@ -22,7 +22,17 @@ serve(
     const origin = `http://127.0.0.1:${info.port}`;
     app = createNodeComposedHandler({
       origin,
-      apiHandlers: [createRscAssetHandler(build)],
+      apiHandlers: [
+        createRscAssetHandler(build),
+        {
+          match: (request) =>
+            request.method === "POST" && new URL(request.url).pathname === "/release",
+          handle: async (request) => {
+            await build.invokeAction("release", null, { request });
+            return new Response(null, { status: 204 });
+          },
+        },
+      ],
       // The tenant is resolved by the server, never read from a client header.
       pageHandler: (request, context) =>
         renderServer.handle(request, { ...context, env: { tenant: "server-tenant" } }),

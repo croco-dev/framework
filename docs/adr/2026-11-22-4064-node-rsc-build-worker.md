@@ -1,5 +1,7 @@
 # Serve each Vite RSC production build from a worker thread of its own
 
+Superseded in part by [2026-11-23-4065-stream-document-flight](2026-11-23-4065-stream-document-flight.md): the decision that a document request buffers the whole Flight payload in the worker and embeds it after the HTML.
+
 Ticket: #4064
 
 ## Context

@@ -35,8 +35,13 @@ try {
   const html = await page.text();
   expect(page.status === 200, `document status ${page.status}`);
   expect(html.includes('data-croco-smoke="server-time"'), "async server component missing");
-  expect(html.includes('id="croco-rsc-initial-flight"'), "embedded Flight payload missing");
-  const clientEntry = /<script type="module" src="([^"]+)"/.exec(html)?.[1];
+  expect(
+    html.includes('<meta name="croco:rsc-initial-flight" content="streamed">') &&
+      html.includes('data-croco-rsc-flight="chunk"') &&
+      html.includes('data-croco-rsc-flight="end"'),
+    "streamed Flight payload missing",
+  );
+  const clientEntry = /<script type="module" src="([^"]+)"[^>]* async=""/.exec(html)?.[1];
   expect(clientEntry !== undefined, "client entry script missing");
   expect((await fetch(`${origin}${clientEntry}`)).status === 200, "client entry not served");
 

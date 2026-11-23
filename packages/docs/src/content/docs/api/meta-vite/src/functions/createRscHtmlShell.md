@@ -5,7 +5,7 @@ prev: false
 title: "createRscHtmlShell"
 ---
 
-> **createRscHtmlShell**(`headMetadata`, `html`, `manifestVersion`): `string`
+> **createRscHtmlShell**(`headMetadata`, `html`, `manifestVersion`, `options?`): `string`
 
 ## Parameters
 
@@ -20,6 +20,10 @@ title: "createRscHtmlShell"
 ### manifestVersion
 
 `string`
+
+### options?
+
+[`RscHtmlShellOptions`](/api/meta-vite/src/type-aliases/rschtmlshelloptions/) = `{}`
 
 ## Returns
 

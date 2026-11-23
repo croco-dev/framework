@@ -254,7 +254,7 @@ export {
 } from "./libs/rsc/flight";
 // Production Node path: load a `@vitejs/plugin-rsc` build and pass it to
 // `RenderServer`. The build's own entries use `./rsc/server` and `./rsc/ssr`.
-export { readRscInitialFlight } from "./libs/rsc/flight";
+export { readRscInitialFlight, RscInitialFlightIncompleteProblem } from "./libs/rsc/flight";
 export { RscRouteNotInBuildProblem } from "./libs/rsc/buildEntry";
 export { loadRscBuild, RscBuildInvalidProblem } from "./libs/rsc/loadRscBuild";
 export { RscBuildValueUnsupportedProblem } from "./libs/rsc/plainData";
@@ -281,6 +281,7 @@ export type {
 export type {
   RscFlightEncoder,
   RscFlightRequest,
+  RscHtmlShellOptions,
   RscManifestDocument,
   RscManifestElement,
   RscBuildRenderOptions,

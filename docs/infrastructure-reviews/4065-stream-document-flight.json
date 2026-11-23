@@ -1,0 +1,120 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "meta-vite",
+      "classification": "runtime-adapter",
+      "reason": "Changes how a Node RSC production-build document carries its Flight payload: the build worker streams it into the HTML between React flushes, the client entry loads as an async React bootstrap module, and readRscInitialFlight() reads the blocks as they arrive, so the shell hydrates before late Suspense boundaries resolve.",
+      "files": {
+        "packages/meta-vite/src/index.ts": "66ab0357aa7cc97df7fbac686142ab4887db593ceb246e1f9cd3eb66a9e0653d",
+        "packages/meta-vite/src/libs/render/renderServer.ts": "ad471a9b11246d2369e39dbe784d451311a9dc7ac92263055c38abeb3d38b788",
+        "packages/meta-vite/src/libs/rsc/buildEntry.ts": "f3c5ba7f09b35e7a751d04409aa4c7b280fb6d555cbad2325b8cefdca0d02dec",
+        "packages/meta-vite/src/libs/rsc/flight.ts": "322e2fc15e90b616237116fe554502f7bb763cee30e929bc54d4fabb96aa559a",
+        "packages/meta-vite/src/libs/rsc/flightBrowser.entry.ts": "9a15cbde4fe6c67faf73de9edb630cedccfe307736d6e767b2299792f652f450",
+        "packages/meta-vite/src/libs/rsc/rscBuildProtocol.ts": "352e221e9593bd2bb2bea355f3819321eb60b7dc9c26a172ed37c550f2950d3a",
+        "packages/meta-vite/src/libs/rsc/rscBuildWorker.mts": "85d969c6a6ab90c1f290f24f075145e909de1be6c343167c127e7f77224ce227",
+        "packages/meta-vite/src/libs/rsc/rscBuildWorkerClient.ts": "6f189420f612c2bfbb2ab7a082dc2a0f8993629d841b00081c598d33b7c7474c",
+        "packages/meta-vite/src/libs/rsc/ssrEntry.ts": "2018309eb0799cb2a650c4ec8b3286d1177d513081059a4fdc1736a962742060"
+      },
+      "catalogRuntimes": ["node", "lambda", "cloudflare-workers", "browser"],
+      "profiles": {
+        "kubernetes": {
+          "result": "supported",
+          "reason": "A Vite RSC fixture served by @hono/node-server through createNodeComposedHandler, RenderServer and loadRscBuild sends the shell, the async client entry and the shell's Flight blocks over real HTTP while a boundary is held in the build's worker, then the late HTML, its Flight and the end block after release.",
+          "providers": [
+            "@croco/meta-vite/loadRscBuild",
+            "@croco/meta-vite/RenderServer",
+            "@croco/meta-vite/createNodeComposedHandler",
+            "@croco/meta-vite/readRscInitialFlight"
+          ],
+          "constraints": [
+            "The worker reads one HTML chunk ahead to find React flush ends and reads Flight eagerly; memory per document stays bounded by its Flight payload.",
+            "A proxy in front of the server must stream responses instead of buffering them, or the shell hydrates only when the document ends.",
+            "Local host-runtime evidence does not certify a deployed Kubernetes cluster."
+          ],
+          "references": [
+            "packages/meta-vite/src/libs/rsc/rscBuildWorker.mts",
+            "packages/meta-vite/src/libs/rsc/flight.ts",
+            "packages/meta-vite/src/tests/RscNodeHost.spec.ts",
+            "packages/meta-vite/src/tests/published-contract.spec.ts"
+          ],
+          "evidence": {
+            "kind": "host-runtime",
+            "runtime": "node",
+            "path": "packages/meta-vite/src/tests/RscNodeHost.spec.ts",
+            "testName": "Node RSC production build host sends the shell, the client entry and the shell's Flight before a held boundary resolves",
+            "sha256": "fe45c624e9e84ac7df6ea5e8122dc6c766170cedcca2a0fd6be8067f383b3daa"
+          }
+        },
+        "aws-lambda": {
+          "result": "unverified",
+          "reason": "The streamed document comes from the same build worker as before, but no Lambda packaging of a plugin-rsc build was exercised, and buffered Lambda delivery would send the whole document at once, so early hydration is not claimed there.",
+          "providers": ["@croco/meta-vite/createLambdaHandler"],
+          "constraints": [
+            "No Lambda RSC integration or deployment evidence is claimed.",
+            "The buffered Lambda response contract is unchanged."
+          ],
+          "references": [
+            "packages/meta-vite/src/libs/providers/lambda.ts",
+            "packages/meta-vite/README.md"
+          ]
+        },
+        "cloudflare": {
+          "result": "unverified",
+          "host": "node-container",
+          "reason": "A Node Container could run the same Node server, but no container host was exercised. Worker isolates are not claimed: loadRscBuild still needs node:fs and node:worker_threads.",
+          "providers": ["@croco/meta-vite/loadRscBuild"],
+          "constraints": [
+            "No Workers isolate support is added.",
+            "No Cloudflare Node Container evidence is claimed."
+          ],
+          "references": [
+            "packages/meta-vite/src/libs/rsc/loadRscBuild.ts",
+            "packages/meta-vite/README.md"
+          ]
+        }
+      }
+    },
+    {
+      "package": "problems-core",
+      "classification": "pure-contract",
+      "reason": "Regenerates the Problem code registry with recovery metadata for meta-vite/rsc-initial-flight-incomplete. Registry data only.",
+      "files": {
+        "packages/problems-core/src/generated/problem-code-registry.ts": "030c19f97a431e9e46c43c366559f8dead5a38f00c6bbc7e0b298be54bab2ae8"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Generated registry data adds no Node capability, storage or lifecycle dependency.",
+          "providers": [],
+          "constraints": ["Registry metadata only; no host behavior changes."],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "scripts/problem-registry.mts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Generated registry data adds no Lambda capability, storage or lifecycle dependency.",
+          "providers": [],
+          "constraints": ["Registry metadata only; no host behavior changes."],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "scripts/problem-registry.mts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Generated registry data adds no Workers or Node Container capability, storage or lifecycle dependency.",
+          "providers": [],
+          "constraints": ["Registry metadata only; no host behavior changes."],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "scripts/problem-registry.mts"
+          ]
+        }
+      }
+    }
+  ]
+}

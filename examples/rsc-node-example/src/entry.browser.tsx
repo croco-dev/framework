@@ -54,11 +54,16 @@ async function hydrate() {
   if (!outlet) {
     return;
   }
-  // The document embeds the Flight bytes its HTML was rendered from, so the
-  // first render hydrates from those instead of fetching the route again.
+  // The document streams the Flight bytes its HTML is rendered from, so the
+  // shell hydrates from those as soon as its rows arrive, without fetching the
+  // route again or waiting for late Suspense boundaries.
   const initial = readRscInitialFlight();
   const node = initial ? await createFromReadableStream(initial) : await loadFlightNode();
-  root = hydrateRoot(outlet, node as never);
+  // A recovered mismatch means React re-rendered part of the server HTML on the
+  // client; report it so the lab's browser-error checks fail on it.
+  root = hydrateRoot(outlet, node as never, {
+    onRecoverableError: (error) => console.error("Hydration recovered from an error", error),
+  });
   document.querySelector("[data-testid=refresh]")?.addEventListener("click", () => {
     void refresh();
   });

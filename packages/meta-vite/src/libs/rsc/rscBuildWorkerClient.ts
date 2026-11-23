@@ -77,7 +77,7 @@ type PendingRender = {
   readonly target: string;
   readonly onStarted: () => void;
   readonly onChunk: (bytes: Uint8Array) => void;
-  readonly onEnd: (embeddedFlight: string | undefined) => void;
+  readonly onEnd: () => void;
   readonly onError: (problem: Problem) => void;
 };
 
@@ -91,7 +91,6 @@ type PendingAction = {
 type OpenedRender = {
   readonly stream: ReadableStream<Uint8Array>;
   readonly started: Promise<void>;
-  readonly embeddedFlight: Promise<string | undefined>;
 };
 
 export type RscBuildWorkerClient = {
@@ -219,19 +218,11 @@ function createClient(worker: Worker, ready: RscWorkerReady): RscBuildWorkerClie
     assertContext(input.context);
     const id = nextId++;
     let started!: { resolve: () => void; reject: (problem: Problem) => void };
-    let ended!: {
-      resolve: (flight: string | undefined) => void;
-      reject: (problem: Problem) => void;
-    };
     const startedPromise = new Promise<void>((resolve, reject) => {
       started = { resolve, reject };
     });
-    const embeddedFlight = new Promise<string | undefined>((resolve, reject) => {
-      ended = { resolve, reject };
-    });
-    // Rejections are delivered through the stream; these copies are optional.
+    // Rejections are delivered through the stream; this copy is optional.
     startedPromise.catch(() => undefined);
-    embeddedFlight.catch(() => undefined);
 
     let wakePull: (() => void) | undefined;
     const wake = (): void => {
@@ -259,17 +250,15 @@ function createClient(worker: Worker, ready: RscWorkerReady): RscBuildWorkerClie
             controller.enqueue(bytes);
             wake();
           },
-          onEnd: (flight) => {
+          onEnd: () => {
             input.signal.removeEventListener("abort", onAbort);
             controller.close();
-            ended.resolve(flight);
             wake();
           },
           onError: (problem) => {
             input.signal.removeEventListener("abort", onAbort);
             controller.error(problem);
             started.reject(problem);
-            ended.reject(problem);
             wake();
           },
         });
@@ -295,14 +284,12 @@ function createClient(worker: Worker, ready: RscWorkerReady): RscBuildWorkerClie
         input.signal.removeEventListener("abort", onAbort);
         pending.delete(id);
         send({ type: "cancel", id, reason: String(reason ?? "cancelled") });
-        // The worker no longer answers this render, so nothing else settles these.
-        const cancelled = new RscFlightEncodeAbortedProblem(input.route);
-        started.reject(cancelled);
-        ended.reject(cancelled);
+        // The worker no longer answers this render, so nothing else settles it.
+        started.reject(new RscFlightEncodeAbortedProblem(input.route));
       },
     });
 
-    return { stream, started: startedPromise, embeddedFlight };
+    return { stream, started: startedPromise };
   };
 
   return {
@@ -313,18 +300,7 @@ function createClient(worker: Worker, ready: RscWorkerReady): RscBuildWorkerClie
     renderDocument: async (input) => {
       const render = openRender("document", input);
       await render.started;
-      return {
-        html: render.stream,
-        embeddedFlight: async () => {
-          const flight = await render.embeddedFlight;
-          if (flight === undefined) {
-            throw new RscBuildWorkerFailedProblem("render", input.route, {
-              message: "the worker ended a document render without its Flight payload",
-            });
-          }
-          return flight;
-        },
-      };
+      return { html: render.stream };
     },
     invokeAction: async (name, input, options) => {
       assertAvailable();
@@ -385,7 +361,7 @@ function dispatch(
       return;
     case "end":
       pending.delete(message.id);
-      entry.onEnd(message.embeddedFlight);
+      entry.onEnd();
       return;
     case "error":
       pending.delete(message.id);

@@ -9,7 +9,6 @@ import {
   RscServerReferenceNotSupportedProblem,
   assertRscClientManifestVersion,
   assertRscServerReferenceUnsupported,
-  createRscDocumentTail,
   createRscFlightHeaders,
   createRscHtmlShell,
   parseRscFlightRequest,
@@ -21,7 +20,12 @@ import {
 } from "../rsc/isolatedEncode";
 import { RscRouteNotInBuildProblem } from "../rsc/buildEntry";
 import type { RscBuild } from "../rsc/buildEntry";
-import type { RscFlightEncoder, RscFlightRequest, RscRenderOptions } from "../rsc/flight";
+import type {
+  RscFlightEncoder,
+  RscFlightRequest,
+  RscHtmlShellOptions,
+  RscRenderOptions,
+} from "../rsc/flight";
 import type { RscSsrCodec } from "../rsc/ssrDecode";
 import { decodeFlightToHtmlStream } from "../rsc/ssrDecode";
 import { encodePagePath } from "../routes/encodePagePath";
@@ -830,8 +834,9 @@ export class RenderServer {
 
   /**
    * Renders through the build's worker. A Flight request relays the payload;
-   * a document request streams the HTML and then embeds the Flight bytes it
-   * came from, so the browser hydrates without rendering the route again.
+   * a document request streams HTML with the Flight bytes it came from written
+   * in, so the browser hydrates the shell without rendering the route again
+   * and without waiting for late Suspense boundaries.
    */
   private async createRscBuildResponse(
     route: RenderRouteIR,
@@ -853,20 +858,20 @@ export class RenderServer {
     }
 
     const document = await build.renderDocument(input);
-    return this.createRscHtmlStreamResponse(route, route.head?.(), document.html, async () =>
-      createRscDocumentTail(await document.embeddedFlight(), build.clientEntryUrl),
-    );
+    return this.createRscHtmlStreamResponse(route, route.head?.(), document.html, {
+      streamedFlight: true,
+    });
   }
 
   private createRscHtmlStreamResponse(
     route: RenderRouteIR,
     headMetadata: HeadMetadata | undefined,
     htmlStream: ReadableStream<Uint8Array>,
-    renderBodyTail?: () => Promise<string>,
+    shellOptions: RscHtmlShellOptions = {},
   ): Response {
     const encoder = new TextEncoder();
     const { prefix, suffix } = splitRscHtmlShell(
-      createRscHtmlShell(headMetadata, "", this.rscClientManifestVersion),
+      createRscHtmlShell(headMetadata, "", this.rscClientManifestVersion, shellOptions),
     );
 
     // Share the reader with cancel(): once getReader() locks htmlStream,
@@ -908,15 +913,7 @@ export class RenderServer {
         if (done) {
           reader.releaseLock();
           reader = undefined;
-          let tail = "";
-          try {
-            tail = renderBodyTail ? await renderBodyTail() : "";
-          } catch (error) {
-            reportShellFailure("RSC HTML stream failed", { route: route.path, error }, route.path);
-            controller.error(error);
-            return;
-          }
-          controller.enqueue(encoder.encode(insertBeforeBodyEnd(suffix, tail)));
+          controller.enqueue(encoder.encode(suffix));
           controller.close();
           return;
         }
@@ -1017,13 +1014,6 @@ export class RenderServer {
       headers: createRscFlightHeaders(this.rscClientManifestVersion),
     });
   }
-}
-
-function insertBeforeBodyEnd(suffix: string, tail: string): string {
-  const bodyEnd = suffix.lastIndexOf("</body>");
-  return bodyEnd === -1
-    ? `${suffix}${tail}`
-    : `${suffix.slice(0, bodyEnd)}${tail}${suffix.slice(bodyEnd)}`;
 }
 
 // A build renders every request with that request's cookies and host context,

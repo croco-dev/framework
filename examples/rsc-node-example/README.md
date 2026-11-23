@@ -16,8 +16,9 @@ Real React Flight + server/client boundary path built on `@vitejs/plugin-rsc`
 - `src/entry.ssr.tsx` — `defineRscSsrEntry()` from `@croco/meta-vite/rsc/ssr`
   with the official `@vitejs/plugin-rsc/ssr` decoder and `react-dom/server`.
 - `src/entry.browser.tsx` — hydrates with `hydrateRoot` from the Flight bytes
-  the document embeds (`readRscInitialFlight()`), so the page is not rendered
-  twice; Refresh re-fetches `.rsc` and renders the new Flight node into the
+  streamed into the document (`readRscInitialFlight()`), so the page is not
+  rendered twice and the shell hydrates before late Suspense boundaries
+  resolve; Refresh re-fetches `.rsc` and renders the new Flight node into the
   same root. Every `.rsc` fetch carries `createRscBrowserFlightHeaders()`, which
   reads the manifest version out of the document it is running in. Both come
   from `@croco/meta-vite/rsc/browser`: the package root is a server entry, so
@@ -134,7 +135,7 @@ and receipts never enter the shared fragment cache. The experiment measurement i
 `ExperimentRegion` browser boundary and its display-exposure request. It does not
 measure conversion delivery. It adds no allocator. Optional recommendation failure yields
 an explicit unavailable region and diagnostic, leaving the real CTA usable. The
-browser hydrates the exact initial Flight bytes embedded with the document, rather
+browser hydrates from the exact Flight bytes streamed into the document, rather
 than assigning again during hydration. Refresh fetches a new negotiated Flight
 snapshot and preserves a working client boundary. A stale manifest is rejected.
 
@@ -157,20 +158,26 @@ Cold samples use a fresh browser context and cleared fragment store. Warm sample
 first load the same configuration in that context, then navigate again with its
 browser and fragment caches retained. Each mode runs three repetitions. Reports
 record document TTFB, public-loader timing/waterfall, first visible critical shell,
-decoded/visible hero, browser LCP, decoded HTML/embedded Flight/JS/image bytes,
-actual transfer bytes, requests, fragment source, hydration-ready time and keyboard-click-to-next-paint
-latency. The current fixture hydrates when its initial Flight snapshot is complete;
-hydration-ready time includes deferred-content waiting.
+decoded/visible hero, browser LCP, decoded HTML/streamed Flight/JS/image bytes,
+actual transfer bytes, requests, fragment source, hydration-ready time, visible
+recommendation time and keyboard-click-to-next-paint latency. The shell hydrates
+from the Flight rows that arrived with it, so hydration-ready time excludes
+deferred-content waiting; that waiting shows up in recommendation time instead.
 Click-to-next-paint is a **lab interaction measurement, not field INP**. Missing
 measurements fail; they are never zero-filled. Timing deltas require identical
 artifact, fixture, versions, user, viewport, network, CPU, cache mode and repetition.
 
-The lab also injects a held blocking fetch, oversized valid JS and image responses,
+The lab also injects a held blocking fetch, a slow optional source (which must
+delay only the recommendation, never hydration), oversized valid JS and image responses,
 a missing responsive image policy, an initial/hydrated snapshot discrepancy and private-content contamination. Each
 must be rejected. Separate browser checks verify optional-source failure, Alice/Bob
 isolation (Alice → Bob → Alice with no intervening cache reset, public-cache hits, and HTML/Flight private values), network-path origin rejection, mobile/desktop overflow, keyboard/ARIA behavior, no unexpected browser
-errors, manifest/status handling, actual shell visibility while the recommendation
-fetch is held, stable hero geometry after release, and a fresh decoded refresh.
+errors, manifest/status handling, and, while the recommendation fetch is held,
+that the shell hydrates without a second Flight request, the CTA answers the
+keyboard and the experiment exposure is reported. After release, either a late
+recommendation or a late failure (`/lab/resume?outcome=unavailable`) fills the
+same UI while the CTA keeps its state and the hero keeps its geometry, and a
+fresh decoded refresh follows.
 The shared-private-cache negative control deliberately stores the first user’s private result in the process cache; the same user-switch checks must reject its HTML and Flight.
 Synthetic negative-control errors are evidence of rejection, not healthy-page errors.
 

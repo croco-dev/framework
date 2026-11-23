@@ -438,6 +438,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`RscClientManifestMismatchProblem`](/api/meta-vite/src/classes/rscclientmanifestmismatchproblem/)
 - [`RscClientReferenceMissingProblem`](/api/meta-vite/src/classes/rscclientreferencemissingproblem/)
 - [`RscFlightNotAcceptableProblem`](/api/meta-vite/src/classes/rscflightnotacceptableproblem/)
+- [`RscInitialFlightIncompleteProblem`](/api/meta-vite/src/classes/rscinitialflightincompleteproblem/)
 - [`RscRouteNotInBuildProblem`](/api/meta-vite/src/classes/rscroutenotinbuildproblem/)
 - [`RscServerReferenceNotSupportedProblem`](/api/meta-vite/src/classes/rscserverreferencenotsupportedproblem/)
 - [`ServerActionDuplicateRegistrationProblem`](/api/meta-vite/src/classes/serveractionduplicateregistrationproblem/)

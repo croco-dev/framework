@@ -27897,6 +27897,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "RscInitialFlightIncompleteProblem",
+              "exportKind": "named",
+              "source": "./libs/rsc/flight",
+              "declarationKind": "class"
+            },
+            {
               "name": "RscRouteNotInBuildProblem",
               "exportKind": "named",
               "source": "./libs/rsc/buildEntry",
@@ -28757,6 +28763,11 @@
               "source": "./libs/rsc/buildEntry"
             },
             {
+              "name": "RscHtmlShellOptions",
+              "exportKind": "named",
+              "source": "./libs/rsc/flight"
+            },
+            {
               "name": "RscManifestDocument",
               "exportKind": "named",
               "source": "./libs/rsc/flight"
@@ -29051,6 +29062,12 @@
               "exportKind": "named",
               "source": "./flight",
               "declarationKind": "const"
+            },
+            {
+              "name": "RscInitialFlightIncompleteProblem",
+              "exportKind": "named",
+              "source": "./flight",
+              "declarationKind": "class"
             },
             {
               "name": "createRscBrowserFlightHeaders",

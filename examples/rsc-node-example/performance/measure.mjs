@@ -156,7 +156,7 @@ try {
     await cdp.send("Network.emulateNetworkConditions", { offline: false, ...profile.network });
     await cdp.send("Emulation.setCPUThrottlingRate", { rate: profile.cpuSlowdown });
     await page.addInitScript(() => {
-      window.pdpLab = { shellMs: null, heroMs: null, lcpMs: null };
+      window.pdpLab = { shellMs: null, heroMs: null, lcpMs: null, recommendationMs: null };
       new PerformanceObserver((list) => {
         for (const e of list.getEntries()) window.pdpLab.lcpMs = e.startTime;
       }).observe({ type: "largest-contentful-paint", buffered: true });
@@ -177,7 +177,16 @@ try {
           window.pdpLab.heroMs === null
         )
           window.pdpLab.heroMs = performance.now();
-        if (window.pdpLab.shellMs === null || window.pdpLab.heroMs === null)
+        if (
+          document.getElementById("recommendation-content")?.getBoundingClientRect().height &&
+          window.pdpLab.recommendationMs === null
+        )
+          window.pdpLab.recommendationMs = performance.now();
+        if (
+          window.pdpLab.shellMs === null ||
+          window.pdpLab.heroMs === null ||
+          window.pdpLab.recommendationMs === null
+        )
           requestAnimationFrame(frame);
       };
       requestAnimationFrame(frame);
@@ -219,10 +228,12 @@ try {
         );
       }
       initialResponse = await page.goto(url);
+      // React reveals a completed boundary from a hidden container a little
+      // later, so wait until the recommendation is visible, not just present.
       await page.waitForFunction(
         () =>
           document.documentElement.dataset.pdpHydrated &&
-          document.getElementById("recommendation") &&
+          window.pdpLab.recommendationMs !== null &&
           window.pdpLab.heroMs !== null &&
           window.pdpLab.lcpMs !== null,
       );
@@ -238,13 +249,19 @@ try {
         const resources = performance.getEntriesByType("resource");
         const bytes = (select) =>
           resources.filter(select).reduce((total, r) => total + r.decodedBodySize, 0);
-        const initial = document.getElementById("croco-rsc-initial-flight");
+        // The document streams its Flight payload as base64 blocks between HTML chunks.
+        const flightBlocks = [
+          ...document.querySelectorAll('script[data-croco-rsc-flight="chunk"]'),
+        ];
         return {
           ...window.pdpLab,
           hydrationReadyMs: performance.getEntriesByName("pdp:hydrated")[0]?.startTime,
           ttfbMs: nav.responseStart,
           htmlBytes: nav.decodedBodySize,
-          flightBytes: atob(JSON.parse(initial.textContent)).length,
+          flightBytes: flightBlocks.reduce(
+            (total, block) => total + atob(JSON.parse(block.textContent)).length,
+            0,
+          ),
           jsBytes: bytes((r) => new URL(r.name).pathname.endsWith(".js")),
           imageBytes: bytes((r) => new URL(r.name).pathname.startsWith("/cdn-cgi/")),
           wireBytes: nav.transferSize + resources.reduce((total, r) => total + r.transferSize, 0),
@@ -437,7 +454,13 @@ try {
   negativeControls.blocking = { sample: blockingSample, verdict: blockingVerdict };
   const deferredSample = await measure("combined", "cold", 0, { fault: "deferred-blocking" });
   const deferredVerdict = assess(deferredSample, baseline);
-  assert.ok(deferredVerdict.diagnostics.includes("PDP_REGRESSION:hydrationReadyMs"));
+  // A slow optional source delays only the late region: the shell must still
+  // hydrate on time, so hydration-ready time is not allowed to regress with it.
+  assert.ok(deferredVerdict.diagnostics.includes("PDP_REGRESSION:recommendationMs"));
+  assert.ok(
+    !deferredVerdict.diagnostics.includes("PDP_REGRESSION:hydrationReadyMs"),
+    "A slow optional source must not delay hydration of the critical shell",
+  );
   negativeControls.deferredBlocking = { sample: deferredSample, verdict: deferredVerdict };
   for (const fault of ["hydration", "private", "image-policy"]) {
     const sample = await measure("combined", "cold", 0, { fault });
@@ -488,54 +511,133 @@ try {
   negativeControls.sharedPrivate = { sequence: sharedPrivate, detected: true };
   const desktop = await measure("combined", "cold", 0, { viewport: { width: 1280, height: 900 } });
   assert.equal(desktop.correctness, true);
-  // Hold the real optional fetch open; the streamed shell must stay usable before release.
-  await fetch(`${origin}/lab/defer`, { method: "POST" });
-  const streamingContext = await browser.newContext({ viewport: profile.viewport });
-  const streamingPage = await streamingContext.newPage();
-  streamingPage.setDefaultTimeout(15000);
-  const streamingErrors = [];
-  streamingPage.on("pageerror", (error) => streamingErrors.push(error.message));
-  streamingPage.on("console", (message) => {
-    if (message.type() === "error") streamingErrors.push(message.text());
-  });
-  const streamingNavigation = streamingPage.goto(
-    `${origin}/products/orbit?configuration=combined`,
-    { waitUntil: "load" },
-  );
-  try {
-    await streamingPage.getByRole("heading", { name: "Orbit art print", exact: true }).waitFor();
-    assert.equal(
-      await streamingPage.getByRole("button", { name: "Preview this print" }).isVisible(),
-      true,
-    );
-    assert.equal(await streamingPage.locator("#recommendation").count(), 0);
-    const before = await streamingPage.locator("#hero").boundingBox();
-    await fetch(`${origin}/lab/resume`, { method: "POST" });
-    await streamingNavigation;
-    await streamingPage.waitForFunction(() => document.documentElement.dataset.pdpHydrated);
-    const after = await streamingPage.locator("#hero").boundingBox();
-    assert.deepEqual(after, before, "Deferred content must not shift the hero");
-    const snapshotBeforeRefresh = await streamingPage
-      .locator("main")
-      .getAttribute("data-pdp-snapshot");
-    await streamingPage.evaluate(() => {
-      delete document.documentElement.dataset.pdpExposure;
+  // Hold the real optional fetch open. Before release the shell must hydrate and
+  // the CTA must answer the keyboard; after release the same UI takes the late
+  // result without remounting. Ordering is structural: nothing waits on a timer.
+  async function heldRecommendation(outcome) {
+    await fetch(`${origin}/lab/defer`, { method: "POST" });
+    const context = await browser.newContext({ viewport: profile.viewport });
+    const page = await context.newPage();
+    page.setDefaultTimeout(15000);
+    const errors = [];
+    const flightRequests = [];
+    const exposureRequests = [];
+    page.on("pageerror", (error) => errors.push(error.message));
+    page.on("console", (message) => {
+      if (message.type() === "error") errors.push(message.text());
     });
-    await streamingPage.getByRole("button", { name: "Refresh", exact: true }).click();
-    await streamingPage.waitForFunction(
-      (previous) =>
-        document.querySelector("main").dataset.pdpSnapshot !== previous &&
-        document.querySelector("main").dataset.pdpSnapshot ===
+    page.on("request", (request) => {
+      const { pathname } = new URL(request.url());
+      if (pathname.endsWith(".rsc")) flightRequests.push(request.url());
+      if (pathname === "/lab/expose") exposureRequests.push(request.url());
+    });
+    const navigation = page.goto(`${origin}/products/orbit?configuration=combined`, {
+      waitUntil: "load",
+    });
+    try {
+      await page.getByRole("heading", { name: "Orbit art print", exact: true }).waitFor();
+      await page.waitForFunction(
+        () =>
           document.documentElement.dataset.pdpHydrated &&
-        document.documentElement.dataset.pdpExposure === "reported",
-      snapshotBeforeRefresh,
-    );
-    assert.deepEqual(streamingErrors, []);
-  } finally {
-    await fetch(`${origin}/lab/resume`, { method: "POST" });
-    await streamingNavigation.catch(() => undefined);
-    await streamingContext.close();
+          document.documentElement.dataset.pdpExposure,
+      );
+      const cta = page.getByRole("button", { name: "Preview this print" });
+      await cta.focus();
+      await page.keyboard.press("Enter");
+      await page.waitForFunction(
+        () => document.getElementById("trial-cta").getAttribute("aria-pressed") === "true",
+      );
+      const held = {
+        recommendations: await page.locator("#recommendation").count(),
+        fallbackVisible: await page.getByText("Loading recommendations…").isVisible(),
+        status: await page.getByRole("status").innerText(),
+        exposure: await page.evaluate(() => document.documentElement.dataset.pdpExposure),
+      };
+      assert.deepEqual(
+        held,
+        {
+          recommendations: 0,
+          fallbackVisible: true,
+          status: "Preview selected",
+          exposure: "reported",
+        },
+        "The CTA must work while the recommendation is still held",
+      );
+      const before = await page.locator("#hero").boundingBox();
+
+      await fetch(
+        `${origin}/lab/resume${outcome === "unavailable" ? "?outcome=unavailable" : ""}`,
+        { method: "POST" },
+      );
+      await navigation;
+      await page.locator("#recommendation-content").waitFor();
+      const released = {
+        recommendation: await page.locator("#recommendation-content").innerText(),
+        pressed: await cta.getAttribute("aria-pressed"),
+        status: await page.getByRole("status").innerText(),
+      };
+      assert.deepEqual(
+        released,
+        {
+          recommendation:
+            outcome === "unavailable"
+              ? "Recommendations unavailable"
+              : "More orbital studies: Saved inspiration for alice",
+          pressed: "true",
+          status: "Preview selected",
+        },
+        "The late result must update the same UI without resetting the CTA",
+      );
+      assert.deepEqual(
+        await page.locator("#hero").boundingBox(),
+        before,
+        "Deferred content must not shift the hero",
+      );
+      // Hydration used the Flight bytes written into the document, not a second request.
+      const flightRequestsDuringHydration = flightRequests.length;
+      assert.equal(flightRequestsDuringHydration, 0);
+      // The late boundary must not report the decision again; a replayed receipt
+      // would be refused and flip the exposure state to "failed".
+      const exposuresBeforeRefresh = exposureRequests.length;
+      assert.equal(exposuresBeforeRefresh, 1, "The display exposure must be reported exactly once");
+      assert.equal(
+        await page.evaluate(() => document.documentElement.dataset.pdpExposure),
+        "reported",
+      );
+
+      if (outcome === "available") {
+        const snapshotBeforeRefresh = await page.locator("main").getAttribute("data-pdp-snapshot");
+        await page.evaluate(() => {
+          delete document.documentElement.dataset.pdpExposure;
+        });
+        await page.getByRole("button", { name: "Refresh", exact: true }).click();
+        await page.waitForFunction(
+          (previous) =>
+            document.querySelector("main").dataset.pdpSnapshot !== previous &&
+            document.querySelector("main").dataset.pdpSnapshot ===
+              document.documentElement.dataset.pdpHydrated &&
+            document.documentElement.dataset.pdpExposure === "reported",
+          snapshotBeforeRefresh,
+        );
+      }
+      assert.deepEqual(errors, []);
+      return {
+        outcome,
+        held,
+        released,
+        flightRequestsDuringHydration,
+        exposuresBeforeRefresh,
+      };
+    } finally {
+      await fetch(`${origin}/lab/resume`, { method: "POST" });
+      await navigation.catch(() => undefined);
+      await context.close();
+    }
   }
+  const earlyInteraction = [
+    await heldRecommendation("available"),
+    await heldRecommendation("unavailable"),
+  ];
   const alice = await measure("combined", "cold", 0);
   const receipt = JSON.parse(alice.snapshot).decision.receipt;
   const exposureBody = JSON.stringify({
@@ -577,6 +679,7 @@ try {
       crossUser,
       invalidTargetStatus,
       desktop,
+      earlyInteraction,
       exposureStatuses: [204, 403, 403, 400, 413],
       missingStatus: 404,
       staleManifestStatus: 400,

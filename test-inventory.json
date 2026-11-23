@@ -3804,6 +3804,12 @@
       "owner": "@croco/meta-vite"
     },
     {
+      "path": "packages/meta-vite/src/tests/InterleaveFlight.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/meta-vite"
+    },
+    {
       "path": "packages/meta-vite/src/tests/IsrVary.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -3835,6 +3841,12 @@
     },
     {
       "path": "packages/meta-vite/src/tests/PublicPageHandler.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/meta-vite"
+    },
+    {
+      "path": "packages/meta-vite/src/tests/ReadRscInitialFlight.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/meta-vite"

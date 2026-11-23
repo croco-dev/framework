@@ -6,6 +6,18 @@ import { SERVER_ONLY_TOKEN } from "./serverOnly.js";
 
 let renders = 0;
 
+// A boundary that stays pending until the `release` action runs, so a test can
+// hold late content open and check what already works before it arrives.
+let releaseHeld;
+let held = new Promise((resolve) => {
+  releaseHeld = resolve;
+});
+
+async function HeldFact() {
+  await held;
+  return <p data-testid="held">held:released</p>;
+}
+
 async function SlowFact() {
   await new Promise((resolve) => setTimeout(resolve, 50));
   return <p data-testid="slow">slow:resolved</p>;
@@ -28,6 +40,11 @@ function Home({ request, context }) {
       <Suspense fallback={<p>loading</p>}>
         <SlowFact />
       </Suspense>
+      {url.searchParams.has("hold") ? (
+        <Suspense fallback={<p data-testid="held-fallback">holding</p>}>
+          <HeldFact />
+        </Suspense>
+      ) : null}
       <Counter />
     </main>
   );
@@ -35,5 +52,14 @@ function Home({ request, context }) {
 
 export default defineRscServerEntry({
   renderToReadableStream,
+  actions: {
+    release: () => {
+      releaseHeld();
+      held = new Promise((resolve) => {
+        releaseHeld = resolve;
+      });
+      return null;
+    },
+  },
   routes: [{ path: "/", component: Home, head: () => ({ title: "Packed RSC" }) }],
 });

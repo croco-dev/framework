@@ -63,7 +63,8 @@ Missing durable ISR configuration is not treated as a silent production success:
 The `rsc` mode is real React Flight on Node. The recommended production path loads a
 `@vitejs/plugin-rsc` build with `loadRscBuild()` and passes it to `RenderServer`: the built `rsc` and
 `ssr` entries render in a worker thread per build, client islands hydrate from the Flight bytes
-embedded in the document, and plain-data `RuntimeContext` values reach server components
+streamed into the document before late Suspense boundaries resolve, and plain-data `RuntimeContext`
+values reach server components
 (`examples/rsc-node-example` and the `node-meta-vite-rsc` create-croco-app profile). Routes rendered
 without a build use the isolated encoder, which starts one `react-server` child process per request
 and cannot decode client islands. Both paths negotiate HTML vs Flight on one path with distinct

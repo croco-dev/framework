@@ -28,8 +28,12 @@ export class RscRouteNotInBuildProblem extends Problem {
  */
 export const RSC_SERVER_ENTRY_VERSION = "croco.meta-vite.rsc-server-entry.v1" as const;
 
-/** Marks the default export of a built `ssr` entry. */
-export const RSC_SSR_ENTRY_VERSION = "croco.meta-vite.rsc-ssr-entry.v1" as const;
+/**
+ * Marks the default export of a built `ssr` entry. v2 entries write the client
+ * entry as a React bootstrap module; a v1 build relied on the host appending
+ * it, so loading one now would leave the page without a client entry.
+ */
+export const RSC_SSR_ENTRY_VERSION = "croco.meta-vite.rsc-ssr-entry.v2" as const;
 
 /** The route metadata the host reads from a built `rsc` entry. */
 export type RscBuildRoute = {
@@ -95,9 +99,11 @@ export type RscRenderRequest = {
 };
 
 export type RscDocumentRender = {
+  /**
+   * The document body. The Flight bytes the HTML is rendered from are written
+   * into it as they arrive, so the browser can hydrate before it ends.
+   */
   readonly html: ReadableStream<Uint8Array>;
-  /** The Flight bytes the HTML was rendered from, base64-encoded, available once the HTML ends. */
-  readonly embeddedFlight: () => Promise<string>;
 };
 
 /**

@@ -14,8 +14,8 @@ apps' builds share one process without resolving each other's modules. The `Runt
 plain data, the request body is not carried, and `head()` is read once per build. The request's
 abort signal and a cancelled response body stop both renders in the worker, and `build.close()`
 stops the worker and fails renders still in flight. `build.closed` settles when the worker stops for
-any reason, so a server can exit and be restarted instead of failing every later request. The document embeds the Flight
-bytes its HTML came from (base64, so binary rows survive) and loads the build's client entry, so client islands hydrate without a
+any reason, so a server can exit and be restarted instead of failing every later request. The document streams the Flight
+bytes its HTML comes from (base64, so binary rows survive) and loads the build's client entry, so client islands hydrate without a
 second render and refresh through the existing manifest handshake. Both representations are sent with
 `cache-control: private, no-store`. `createRscAssetHandler(build)` serves the hashed client bundle.
 

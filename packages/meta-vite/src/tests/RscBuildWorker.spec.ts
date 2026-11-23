@@ -7,7 +7,6 @@ import {
   RSC_CLIENT_BUILD_FILE,
   RSC_FLIGHT_VERSION,
   composeRscClientManifestVersion,
-  readRscInitialFlight,
 } from "../libs/rsc/flight";
 import { loadRscBuild } from "../libs/rsc/loadRscBuild";
 import { RscFlightEncodeAbortedProblem } from "../libs/rsc/isolatedEncode";
@@ -17,6 +16,7 @@ import {
   RscBuildWorkerFailedProblem,
   RscBuildWorkerUnavailableProblem,
 } from "../libs/rsc/rscBuildWorkerClient";
+import { splitStreamedFlight } from "./fixtures/streamedFlightDocument";
 import type { RscBuild, RscRenderRequest } from "../libs/rsc/buildEntry";
 
 // Plain ESM entries with the shape the helpers produce. Module state counts
@@ -144,23 +144,39 @@ describe("RSC build worker", () => {
     expect(await textOf(build.renderFlight(renderInput("/", { tenant: "a" })))).toBe("0:/:a:r1\n");
 
     const document = await build.renderDocument(renderInput("/", { tenant: "b" }));
-    expect(await textOf(document.html)).toBe("<p>0:/:b:r1</p>");
-    expect(Buffer.from(await document.embeddedFlight(), "base64").toString()).toBe("0:/:b:r1\n");
+    const parts = splitStreamedFlight(await textOf(document.html));
+    expect(parts.html).toBe("<p>0:/:b:r1</p>");
+    expect(Buffer.from(parts.flight).toString()).toBe("0:/:b:r1\n");
+    expect(parts.ended).toBe(true);
   });
 
-  it("embeds Flight bytes that are not valid UTF-8 without changing them", async () => {
+  it("writes Flight bytes that are not valid UTF-8 into the document without changing them", async () => {
     const build = await loadFakeBuild("app");
     const document = await build.renderDocument(renderInput("/binary"));
-    await textOf(document.html);
 
-    const embedded = await document.embeddedFlight();
-    const stream = readRscInitialFlight({
-      getElementById: () => ({ textContent: JSON.stringify(embedded) }),
-    });
-
-    expect([...new Uint8Array(await new Response(stream).arrayBuffer())]).toEqual([
+    expect([...splitStreamedFlight(await textOf(document.html)).flight]).toEqual([
       0x30, 0x3a, 0xff, 0xfe, 0x00, 0x0a,
     ]);
+  });
+
+  it("delivers the shell and its Flight rows while a boundary is still pending", async () => {
+    const build = await loadFakeBuild("app");
+    const document = await build.renderDocument(renderInput("/pending"));
+    const reader = document.html.getReader();
+    const decoder = new TextDecoder();
+
+    let text = "";
+    while (splitStreamedFlight(text).flight.length === 0) {
+      const { done, value } = await reader.read();
+      expect(done).toBe(false);
+      text += decoder.decode(value, { stream: true });
+    }
+    const parts = splitStreamedFlight(text);
+
+    expect(parts.html).toBe("<p>0:pending</p>");
+    expect(Buffer.from(parts.flight).toString()).toBe("0:pending\n");
+    expect(parts.ended).toBe(false);
+    await reader.cancel("done");
   });
 
   it("refuses context that is not plain data instead of cloning it silently", async () => {
@@ -224,17 +240,6 @@ describe("RSC build worker", () => {
       RscFlightEncodeAbortedProblem,
     );
     expect((await workerState(build)).renders).toBe(0);
-  });
-
-  it("settles the embedded Flight when the HTML consumer cancels", async () => {
-    const build = await loadFakeBuild("app");
-    const document = await build.renderDocument(renderInput("/pending"));
-    const reader = document.html.getReader();
-    await reader.read();
-
-    await reader.cancel("navigated-away");
-
-    await expect(document.embeddedFlight()).rejects.toThrow(RscFlightEncodeAbortedProblem);
   });
 
   it("stops the document render inside the worker when the HTML consumer cancels", async () => {

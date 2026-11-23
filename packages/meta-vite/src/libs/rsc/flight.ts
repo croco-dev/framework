@@ -25,11 +25,15 @@ export const RSC_CLIENT_MANIFEST_HEADER = "x-croco-rsc-client-manifest" as const
 export const RSC_MANIFEST_ELEMENT_ID = "croco-rsc-manifest" as const;
 
 /**
- * Element id of the JSON block that carries the Flight payload a document was
- * rendered from, so the browser hydrates from the same bytes instead of
- * fetching and rendering the route a second time.
+ * Attribute of the JSON blocks that carry the Flight payload a document is
+ * rendered from. The blocks are written between HTML chunks while both
+ * stream, so the browser hydrates the shell from the same bytes before late
+ * Suspense boundaries resolve, without fetching the route a second time.
  */
-export const RSC_INITIAL_FLIGHT_ELEMENT_ID = "croco-rsc-initial-flight" as const;
+export const RSC_INITIAL_FLIGHT_ATTRIBUTE = "data-croco-rsc-flight" as const;
+
+/** `<meta>` name a document uses to say that its Flight payload streams with it. */
+export const RSC_INITIAL_FLIGHT_META_NAME = "croco:rsc-initial-flight" as const;
 
 /**
  * Name of the file `crocoMetaVitePlugin` writes into the client build output.
@@ -94,6 +98,26 @@ export class RscClientManifestMismatchProblem extends Problem {
       ProblemCategory.BadRequest,
       `Route '${route}' refused a Flight request with a mismatched client manifest version`,
       { extensions: { route, expected, received: received ?? "missing" } },
+    );
+  }
+}
+
+/**
+ * The document's streamed Flight payload cannot be read to its end: the
+ * document finished loading before the block that ends it (`ended-early`, the
+ * response was cut off mid-render), or a block is not a base64 JSON string
+ * (`unreadable-block`).
+ */
+export class RscInitialFlightIncompleteProblem extends Problem {
+  readonly code = "meta-vite/rsc-initial-flight-incomplete";
+  readonly category = ProblemCategory.InternalServerError;
+
+  constructor(blocksRead: number, reason: "ended-early" | "unreadable-block") {
+    super(
+      "meta-vite/rsc-initial-flight-incomplete",
+      ProblemCategory.InternalServerError,
+      "The document's streamed Flight payload could not be read to its end",
+      { extensions: { blocksRead, reason } },
     );
   }
 }
@@ -300,42 +324,122 @@ export function readRscClientManifestVersion(doc: RscManifestDocument): string |
 }
 
 /**
- * The Flight payload the current document was rendered from, as the stream the
- * official browser decoder reads. Returns null when the document carries none,
- * and the caller then fetches the route's Flight representation instead.
+ * The Flight payload the current document is rendered from, as the stream the
+ * official browser decoder reads. The stream yields each block as soon as the
+ * parser has it, so the shell can hydrate while later rows are still on their
+ * way, and closes at the block that ends the payload. Returns null when the
+ * document carries no streamed payload; the caller then fetches the route's
+ * Flight representation instead.
  */
-export function readRscInitialFlight(
-  doc?: Pick<RscManifestDocument, "getElementById">,
-): ReadableStream<Uint8Array> | null {
+export function readRscInitialFlight(doc?: Document): ReadableStream<Uint8Array> | null {
   const documentRef = doc ?? (typeof document === "undefined" ? undefined : document);
-  const text = documentRef?.getElementById(RSC_INITIAL_FLIGHT_ELEMENT_ID)?.textContent;
-  if (!text) {
+  const marker = documentRef?.querySelector(`meta[name="${RSC_INITIAL_FLIGHT_META_NAME}"]`);
+  if (!documentRef || marker?.getAttribute("content") !== "streamed") {
     return null;
   }
 
-  const payload: unknown = JSON.parse(text);
-  if (typeof payload !== "string") {
-    return null;
-  }
-  const bytes = Uint8Array.from(atob(payload), (character) => character.charCodeAt(0));
+  // Blocks are tracked by identity, not by position: when a hydration mismatch
+  // makes React re-render the root, it empties `#root`, which removes the
+  // blocks already read, and the parser keeps appending later ones there.
+  const read = new WeakSet<Element>();
+  let waiting: Element | undefined;
+  let blocksRead = 0;
+  let finished = false;
+  let stop = (): void => undefined;
   return new ReadableStream<Uint8Array>({
     start(controller) {
-      controller.enqueue(bytes);
-      controller.close();
+      const watch = { childList: true, subtree: true, characterData: true };
+      const observer = new MutationObserver(() => drain());
+      const finish = (error?: RscInitialFlightIncompleteProblem): void => {
+        finished = true;
+        stop();
+        if (error) {
+          controller.error(error);
+        } else {
+          controller.close();
+        }
+      };
+      const drainBlocks = (): void => {
+        const unread = Array.from(
+          documentRef.querySelectorAll(`script[${RSC_INITIAL_FLIGHT_ATTRIBUTE}]`),
+        ).filter((block) => !read.has(block) && block !== waiting);
+        for (const block of waiting ? [waiting, ...unread] : unread) {
+          const result = readFlightBlock(block);
+          if (result.kind === "pending") {
+            // The block is watched on its own too: if React empties `#root`
+            // before the parser finishes it, its text still arrives, but no
+            // longer inside the observed document.
+            if (waiting !== block) {
+              observer.observe(block, watch);
+            }
+            waiting = block;
+            return;
+          }
+          waiting = undefined;
+          read.add(block);
+          if (result.kind !== "chunk") {
+            finish(
+              result.kind === "end"
+                ? undefined
+                : new RscInitialFlightIncompleteProblem(blocksRead, "unreadable-block"),
+            );
+            return;
+          }
+          blocksRead += 1;
+          controller.enqueue(result.bytes);
+        }
+      };
+      const drain = (): void => {
+        if (finished) {
+          return;
+        }
+        drainBlocks();
+        if (!finished && documentRef.readyState !== "loading") {
+          // The document ended without the block that closes the payload: the
+          // response was cut off, so late boundaries would wait forever.
+          finish(new RscInitialFlightIncompleteProblem(blocksRead, "ended-early"));
+        }
+      };
+      observer.observe(documentRef, watch);
+      documentRef.addEventListener("DOMContentLoaded", drain);
+      stop = () => {
+        observer.disconnect();
+        documentRef.removeEventListener("DOMContentLoaded", drain);
+      };
+      drain();
+    },
+    cancel() {
+      finished = true;
+      stop();
     },
   });
 }
 
-/**
- * Body tail of a document rendered from a production build: the Flight bytes
- * the HTML came from (base64, so binary rows survive), then the client entry
- * that hydrates it.
- */
-export function createRscDocumentTail(flightBase64: string, clientEntryUrl: string): string {
-  return (
-    `<script type="application/json" id="${RSC_INITIAL_FLIGHT_ELEMENT_ID}">${serializeRscManifestJson(flightBase64)}</script>` +
-    `<script type="module" src="${escapeRscHtml(clientEntryUrl)}"></script>`
-  );
+type FlightBlock =
+  | { readonly kind: "pending" | "end" | "unreadable" }
+  | { readonly kind: "chunk"; readonly bytes: Uint8Array };
+
+function readFlightBlock(block: Element): FlightBlock {
+  // The parser may hand over a block before all of its text arrived. A payload
+  // is complete only once its closing quote (or `null`) is in.
+  const text = block.textContent ?? "";
+  if (block.getAttribute(RSC_INITIAL_FLIGHT_ATTRIBUTE) === "end") {
+    return { kind: text === "null" ? "end" : "pending" };
+  }
+  if (text.length < 2 || !text.startsWith('"') || !text.endsWith('"')) {
+    return { kind: "pending" };
+  }
+  try {
+    return { kind: "chunk", bytes: decodeBase64(JSON.parse(text) as string) };
+  } catch {
+    // A complete block that is not a base64 JSON string cannot be decoded, and
+    // skipping it would hand the decoder a stream with bytes missing.
+    return { kind: "unreadable" };
+  }
+}
+
+function decodeBase64(payload: string): Uint8Array {
+  return Uint8Array.from(atob(payload), (character) => character.charCodeAt(0));
 }
 
 function readMetaManifestVersion(doc: RscManifestDocument): string | null {
@@ -365,10 +469,16 @@ export function createRscFlightHeaders(manifestVersion: string): Headers {
   return headers;
 }
 
+export type RscHtmlShellOptions = {
+  /** The body carries its Flight payload as streamed blocks (`readRscInitialFlight`). */
+  readonly streamedFlight?: boolean;
+};
+
 export function createRscHtmlShell(
   headMetadata: HeadMetadata | undefined,
   html: string,
   manifestVersion: string,
+  options: RscHtmlShellOptions = {},
 ): string {
   const title = escapeRscHtml(headMetadata?.title ?? "Croco App");
 
@@ -390,7 +500,11 @@ export function createRscHtmlShell(
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>${title}</title>${metaTags}
     <meta name="croco:rsc-flight-version" content="${escapeRscHtml(RSC_FLIGHT_VERSION)}">
-    <meta name="croco:rsc-client-manifest" content="${escapeRscHtml(manifestVersion)}">
+    <meta name="croco:rsc-client-manifest" content="${escapeRscHtml(manifestVersion)}">${
+      options.streamedFlight
+        ? `\n    <meta name="${RSC_INITIAL_FLIGHT_META_NAME}" content="streamed">`
+        : ""
+    }
   </head>
   <body>
     <div id="root">${html}</div>

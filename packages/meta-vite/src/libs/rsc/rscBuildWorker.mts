@@ -26,7 +26,6 @@ type Render = {
   readonly controller: AbortController;
   started: Promise<void>;
   reader?: ReadableStreamDefaultReader<Uint8Array>;
-  embeddedFlight?: Promise<string>;
 };
 
 type LoadedEntries = {
@@ -60,17 +59,173 @@ function toRequest(serialized: RscSerializedRequest, signal: AbortSignal): Reque
   return new Request(serialized.url, { method: serialized.method, headers, signal });
 }
 
-// Flight rows can carry raw bytes (typed arrays, ArrayBuffers), so the payload
-// is embedded as base64 rather than as text that would replace invalid UTF-8.
-async function readBase64(reader: ReadableStreamDefaultReader<Uint8Array>): Promise<string> {
-  const chunks: Uint8Array[] = [];
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) {
-      return Buffer.concat(chunks).toString("base64");
+// Must match RSC_INITIAL_FLIGHT_ATTRIBUTE in ./flight; this file cannot import it.
+export const FLIGHT_BLOCK_ATTRIBUTE = "data-croco-rsc-flight";
+const MACROTASK = Symbol("macrotask");
+const FLIGHT_READY = Symbol("flight-ready");
+const encoder = new TextEncoder();
+
+// The worker transfers each chunk's ArrayBuffer to the host, and a Buffer may
+// be a view into Node's shared pool, so chunks leave here as plain arrays.
+function concat(chunks: readonly Uint8Array[]): Uint8Array {
+  return new Uint8Array(Buffer.concat(chunks));
+}
+
+// Flight rows can carry raw bytes (typed arrays, ArrayBuffers), so each block
+// carries base64 rather than text that would replace invalid UTF-8. Base64
+// has no `<`, so a block cannot close its script element early.
+function flightBlock(chunks: readonly Uint8Array[]): Uint8Array {
+  const payload = Buffer.concat(chunks).toString("base64");
+  return encoder.encode(
+    `<script type="application/json" ${FLIGHT_BLOCK_ATTRIBUTE}="chunk">"${payload}"</script>`,
+  );
+}
+
+const FLIGHT_END_BLOCK = encoder.encode(
+  `<script type="application/json" ${FLIGHT_BLOCK_ATTRIBUTE}="end">null</script>`,
+);
+
+function nextMacrotask(): Promise<typeof MACROTASK> {
+  return new Promise((resolve) => setImmediate(() => resolve(MACROTASK)));
+}
+
+/**
+ * Writes the Flight bytes a document was rendered from into its HTML while
+ * both are still streaming, so the browser can hydrate the shell before late
+ * Suspense boundaries resolve.
+ *
+ * React flushes HTML synchronously, but may split one flush into several
+ * chunks at arbitrary byte offsets, including inside a tag. All chunks of one
+ * flush are enqueued in the same task, so a read that is still pending once a
+ * macrotask has passed marks the end of a flush. Blocks are written only at
+ * those boundaries and only after the shell, so they never land inside an
+ * element React will hydrate. Merging two flushes into one burst is harmless.
+ */
+export function interleaveFlight(
+  html: ReadableStream<Uint8Array>,
+  flight: ReadableStream<Uint8Array>,
+): ReadableStream<Uint8Array> {
+  const htmlReader = html.getReader();
+  const flightReader = flight.getReader();
+  let pendingFlight: Uint8Array[] = [];
+  let wakeFlight: (() => void) | undefined;
+  let nextHtml: Promise<ReadableStreamReadResult<Uint8Array>> | undefined;
+  let shellSent = false;
+  let htmlDone = false;
+
+  const flightRead = (async () => {
+    for (;;) {
+      const { done, value } = await flightReader.read();
+      if (done) {
+        return;
+      }
+      pendingFlight.push(value);
+      wakeFlight?.();
     }
-    chunks.push(value);
-  }
+  })();
+  // A Flight failure also fails the HTML branch; it is rethrown at the end.
+  flightRead.catch(() => undefined);
+
+  const takeFlight = (): Uint8Array[] => {
+    if (pendingFlight.length === 0) {
+      return [];
+    }
+    const block = flightBlock(pendingFlight);
+    pendingFlight = [];
+    return [block];
+  };
+  const flightArrival = (): Promise<typeof FLIGHT_READY> =>
+    new Promise((resolve) => {
+      wakeFlight = () => resolve(FLIGHT_READY);
+    });
+  // A tee branch's cancel settles only once the other branch is cancelled too,
+  // and the SSR decoder holds that one, so the Flight side is not awaited.
+  // The render's abort signal is what stops the encoder upstream.
+  const cancelBoth = async (reason: unknown): Promise<void> => {
+    void flightReader.cancel(reason).catch(() => undefined);
+    await htmlReader.cancel(reason).catch(() => undefined);
+  };
+  // The HTML can end before the Flight stream does, for example when a client
+  // component receives a promise that SSR never reads. The finished HTML goes
+  // out at once; later pulls carry the rest of the payload, then the end block.
+  const endHtml = (
+    controller: ReadableStreamDefaultController<Uint8Array>,
+    head: readonly Uint8Array[],
+  ): void => {
+    htmlDone = true;
+    shellSent = true;
+    const bytes = [...head, ...takeFlight()];
+    if (bytes.length > 0) {
+      controller.enqueue(concat(bytes));
+    }
+  };
+  const pullAfterHtml = async (
+    controller: ReadableStreamDefaultController<Uint8Array>,
+  ): Promise<void> => {
+    // Racing the read itself settles this wait when Flight ends or fails, not
+    // only when a row arrives; a failure rejects here and errors the document.
+    if (pendingFlight.length === 0) {
+      await Promise.race([flightArrival(), flightRead]);
+    }
+    if (pendingFlight.length > 0) {
+      controller.enqueue(concat(takeFlight()));
+      return;
+    }
+    await flightRead;
+    controller.enqueue(concat([FLIGHT_END_BLOCK]));
+    controller.close();
+  };
+
+  const pull = async (controller: ReadableStreamDefaultController<Uint8Array>): Promise<void> => {
+    if (htmlDone) {
+      await pullAfterHtml(controller);
+      return;
+    }
+    if (shellSent && pendingFlight.length > 0) {
+      controller.enqueue(concat(takeFlight()));
+      return;
+    }
+    nextHtml ??= htmlReader.read();
+    const first = shellSent ? await Promise.race([nextHtml, flightArrival()]) : await nextHtml;
+    if (first === FLIGHT_READY) {
+      controller.enqueue(concat(takeFlight()));
+      return;
+    }
+    nextHtml = undefined;
+    if (first.done) {
+      endHtml(controller, []);
+      return;
+    }
+
+    const burst = [first.value];
+    for (;;) {
+      nextHtml = htmlReader.read();
+      const next = await Promise.race([nextHtml, nextMacrotask()]);
+      if (next === MACROTASK) {
+        break;
+      }
+      nextHtml = undefined;
+      if (next.done) {
+        endHtml(controller, burst);
+        return;
+      }
+      burst.push(next.value);
+    }
+    shellSent = true;
+    controller.enqueue(concat([...burst, ...takeFlight()]));
+  };
+
+  return new ReadableStream<Uint8Array>({
+    async pull(controller) {
+      try {
+        await pull(controller);
+      } catch (error) {
+        await cancelBoth(error);
+        throw error;
+      }
+    },
+    cancel: cancelBoth,
+  });
 }
 
 async function importDefault(file: string): Promise<unknown> {
@@ -187,14 +342,17 @@ async function openRender(
     render.reader = flight.getReader();
     return;
   }
-  // One branch becomes HTML; the other is embedded after it so the browser
-  // hydrates from the same bytes.
+  // One branch becomes HTML; the other is written into that HTML so the
+  // browser hydrates from the same bytes the server rendered.
   const [htmlBranch, embedBranch] = flight.tee();
-  const embeddedFlight = readBase64(embedBranch.getReader());
-  embeddedFlight.catch(() => undefined);
-  render.embeddedFlight = embeddedFlight;
-  const html = await entries.ssr.renderHtml({ flight: htmlBranch, signal });
-  render.reader = html.getReader();
+  let html: ReadableStream<Uint8Array>;
+  try {
+    html = await entries.ssr.renderHtml({ flight: htmlBranch, signal });
+  } catch (error) {
+    void embedBranch.cancel(error).catch(() => undefined);
+    throw error;
+  }
+  render.reader = interleaveFlight(html, embedBranch).getReader();
 }
 
 async function pull(port: MessagePort, id: number): Promise<void> {
@@ -219,13 +377,8 @@ async function pull(port: MessagePort, id: number): Promise<void> {
       return;
     }
     if (done) {
-      const embeddedFlight = render.embeddedFlight ? await render.embeddedFlight : undefined;
       renders.delete(id);
-      post(port, {
-        type: "end",
-        id,
-        ...(embeddedFlight === undefined ? {} : { embeddedFlight }),
-      });
+      post(port, { type: "end", id });
       return;
     }
     // React may hand out views into a shared buffer; transferring a copy keeps
@@ -304,6 +457,7 @@ async function main(port: MessagePort, data: RscWorkerData): Promise<void> {
   });
 }
 
-if (parentPort) {
+// Tests import `interleaveFlight` from this file; only a build's worker starts.
+if (parentPort && workerData) {
   void main(parentPort, workerData as RscWorkerData);
 }
