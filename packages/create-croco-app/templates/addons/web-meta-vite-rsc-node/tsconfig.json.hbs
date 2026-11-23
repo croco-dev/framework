@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.json",
+  "include": ["src", "vite.config.ts", "vite.server.config.ts"],
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "types": ["node", "vite/client", "@vitejs/plugin-rsc/types"]
+  }
+}

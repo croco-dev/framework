@@ -1,8 +1,10 @@
 import React, { Suspense } from "react";
 import { renderToReadableStream } from "@vitejs/plugin-rsc/rsc";
+import { defineRscServerEntry } from "@croco/meta-vite/rsc/server";
+import type { RenderRouteComponentProps } from "@croco/meta-vite";
 import Counter from "./Counter";
 import { productPage } from "../performance/Pdp";
-export { resetLabCache, imagePath, exposeLab } from "../performance/runtime";
+import { exposeLab, imagePath, resetLabCache } from "../performance/runtime";
 
 export const SERVER_ONLY_VALUE = "RSC:server-only-value";
 
@@ -29,15 +31,24 @@ function RscPage() {
   );
 }
 
-export default async function handler(request: Request): Promise<Response> {
-  if (new URL(request.url).pathname.startsWith("/products/")) {
-    const { node } = await productPage(request);
-    return new Response(renderToReadableStream(node), {
-      headers: { "content-type": "text/x-component; charset=utf-8" },
-    });
-  }
-  const stream = renderToReadableStream(<RscPage />);
-  return new Response(stream, {
-    headers: { "content-type": "text/x-component; charset=utf-8" },
-  });
+async function ProductPage({ request }: RenderRouteComponentProps) {
+  const { node } = await productPage(request);
+  return node;
 }
+
+type ExposeInput = { receipt: string; displayInstanceId: string; occurredAt: string };
+
+export default defineRscServerEntry({
+  renderToReadableStream,
+  // The performance lab reaches the same experiment bridge and cache the
+  // rendered pages use, which live in this build's worker.
+  actions: {
+    exposeLab: (input, { request }) => exposeLab(request, input as ExposeInput),
+    resetLabCache: () => resetLabCache(),
+    imagePaths: () => [400, 800, 1200].map((width) => imagePath(width)),
+  },
+  routes: [
+    { path: "/", component: RscPage, head: () => ({ title: "RSC Node Example" }) },
+    { path: "/products/orbit", component: ProductPage, head: () => ({ title: "Orbit print" }) },
+  ],
+});

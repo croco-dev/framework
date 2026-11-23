@@ -14,6 +14,7 @@
 export {
   createRscBrowserFlightHeaders,
   readRscClientManifestVersion,
+  readRscInitialFlight,
   RSC_CLIENT_MANIFEST_VERSION,
   RSC_FLIGHT_CONTENT_TYPE,
   RSC_MANIFEST_ELEMENT_ID,

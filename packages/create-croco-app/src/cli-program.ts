@@ -41,7 +41,7 @@ export function configureCreateCrocoAppProgram(program: Command): Command {
     )
     .option(
       "--frontend-deploy <deploy>",
-      "Frontend deploy (opennext|vercel|docker|cloudflare-meta-vite|vite-spa)",
+      "Frontend deploy (opennext|vercel|docker|cloudflare-meta-vite|node-meta-vite-rsc|vite-spa)",
     )
     .option("--ui <profile>", "UI profile (none|astryx). Astryx currently requires vite-spa")
     .option("--db <dbs>", "Comma-separated DB types (postgres,mongodb,redis)")

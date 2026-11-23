@@ -9,6 +9,7 @@ import {
   RscServerReferenceNotSupportedProblem,
   assertRscClientManifestVersion,
   assertRscServerReferenceUnsupported,
+  createRscDocumentTail,
   createRscFlightHeaders,
   createRscHtmlShell,
   parseRscFlightRequest,
@@ -18,7 +19,9 @@ import {
   encodeRscFlightInIsolatedEncoder,
   RscFlightEncodeFailedProblem,
 } from "../rsc/isolatedEncode";
-import type { RscFlightEncoder, RscRenderOptions } from "../rsc/flight";
+import { RscRouteNotInBuildProblem } from "../rsc/buildEntry";
+import type { RscBuild } from "../rsc/buildEntry";
+import type { RscFlightEncoder, RscFlightRequest, RscRenderOptions } from "../rsc/flight";
 import type { RscSsrCodec } from "../rsc/ssrDecode";
 import { decodeFlightToHtmlStream } from "../rsc/ssrDecode";
 import { encodePagePath } from "../routes/encodePagePath";
@@ -65,10 +68,15 @@ export class RenderServer {
     private readonly routes: RenderRouteIR[],
     private readonly rscOptions: RscRenderOptions = {},
   ) {
+    this.rscBuild = rscOptions.build;
     this.rscEncoder = rscOptions.encodeFlight;
     this.rscClientManifestVersion = resolveRscClientManifestVersion(rscOptions);
+    if (rscOptions.build) {
+      assertRscRoutesInBuild(routes, rscOptions.build);
+    }
   }
 
+  private readonly rscBuild: RscBuild | undefined;
   private readonly rscEncoder: RscFlightEncoder | undefined;
   private readonly rscClientManifestVersion: string;
   private rscSsrCodecPromise: Promise<RscSsrCodec> | undefined;
@@ -682,6 +690,12 @@ export class RenderServer {
       assertRscClientManifestVersion(route, flightRequest, this.rscClientManifestVersion);
       assertRscServerReferenceUnsupported(route, flightRequest);
 
+      if (this.rscBuild) {
+        return markPerRequest(
+          await this.createRscBuildResponse(route, this.rscBuild, flightRequest, request, context),
+        );
+      }
+
       const encoder = this.rscEncoder ?? defaultRscFlightEncoder;
       const flight = await encoder(route, request, context);
 
@@ -814,16 +828,46 @@ export class RenderServer {
     );
   }
 
+  /**
+   * Renders through the build's worker. A Flight request relays the payload;
+   * a document request streams the HTML and then embeds the Flight bytes it
+   * came from, so the browser hydrates without rendering the route again.
+   */
+  private async createRscBuildResponse(
+    route: RenderRouteIR,
+    build: RscBuild,
+    flightRequest: RscFlightRequest,
+    request: Request,
+    context: RuntimeContext | undefined,
+  ): Promise<Response> {
+    const input = {
+      route: route.path,
+      // A Flight request names the page with a `.rsc` suffix. The component
+      // sees the page URL either way, so HTML and Flight render the same tree.
+      request: new Request(toPageUrl(request.url), request),
+      ...(context ? { context } : {}),
+      signal: request.signal,
+    };
+    if (flightRequest.wantsFlight) {
+      return this.createRscFlightResponse(route, build.renderFlight(input));
+    }
+
+    const document = await build.renderDocument(input);
+    return this.createRscHtmlStreamResponse(route, route.head?.(), document.html, async () =>
+      createRscDocumentTail(await document.embeddedFlight(), build.clientEntryUrl),
+    );
+  }
+
   private createRscHtmlStreamResponse(
     route: RenderRouteIR,
     headMetadata: HeadMetadata | undefined,
     htmlStream: ReadableStream<Uint8Array>,
+    renderBodyTail?: () => Promise<string>,
   ): Response {
     const encoder = new TextEncoder();
     const { prefix, suffix } = splitRscHtmlShell(
       createRscHtmlShell(headMetadata, "", this.rscClientManifestVersion),
     );
-    void route;
 
     // Share the reader with cancel(): once getReader() locks htmlStream,
     // htmlStream.cancel() rejects with TypeError. Cancel through the reader
@@ -864,7 +908,15 @@ export class RenderServer {
         if (done) {
           reader.releaseLock();
           reader = undefined;
-          controller.enqueue(encoder.encode(suffix));
+          let tail = "";
+          try {
+            tail = renderBodyTail ? await renderBodyTail() : "";
+          } catch (error) {
+            reportShellFailure("RSC HTML stream failed", { route: route.path, error }, route.path);
+            controller.error(error);
+            return;
+          }
+          controller.enqueue(encoder.encode(insertBeforeBodyEnd(suffix, tail)));
           controller.close();
           return;
         }
@@ -964,6 +1016,42 @@ export class RenderServer {
       status: 200,
       headers: createRscFlightHeaders(this.rscClientManifestVersion),
     });
+  }
+}
+
+function insertBeforeBodyEnd(suffix: string, tail: string): string {
+  const bodyEnd = suffix.lastIndexOf("</body>");
+  return bodyEnd === -1
+    ? `${suffix}${tail}`
+    : `${suffix.slice(0, bodyEnd)}${tail}${suffix.slice(bodyEnd)}`;
+}
+
+// A build renders every request with that request's cookies and host context,
+// so neither representation may be stored or shared by a cache.
+function markPerRequest(response: Response): Response {
+  if (response.ok) {
+    response.headers.set("cache-control", "private, no-store");
+  }
+  return response;
+}
+
+function toPageUrl(requestUrl: string): URL {
+  const url = new URL(requestUrl);
+  if (url.pathname.endsWith(".rsc")) {
+    url.pathname = url.pathname.slice(0, -".rsc".length) || "/";
+  }
+  return url;
+}
+
+// Host routes are compiled separately from the build, so a route the build
+// does not render is a deployment mismatch. Refusing it here keeps the server
+// from starting instead of failing the first request for that path.
+function assertRscRoutesInBuild(routes: readonly RenderRouteIR[], build: RscBuild): void {
+  const built = new Set(build.routes.map((route) => route.path));
+  for (const route of routes) {
+    if (route.mode === "rsc" && !built.has(route.path)) {
+      throw new RscRouteNotInBuildProblem(route.path);
+    }
   }
 }
 

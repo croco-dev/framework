@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export type CrocoProblemRegistry = {
   readonly version: "croco.problem-code-registry.v1";
-  readonly problemCount: 1189;
+  readonly problemCount: 1196;
   readonly problems: readonly [
     {
       readonly code: "ACCESS_DENIED";
@@ -20483,6 +20483,34 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [];
     },
     {
+      readonly code: "meta-vite/node-request-origin-mismatch";
+      readonly category: "BadRequest";
+      readonly status: 400;
+      readonly title: "Bad Request";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#meta-vite-node-request-origin-mismatch";
+      readonly recovery: {
+        readonly cause: "The request names an origin other than the one this Node server was configured to answer for.";
+        readonly userAction: "Request the page through the site's public address.";
+        readonly operatorAction: "Check that the proxy forwards the public Host header and that the configured origin matches the address clients use.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.warning";
+          readonly severity: "warning";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/meta-vite/src/libs/providers/node.ts";
+          readonly line: 26;
+          readonly column: 1;
+          readonly kind: "problem-class";
+        },
+      ];
+    },
+    {
       readonly code: "meta-vite/personalized-fragment-invalid";
       readonly category: "ValidationError";
       readonly status: 422;
@@ -20511,6 +20539,146 @@ export type CrocoProblemRegistry = {
       ];
     },
     {
+      readonly code: "meta-vite/rsc-build-action-not-found";
+      readonly category: "NotFound";
+      readonly status: 404;
+      readonly title: "Not Found";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#meta-vite-rsc-build-action-not-found";
+      readonly recovery: {
+        readonly cause: "The host called an action that the built rsc entry does not declare.";
+        readonly userAction: "Do not retry: the action does not exist in this build.";
+        readonly operatorAction: "Declare the action in defineRscServerEntry({ actions }) and rebuild, or fix the name passed to invokeAction.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "operator-only";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.error";
+          readonly severity: "error";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/meta-vite/src/libs/rsc/rscBuildWorkerClient.ts";
+          readonly line: 58;
+          readonly column: 1;
+          readonly kind: "problem-class";
+        },
+      ];
+    },
+    {
+      readonly code: "meta-vite/rsc-build-invalid";
+      readonly category: "InternalServerError";
+      readonly status: 500;
+      readonly title: "Internal Server Error";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#meta-vite-rsc-build-invalid";
+      readonly recovery: {
+        readonly cause: "The RSC production build cannot be served: an entry or the client build record is missing, an entry was not created by the meta-vite helpers, or the client and server outputs come from different builds.";
+        readonly userAction: "Do not retry: the server refuses to start until the build is replaced.";
+        readonly operatorAction: "Read the artifact and reason extensions, rebuild client and server together with crocoMetaVitePlugin({ rsc: true }), and deploy the whole dist directory.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "operator-only";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.error";
+          readonly severity: "error";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/meta-vite/src/libs/rsc/loadRscBuild.ts";
+          readonly line: 24;
+          readonly column: 1;
+          readonly kind: "problem-class";
+        },
+      ];
+    },
+    {
+      readonly code: "meta-vite/rsc-build-value-unsupported";
+      readonly category: "InternalServerError";
+      readonly status: 500;
+      readonly title: "Internal Server Error";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#meta-vite-rsc-build-value-unsupported";
+      readonly recovery: {
+        readonly cause: "A runtime context or action input bound for the RSC build worker is not plain data, so structured clone would change it silently.";
+        readonly userAction: "Do not retry unchanged: the same value is refused again.";
+        readonly operatorAction: "Read the path extension and pass primitives, arrays or plain objects instead of functions, class instances, getters or cyclic values.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "operator-only";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.error";
+          readonly severity: "error";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/meta-vite/src/libs/rsc/plainData.ts";
+          readonly line: 8;
+          readonly column: 1;
+          readonly kind: "problem-class";
+        },
+      ];
+    },
+    {
+      readonly code: "meta-vite/rsc-build-worker-failed";
+      readonly category: "InternalServerError";
+      readonly status: 500;
+      readonly title: "Internal Server Error";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#meta-vite-rsc-build-worker-failed";
+      readonly recovery: {
+        readonly cause: "A render or action threw inside the RSC build worker.";
+        readonly userAction: "Retry later; the operator has to fix the failing server code first.";
+        readonly operatorAction: "Read the operation, target and workerMessage extensions, fix the server component or action, and redeploy the build.";
+        readonly retryability: "conditional";
+        readonly redactionPolicy: "operator-only";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.error";
+          readonly severity: "error";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/meta-vite/src/libs/rsc/rscBuildWorkerClient.ts";
+          readonly line: 21;
+          readonly column: 1;
+          readonly kind: "problem-class";
+        },
+      ];
+    },
+    {
+      readonly code: "meta-vite/rsc-build-worker-unavailable";
+      readonly category: "InternalServerError";
+      readonly status: 500;
+      readonly title: "Internal Server Error";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#meta-vite-rsc-build-worker-unavailable";
+      readonly recovery: {
+        readonly cause: "The RSC build worker exited or was closed, so the build cannot render.";
+        readonly userAction: "Retry after the server restarts.";
+        readonly operatorAction: "Check the worker exit reason in the extensions and the server logs, then restart the server; loadRscBuild starts a new worker.";
+        readonly retryability: "conditional";
+        readonly redactionPolicy: "operator-only";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.error";
+          readonly severity: "error";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/meta-vite/src/libs/rsc/rscBuildWorkerClient.ts";
+          readonly line: 44;
+          readonly column: 1;
+          readonly kind: "problem-class";
+        },
+      ];
+    },
+    {
       readonly code: "meta-vite/rsc-client-build-id-invalid";
       readonly category: "BadRequest";
       readonly status: 400;
@@ -20532,7 +20700,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/meta-vite/src/libs/rsc/flight.ts";
-          readonly line: 51;
+          readonly line: 59;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -20560,7 +20728,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/meta-vite/src/libs/rsc/flight.ts";
-          readonly line: 79;
+          readonly line: 87;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -20588,7 +20756,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/meta-vite/src/libs/rsc/flight.ts";
-          readonly line: 108;
+          readonly line: 116;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -20756,7 +20924,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/meta-vite/src/libs/rsc/flight.ts";
-          readonly line: 65;
+          readonly line: 73;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -20791,6 +20959,34 @@ export type CrocoProblemRegistry = {
       ];
     },
     {
+      readonly code: "meta-vite/rsc-route-not-in-build";
+      readonly category: "InternalServerError";
+      readonly status: 500;
+      readonly title: "Internal Server Error";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#meta-vite-rsc-route-not-in-build";
+      readonly recovery: {
+        readonly cause: "A host route is rendered as RSC, but the built rsc entry does not declare that route.";
+        readonly userAction: "Do not retry: the route cannot render until host routes and the build agree.";
+        readonly operatorAction: "Declare the route in defineRscServerEntry() and rebuild, or remove it from the routes passed to RenderServer.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "operator-only";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.error";
+          readonly severity: "error";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/meta-vite/src/libs/rsc/buildEntry.ts";
+          readonly line: 10;
+          readonly column: 1;
+          readonly kind: "problem-class";
+        },
+      ];
+    },
+    {
       readonly code: "meta-vite/rsc-server-reference-unsupported";
       readonly category: "NotImplemented";
       readonly status: 501;
@@ -20812,7 +21008,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/meta-vite/src/libs/rsc/flight.ts";
-          readonly line: 93;
+          readonly line: 101;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -33606,7 +33802,7 @@ export type CrocoProblemRegistry = {
 
 export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 1189,
+  problemCount: 1196,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -56445,6 +56641,38 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [],
     },
     {
+      code: "meta-vite/node-request-origin-mismatch",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#meta-vite-node-request-origin-mismatch",
+      recovery: {
+        cause:
+          "The request names an origin other than the one this Node server was configured to answer for.",
+        userAction: "Request the page through the site's public address.",
+        operatorAction:
+          "Check that the proxy forwards the public Host header and that the configured origin matches the address clients use.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/meta-vite/src/libs/providers/node.ts",
+          line: 26,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
       code: "meta-vite/personalized-fragment-invalid",
       category: "ValidationError",
       status: 422,
@@ -56469,6 +56697,163 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
         {
           file: "packages/meta-vite/src/libs/isr/personalizedFragmentProblems.ts",
           line: 9,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "meta-vite/rsc-build-action-not-found",
+      category: "NotFound",
+      status: 404,
+      title: "Not Found",
+      cookbookPath: "/reference/problem-recovery-cookbook/#meta-vite-rsc-build-action-not-found",
+      recovery: {
+        cause: "The host called an action that the built rsc entry does not declare.",
+        userAction: "Do not retry: the action does not exist in this build.",
+        operatorAction:
+          "Declare the action in defineRscServerEntry({ actions }) and rebuild, or fix the name passed to invokeAction.",
+        retryability: "not-retryable",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/meta-vite/src/libs/rsc/rscBuildWorkerClient.ts",
+          line: 58,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "meta-vite/rsc-build-invalid",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#meta-vite-rsc-build-invalid",
+      recovery: {
+        cause:
+          "The RSC production build cannot be served: an entry or the client build record is missing, an entry was not created by the meta-vite helpers, or the client and server outputs come from different builds.",
+        userAction: "Do not retry: the server refuses to start until the build is replaced.",
+        operatorAction:
+          "Read the artifact and reason extensions, rebuild client and server together with crocoMetaVitePlugin({ rsc: true }), and deploy the whole dist directory.",
+        retryability: "not-retryable",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/meta-vite/src/libs/rsc/loadRscBuild.ts",
+          line: 24,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "meta-vite/rsc-build-value-unsupported",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#meta-vite-rsc-build-value-unsupported",
+      recovery: {
+        cause:
+          "A runtime context or action input bound for the RSC build worker is not plain data, so structured clone would change it silently.",
+        userAction: "Do not retry unchanged: the same value is refused again.",
+        operatorAction:
+          "Read the path extension and pass primitives, arrays or plain objects instead of functions, class instances, getters or cyclic values.",
+        retryability: "not-retryable",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/meta-vite/src/libs/rsc/plainData.ts",
+          line: 8,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "meta-vite/rsc-build-worker-failed",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#meta-vite-rsc-build-worker-failed",
+      recovery: {
+        cause: "A render or action threw inside the RSC build worker.",
+        userAction: "Retry later; the operator has to fix the failing server code first.",
+        operatorAction:
+          "Read the operation, target and workerMessage extensions, fix the server component or action, and redeploy the build.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/meta-vite/src/libs/rsc/rscBuildWorkerClient.ts",
+          line: 21,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "meta-vite/rsc-build-worker-unavailable",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#meta-vite-rsc-build-worker-unavailable",
+      recovery: {
+        cause: "The RSC build worker exited or was closed, so the build cannot render.",
+        userAction: "Retry after the server restarts.",
+        operatorAction:
+          "Check the worker exit reason in the extensions and the server logs, then restart the server; loadRscBuild starts a new worker.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/meta-vite/src/libs/rsc/rscBuildWorkerClient.ts",
+          line: 44,
           column: 1,
           kind: "problem-class",
         },
@@ -56500,7 +56885,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/meta-vite/src/libs/rsc/flight.ts",
-          line: 51,
+          line: 59,
           column: 1,
           kind: "problem-class",
         },
@@ -56531,7 +56916,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/meta-vite/src/libs/rsc/flight.ts",
-          line: 79,
+          line: 87,
           column: 1,
           kind: "problem-class",
         },
@@ -56564,7 +56949,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/meta-vite/src/libs/rsc/flight.ts",
-          line: 108,
+          line: 116,
           column: 1,
           kind: "problem-class",
         },
@@ -56756,7 +57141,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/meta-vite/src/libs/rsc/flight.ts",
-          line: 65,
+          line: 73,
           column: 1,
           kind: "problem-class",
         },
@@ -56794,6 +57179,38 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       ],
     },
     {
+      code: "meta-vite/rsc-route-not-in-build",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#meta-vite-rsc-route-not-in-build",
+      recovery: {
+        cause:
+          "A host route is rendered as RSC, but the built rsc entry does not declare that route.",
+        userAction: "Do not retry: the route cannot render until host routes and the build agree.",
+        operatorAction:
+          "Declare the route in defineRscServerEntry() and rebuild, or remove it from the routes passed to RenderServer.",
+        retryability: "not-retryable",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/meta-vite/src/libs/rsc/buildEntry.ts",
+          line: 10,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
       code: "meta-vite/rsc-server-reference-unsupported",
       category: "NotImplemented",
       status: 501,
@@ -56820,7 +57237,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/meta-vite/src/libs/rsc/flight.ts",
-          line: 93,
+          line: 101,
           column: 1,
           kind: "problem-class",
         },

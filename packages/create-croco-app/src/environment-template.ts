@@ -42,6 +42,11 @@ export const ENVIRONMENT_VARIABLE_CATALOG = {
     description: "Bearer token accepted by the generated GraphQL auth guard.",
     secret: true,
   },
+  HOST: {
+    description: "Interface the generated Node RSC web server listens on.",
+    secret: false,
+    example: "127.0.0.1",
+  },
   NEXT_PUBLIC_API_URL: {
     description: "Public API URL used by the generated Next.js client.",
     secret: false,
@@ -78,6 +83,12 @@ export const ENVIRONMENT_VARIABLE_CATALOG = {
     description: "Port used by the generated Node API server.",
     secret: false,
     example: "3000",
+  },
+  PUBLIC_ORIGIN: {
+    description:
+      "Public origin clients use for the generated Node RSC web app; requests for another host are refused.",
+    secret: false,
+    example: "https://shop.example",
   },
   R2_BUCKET: {
     description: "R2 bucket name for object storage.",
@@ -153,6 +164,7 @@ export type EnvironmentTemplateCapabilities = {
   readonly nextjsApiClient: boolean;
   readonly viteApiClient: boolean;
   readonly workerRuntime: boolean;
+  readonly nodeRscWebApp: boolean;
 };
 
 type SaasEnvironmentManifest = {
@@ -177,6 +189,7 @@ const GRAPHQL_AUTH_SECTION = section("GraphQL authentication", ["GRAPHQL_AUTH_TO
 const NEXT_PUBLIC_API_SECTION = section("Next.js API client", ["NEXT_PUBLIC_API_URL"]);
 const VITE_API_SECTION = section("Vite API client", ["VITE_API_URL"]);
 const WORKER_RUNTIME_SECTION = section("Worker runtime", ["WEB_ORIGIN"]);
+const NODE_RSC_WEB_SECTION = section("Node RSC web app", ["HOST", "PUBLIC_ORIGIN"]);
 const PRODUCTION_RUNTIME_SECTION = section("API runtime", ["NODE_ENV", "PORT", "WEB_ORIGIN"]);
 const TELEMETRY_SECTION = section("Telemetry", [
   "TELEMETRY_ENABLED",
@@ -237,6 +250,10 @@ export function renderEnvironmentTemplate(capabilities: EnvironmentTemplateCapab
 
   if (capabilities.viteApiClient) {
     sections.push(VITE_API_SECTION);
+  }
+
+  if (capabilities.nodeRscWebApp) {
+    sections.push(NODE_RSC_WEB_SECTION);
   }
 
   return renderSections(sections);

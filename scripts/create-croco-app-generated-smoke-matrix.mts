@@ -188,6 +188,15 @@ export const GENERATED_SMOKE_MATRIX_CASES = [
         "CROCO_GENERATED_SMOKE_CASES=meta-vite-web pnpm create-croco-app:smoke; inspect the meta-vite build and presentation smoke.",
     },
   },
+  {
+    name: "meta-vite-node-rsc",
+    tier: "ecosystem-advisory",
+    advisory: {
+      owner: "Meta Vite presentation owner",
+      recoveryAction:
+        "CROCO_GENERATED_SMOKE_CASES=meta-vite-node-rsc pnpm create-croco-app:smoke; inspect the RSC production build and the Node server smoke.",
+    },
+  },
   { name: "meta-vite-fullstack-workers", tier: "spine-blocking" },
   { name: "kubernetes-node-api", tier: "spine-blocking" },
   { name: "lambda-api", tier: "spine-blocking" },

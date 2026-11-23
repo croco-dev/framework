@@ -4,8 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "NODE_ENV=production vite build",
-    "serve": "NODE_ENV=production node ./serve.mjs",
+    "build": "NODE_ENV=production vite build && NODE_ENV=production vite build --config vite.server.config.ts",
+    "serve": "NODE_ENV=production node ./dist/server/server.js",
     "typecheck": "tsrs --noEmit",
     "test:performance": "node performance/measure.mjs"
   },
@@ -15,6 +15,8 @@
     "@croco/frontend-react": "workspace:*",
     "@croco/meta-vite": "workspace:*",
     "@croco/storage-cloudflare": "workspace:*",
+    "@hono/node-server": "^1.19.17",
+    "hono": "^4.12.34",
     "react": "19.3.1",
     "react-dom": "19.3.1",
     "react-server-dom-webpack": "19.3.1"

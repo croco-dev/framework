@@ -293,6 +293,13 @@ export function validateResolvedOptions(options: NormalizedGeneratorOptions): Ge
         "--web-apps",
       );
     }
+    if (apiHosting === "nextjs" && options.frontendDeploy === "node-meta-vite-rsc") {
+      throwInvalidCliOption(
+        "--frontend-deploy node-meta-vite-rsc replaces the web app and cannot host the Next.js API",
+        "Use --api-hosting standalone with --frontend-deploy node-meta-vite-rsc.",
+        "--frontend-deploy",
+      );
+    }
     if (options.apiHosting === "nextjs" && options.backendDeploy) {
       throwInvalidCliOption(
         "--backend-deploy is only supported with standalone API hosting",

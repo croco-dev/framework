@@ -109,6 +109,34 @@ Use `--ui none` for an explicit provider-neutral Vite starter. Omitting `--ui` p
 generator's existing output for compatibility. Astryx does not change `@croco/frontend-react` or
 apply to meta-vite profiles in this release.
 
+### Node RSC profile
+
+`--frontend-deploy node-meta-vite-rsc` generates `apps/<web>` as a React Server Components app
+served by Node:
+
+```bash
+npx create-croco-app@latest my-app \
+  --preset ddd-fullstack \
+  --scope @myorg \
+  --api graphql \
+  --api-hosting standalone \
+  --web-apps web \
+  --frontend-deploy node-meta-vite-rsc \
+  --no-install \
+  --no-git
+```
+
+The app builds with `@vitejs/plugin-rsc` and serves the build through `loadRscBuild()`,
+`RenderServer` and `createNodeComposedHandler()` from `@croco/meta-vite`; it contains no copy of the
+HTML/Flight negotiation. `pnpm build` writes `dist/` including `dist/server/server.js`, `pnpm start`
+runs it, and `pnpm rsc:smoke` checks one document and one Flight request against the build. Set
+`PUBLIC_ORIGIN` to the origin clients use (it is required when `HOST` is `0.0.0.0` or `::`).
+Requests for another host are refused and accepted requests are rewritten to that origin, so a proxy
+that ends TLS may forward plain HTTP. Health probes must send the public host, for example a
+Kubernetes `httpGet` probe with `httpHeaders: [{ name: Host, value: shop.example }]`. The build
+renders in a worker thread, so values passed to server components through the runtime context must
+be plain data; if that worker stops, the server exits so its supervisor can restart it. The profile targets Node only; Lambda and Workers RSC hosting are not covered.
+
 Generated projects include the package manager command and next-step instructions in
 the CLI result.
 

@@ -7,5 +7,5 @@
     "jsx": "react-jsx",
     "lib": ["es2022", "dom", "dom.iterable"]
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx"]
+  "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.mts"]
 }

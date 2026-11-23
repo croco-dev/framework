@@ -1,6 +1,8 @@
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
+import type { ChildProcess } from "node:child_process";
 import { createRequire } from "node:module";
 import {
+  cpSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
@@ -11,6 +13,7 @@ import {
   statSync,
   writeFileSync,
 } from "node:fs";
+import { get as httpGet } from "node:http";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -80,6 +83,9 @@ const buildTargets: readonly BuildTarget[] = [
       join(packageDir, "dist", "libs", "rsc", "flightEncode.entry.mjs"),
       join(packageDir, "dist", "libs", "rsc", "flightEncode.entry.d.ts"),
       join(packageDir, "dist", "libs", "isr", "adapters", "index.d.mts"),
+      join(packageDir, "dist", "libs", "rsc", "serverEntry.mjs"),
+      join(packageDir, "dist", "libs", "rsc", "ssrEntry.mjs"),
+      join(packageDir, "dist", "libs", "rsc", "rscBuildWorker.mjs"),
     ],
   },
 ];
@@ -111,6 +117,86 @@ describe("published @croco/meta-vite contract", () => {
           "generated DI SSR request isolation passed",
         );
       } finally {
+        rmSync(packRoot, { force: true, recursive: true });
+        rmSync(consumerRoot, { force: true, recursive: true });
+      }
+    },
+    publishedContractTimeoutMs,
+  );
+
+  it(
+    "serves a built RSC app with client islands and Flight refresh through the published Node adapter",
+    async () => {
+      const packRoot = mkdtempSync(join(tmpdir(), "croco-meta-vite-rsc-pack-"));
+      const consumerRoot = mkdtempSync(join(tmpdir(), "croco-meta-vite-rsc-consumer-"));
+      let server: ChildProcess | undefined;
+
+      try {
+        const tarballs = packPackages(packRoot);
+        writeConsumerPackageJson(consumerRoot, tarballs);
+        installMetaViteConsumer(consumerRoot, tarballs, [
+          "react@19.3.1",
+          "react-dom@19.3.1",
+          "react-server-dom-webpack@19.3.1",
+          "vite@6.4.3",
+          "@vitejs/plugin-rsc@0.5.38",
+          "@hono/node-server@1.19.17",
+          "hono@4.12.34",
+          "zod@^4.6.6",
+        ]);
+        cpSync(join(__dirname, "fixtures", "rsc-node-consumer"), consumerRoot, { recursive: true });
+        run("node", [join("node_modules", "vite", "bin", "vite.js"), "build"], consumerRoot, {
+          NODE_ENV: "production",
+        });
+
+        expect(readTree(join(consumerRoot, "dist", "client"))).not.toContain(SERVER_ONLY_TOKEN);
+        expect(readTree(join(consumerRoot, "dist", "rsc"))).toContain(SERVER_ONLY_TOKEN);
+
+        const started = await startConsumerServer(consumerRoot);
+        server = started.process;
+        const origin = started.origin;
+        const manifestVersion = (
+          JSON.parse(
+            readFileSync(
+              join(consumerRoot, "dist", "client", "croco-rsc-client-build.json"),
+              "utf8",
+            ),
+          ) as { clientManifestVersion: string }
+        ).clientManifestVersion;
+
+        const html = await fetch(`${origin}/`);
+        const document = await html.text();
+        expect(html.status).toBe(200);
+        expect(html.headers.get("cache-control")).toBe("private, no-store");
+        expect(document).toContain("path=<!-- -->/<!-- --> tenant=<!-- -->server-tenant");
+        expect(document).toContain('id="croco-rsc-initial-flight"');
+        expect(document).not.toContain(SERVER_ONLY_TOKEN);
+
+        const flight = await fetch(`${origin}/.rsc`, {
+          headers: { "x-croco-rsc-client-manifest": manifestVersion },
+        });
+        expect(flight.status).toBe(200);
+        expect(flight.headers.get("content-type")).toBe("text/x-component; charset=utf-8");
+        expect(await flight.text()).toContain("server-tenant");
+
+        const stale = await fetch(`${origin}/.rsc`, {
+          headers: { "x-croco-rsc-client-manifest": "stale" },
+        });
+        expect(stale.status).toBe(400);
+        expect((await fetch(`${origin}/missing`)).status).toBe(404);
+        expect(await requestWithHost(origin, "attacker.example")).toBe(400);
+
+        const browserState = await exerciseInBrowser(origin);
+        expect(browserState).toEqual({
+          consoleErrors: [],
+          hydrationErrors: [],
+          slow: "slow:resolved",
+          counterAfterClick: "count=1",
+          counterAfterRefresh: "count=1",
+          renderChanged: true,
+        });
+      } finally {
+        server?.kill("SIGTERM");
         rmSync(packRoot, { force: true, recursive: true });
         rmSync(consumerRoot, { force: true, recursive: true });
       }
@@ -221,6 +307,19 @@ describe("published @croco/meta-vite contract", () => {
           import: "./dist/libs/rsc/flightBrowser.entry.mjs",
           require: "./dist/libs/rsc/flightBrowser.entry.js",
         });
+        for (const [subpath, file] of [
+          ["./rsc/server", "serverEntry"],
+          ["./rsc/ssr", "ssrEntry"],
+        ] as const) {
+          expect(packedManifest.exports?.[subpath]).toEqual({
+            types: {
+              import: `./dist/libs/rsc/${file}.d.mts`,
+              require: `./dist/libs/rsc/${file}.d.ts`,
+            },
+            import: `./dist/libs/rsc/${file}.mjs`,
+            require: `./dist/libs/rsc/${file}.js`,
+          });
+        }
         expect(packedDiagnosticsManifest.dependencies?.["@croco/health-core"]).toBeUndefined();
         expect(packedDiagnosticsManifest.peerDependencies?.["@croco/health-core"]).toBeUndefined();
         expect(packedDiagnosticsDeclarations).not.toContain("@croco/health-core");
@@ -599,10 +698,12 @@ function run(
   command: string,
   args: readonly string[],
   cwd: string,
+  env?: Readonly<Record<string, string>>,
 ): { readonly stdout: string; readonly stderr: string } {
   const invocation = resolveCommandInvocation(command, args);
   const result = spawnSync(invocation.command, [...invocation.args], {
     cwd,
+    ...(env ? { env: { ...process.env, ...env } } : {}),
     encoding: "utf-8",
     stdio: "pipe",
     timeout: commandTimeoutMs,
@@ -683,4 +784,117 @@ function transportDependencyNames(): readonly string[] {
   }
   visit("@croco/transports-http");
   return [...names].sort();
+}
+
+const SERVER_ONLY_TOKEN = "croco-server-only-token-7f3a91";
+
+function readTree(directory: string): string {
+  return readdirSync(directory, { recursive: true, withFileTypes: true })
+    .filter((entry) => entry.isFile())
+    .map((entry) => readFileSync(join(entry.parentPath, entry.name), "utf8"))
+    .join("\n");
+}
+
+async function startConsumerServer(
+  consumerRoot: string,
+): Promise<{ readonly process: ChildProcess; readonly origin: string }> {
+  // React's production and development Flight formats are not interchangeable,
+  // so the server runs with the same NODE_ENV the build used.
+  const child = spawn(process.execPath, ["server.mjs"], {
+    cwd: consumerRoot,
+    env: { ...process.env, NODE_ENV: "production", PORT: "0" },
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  let output = "";
+  const origin = await new Promise<string>((resolveOrigin, reject) => {
+    const timer = setTimeout(() => reject(new Error(`server did not start: ${output}`)), 30_000);
+    const onData = (chunk: Buffer): void => {
+      output += chunk.toString();
+      const match = /listening (http:\/\/127\.0\.0\.1:\d+)/.exec(output);
+      if (match?.[1]) {
+        clearTimeout(timer);
+        resolveOrigin(match[1]);
+      }
+    };
+    child.stdout?.on("data", onData);
+    child.stderr?.on("data", onData);
+    child.once("exit", (code) => {
+      clearTimeout(timer);
+      reject(new Error(`server exited ${String(code)}: ${output}`));
+    });
+  });
+  return { process: child, origin };
+}
+
+// `fetch` refuses to override Host, so the forged header goes out over node:http.
+function requestWithHost(origin: string, host: string): Promise<number | undefined> {
+  return new Promise((resolveStatus, reject) => {
+    httpGet(`${origin}/`, { headers: { host } }, (response) => {
+      response.resume();
+      response.on("end", () => resolveStatus(response.statusCode));
+    }).on("error", reject);
+  });
+}
+
+type BrowserPage = {
+  on(event: "console", listener: (message: { type(): string; text(): string }) => void): void;
+  on(event: "pageerror", listener: (error: Error) => void): void;
+  goto(url: string): Promise<unknown>;
+  waitForFunction(expression: string): Promise<unknown>;
+  textContent(selector: string): Promise<string | null>;
+  click(selector: string): Promise<void>;
+  evaluate<T>(expression: string): Promise<T>;
+};
+
+type PlaywrightModule = {
+  readonly chromium: {
+    launch(): Promise<{ newPage(): Promise<BrowserPage>; close(): Promise<void> }>;
+  };
+};
+
+// The browser runs the production client bundle, so hydration, the island's
+// state and the Flight refresh are checked where they actually happen.
+async function exerciseInBrowser(origin: string): Promise<Record<string, unknown>> {
+  const requireDocs = createRequire(join(rootDir, "packages", "docs", "package.json"));
+  const { chromium } = requireDocs("@playwright/test") as PlaywrightModule;
+  const browser = await chromium.launch();
+  try {
+    const page = await browser.newPage();
+    const consoleErrors: string[] = [];
+    page.on("console", (message) => {
+      if (message.type() === "error") {
+        consoleErrors.push(message.text());
+      }
+    });
+    page.on("pageerror", (error) => consoleErrors.push(error.message));
+
+    await page.goto(`${origin}/`);
+    await page.waitForFunction("window.__hydrated === true");
+    await page.waitForFunction(
+      "document.querySelector('[data-testid=slow]')?.textContent === 'slow:resolved'",
+    );
+    const slow = await page.textContent("[data-testid=slow]");
+    await page.click("[data-testid=counter]");
+    await page.waitForFunction(
+      "document.querySelector('[data-testid=counter]')?.textContent === 'count=1'",
+    );
+    const counterAfterClick = await page.textContent("[data-testid=counter]");
+    const renderBefore = await page.textContent("[data-testid=render]");
+    await page.click("[data-testid=refresh]");
+    await page.waitForFunction(
+      `document.querySelector('[data-testid=render]')?.textContent !== ${JSON.stringify(renderBefore)}`,
+    );
+    const renderAfter = await page.textContent("[data-testid=render]");
+
+    return {
+      consoleErrors,
+      hydrationErrors: await page.evaluate<string[]>("window.__hydrationErrors ?? []"),
+      slow,
+      counterAfterClick,
+      counterAfterRefresh: await page.textContent("[data-testid=counter]"),
+      renderChanged: renderAfter !== renderBefore,
+    };
+  } finally {
+    await browser.close();
+  }
 }

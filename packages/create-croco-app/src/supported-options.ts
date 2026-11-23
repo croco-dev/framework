@@ -28,7 +28,14 @@ export const SUPPORTED_CREATE_CROCO_APP_CHOICES = {
   apis: ["graphql", "trpc"],
   apiHosting: ["standalone", "nextjs"],
   backendDeploys: ["docker", "lambda", "kubernetes"],
-  frontendDeploys: ["opennext", "vercel", "docker", "cloudflare-meta-vite", "vite-spa"],
+  frontendDeploys: [
+    "opennext",
+    "vercel",
+    "docker",
+    "cloudflare-meta-vite",
+    "node-meta-vite-rsc",
+    "vite-spa",
+  ],
   uiProfiles: ["none", "astryx"],
   databases: ["postgres", "mongodb", "redis"],
 } as const satisfies {

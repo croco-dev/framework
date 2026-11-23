@@ -149,7 +149,12 @@ export {
   createCloudflareHandler,
 } from "./libs/providers/cloudflare";
 export { createLambdaComposedHandler, createLambdaHandler } from "./libs/providers/lambda";
-export { createNodeComposedHandler, createNodeHandler } from "./libs/providers/node";
+export {
+  createNodeComposedHandler,
+  createNodeHandler,
+  NodeRequestOriginProblem,
+} from "./libs/providers/node";
+export type { NodeHandlerOptions } from "./libs/providers/node";
 export type { MetaFetchHandlerOptions } from "./libs/render/composeHandler";
 // Render core
 export { createMetaFetchHandler } from "./libs/render/composeHandler";
@@ -247,11 +252,39 @@ export {
   RscFlightNotAcceptableProblem,
   RscServerReferenceNotSupportedProblem,
 } from "./libs/rsc/flight";
+// Production Node path: load a `@vitejs/plugin-rsc` build and pass it to
+// `RenderServer`. The build's own entries use `./rsc/server` and `./rsc/ssr`.
+export { readRscInitialFlight } from "./libs/rsc/flight";
+export { RscRouteNotInBuildProblem } from "./libs/rsc/buildEntry";
+export { loadRscBuild, RscBuildInvalidProblem } from "./libs/rsc/loadRscBuild";
+export { RscBuildValueUnsupportedProblem } from "./libs/rsc/plainData";
+export {
+  RscBuildActionNotFoundProblem,
+  RscBuildWorkerFailedProblem,
+  RscBuildWorkerUnavailableProblem,
+} from "./libs/rsc/rscBuildWorkerClient";
+export type { LoadRscBuildOptions } from "./libs/rsc/loadRscBuild";
+export { createRscAssetHandler } from "./libs/rsc/rscAssets";
+export type { RscAssetHandler } from "./libs/rsc/rscAssets";
+export type {
+  RscBuild,
+  RscBuildRoute,
+  RscDocumentRender,
+  RscFlightRenderInput,
+  RscHtmlRenderInput,
+  RscRenderRequest,
+  RscServerAction,
+  RscServerActionOptions,
+  RscServerEntry,
+  RscSsrEntry,
+} from "./libs/rsc/buildEntry";
 export type {
   RscFlightEncoder,
   RscFlightRequest,
   RscManifestDocument,
   RscManifestElement,
+  RscBuildRenderOptions,
+  RscEncoderRenderOptions,
   RscRenderOptions,
 } from "./libs/rsc/flight";
 export type {

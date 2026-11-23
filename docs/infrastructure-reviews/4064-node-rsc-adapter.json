@@ -1,0 +1,178 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "meta-vite",
+      "classification": "runtime-adapter",
+      "reason": "Adds a Node production path for @vitejs/plugin-rsc builds: loadRscBuild loads each build into a worker thread of its own, RenderServer renders through it, and the Node adapters can pin the origin a server answers for.",
+      "files": {
+        "packages/meta-vite/package.json": "4ed0c844a8ffa50d10bb19718ae67d6daaae81f42326f80bc141c1063c3f6b02",
+        "packages/meta-vite/src/index.ts": "b7dc870d24921030343333d98f37c6e630ac742cd04acbbcaa74bb0d63a4b98a",
+        "packages/meta-vite/src/libs/providers/node.ts": "a8702b6c4854d84ef3af2ccafbf9ba7eba9c654cb755fcf7e9cd17b6778a58b7",
+        "packages/meta-vite/src/libs/render/renderServer.ts": "ea165e634272405bd7bdee2d775a4d1a1b8bb0fede121350bdc933cca33f9286",
+        "packages/meta-vite/src/libs/rsc/buildEntry.ts": "73dabcafe62971796d08c1ed968fea723a350bb8fe947f2c5254b4b5d028ea3a",
+        "packages/meta-vite/src/libs/rsc/flight.ts": "0934262097d878150c93b4d603737d4cc1538ec33e625b4b371671844fa28658",
+        "packages/meta-vite/src/libs/rsc/flightBrowser.entry.ts": "785eeebf8f682ea436f4841ba9cda4004483d1f8275753e825ec898e7bdc23f3",
+        "packages/meta-vite/src/libs/rsc/loadRscBuild.ts": "bb6d341928726a46be137c7ba8f78cb0a53f49eb1a73c0f6ef21ae475f8e6c1b",
+        "packages/meta-vite/src/libs/rsc/plainData.ts": "c87c42e862ace35aacde25da1d52d2b1251f05ecbf5e2196df1b3103a2a1369d",
+        "packages/meta-vite/src/libs/rsc/rscAssets.ts": "a29a99f4ef9d8809f3b827ae8ddaa798e7b41cc7cea2ffbb95ba2833cc61c2e8",
+        "packages/meta-vite/src/libs/rsc/rscBuildProtocol.ts": "9347644744b45231ed3cd1a8a363bb8a2d5c598e770c899038cc688a27fc5652",
+        "packages/meta-vite/src/libs/rsc/rscBuildWorker.mts": "8ea3bba2a68ca60c58161293c448b75a187b2a17f1f6ca0eb082654f881c9044",
+        "packages/meta-vite/src/libs/rsc/rscBuildWorkerClient.ts": "e9afd859591d23503298ae6db907bd941234c6aa15e261576710e2c78b2c5b92",
+        "packages/meta-vite/src/libs/rsc/serverEntry.ts": "dbb0aca7871a8d435e491416774596f7cb6f18d9fc07c28a781917c7b7de678d",
+        "packages/meta-vite/src/libs/rsc/ssrEntry.ts": "34326afd4e9aed05568abc074ab1996ada2e7be6a6c8b23fb203ab3a7da644c9"
+      },
+      "catalogRuntimes": ["node", "lambda", "cloudflare-workers", "browser"],
+      "profiles": {
+        "kubernetes": {
+          "result": "supported",
+          "reason": "Two separately built Vite RSC fixtures are served from one Node process by @hono/node-server through createNodeComposedHandler, RenderServer and loadRscBuild, answering HTML, Flight, client assets, a stale manifest, a forged Host header and per-tenant requests over real HTTP.",
+          "providers": [
+            "@croco/meta-vite/loadRscBuild",
+            "@croco/meta-vite/RenderServer",
+            "@croco/meta-vite/createNodeComposedHandler",
+            "@croco/meta-vite/createRscAssetHandler"
+          ],
+          "constraints": [
+            "Each build runs in a node:worker_threads worker; runtime context and action input must be plain data.",
+            "With origin set, health probes must send the public host; a server should exit on build.closed so its supervisor restarts it.",
+            "Requires the @vitejs/plugin-rsc default dist/rsc, dist/ssr and dist/client layout and the root Vite base.",
+            "The build and the server must use the same NODE_ENV.",
+            "Local host-runtime evidence does not certify a deployed Kubernetes cluster."
+          ],
+          "references": [
+            "packages/meta-vite/src/libs/rsc/loadRscBuild.ts",
+            "packages/meta-vite/src/libs/providers/node.ts",
+            "packages/meta-vite/src/tests/RscNodeHost.spec.ts",
+            "packages/meta-vite/src/tests/published-contract.spec.ts"
+          ],
+          "evidence": {
+            "kind": "host-runtime",
+            "runtime": "node",
+            "path": "packages/meta-vite/src/tests/RscNodeHost.spec.ts",
+            "testName": "Node RSC production build host serves a Vite RSC build as HTML, Flight and client assets over a real Node HTTP server",
+            "sha256": "0451f59098bb147616ec0d41c7ddc7239bbb140c0a3dcfc584acc325c2ec0b3a"
+          }
+        },
+        "aws-lambda": {
+          "result": "unverified",
+          "reason": "loadRscBuild and its worker run on any Node process, but no Lambda packaging of a plugin-rsc build, worker start-up per container, or buffered Lambda delivery of its HTML and Flight was exercised.",
+          "providers": ["@croco/meta-vite/createLambdaHandler"],
+          "constraints": [
+            "No Lambda RSC integration or deployment evidence is claimed.",
+            "The buffered Lambda response contract is unchanged."
+          ],
+          "references": [
+            "packages/meta-vite/src/libs/providers/lambda.ts",
+            "packages/meta-vite/README.md"
+          ]
+        },
+        "cloudflare": {
+          "result": "unverified",
+          "host": "node-container",
+          "reason": "A Node Container could run the same Node server, but no container host was exercised. Worker isolates are not claimed: loadRscBuild reads the build from the filesystem and starts node:worker_threads workers.",
+          "providers": ["@croco/meta-vite/loadRscBuild"],
+          "constraints": [
+            "No Workers isolate support is added; loadRscBuild needs node:fs and node:worker_threads.",
+            "No Cloudflare Node Container evidence is claimed."
+          ],
+          "references": [
+            "packages/meta-vite/src/libs/rsc/loadRscBuild.ts",
+            "packages/meta-vite/README.md"
+          ]
+        }
+      }
+    },
+    {
+      "package": "create-croco-app",
+      "classification": "deployment-profile",
+      "reason": "Adds --frontend-deploy node-meta-vite-rsc, which writes a Node RSC web app that serves its build through the meta-vite adapter. The CLI itself only writes files.",
+      "files": {
+        "packages/create-croco-app/src/cli-program.ts": "fc5de008be063c290416b5e2a124c668a3ecbf234b1298350fa1d4910406ba2e",
+        "packages/create-croco-app/src/environment-template.ts": "3192fe04031f4b9382aa5f33667921aab901bc7c0866dbcab522725e75c9e543",
+        "packages/create-croco-app/src/generator.ts": "3f5b93fb435054647bc20ecdf288d5bd44e9710d21ab1531f76a26ec38cacd32",
+        "packages/create-croco-app/src/installers/frontend-deploy.ts": "6f6506056cf9a97f16bd79f83b273c356f9abd48cdd0ebc8579f211286dc9514",
+        "packages/create-croco-app/src/options.ts": "01ae9969a75f590559f006e86539f9dd8517a30da5dbf04cd4ffe6fc0b96aa54",
+        "packages/create-croco-app/src/prompts.ts": "253fda83008a644da63535ec12337ec31a57e2165c3c0c8a2daddfdb19314f1b",
+        "packages/create-croco-app/src/supported-options.ts": "6567eb8ca08c7f6b7a11350a1749e96b19eaff25a4459dd8a2ca195211ca057d",
+        "packages/create-croco-app/src/types.ts": "4ed867d01a5fb8d3b5fb5b0a6686bc826a74fd26a5678ab424691816e9f9bfbc"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The generator writes project files and claims no runtime; the generated app's Node hosting is the meta-vite decision in this review, exercised by the meta-vite-node-rsc generated smoke.",
+          "providers": [],
+          "constraints": [
+            "Generated app evidence is the ecosystem-advisory meta-vite-node-rsc smoke, not a deployed cluster."
+          ],
+          "references": [
+            "packages/create-croco-app/src/installers/frontend-deploy.ts",
+            "scripts/create-croco-app-generated-smoke.mts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The generator writes project files and claims no runtime; the generated profile targets a Node server, not Lambda.",
+          "providers": [],
+          "constraints": ["The profile generates no Lambda handler."],
+          "references": [
+            "packages/create-croco-app/src/installers/frontend-deploy.ts",
+            "packages/create-croco-app/README.md"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The generator writes project files and claims no runtime; the generated profile targets a Node server, not Workers.",
+          "providers": [],
+          "constraints": ["The profile generates no Worker entry or wrangler configuration."],
+          "references": [
+            "packages/create-croco-app/src/installers/frontend-deploy.ts",
+            "packages/create-croco-app/README.md"
+          ]
+        }
+      }
+    },
+    {
+      "package": "problems-core",
+      "classification": "pure-contract",
+      "reason": "Regenerates the Problem code registry with recovery metadata for the new meta-vite RSC build and Node origin codes. Registry data only.",
+      "files": {
+        "packages/problems-core/src/generated/problem-code-registry.ts": "fd87394c3718fd2bddcd5d108798aebd214eab08bf3ed457af5f5ef6feca2aec"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Generated registry data adds no Node capability, storage or lifecycle dependency.",
+          "providers": [],
+          "constraints": ["Registry metadata only; no host behavior changes."],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "scripts/problem-registry.mts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Generated registry data adds no Lambda capability, storage or lifecycle dependency.",
+          "providers": [],
+          "constraints": ["Registry metadata only; no host behavior changes."],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "scripts/problem-registry.mts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Generated registry data adds no Workers or Node Container capability, storage or lifecycle dependency.",
+          "providers": [],
+          "constraints": ["Registry metadata only; no host behavior changes."],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "scripts/problem-registry.mts"
+          ]
+        }
+      }
+    }
+  ]
+}
