@@ -54,8 +54,8 @@ const CI_WORKFLOW_ENVIRONMENT = {
   CROCO_CACHEABLE_FAILURE_CLASS: "${{ inputs.cacheable_failure_class || 'none' }}",
 } as const;
 const CI_WORKFLOW_CONCURRENCY = {
-  group: "ci-${{ github.event_name == 'workflow_dispatch' && github.run_id || github.ref }}",
-  "cancel-in-progress": "${{ github.event_name == 'pull_request' }}",
+  group: "ci-${{ github.event_name == 'push' && github.ref || github.run_id }}",
+  "cancel-in-progress": false,
 } as const;
 const WORKTREE_MUTATING_GIT_COMMAND =
   /\bgit(?:\s+(?:-[A-Za-z]\s+\S+|--[a-z-]+(?:=\S+)?))*\s+(?:checkout|switch|reset|restore|clean|read-tree|update-index|sparse-checkout|apply|stash|merge|rebase|cherry-pick|am|revert)\b/;
