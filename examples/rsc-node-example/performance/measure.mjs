@@ -521,12 +521,15 @@ try {
     page.setDefaultTimeout(15000);
     const errors = [];
     const flightRequests = [];
+    const exposureRequests = [];
     page.on("pageerror", (error) => errors.push(error.message));
     page.on("console", (message) => {
       if (message.type() === "error") errors.push(message.text());
     });
     page.on("request", (request) => {
-      if (new URL(request.url()).pathname.endsWith(".rsc")) flightRequests.push(request.url());
+      const { pathname } = new URL(request.url());
+      if (pathname.endsWith(".rsc")) flightRequests.push(request.url());
+      if (pathname === "/lab/expose") exposureRequests.push(request.url());
     });
     const navigation = page.goto(`${origin}/products/orbit?configuration=combined`, {
       waitUntil: "load",
@@ -593,6 +596,14 @@ try {
       // Hydration used the Flight bytes written into the document, not a second request.
       const flightRequestsDuringHydration = flightRequests.length;
       assert.equal(flightRequestsDuringHydration, 0);
+      // The late boundary must not report the decision again; a replayed receipt
+      // would be refused and flip the exposure state to "failed".
+      const exposuresBeforeRefresh = exposureRequests.length;
+      assert.equal(exposuresBeforeRefresh, 1, "The display exposure must be reported exactly once");
+      assert.equal(
+        await page.evaluate(() => document.documentElement.dataset.pdpExposure),
+        "reported",
+      );
 
       if (outcome === "available") {
         const snapshotBeforeRefresh = await page.locator("main").getAttribute("data-pdp-snapshot");
@@ -610,7 +621,13 @@ try {
         );
       }
       assert.deepEqual(errors, []);
-      return { outcome, held, released, flightRequestsDuringHydration };
+      return {
+        outcome,
+        held,
+        released,
+        flightRequestsDuringHydration,
+        exposuresBeforeRefresh,
+      };
     } finally {
       await fetch(`${origin}/lab/resume`, { method: "POST" });
       await navigation.catch(() => undefined);

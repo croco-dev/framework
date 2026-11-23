@@ -6,7 +6,7 @@ async function main() {
   const outlet = document.getElementById("root");
   const initial = readRscInitialFlight();
   if (!outlet || !initial) {
-    throw new Error("document carries no embedded Flight payload");
+    throw new Error("document carries no streamed Flight payload");
   }
   const root = hydrateRoot(outlet, await createFromReadableStream(initial), {
     onRecoverableError: (error) => {

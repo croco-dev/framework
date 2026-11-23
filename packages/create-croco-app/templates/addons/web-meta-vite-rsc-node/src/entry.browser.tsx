@@ -18,8 +18,9 @@ async function hydrate(): Promise<void> {
   if (!outlet) {
     return;
   }
-  // The document embeds the Flight bytes its HTML came from; hydrating from
-  // them avoids rendering the page a second time.
+  // The document streams the Flight bytes its HTML comes from; hydrating from
+  // them avoids rendering the page a second time and does not wait for late
+  // Suspense boundaries.
   const initial = readRscInitialFlight();
   const node = initial ? await createFromReadableStream<ReactNode>(initial) : await loadFlight();
   hydrateRoot(outlet, node);

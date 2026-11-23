@@ -113,6 +113,36 @@ describe("interleaveFlight", () => {
     expect(new TextDecoder().decode(splitStreamedFlight(output).flight)).toBe("0:a\n1:b\n");
   });
 
+  it("carries a large payload with markup-like text without letting it into the HTML", async () => {
+    const html = source();
+    const flight = source();
+    const document = readAll(interleaveFlight(html.stream, flight.stream), { delayEachRead: true });
+    const hostile = "</script><!--<script>alert(1)</script>\u2028·’";
+    const rows = Array.from(
+      { length: 40 },
+      (_, index) => `${index}:${hostile}${"x".repeat(8_000)}\n`,
+    );
+
+    html.enqueue("<main>", "shell</main>");
+    for (const [index, row] of rows.entries()) {
+      flight.enqueue(row);
+      if (index % 10 === 9) {
+        await nextTask();
+        html.enqueue(`<div hidden id="S:${index}">`, "late</div>");
+      }
+    }
+    flight.close();
+    await nextTask();
+    html.close();
+
+    const output = await document;
+    const parts = splitStreamedFlight(output);
+    expect(new TextDecoder().decode(parts.flight)).toBe(rows.join(""));
+    expect(parts.flight.length).toBeGreaterThan(300_000);
+    expect(output).not.toContain("alert(1)");
+    expect(parts.ended).toBe(true);
+  });
+
   it("keeps bytes that are not valid UTF-8 intact", async () => {
     const html = source();
     const flight = new ReadableStream<Uint8Array>({

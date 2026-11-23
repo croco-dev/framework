@@ -59,7 +59,11 @@ async function hydrate() {
   // route again or waiting for late Suspense boundaries.
   const initial = readRscInitialFlight();
   const node = initial ? await createFromReadableStream(initial) : await loadFlightNode();
-  root = hydrateRoot(outlet, node as never);
+  // A recovered mismatch means React re-rendered part of the server HTML on the
+  // client; report it so the lab's browser-error checks fail on it.
+  root = hydrateRoot(outlet, node as never, {
+    onRecoverableError: (error) => console.error("Hydration recovered from an error", error),
+  });
   document.querySelector("[data-testid=refresh]")?.addEventListener("click", () => {
     void refresh();
   });
