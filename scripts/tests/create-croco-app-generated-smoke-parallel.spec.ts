@@ -159,6 +159,43 @@ describe("runWithResourceLocks", () => {
       }),
     ).rejects.toThrow("worker crashed");
   });
+
+  it("waits for running items and starts no new item before rejecting on a failure", async () => {
+    const sibling = deferred();
+    const started: string[] = [];
+    let siblingSettled = false;
+    let poolSettled = false;
+    const done = runWithResourceLocks(
+      [
+        { name: "failing", locks: [] },
+        { name: "running", locks: [] },
+        { name: "queued", locks: [] },
+      ],
+      {
+        concurrency: 2,
+        locksOf: (item) => item.locks,
+        run: async (item) => {
+          started.push(item.name);
+          if (item.name === "failing") throw new Error("result could not be recorded");
+          if (item.name === "running") {
+            await sibling.promise;
+            siblingSettled = true;
+          }
+        },
+      },
+    ).finally(() => {
+      poolSettled = true;
+    });
+    const rejection = expect(done).rejects.toThrow("result could not be recorded");
+
+    await flush();
+    expect(poolSettled).toBe(false);
+
+    sibling.resolve();
+    await rejection;
+    expect(siblingSettled).toBe(true);
+    expect(started).toEqual(["failing", "running"]);
+  });
 });
 
 describe("combineGeneratedSmokeCaseTiming", () => {

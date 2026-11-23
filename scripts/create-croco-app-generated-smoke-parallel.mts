@@ -52,8 +52,12 @@ export async function runWithResourceLocks<T>(
   const pending = [...items];
   const heldLocks = new Set<string>();
   const active = new Set<Promise<void>>();
+  let failure: { readonly error: unknown } | undefined;
 
   const launchRunnable = (): void => {
+    // After a failure, no new item starts; running items finish before the pool rejects so
+    // none of them outlives the caller's cleanup.
+    if (failure) return;
     for (const item of pending.splice(0)) {
       const locks = options.locksOf(item);
       if (active.size >= options.concurrency || locks.some((lock) => heldLocks.has(lock))) {
@@ -61,10 +65,15 @@ export async function runWithResourceLocks<T>(
         continue;
       }
       for (const lock of locks) heldLocks.add(lock);
-      const execution: Promise<void> = options.run(item).finally(() => {
-        for (const lock of locks) heldLocks.delete(lock);
-        active.delete(execution);
-      });
+      const execution: Promise<void> = options
+        .run(item)
+        .catch((error: unknown) => {
+          failure ??= { error };
+        })
+        .finally(() => {
+          for (const lock of locks) heldLocks.delete(lock);
+          active.delete(execution);
+        });
       active.add(execution);
     }
   };
@@ -74,6 +83,7 @@ export async function runWithResourceLocks<T>(
     await Promise.race(active);
     launchRunnable();
   }
+  if (failure) throw failure.error;
 }
 
 export function combineGeneratedSmokeCaseTiming(

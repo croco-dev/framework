@@ -2957,6 +2957,21 @@ function applySmokeCaseVerification(
   );
 }
 
+function settleSmokeCaseVerification(
+  report: GeneratedSmokeReport,
+  prepared: PreparedSmokeCase,
+  verification: SmokeCaseVerification,
+  smokeCaseFailures: Error[],
+): void {
+  try {
+    applySmokeCaseVerification(report, prepared, verification, smokeCaseFailures);
+  } catch (error) {
+    // A case whose evidence cannot be recorded fails on its own, so the remaining cases still run.
+    recordUnhandledSmokeCaseFailure(report, prepared.caseResult, prepared.projectDir, error);
+    reportSmokeCaseFailure(report, prepared.caseResult.name, error, smokeCaseFailures);
+  }
+}
+
 function reportSmokeCaseFailure(
   report: GeneratedSmokeReport,
   caseName: string,
@@ -2977,7 +2992,7 @@ async function verifyPreparedSmokeCases(
   const concurrency = resolveGeneratedSmokeConcurrency();
   if (concurrency === 1 || preparedSmokeCases.length <= 1) {
     for (const prepared of preparedSmokeCases) {
-      applySmokeCaseVerification(
+      settleSmokeCaseVerification(
         report,
         prepared,
         verifyPreparedSmokeCase(
@@ -3006,7 +3021,7 @@ async function verifyPreparedSmokeCases(
       } catch (error) {
         verification = verificationWithoutWorkerResult(prepared, error);
       }
-      applySmokeCaseVerification(report, prepared, verification, smokeCaseFailures);
+      settleSmokeCaseVerification(report, prepared, verification, smokeCaseFailures);
     },
   });
 }
@@ -3086,7 +3101,12 @@ function readWorkerVerification(source: string): SmokeCaseVerification {
     !("steps" in parsed.verification) ||
     !Array.isArray(parsed.verification.steps) ||
     !("status" in parsed.verification) ||
-    (parsed.verification.status !== "passed" && parsed.verification.status !== "failed")
+    (parsed.verification.status !== "passed" && parsed.verification.status !== "failed") ||
+    !("timing" in parsed.verification) ||
+    typeof parsed.verification.timing !== "object" ||
+    parsed.verification.timing === null ||
+    !("steps" in parsed.verification.timing) ||
+    !Array.isArray(parsed.verification.timing.steps)
   ) {
     throw new Error("Generated smoke verification worker wrote an unreadable result");
   }

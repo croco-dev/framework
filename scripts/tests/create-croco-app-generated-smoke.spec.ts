@@ -1939,6 +1939,17 @@ describe("create-croco-app generated smoke timing", () => {
     expect(readFunctionSource(source, "applySmokeCaseVerification")).toContain(
       "caseResult.timing = combineGeneratedSmokeCaseTiming(prepared.preparation, verification.timing);",
     );
+    expect(readFunctionSource(source, "settleSmokeCaseVerification")).toContain(
+      "recordUnhandledSmokeCaseFailure(report, prepared.caseResult, prepared.projectDir, error);",
+    );
+    expect(
+      readFunctionSource(source, "verifyPreparedSmokeCases").match(
+        /settleSmokeCaseVerification\(/g,
+      ),
+    ).toHaveLength(2);
+    expect(readFunctionSource(source, "verifyPreparedSmokeCases")).not.toContain(
+      "applySmokeCaseVerification(",
+    );
     expect(
       source.match(
         /caseResult\.status = "passed";\n\s+caseResult\.timing = finalizeSmokeCaseTiming\(/g,
