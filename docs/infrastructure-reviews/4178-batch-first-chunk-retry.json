@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "batch-core",
+      "classification": "pure-contract",
+      "reason": "Restore the starting position of the same checkpointable reader after a failure before the first successful checkpoint.",
+      "files": {
+        "packages/batch-core/src/libs/ChunkExecutor.ts": "12cc33edc60c165b827f89b6bb86dd281d29308df9f399b4f1b62a11021647e1"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The Node host does not participate in tracking a live batch reader's starting position. The existing durable checkpoint contract still supplies completed chunk progress.",
+          "providers": [],
+          "constraints": [
+            "The starting position is local to the existing reader instance. A new reader starts from its configured position if there is no durable cursor."
+          ],
+          "references": [
+            "packages/batch-core/src/libs/ChunkExecutor.ts",
+            "packages/batch-core/src/libs/interfaces/ItemReader.ts",
+            "packages/batch-core/src/tests/ChunkExecutor.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The Lambda host does not participate in tracking a live batch reader's starting position. The existing durable checkpoint contract still supplies completed chunk progress.",
+          "providers": [],
+          "constraints": [
+            "The starting position is local to the existing reader instance. A new reader starts from its configured position if there is no durable cursor."
+          ],
+          "references": [
+            "packages/batch-core/src/libs/ChunkExecutor.ts",
+            "packages/batch-core/src/libs/interfaces/ItemReader.ts",
+            "packages/batch-core/src/tests/ChunkExecutor.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The Workers or Node Container host does not participate in tracking a live batch reader's starting position. The existing durable checkpoint contract still supplies completed chunk progress.",
+          "providers": [],
+          "constraints": [
+            "The starting position is local to the existing reader instance. A new reader starts from its configured position if there is no durable cursor."
+          ],
+          "references": [
+            "packages/batch-core/src/libs/ChunkExecutor.ts",
+            "packages/batch-core/src/libs/interfaces/ItemReader.ts",
+            "packages/batch-core/src/tests/ChunkExecutor.spec.ts"
+          ]
+        }
+      }
+    }
+  ]
+}
