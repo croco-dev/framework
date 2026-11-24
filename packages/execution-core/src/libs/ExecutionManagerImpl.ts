@@ -526,6 +526,11 @@ export class ExecutionManagerImpl
 
   async retry(id: string): Promise<Execution> {
     const execution = await this.findExisting(id);
+    if (execution.status !== "failed" && execution.status !== "timed_out") {
+      throw ExecutionProblems.invalidStateTransition(
+        `Cannot transition from '${execution.status}' to 'retrying'`,
+      );
+    }
 
     if (execution.error?.indeterminate === true) {
       throw ExecutionProblems.indeterminateRetryBlocked(
@@ -537,12 +542,8 @@ export class ExecutionManagerImpl
       throw ExecutionProblems.maxRetriesExceeded("Maximum retry attempts exceeded");
     }
 
-    // Allow: failed → retrying, timed_out → retrying
-    const targetStatus: ExecutionStatus = "retrying";
-    validateTransition(execution.status, targetStatus);
-
-    return this.transition(execution, targetStatus, {
-      status: targetStatus,
+    return this.transition(execution, "retrying", {
+      status: "retrying",
       error: undefined, // Clear previous error
       completedAt: undefined,
     });

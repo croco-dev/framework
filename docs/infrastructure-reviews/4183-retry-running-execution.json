@@ -1,0 +1,64 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "execution-core",
+      "classification": "pure-contract",
+      "reason": "Restrict manual retry to failed and safely resolved timed-out executions before applying the existing atomic transition. The task runner continues to resume retrying executions through the normal start path.",
+      "files": {
+        "packages/execution-core/src/libs/ExecutionManagerImpl.ts": "df49634af9f096e15dcfb6db850d20223bc5054337262836d2aa3d621e022fa2"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Manual retry eligibility is checked by the execution manager before the existing conditional store update. The check adds no capability, storage configuration, or lifecycle requirement for the Node host.",
+          "providers": [
+            "@croco/execution-core/ExecutionStore",
+            "@croco/execution-core/ExecutionAttemptStore"
+          ],
+          "constraints": [
+            "Configured stores still supply an atomic status comparison and, when supported, an attempt comparison. No host or provider support claim changes."
+          ],
+          "references": [
+            "packages/execution-core/src/libs/ExecutionManagerImpl.ts",
+            "packages/execution-core/src/libs/interfaces/ExecutionStore.ts",
+            "packages/tasks-core/src/libs/TaskRunner.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Manual retry eligibility is checked by the execution manager before the existing conditional store update. The check adds no capability, storage configuration, or lifecycle requirement for the Lambda host.",
+          "providers": [
+            "@croco/execution-core/ExecutionStore",
+            "@croco/execution-core/ExecutionAttemptStore"
+          ],
+          "constraints": [
+            "Configured stores still supply an atomic status comparison and, when supported, an attempt comparison. No host or provider support claim changes."
+          ],
+          "references": [
+            "packages/execution-core/src/libs/ExecutionManagerImpl.ts",
+            "packages/execution-core/src/libs/interfaces/ExecutionStore.ts",
+            "packages/tasks-core/src/libs/TaskRunner.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Manual retry eligibility is checked by the execution manager before the existing conditional store update. The check adds no capability, storage configuration, or lifecycle requirement for Workers or a Node container.",
+          "providers": [
+            "@croco/execution-core/ExecutionStore",
+            "@croco/execution-core/ExecutionAttemptStore"
+          ],
+          "constraints": [
+            "Configured stores still supply an atomic status comparison and, when supported, an attempt comparison. No host or provider support claim changes."
+          ],
+          "references": [
+            "packages/execution-core/src/libs/ExecutionManagerImpl.ts",
+            "packages/execution-core/src/libs/interfaces/ExecutionStore.ts",
+            "packages/tasks-core/src/libs/TaskRunner.ts"
+          ]
+        }
+      }
+    }
+  ]
+}

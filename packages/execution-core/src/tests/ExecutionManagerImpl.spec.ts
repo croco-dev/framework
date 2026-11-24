@@ -1413,6 +1413,26 @@ describe("ExecutionManagerImpl", () => {
   });
 
   describe("retry", () => {
+    it.each([
+      { status: "pending", attempts: 0, maxAttempts: 3 },
+      { status: "running", attempts: 1, maxAttempts: 3 },
+      { status: "running", attempts: 1, maxAttempts: 1 },
+      { status: "retrying", attempts: 1, maxAttempts: 3 },
+      { status: "completed", attempts: 1, maxAttempts: 3 },
+      { status: "cancelled", attempts: 0, maxAttempts: 3 },
+    ] as const)(
+      "rejects manual retry from $status at attempt $attempts of $maxAttempts",
+      async ({ status, attempts, maxAttempts }) => {
+        const execution = await manager.create({ type: "task", maxAttempts });
+        const before = await store.update(execution.id, { status, attempts });
+
+        await expect(manager.retry(execution.id)).rejects.toMatchObject({
+          code: "execution/invalid-state-transition",
+        });
+        expect(await manager.get(execution.id)).toEqual(before);
+      },
+    );
+
     it("transitions failed to retrying without incrementing attempts", async () => {
       const execution = await manager.create({ type: "task", maxAttempts: 3 });
       await manager.start(execution.id);
