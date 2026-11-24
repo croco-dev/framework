@@ -926,7 +926,7 @@ describe("GraphQLServer integration", () => {
     });
 
     await testServer.initialize();
-    await testServer.start(4001);
+    await testServer.start(0);
 
     const handler = testServer.getHandler();
     expect(typeof handler).toBe("function");
@@ -949,10 +949,10 @@ describe("GraphQLServer integration", () => {
     headers.append("set-cookie", "csrf=csrf-token; SameSite=Strict; Path=/");
     Reflect.set(testServer, "yogaHandler", async () => new Response("ok", { headers }));
 
-    await testServer.start(4003);
+    await testServer.start(0);
 
     try {
-      const response = await fetch("http://localhost:4003/graphql");
+      const response = await fetch(`http://localhost:${listeningPort(testServer)}/graphql`);
 
       expect(response.headers.getSetCookie()).toEqual([
         "session=session-token; HttpOnly; Path=/",
@@ -980,10 +980,10 @@ describe("GraphQLServer integration", () => {
       await new Promise((resolve) => setTimeout(resolve, 250));
       return new Response("late response");
     });
-    await testServer.start(42209);
+    await testServer.start(0);
 
     try {
-      const response = await fetch("http://localhost:42209/graphql");
+      const response = await fetch(`http://localhost:${listeningPort(testServer)}/graphql`);
       const responseBody = await response.text();
 
       expect(response.status).toBe(500);
@@ -1031,10 +1031,10 @@ describe("GraphQLServer integration", () => {
       requestTimeoutMs: 100,
     });
 
-    await testServer.start(42210);
+    await testServer.start(0);
 
     try {
-      const responsePromise = fetch("http://localhost:42210/graphql", {
+      const responsePromise = fetch(`http://localhost:${listeningPort(testServer)}/graphql`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ query: "{ slow }" }),
@@ -1075,10 +1075,10 @@ describe("GraphQLServer integration", () => {
       requestTimeoutMs: 1_000,
     });
 
-    await testServer.start(42211);
+    await testServer.start(0);
 
     try {
-      const response = await fetch("http://localhost:42211/graphql");
+      const response = await fetch(`http://localhost:${listeningPort(testServer)}/graphql`);
       await response.text();
 
       const timeoutCallIndex = setTimeoutSpy.mock.calls.findIndex(([, delay]) => delay === 1_000);
@@ -1141,9 +1141,13 @@ describe("GraphQLServer integration", () => {
         signal.addEventListener("abort", () => reject(signal.reason), { once: true });
       });
     });
-    await testServer.start(42212);
+    await testServer.start(0);
 
-    const request = httpRequest({ host: "localhost", port: 42212, path: "/graphql" });
+    const request = httpRequest({
+      host: "localhost",
+      port: listeningPort(testServer),
+      path: "/graphql",
+    });
     request.on("error", () => undefined);
 
     try {
@@ -1257,25 +1261,28 @@ describe("GraphQLServer integration", () => {
       maxBodySizeBytes: limit,
     });
 
-    await testServer.start(4003);
+    await testServer.start(0);
 
     try {
-      const bufferedAtLimit = await fetch("http://localhost:4003/graphql", {
+      const bufferedAtLimit = await fetch(`http://localhost:${listeningPort(testServer)}/graphql`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body,
       });
-      const bufferedOverLimit = await fetch("http://localhost:4003/graphql", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: `${body} `,
-      });
+      const bufferedOverLimit = await fetch(
+        `http://localhost:${listeningPort(testServer)}/graphql`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: `${body} `,
+        },
+      );
       const multibyteOffset = body.indexOf("😀");
-      const streamedAtLimit = await sendChunkedRequest(4003, [
+      const streamedAtLimit = await sendChunkedRequest(listeningPort(testServer), [
         body.slice(0, multibyteOffset),
         body.slice(multibyteOffset),
       ]);
-      const streamedOverLimit = await sendChunkedRequest(4003, [body, " "]);
+      const streamedOverLimit = await sendChunkedRequest(listeningPort(testServer), [body, " "]);
 
       expect(bufferedAtLimit.status).toBe(200);
       expect(bufferedOverLimit.status).toBe(413);
@@ -1296,9 +1303,9 @@ describe("GraphQLServer integration", () => {
     });
 
     await testServer.initialize();
-    await testServer.start(4002);
+    await testServer.start(0);
 
-    const response = await fetch("http://localhost:4002/graphql", {
+    const response = await fetch(`http://localhost:${listeningPort(testServer)}/graphql`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -1347,12 +1354,12 @@ describe("GraphQLServer integration", () => {
       await testServer.initialize();
       const yogaHandler = vi.fn(async (request: Request) => new Response(request.url));
       Reflect.set(testServer, "yogaHandler", yogaHandler);
-      await testServer.start(4004);
+      await testServer.start(0);
 
       try {
         const hostHeader = host === undefined ? "" : `Host: ${host}\r\n`;
         const response = await sendRawHttpRequest(
-          4004,
+          listeningPort(testServer),
           `GET /graphql?query=test HTTP/${version}\r\n${hostHeader}Connection: close\r\n\r\n`,
         );
 
@@ -1371,11 +1378,11 @@ describe("GraphQLServer integration", () => {
     const testServer = new GraphQLServer({
       schemaOptions: { resolvers: [UserResolver], autoDiscover: false },
     });
-    await testServer.start(4004);
+    await testServer.start(0);
 
     try {
       const response = await sendRawHttpRequest(
-        4004,
+        listeningPort(testServer),
         "GET http://[/graphql HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n",
       );
 
@@ -1415,7 +1422,7 @@ describe("GraphQLServer integration", () => {
         schemaOptions: { resolvers: [UserResolver], autoDiscover: false },
         maxBodySizeBytes: 16,
       });
-      await testServer.start(42213);
+      await testServer.start(0);
       const nodeServer = Reflect.get(testServer, "server") as Server;
       const destruction: { error: Error | undefined; finished: boolean }[] = [];
       let receivedFirstChunk: (() => void) | undefined;
@@ -1447,7 +1454,7 @@ describe("GraphQLServer integration", () => {
 
       try {
         const response = await sendRawHttpRequest(
-          42213,
+          listeningPort(testServer),
           `POST /graphql HTTP/1.1\r\nHost: localhost\r\nContent-Type: application/json\r\nConnection: keep-alive\r\n${framing}\r\n\r\n${body}`,
           {
             unfinished: true,
@@ -1475,7 +1482,7 @@ describe("GraphQLServer integration", () => {
       schemaOptions: { resolvers: [UserResolver], autoDiscover: false },
       maxBodySizeBytes: 16,
     });
-    await testServer.start(42213);
+    await testServer.start(0);
     const nodeServer = Reflect.get(testServer, "server") as Server;
     const destruction: { error: Error | undefined; finished: boolean }[] = [];
     nodeServer.once("request", (request, response) => {
@@ -1500,7 +1507,7 @@ describe("GraphQLServer integration", () => {
 
     try {
       await sendRawHttpRequest(
-        42213,
+        listeningPort(testServer),
         "POST /graphql HTTP/1.1\r\nHost: localhost\r\nConnection: keep-alive\r\nContent-Length: 1000\r\n\r\nx",
         { unfinished: true },
       );
@@ -1530,10 +1537,10 @@ describe("GraphQLServer integration", () => {
         { reason: "tenant mismatch", providerSecret: "secret" },
       );
     });
-    await testServer.start(4005);
+    await testServer.start(0);
 
     try {
-      const response = await fetch("http://localhost:4005/graphql");
+      const response = await fetch(`http://localhost:${listeningPort(testServer)}/graphql`);
       const problem = (await response.json()) as Record<string, unknown>;
 
       expect(response.status).toBe(403);
@@ -1568,10 +1575,10 @@ describe("GraphQLServer integration", () => {
     Reflect.set(testServer, "yogaHandler", async () => {
       throw new Error("provider credential leaked");
     });
-    await testServer.start(4006);
+    await testServer.start(0);
 
     try {
-      const response = await fetch("http://localhost:4006/graphql");
+      const response = await fetch(`http://localhost:${listeningPort(testServer)}/graphql`);
       const responseBody = await response.text();
 
       expect(response.status).toBe(500);
@@ -1619,10 +1626,10 @@ describe("GraphQLServer integration", () => {
       },
     );
     Reflect.set(testServer, "yogaHandler", async () => yogaResponse);
-    await testServer.start(4007);
+    await testServer.start(0);
 
     try {
-      const response = await fetch("http://localhost:4007/graphql");
+      const response = await fetch(`http://localhost:${listeningPort(testServer)}/graphql`);
       const responseBody = await response.text();
 
       expect(response.status).toBe(500);
@@ -1665,11 +1672,13 @@ describe("GraphQLServer integration", () => {
       },
     });
 
-    await testServer.start(4008);
+    await testServer.start(0);
 
     try {
       await expect(
-        fetch("http://localhost:4008/graphql").then((response) => response.text()),
+        fetch(`http://localhost:${listeningPort(testServer)}/graphql`).then((response) =>
+          response.text(),
+        ),
       ).rejects.toThrow();
       await vi.waitFor(() => {
         expect(logger.error).toHaveBeenCalledWith("GraphQL request failed", {
@@ -2183,6 +2192,12 @@ async function executeQuery(
     response,
     data: await response.json(),
   };
+}
+
+function listeningPort(server: GraphQLServer): number {
+  const address = (Reflect.get(server, "server") as Server).address();
+  if (!address || typeof address === "string") throw new Error("Expected TCP address");
+  return address.port;
 }
 
 function sendRawHttpRequest(
