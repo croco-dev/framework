@@ -70,10 +70,30 @@ describe("PolicyDecisionTrace", () => {
       'Authorization="[Redacted]" request ID: sample-request',
     ],
     [
+      "Authorization='Custom sample;credential' request ID: sample-request",
+      "Authorization='[Redacted]' request ID: sample-request",
+    ],
+    [
       '{"authorization":"Custom sample-credential","requestId":"sample-request"}',
       '{"authorization":"[Redacted]","requestId":"sample-request"}',
     ],
     ["Authorization: Custom\r\n\tsample-credential", "Authorization: [Redacted]"],
+    ["Authorization: Custom\r\n \r\n\tsample-credential", "Authorization: [Redacted]"],
+    [
+      "Headers:\r\n  Authorization: Bearer sample-credential\r\n  X-Request-Id: sample-request",
+      "Headers:\r\n  Authorization: [Redacted]\r\n  X-Request-Id: sample-request",
+    ],
+    [
+      'Authorization: Digest username="sample\r\n\t;user", response="sample-proof"',
+      "Authorization: [Redacted]",
+    ],
+    [
+      JSON.stringify({
+        message: 'upstream Authorization: Digest username="sample;user", response="sample-proof"',
+        operation: "list",
+      }),
+      '{"message":"upstream Authorization: [Redacted]","operation":"list"}',
+    ],
     ["Bearer sample-credential", "Bearer [Redacted]"],
     ["password=sample-credential denied", "password=[Redacted] denied"],
   ])("redacts credentials in trace strings (%s)", (header, redactedHeader) => {

@@ -83,16 +83,16 @@ const DEFAULT_SENSITIVE_KEY_PATTERN =
   /authorization|cookie|credential|password|secret|token|api[-_]?key|private[-_]?key|access[-_]?key|database[-_]?url|redis[-_]?url|mongo(?:db)?[-_]?url|postgres(?:ql)?[-_]?url|connection[-_]?string|dsn/i;
 const AUTHORIZATION_LABEL = "(?:proxy[-_])?authorization";
 const ASSIGNMENT_SEPARATOR = String.raw`[ \t]*[:=][ \t]*`;
-const QUOTED_VALUE =
-  /"(?:\\[^\r\n]|[^"\\\r\n])*"|'(?:\\[^\r\n]|[^'\\\r\n])*'(?=[ \t]*(?:[,;}&\]\r\n]|$))/;
-const HEADER_CONTINUATION = String.raw`(?:\r\n|[\r\n])[ \t]+`;
-const UNQUOTED_HEADER_LINE = String.raw`(?:[^";\r\n]|"(?:\\[^\r\n]|[^"\\\r\n])*(?:"|\\?(?=[\r\n]|$)))+`;
-const QUOTED_AUTHORIZATION_HEADER = String.raw`((["'])${AUTHORIZATION_LABEL}${ASSIGNMENT_SEPARATOR})(?:\\[^\r\n]|(?!\2)[^\\\r\n])+\2`;
-const UNQUOTED_HEADER_VALUE = String.raw`(?![ \t])(?:${HEADER_CONTINUATION})?${UNQUOTED_HEADER_LINE}(?:${HEADER_CONTINUATION}${UNQUOTED_HEADER_LINE})*`;
-const AUTHORIZATION_ASSIGNMENT = String.raw`((["']?)${AUTHORIZATION_LABEL}\4${ASSIGNMENT_SEPARATOR})(?:(${QUOTED_VALUE.source})|[^\s,;&"']+(?=[,&])|${UNQUOTED_HEADER_VALUE})`;
-const AUTHORIZATION_VALUE_PATTERN = new RegExp(
-  `${QUOTED_AUTHORIZATION_HEADER}|${AUTHORIZATION_ASSIGNMENT}`,
-  "gi",
+const DOUBLE_QUOTED_TEXT = /"(?:\\[^\r\n]|[^"\\\r\n])*"/;
+const SINGLE_QUOTED_TEXT = /'(?:\\[^\r\n]|[^'\\\r\n])*'/;
+const QUOTED_VALUE = String.raw`(?:${DOUBLE_QUOTED_TEXT.source}|(?='(?:\\[^\r\n]|[^'\\\r\n])*[ \t;])${SINGLE_QUOTED_TEXT.source}|${SINGLE_QUOTED_TEXT.source}(?=[ \t]*(?:[,;}&\]\r\n]|$)))`;
+const HEADER_CONTINUATION = String.raw`(?:\r\n|[\r\n])\k<indent>[ \t]+`;
+const HEADER_QUOTED_PARAM = String.raw`"(?:\\[^\r\n]|[^"\\\r\n]|${HEADER_CONTINUATION})*(?:"|\\?(?=[\r\n]|$))`;
+const UNQUOTED_HEADER_VALUE = String.raw`(?![ \t])(?:[^";\r\n]|${HEADER_QUOTED_PARAM}|${HEADER_CONTINUATION})+`;
+const AUTHORIZATION_ASSIGNMENT = String.raw`((?:^(?<indent>[ \t]*)|)(?<keyQuote>["']?)${AUTHORIZATION_LABEL}\k<keyQuote>${ASSIGNMENT_SEPARATOR})(?:(${QUOTED_VALUE})|[^\s,;&"']+(?=[,&])|${UNQUOTED_HEADER_VALUE})`;
+const AUTHORIZATION_OR_QUOTED_TEXT = new RegExp(
+  `${AUTHORIZATION_ASSIGNMENT}|${DOUBLE_QUOTED_TEXT.source}|${SINGLE_QUOTED_TEXT.source}`,
+  "gim",
 );
 const DEFAULT_SENSITIVE_VALUE_PATTERN =
   /((?:password|secret|token|api[-_]?key|access[-_]?key|private[-_]?key|credential|dsn)\s*[:=]\s*)[^\s,;&]+|((?:bearer|basic)\s+)[^\s,;]+|((?:postgres(?:ql)?|mysql|mongodb(?:\+srv)?|redis):\/\/)[^\s]+/gi;
@@ -303,28 +303,52 @@ function sanitizePolicyDecisionValue(
   return output;
 }
 
+function decodeDiagnosticString(value: string): string | undefined {
+  try {
+    const decoded: unknown = JSON.parse(value);
+    return typeof decoded === "string" ? decoded : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function redactAuthorizationText(value: string, onRedaction: () => void): string {
+  return value.replace(
+    AUTHORIZATION_OR_QUOTED_TEXT,
+    (match, prefix, _indent, _keyQuote, quotedValue) => {
+      if (prefix !== undefined) {
+        onRedaction();
+        const quote = quotedValue?.[0] ?? "";
+        return `${prefix}${quote}${POLICY_DECISION_REDACTED_VALUE}${quote}`;
+      }
+
+      const quote = match[0];
+      const decoded =
+        quote === '"' && match.includes("\\") ? decodeDiagnosticString(match) : undefined;
+      const content = decoded ?? match.slice(1, -1);
+      const redacted = redactAuthorizationText(content, onRedaction);
+      if (redacted === content) return match;
+      return decoded === undefined ? `${quote}${redacted}${quote}` : JSON.stringify(redacted);
+    },
+  );
+}
+
 function sanitizePolicyDecisionString(
   value: string,
   state: RedactionState,
   path: readonly string[] = [],
 ): string {
   let redacted = false;
-  const scrubbed = value
-    .replace(
-      AUTHORIZATION_VALUE_PATTERN,
-      (_match, headerPrefix, headerQuote, assignmentPrefix, _labelQuote, quotedValue) => {
-        redacted = true;
-        if (headerPrefix !== undefined) {
-          return `${headerPrefix}${POLICY_DECISION_REDACTED_VALUE}${headerQuote}`;
-        }
-        const quote = quotedValue?.[0] ?? "";
-        return `${assignmentPrefix}${quote}${POLICY_DECISION_REDACTED_VALUE}${quote}`;
-      },
-    )
-    .replace(DEFAULT_SENSITIVE_VALUE_PATTERN, (_match, assignmentPrefix, authPrefix, urlPrefix) => {
+  const authorizationRedacted = redactAuthorizationText(value, () => {
+    redacted = true;
+  });
+  const scrubbed = authorizationRedacted.replace(
+    DEFAULT_SENSITIVE_VALUE_PATTERN,
+    (_match, assignmentPrefix, authPrefix, urlPrefix) => {
       redacted = true;
       return `${assignmentPrefix ?? authPrefix ?? urlPrefix ?? ""}${POLICY_DECISION_REDACTED_VALUE}`;
-    });
+    },
+  );
 
   if (redacted) {
     state.paths.push(formatPath(path));
