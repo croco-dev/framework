@@ -44,6 +44,14 @@ export function redactDiagnosticCredentials(
       const sensitive =
         quotedText === undefined && (isQuotedKey ? quotedKeyMatcher : plainKeyMatcher).test(key);
 
+      if (isJsonField && /[:=]/.test(key)) {
+        const redactedKey = redactText(key);
+        if (redactedKey !== key) {
+          parts.push(text.slice(copiedThrough, field.index), JSON.stringify(redactedKey));
+          copiedThrough = field.index + label.length;
+        }
+      }
+
       let end: number;
       let marker: string;
       if (sensitive) {

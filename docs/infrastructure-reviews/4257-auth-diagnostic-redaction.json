@@ -73,7 +73,7 @@
       "reason": "Mask credential values in authentication Problems and readiness diagnostics using only JavaScript string operations.",
       "files": {
         "packages/diagnostics-core/src/index.ts": "f6c13f2ef356780f38741510afb53bd87726958a4ce5202fcfbf5c22cfaa6ce7",
-        "packages/diagnostics-core/src/libs/redactDiagnosticCredentials.ts": "68ef2aa2479685dc8a59aa12f6d133ebedfaf758526f0c9cf31c9b750120013e"
+        "packages/diagnostics-core/src/libs/redactDiagnosticCredentials.ts": "8ca9ef6e2159d958d0c2770485ec7b7d8050da4543de977b2e717edc23fabab6"
       },
       "catalogRuntimes": [],
       "profiles": {
