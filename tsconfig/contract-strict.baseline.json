@@ -285,7 +285,7 @@
     {
       "packageName": "@croco/protocols-rest",
       "file": "packages/protocols-rest/src/libs/guards/AuthGuard.ts",
-      "line": 116,
+      "line": 98,
       "column": 9,
       "code": "TS18048",
       "message": "'scheme' is possibly 'undefined'."

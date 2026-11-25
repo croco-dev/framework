@@ -17,7 +17,13 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../../../..");
-const packages = ["problems-core", "diagnostics-core", "framework-context", "protocols-graphql"];
+const packages = [
+  "problems-core",
+  "diagnostics-core",
+  "framework-context",
+  "protocols-core",
+  "protocols-graphql",
+];
 
 function run(command: string, args: string[], cwd: string): string {
   return execFileSync(command, args, {

@@ -25816,7 +25816,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/protocols-graphql/src/libs/guards/AuthGuard.ts";
-          readonly line: 74;
+          readonly line: 56;
           readonly column: 13;
           readonly kind: "problem-factory";
         },
@@ -25844,7 +25844,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/protocols-graphql/src/libs/guards/AuthGuard.ts";
-          readonly line: 57;
+          readonly line: 39;
           readonly column: 13;
           readonly kind: "problem-factory";
         },
@@ -25872,7 +25872,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/protocols-graphql/src/libs/guards/AuthGuard.ts";
-          readonly line: 17;
+          readonly line: 18;
           readonly column: 10;
           readonly kind: "problem-factory";
         },
@@ -25900,7 +25900,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/protocols-graphql/src/libs/guards/AuthGuard.ts";
-          readonly line: 66;
+          readonly line: 48;
           readonly column: 13;
           readonly kind: "problem-factory";
         },
@@ -25928,7 +25928,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/protocols-graphql/src/libs/guards/AuthGuard.ts";
-          readonly line: 100;
+          readonly line: 82;
           readonly column: 13;
           readonly kind: "problem-factory";
         },
@@ -25984,7 +25984,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/protocols-rest/src/libs/guards/AuthGuard.ts";
-          readonly line: 77;
+          readonly line: 59;
           readonly column: 13;
           readonly kind: "problem-factory";
         },
@@ -26012,7 +26012,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/protocols-rest/src/libs/guards/AuthGuard.ts";
-          readonly line: 59;
+          readonly line: 41;
           readonly column: 13;
           readonly kind: "problem-factory";
         },
@@ -26040,7 +26040,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/protocols-rest/src/libs/guards/AuthGuard.ts";
-          readonly line: 15;
+          readonly line: 16;
           readonly column: 10;
           readonly kind: "problem-factory";
         },
@@ -26068,7 +26068,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/protocols-rest/src/libs/guards/AuthGuard.ts";
-          readonly line: 69;
+          readonly line: 51;
           readonly column: 13;
           readonly kind: "problem-factory";
         },
@@ -26096,7 +26096,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/protocols-rest/src/libs/guards/AuthGuard.ts";
-          readonly line: 102;
+          readonly line: 84;
           readonly column: 13;
           readonly kind: "problem-factory";
         },
@@ -62653,7 +62653,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/protocols-graphql/src/libs/guards/AuthGuard.ts",
-          line: 74,
+          line: 56,
           column: 13,
           kind: "problem-factory",
         },
@@ -62684,7 +62684,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/protocols-graphql/src/libs/guards/AuthGuard.ts",
-          line: 57,
+          line: 39,
           column: 13,
           kind: "problem-factory",
         },
@@ -62714,7 +62714,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/protocols-graphql/src/libs/guards/AuthGuard.ts",
-          line: 17,
+          line: 18,
           column: 10,
           kind: "problem-factory",
         },
@@ -62744,7 +62744,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/protocols-graphql/src/libs/guards/AuthGuard.ts",
-          line: 66,
+          line: 48,
           column: 13,
           kind: "problem-factory",
         },
@@ -62777,7 +62777,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/protocols-graphql/src/libs/guards/AuthGuard.ts",
-          line: 100,
+          line: 82,
           column: 13,
           kind: "problem-factory",
         },
@@ -62839,7 +62839,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/protocols-rest/src/libs/guards/AuthGuard.ts",
-          line: 77,
+          line: 59,
           column: 13,
           kind: "problem-factory",
         },
@@ -62870,7 +62870,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/protocols-rest/src/libs/guards/AuthGuard.ts",
-          line: 59,
+          line: 41,
           column: 13,
           kind: "problem-factory",
         },
@@ -62900,7 +62900,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/protocols-rest/src/libs/guards/AuthGuard.ts",
-          line: 15,
+          line: 16,
           column: 10,
           kind: "problem-factory",
         },
@@ -62930,7 +62930,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/protocols-rest/src/libs/guards/AuthGuard.ts",
-          line: 69,
+          line: 51,
           column: 13,
           kind: "problem-factory",
         },
@@ -62963,7 +62963,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/protocols-rest/src/libs/guards/AuthGuard.ts",
-          line: 102,
+          line: 84,
           column: 13,
           kind: "problem-factory",
         },

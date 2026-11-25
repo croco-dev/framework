@@ -6,6 +6,11 @@ import {
   authGuardConformance,
   createConformanceProtocolUser,
 } from "../../../../test-support/authGuardConformance";
+import {
+  rejectedJwtCases,
+  testJwt,
+  unavailableJwtVerifierCases,
+} from "../../../../test-support/jwtVerificationFixtures";
 import { GRAPHQL_GUARDS_KEY, GRAPHQL_ROLES_KEY, RESOLVERS_KEY } from "../libs/constants";
 import { GraphQLResolver } from "../libs/decorators";
 import { GRAPHQL_AUTH_GUARD_OPTIONS, GraphQLAuthGuard } from "../libs/guards/AuthGuard";
@@ -123,6 +128,32 @@ describe("GraphQLAuthGuard", () => {
       authGuardConformance.graphql.invalidCredentials,
     );
   });
+
+  it.each(rejectedJwtCases)(
+    "should reject $name as invalid credentials",
+    async ({ token, verifier }) => {
+      const request = { headers: { authorization: `Bearer ${token}` } };
+      const context = createMockContext({ context: request });
+
+      await expect(new GraphQLAuthGuard({ verifier }).canActivate(context)).rejects.toMatchObject(
+        authGuardConformance.graphql.invalidCredentials,
+      );
+      expect(request).not.toHaveProperty("user");
+    },
+  );
+
+  it.each(unavailableJwtVerifierCases)(
+    "should report $name as verifier unavailable",
+    async ({ token = testJwt, verifier }) => {
+      const context = createMockContext({
+        context: { headers: { authorization: `Bearer ${token}` } },
+      });
+
+      await expect(new GraphQLAuthGuard({ verifier }).canActivate(context)).rejects.toMatchObject(
+        authGuardConformance.graphql.verifierUnavailable,
+      );
+    },
+  );
 
   it("should surface verifier outages separately from invalid tokens", async () => {
     const guard = new GraphQLAuthGuard({

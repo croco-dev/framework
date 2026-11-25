@@ -78,6 +78,7 @@ export type {
   RouteSchemaLike,
 } from "./libs/RouteSchema";
 export { defineRouteSchema } from "./libs/RouteSchema";
+export { isTokenVerificationError } from "./libs/isTokenVerificationError";
 export type {
   ContractGraphDiff,
   ContractGraphDiffChange,

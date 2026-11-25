@@ -5,6 +5,11 @@ import {
   authGuardConformance,
   createConformanceProtocolUser,
 } from "../../../../test-support/authGuardConformance";
+import {
+  rejectedJwtCases,
+  testJwt,
+  unavailableJwtVerifierCases,
+} from "../../../../test-support/jwtVerificationFixtures";
 import { AuthGuard } from "../libs/guards/AuthGuard";
 import type { ExecutionContext } from "../libs/interfaces/ExecutionContext";
 
@@ -87,6 +92,32 @@ describe("AuthGuard", () => {
     );
     expect(mockVerifier).toHaveBeenCalledWith(authGuardConformance.tokens.invalid);
   });
+
+  it.each(rejectedJwtCases)(
+    "should reject $name as invalid credentials",
+    async ({ token, verifier }) => {
+      const request = { headers: { authorization: `Bearer ${token}` } };
+      mockContext.getRequest = vi.fn().mockReturnValue(request);
+
+      await expect(new AuthGuard({ verifier }).canActivate(mockContext)).rejects.toMatchObject(
+        authGuardConformance.rest.invalidCredentials,
+      );
+      expect(request).not.toHaveProperty("user");
+    },
+  );
+
+  it.each(unavailableJwtVerifierCases)(
+    "should report $name as verifier unavailable",
+    async ({ token = testJwt, verifier }) => {
+      mockContext.getRequest = vi
+        .fn()
+        .mockReturnValue({ headers: { authorization: `Bearer ${token}` } });
+
+      await expect(new AuthGuard({ verifier }).canActivate(mockContext)).rejects.toMatchObject(
+        authGuardConformance.rest.verifierUnavailable,
+      );
+    },
+  );
 
   it("should surface verifier outages separately from invalid tokens", async () => {
     const mockRequest = {

@@ -34,6 +34,7 @@ import type {
 } from "@croco/protocols-graphql";
 import { buildSchema, GraphQLError } from "graphql";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { verifyJoseJwt } from "../../../../test-support/jwtVerificationFixtures";
 import { GraphQLServer } from "../libs/GraphQLServer";
 import { SchemaCompiler } from "../libs/SchemaCompiler";
 import {
@@ -2004,6 +2005,21 @@ describe("GraphQLServer integration", () => {
         expect(resolverExecuted).not.toHaveBeenCalled();
       },
     );
+
+    it("returns a 401 GraphQL Problem extension when jose rejects a token", async () => {
+      verifier.mockImplementation(verifyJoseJwt);
+
+      const { data } = await executeQuery(authServer, "{ authenticatedQuery }", {
+        authorization: "Bearer malformed",
+      });
+
+      expect(data.data).toBeNull();
+      expect(data.errors[0].extensions).toMatchObject({
+        code: "protocols-graphql/auth-invalid-token",
+        status: 401,
+      });
+      expect(resolverExecuted).not.toHaveBeenCalled();
+    });
   });
 
   describe("Declared policy execution", () => {
