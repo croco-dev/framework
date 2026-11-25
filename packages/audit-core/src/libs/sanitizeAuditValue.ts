@@ -24,10 +24,13 @@ const APOSTROPHE_SCHEME =
   String.raw`'(?:` +
   String.raw`(?=${HTTP_TOKEN_CHARACTER}*?')${HTTP_TOKEN_CHARACTER}*${CREDENTIAL_GAP}\S|` +
   String.raw`${HTTP_TOKEN_CHARACTER}*${CREDENTIAL_GAP}${HTTP_CREDENTIAL})`;
+const QUOTED_HEADER_VALUE = /'[^'"\\\s]+\s+(?:\\.|"(?:\\.|[^"\\])*"|[^'"\\])*'/;
+const DIAGNOSTIC_LABEL = String.raw`${HTTP_TOKEN_CHARACTER}+(?:[ \t]+${HTTP_TOKEN_CHARACTER}+)*[ \t]*[:=]`;
+const QUOTED_HEADER_END = String.raw`(?=[ \t]*$(?!(?:${HEADER_CONTINUATION})+\S)|[ \t]*;|[ \t]+${DIAGNOSTIC_LABEL})`;
 const AUTHORIZATION_VALUE =
   String.raw`(?:${OBJECT_PROPERTY_SEPARATOR}(${QUOTED_DIAGNOSTIC_TEXT}|${OBJECT_SCALAR})${OBJECT_PROPERTY_END}|` +
   String.raw`${ASSIGNMENT_SEPARATOR}(${QUOTED_DIAGNOSTIC_TEXT})(?!${HTTP_TOKEN_CHARACTER})|` +
-  String.raw`[ \t]*:${VALUE_GAP}(?!${APOSTROPHE_SCHEME})(${QUOTED_SECRET_VALUE.source})|` +
+  String.raw`[ \t]*:${VALUE_GAP}(${QUOTED_HEADER_VALUE.source}${QUOTED_HEADER_END}|(?!${APOSTROPHE_SCHEME})(?:${QUOTED_SECRET_VALUE.source}))|` +
   String.raw`[ \t]*[:=]${VALUE_GAP}(\S[^\r\n]*(?:${HEADER_CONTINUATION}[^\r\n]*)*))`;
 const AUTHORIZATION_OR_QUOTED_TEXT = new RegExp(
   String.raw`${AUTHORIZATION_LABEL}${AUTHORIZATION_VALUE}|(?<![\w\\])(?:${QUOTED_DIAGNOSTIC_TEXT})`,

@@ -6,7 +6,7 @@
       "classification": "pure-contract",
       "reason": "Redact complete authorization header values before audit messages reach persistence. The change affects only string sanitization.",
       "files": {
-        "packages/audit-core/src/libs/sanitizeAuditValue.ts": "05f169aa4b1f7a2cb1f1eacbf4aff0943339073a140fab28b4929d7e8b0f0d4f"
+        "packages/audit-core/src/libs/sanitizeAuditValue.ts": "ffa1fd004ca593888be62600f2220d6e21cd1095f1311ee3719674b0d0be972b"
       },
       "catalogRuntimes": [],
       "profiles": {

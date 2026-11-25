@@ -50,6 +50,30 @@ describe("sanitizeAuditValue", () => {
     ["Authorization='fixture-value' operation=list", "Authorization='[Redacted]' operation=list"],
     ["Authorization='Example'Auth fixture-value", "Authorization=[Redacted]"],
     [
+      'Authorization: \'Digest realm="fixture"\nproof="fixture-value"\'\nrequest-id: abc',
+      "Authorization: '[Redacted]'\nrequest-id: abc",
+    ],
+    [
+      "Authorization: 'Digest realm=\"fixture\"' request-id=abc",
+      "Authorization: '[Redacted]' request-id=abc",
+    ],
+    [
+      "Authorization: 'Digest realm=\"fixture\"' request ID: abc",
+      "Authorization: '[Redacted]' request ID: abc",
+    ],
+    [
+      "Authorization: 'Digest realm=\"fixture\"'; request ID: abc",
+      "Authorization: '[Redacted]'; request ID: abc",
+    ],
+    [
+      "Authorization: 'ExampleAuth proof=\"fixture' request ID: fixture-value\"",
+      "Authorization: [Redacted]",
+    ],
+    [
+      "Authorization: 'ExampleAuth proof=fixture'\r\n\t, id=fixture-value",
+      "Authorization: [Redacted]",
+    ],
+    [
       "Authorization: 'Bearer fixture-value' request ID: abc",
       "Authorization: '[Redacted]' request ID: abc",
     ],
