@@ -1092,55 +1092,90 @@ describe("ChunkExecutor", () => {
     expect(await manager.get(execution.id)).toMatchObject({ status: "timed_out", attempts: 2 });
   });
 
-  it("does not consume input when start advances past the prepared attempt", async () => {
-    const originalManager = new ExecutionManagerImpl(new TestExecutionStore());
+  it("leaves the next retry available when an attempt fails during reader preparation", async () => {
     const manager = new ExecutionManagerImpl(new TestExecutionStore());
-    const input = { type: "import-users", maxAttempts: 2 };
-    const original = await originalManager.create(input);
-    const execution = await manager.create(input);
-    expect(execution.id).toBe(original.id);
+    const execution = await manager.create({ type: "import-users", maxAttempts: 3 });
     const failure = new Error("temporary sink outage");
     const writer = { write: vi.fn(async (_items: number[]) => {}) };
     writer.write.mockRejectedValueOnce(failure);
+    const reader = createCheckpointReader([1, 2, 3, 4]);
     const step = new Step({
       name: "import-users",
-      reader: createCheckpointReader([1, 2, 3, 4]),
+      reader,
       writer,
       chunkSize: 2,
     });
-    await expect(new ChunkExecutor(originalManager).execute(original.id, step)).rejects.toBe(
-      failure,
-    );
-
-    const get = manager.get.bind(manager);
-    vi.spyOn(manager, "get").mockImplementationOnce(async (id) => {
-      const pending = await get(id);
-      await manager.start(id);
-      await manager.fail(id, { message: "another attempt failed", retryable: true });
-      return pending;
-    });
-    writer.write.mockClear();
     const executor = new ChunkExecutor(manager);
-    await expect(executor.execute(execution.id, step)).rejects.toMatchObject({
+
+    await expect(executor.execute(execution.id, step)).rejects.toBe(failure);
+    const restoring = createBarrier();
+    const releaseRestore = createBarrier();
+    const restore = reader.restoreCheckpoint.getMockImplementation();
+    reader.restoreCheckpoint.mockImplementationOnce(async (cursor) => {
+      restoring.resolve();
+      await releaseRestore.promise;
+      restore?.(cursor);
+    });
+    vi.mocked(reader.read).mockClear();
+    writer.write.mockClear();
+    const retry = expect(executor.execute(execution.id, step)).rejects.toMatchObject({
       code: "execution/conflict",
     });
+    await restoring.promise;
+    try {
+      await manager.start(execution.id);
+      await manager.fail(execution.id, { message: "another attempt failed", retryable: true });
+    } finally {
+      releaseRestore.resolve();
+      await retry;
+    }
+    expect(reader.read).not.toHaveBeenCalled();
     expect(writer.write).not.toHaveBeenCalled();
-    expect(await manager.get(execution.id)).toMatchObject({ status: "running", attempts: 2 });
+    expect(await manager.get(execution.id)).toMatchObject({
+      status: "retrying",
+      attempts: 2,
+      error: { message: "another attempt failed" },
+    });
 
-    await executor.execute(
-      execution.id,
-      new Step({
-        name: step.name,
-        reader: createCheckpointReader([1, 2, 3, 4]),
-        writer,
-        chunkSize: 2,
-      }),
-      { startExecution: false },
-    );
+    await executor.execute(execution.id, step);
     expect(writer.write.mock.calls).toEqual([[[1, 2]], [[3, 4]]]);
     expect(await manager.get(execution.id)).toMatchObject({
       status: "completed",
-      attempts: 2,
+      attempts: 3,
+      result: { processedCount: 4 },
+    });
+  });
+
+  it("uses the saved checkpoint of the attempt it actually starts", async () => {
+    const manager = new ExecutionManagerImpl(new TestExecutionStore());
+    const execution = await manager.create({ type: "import-users", maxAttempts: 3 });
+    const failure = new Error("temporary sink outage");
+    const reader = createCheckpointReader([1, 2, 3, 4]);
+    const writer = { write: vi.fn().mockRejectedValueOnce(failure) };
+    const step = new Step({ name: "import-users", reader, writer, chunkSize: 2 });
+    const executor = new ChunkExecutor(manager);
+    await expect(executor.execute(execution.id, step)).rejects.toBe(failure);
+    writer.write.mockClear();
+
+    const competingStep = new Step({
+      name: step.name,
+      reader: createCheckpointReader([1, 2, 3, 4]),
+      writer: { write: vi.fn().mockResolvedValueOnce(undefined).mockRejectedValueOnce(failure) },
+      chunkSize: 2,
+    });
+    const start = manager.start.bind(manager);
+    vi.spyOn(manager, "start").mockImplementationOnce(async (id) => {
+      await expect(executor.execute(id, competingStep)).rejects.toBe(failure);
+      return start(id);
+    });
+
+    await executor.execute(execution.id, step);
+
+    expect(reader.restoreCheckpoint.mock.calls).toEqual([[{ offset: 0 }], [{ offset: 2 }]]);
+    expect(writer.write.mock.calls).toEqual([[[3, 4]]]);
+    expect(await manager.get(execution.id)).toMatchObject({
+      status: "completed",
+      attempts: 3,
       result: { processedCount: 4 },
     });
   });

@@ -599,35 +599,33 @@ export class ChunkExecutor {
     observe?: (execution: Execution) => void,
   ): Promise<Execution> {
     if (options.startExecution ?? true) {
-      let expectedAttempt: number | undefined;
       if (rewind || observe) {
         const previous = await this.executionManager.get(executionId);
         observe?.(previous);
-        if (rewind) {
-          expectedAttempt = previous.attempts + 1;
-          if (previous.attempts > 0) {
-            if (previous.error?.indeterminate === true) {
-              throw ExecutionProblems.indeterminateRetryBlocked(
-                `Execution '${executionId}' has an indeterminate outcome; record recovery before starting another attempt`,
-              );
-            }
-            // A new attempt must not be admitted if this read did not permit rewinding.
-            if (previous.status !== "retrying") {
-              throw ExecutionProblems.invalidStateTransition(
-                `Cannot rewind a reader while execution '${executionId}' is '${previous.status}'`,
-              );
-            }
-            await rewind(previous, expectedAttempt);
+        if (rewind && previous.attempts > 0) {
+          if (previous.error?.indeterminate === true) {
+            throw ExecutionProblems.indeterminateRetryBlocked(
+              `Execution '${executionId}' has an indeterminate outcome; record recovery before starting another attempt`,
+            );
+          }
+          if (previous.status !== "retrying") {
+            throw ExecutionProblems.invalidStateTransition(
+              `Cannot rewind a reader while execution '${executionId}' is '${previous.status}'`,
+            );
+          }
+          await rewind(previous, previous.attempts + 1);
+          const current = await this.executionManager.get(executionId);
+          observe?.(current);
+          if (current.status !== previous.status || current.attempts !== previous.attempts) {
+            throw ExecutionProblems.conflict(
+              `Execution '${executionId}' changed while preparing its reader. Retry after checking its current state.`,
+            );
           }
         }
       }
-      const execution = await this.executionManager.start(executionId);
-      if (expectedAttempt !== undefined && execution.attempts !== expectedAttempt) {
-        throw ExecutionProblems.conflict(
-          `Execution '${executionId}' changed while preparing its reader. Continue the running attempt with a fresh reader and startExecution: false.`,
-        );
-      }
-      return execution;
+      // A successful start owns the returned attempt. Restore any checkpoint it carries,
+      // including one saved after the last read above.
+      return this.executionManager.start(executionId);
     }
 
     const inspectionManager = this.executionManager as ExecutionManager &

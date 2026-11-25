@@ -149,7 +149,8 @@ await chunkExecutor.execute(executionId, loadStep, { startExecution: false });
 - `classifyFailure`가 실패하면 원래 오류 메시지는 유지하되 `batch-core/failure-classification-failed` 코드로
   실행 실패 메타데이터에 남깁니다. 분류기 오류가 실제 처리 실패를 성공처럼 숨기지 않습니다.
 
-운영 재시도 예:
+아래 운영 예제는 같은 reader를 되감을 수 있을 때 적용합니다. 시작 위치를 복원할 수 없으면 해당 위치로
+초기화한 새 reader로 `Step`을 만들고 같은 실행 ID로 재시도합니다.
 
 ```typescript
 const execution = await manager.create({
