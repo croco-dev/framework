@@ -31,6 +31,11 @@ const localJwtKeys = createLocalJWKSet({ keys: [publicKey.export({ format: "jwk"
 const [ecHeader, ecPayload] = jwt
   .sign({ sub: "test-user" }, privateKey, { algorithm: "ES256", noTimestamp: true })
   .split(".");
+const { privateKey: rsaSigningKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
+const rs256Jwt = jwt.sign({ sub: "test-user" }, rsaSigningKey, {
+  algorithm: "RS256",
+  noTimestamp: true,
+});
 
 export const verifyJoseJwt = (token: string) =>
   jwtVerify(token, new TextEncoder().encode(signingKey), { currentDate: new Date(now * 1000) });
@@ -112,6 +117,18 @@ export const unavailableJwtVerifierCases = [
       ),
   },
   {
+    name: "jose JWKS connection timeout wrapped by fetch and the verifier",
+    verifier: (token: string) =>
+      verifyWithFailedKeyFetch(
+        token,
+        new Error("invalid token key lookup failed", {
+          cause: new TypeError("fetch failed", {
+            cause: Object.assign(new Error("Connect timeout"), { code: "UND_ERR_CONNECT_TIMEOUT" }),
+          }),
+        }),
+      ),
+  },
+  {
     name: "jose unsupported verifier configuration",
     verifier: (token: string) =>
       jwtVerify(token, () => {
@@ -185,5 +202,11 @@ export const unavailableJwtVerifierCases = [
           },
         );
       }),
+  },
+  {
+    name: "jsonwebtoken malformed configured public key",
+    token: rs256Jwt,
+    verifier: (token: string) =>
+      jwt.verify(token, "-----BEGIN PUBLIC KEY-----\nnot a key\n-----END PUBLIC KEY-----"),
   },
 ];

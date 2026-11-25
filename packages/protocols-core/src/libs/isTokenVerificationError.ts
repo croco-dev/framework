@@ -15,15 +15,17 @@ const CONNECTION_ERROR_CODES = new Set([
   "ENETUNREACH",
   "ENOTFOUND",
   "ETIMEDOUT",
+  "UND_ERR_BODY_TIMEOUT",
+  "UND_ERR_CONNECT_TIMEOUT",
+  "UND_ERR_HEADERS_TIMEOUT",
+  "UND_ERR_SOCKET",
 ]);
 
 const JSON_WEB_TOKEN_REJECTION_MESSAGES = new Set([
   "jwt malformed",
   "invalid token",
   "invalid signature",
-  "invalid algorithm",
   "jwt signature is required",
-  'please specify "none" in "algorithms" to verify unsigned tokens',
   "invalid nbf value",
   "invalid exp value",
   "iat required when maxAge is specified",
@@ -81,8 +83,7 @@ export function isTokenVerificationError(error: unknown): boolean {
     }
   }
 
-  const cause: unknown = Object.getOwnPropertyDescriptor(error, "cause")?.value;
-  if (isConnectionError(error) || isConnectionError(cause)) {
+  if (hasConnectionError(error)) {
     return false;
   }
 
@@ -123,10 +124,16 @@ export function isTokenVerificationError(error: unknown): boolean {
   );
 }
 
-function isConnectionError(error: unknown): boolean {
-  if (typeof error !== "object" || error === null) {
-    return false;
+function hasConnectionError(error: Error): boolean {
+  const seen = new Set<object>();
+  let cause: unknown = error;
+  while (typeof cause === "object" && cause !== null && !seen.has(cause)) {
+    seen.add(cause);
+    const code: unknown = Object.getOwnPropertyDescriptor(cause, "code")?.value;
+    if (typeof code === "string" && CONNECTION_ERROR_CODES.has(code)) {
+      return true;
+    }
+    cause = Object.getOwnPropertyDescriptor(cause, "cause")?.value;
   }
-  const code: unknown = Object.getOwnPropertyDescriptor(error, "code")?.value;
-  return typeof code === "string" && CONNECTION_ERROR_CODES.has(code);
+  return false;
 }
