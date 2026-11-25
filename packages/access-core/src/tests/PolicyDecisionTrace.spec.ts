@@ -62,6 +62,24 @@ describe("PolicyDecisionTrace", () => {
       "authorization=[Redacted]; request ID: sample-request",
     ],
     [
+      "Authorization: Bearer sample-credential, requestId=sample-request",
+      "Authorization: [Redacted], requestId=sample-request",
+    ],
+    [
+      "Authorization=Custom sample-credential&requestId=sample-request",
+      "Authorization=[Redacted]&requestId=sample-request",
+    ],
+    [
+      "Upstream Authorization: Bearer sample-credential\n  Request ID: sample-request",
+      "Upstream Authorization: [Redacted]\n  Request ID: sample-request",
+    ],
+    ["Authorization:\nopaque-credential", "Authorization:\n[Redacted]"],
+    ["Authorization:\r\n \r\nopaque-credential", "Authorization:\r\n \r\n[Redacted]"],
+    [
+      '{"authorization":716,"requestId":"sample-request"}',
+      '{"authorization":"[Redacted]","requestId":"sample-request"}',
+    ],
+    [
       '"Authorization: Bearer sample-credential" request ID: sample-request',
       '"Authorization: [Redacted]" request ID: sample-request',
     ],
@@ -130,6 +148,21 @@ describe("PolicyDecisionTrace", () => {
     });
 
     expect(trace.reason).toBe(reason);
+    expect(trace.redaction.applied).toBe(false);
+  });
+
+  it("preserves JSON null for an absent authorization value", () => {
+    const diagnostic = '{"authorization":null,"requestId":"sample-request"}';
+    const trace = createPolicyDecisionTrace({
+      policyKind: "access",
+      result: "deny",
+      ruleId: "access:document:viewer",
+      reason: diagnostic,
+      inputs: { diagnostic },
+    });
+
+    expect(trace.reason).toBe(diagnostic);
+    expect(trace.inputs.diagnostic).toBe(diagnostic);
     expect(trace.redaction.applied).toBe(false);
   });
 

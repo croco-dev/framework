@@ -82,17 +82,22 @@ const DEFAULT_MAX_STRING_LENGTH = 500;
 const DEFAULT_SENSITIVE_KEY_PATTERN =
   /authorization|cookie|credential|password|secret|token|api[-_]?key|private[-_]?key|access[-_]?key|database[-_]?url|redis[-_]?url|mongo(?:db)?[-_]?url|postgres(?:ql)?[-_]?url|connection[-_]?string|dsn/i;
 const AUTHORIZATION_LABEL = "(?:proxy[-_])?authorization";
-const ASSIGNMENT_SEPARATOR = String.raw`[ \t]*[:=][ \t]*`;
+const LINE_BREAK = String.raw`(?:\r\n|[\r\n])`;
+const NEXT_DIAGNOSTIC_FIELD = String.raw`[a-z][\w-]*(?:[ \t]+[\w-]+)*[ \t]*:(?=[ \t\r\n]|$)`;
+const ASSIGNMENT_SEPARATOR = String.raw`[ \t]*[:=][ \t]*(?:(?:${LINE_BREAK}[ \t]*)+(?!${NEXT_DIAGNOSTIC_FIELD})(?=\S))?`;
 const DOUBLE_QUOTED_TEXT = /"(?:\\[^\r\n]|[^"\\\r\n])*"/;
 const SINGLE_QUOTED_TEXT = /'(?:\\[^\r\n]|[^'\\\r\n])*'/;
-const NEXT_DIAGNOSTIC_FIELD = String.raw`[a-z][\w-]*(?:[ \t]+[\w-]+)*[ \t]*:`;
 const QUOTED_VALUE = String.raw`(?:${DOUBLE_QUOTED_TEXT.source}|(?='(?:\\[^\r\n]|[^'\\\r\n])*[ \t;])${SINGLE_QUOTED_TEXT.source}|${SINGLE_QUOTED_TEXT.source}(?=[ \t]*(?:[,;}&\]\r\n]|${NEXT_DIAGNOSTIC_FIELD}|$)))`;
-const HEADER_CONTINUATION = String.raw`(?:\r\n|[\r\n])\k<indent>[ \t]+`;
+const HEADER_CONTINUATION = String.raw`${LINE_BREAK}\k<indent>[ \t]+`;
+const UNQUOTED_HEADER_CONTINUATION = String.raw`${LINE_BREAK}\k<indent>(?![ \t]*${NEXT_DIAGNOSTIC_FIELD})[ \t]+`;
 const HEADER_END = String.raw`\\?(?=[\r\n]|$)`;
 const HEADER_QUOTED_PARAM = String.raw`"(?:\\[^\r\n]|[^"\\\r\n]|${HEADER_CONTINUATION})*(?:"|${HEADER_END})`;
 const TRUNCATED_SINGLE_QUOTED_VALUE = String.raw`'(?:\\[^\r\n]|[^'\\\r\n]|${HEADER_CONTINUATION})*${HEADER_END}`;
-const UNQUOTED_HEADER_VALUE = String.raw`(?![ \t])(?:[^";\r\n]|${HEADER_QUOTED_PARAM}|${HEADER_CONTINUATION})+`;
-const AUTHORIZATION_ASSIGNMENT = String.raw`((?:^(?<indent>[ \t]*)|)(?<keyQuote>["']?)${AUTHORIZATION_LABEL}\k<keyQuote>${ASSIGNMENT_SEPARATOR})(?:(${QUOTED_VALUE})|${TRUNCATED_SINGLE_QUOTED_VALUE}|[^\s,;&"']+(?=[,&])|${UNQUOTED_HEADER_VALUE})`;
+const UNQUOTED_HEADER_VALUE = String.raw`(?![ \t])(?:[^";\r\n]|${HEADER_QUOTED_PARAM}|${UNQUOTED_HEADER_CONTINUATION})+`;
+const SCHEME_AND_TOKEN = String.raw`[!#$%&'*+.^_\x60|~\da-z-]+[ \t]+[a-z0-9._~+/-]+=*`;
+const DELIMITED_TOKEN_VALUE = String.raw`(?:${SCHEME_AND_TOKEN}|[^\s,;&"']+)(?=[ \t]*[,&])`;
+const JSON_SCALAR = String.raw`(?:null|true|false|-?(?:0|[1-9]\d*)(?:\.\d+)?(?:e[+-]?\d+)?)(?=\s*(?:[,}]|$))`;
+const AUTHORIZATION_ASSIGNMENT = String.raw`((?:^(?<indent>[ \t]*)|)(?<keyQuote>["']?)${AUTHORIZATION_LABEL}\k<keyQuote>${ASSIGNMENT_SEPARATOR})(?:(${QUOTED_VALUE})|(${JSON_SCALAR})|${TRUNCATED_SINGLE_QUOTED_VALUE}|${DELIMITED_TOKEN_VALUE}|${UNQUOTED_HEADER_VALUE})`;
 const AUTHORIZATION_OR_QUOTED_TEXT = new RegExp(
   String.raw`${AUTHORIZATION_ASSIGNMENT}|(?<![\p{ID_Continue}\\])(?:${DOUBLE_QUOTED_TEXT.source}|${SINGLE_QUOTED_TEXT.source})`,
   "gimu",
@@ -318,10 +323,13 @@ function decodeDiagnosticString(value: string): string | undefined {
 function redactAuthorizationText(value: string, onRedaction: () => void): string {
   return value.replace(
     AUTHORIZATION_OR_QUOTED_TEXT,
-    (match, prefix, _indent, _keyQuote, quotedValue) => {
+    (match, prefix, _indent, keyQuote, quotedValue, scalar) => {
       if (prefix !== undefined) {
+        const isJsonScalar =
+          scalar !== undefined && keyQuote === '"' && prefix.trimEnd().endsWith(":");
+        if (isJsonScalar && scalar === "null") return match;
         onRedaction();
-        const quote = quotedValue?.[0] ?? "";
+        const quote = isJsonScalar ? '"' : (quotedValue?.[0] ?? "");
         return `${prefix}${quote}${POLICY_DECISION_REDACTED_VALUE}${quote}`;
       }
 
