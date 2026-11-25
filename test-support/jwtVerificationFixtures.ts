@@ -38,6 +38,14 @@ export const verifyJoseJwt = (token: string) =>
 const verifyJsonWebToken = (token: string) =>
   jwt.verify(token, signingKey, { clockTimestamp: now });
 
+const verifyWithFailedKeyFetch = (token: string, error: Error) =>
+  jwtVerify(
+    token,
+    createRemoteJWKSet(new URL("https://example.test/jwks"), {
+      [customFetch]: () => Promise.reject(error),
+    }),
+  );
+
 export const rejectedJwtCases = [
   { name: "jose expired token", token: expiredJwt, verifier: verifyJoseJwt },
   { name: "jose invalid signature", token: wrongSignatureJwt, verifier: verifyJoseJwt },
@@ -88,15 +96,18 @@ export const unavailableJwtVerifierCases = [
   {
     name: "jose unwrapped JWKS connection error",
     verifier: (token: string) =>
-      jwtVerify(
+      verifyWithFailedKeyFetch(
         token,
-        createRemoteJWKSet(new URL("https://example.test/jwks"), {
-          [customFetch]: () =>
-            Promise.reject(
-              Object.assign(new Error("invalid token key lookup failed"), {
-                code: "ECONNRESET",
-              }),
-            ),
+        Object.assign(new Error("invalid token key lookup failed"), { code: "ECONNRESET" }),
+      ),
+  },
+  {
+    name: "jose wrapped JWKS connection error",
+    verifier: (token: string) =>
+      verifyWithFailedKeyFetch(
+        token,
+        new Error("invalid token key lookup failed", {
+          cause: Object.assign(new Error("Connection reset"), { code: "ECONNRESET" }),
         }),
       ),
   },
@@ -121,6 +132,18 @@ export const unavailableJwtVerifierCases = [
       throw new errors.JWSSignatureVerificationFailed(undefined, {
         cause: new DOMException("Verification operation failed", "OperationError"),
       });
+    },
+  },
+  {
+    name: "jose encrypted-token verifier with an invalid configured key",
+    verifier: () => {
+      throw new errors.JWEInvalid("Invalid Content Encryption Key length");
+    },
+  },
+  {
+    name: "jose encrypted-token verifier with an opaque decryption failure",
+    verifier: () => {
+      throw new errors.JWEDecryptionFailed();
     },
   },
   {

@@ -4,8 +4,6 @@ const JOSE_TOKEN_ERROR_CODES = new Set([
   "ERR_JWT_INVALID",
   "ERR_JWS_INVALID",
   "ERR_JWS_SIGNATURE_VERIFICATION_FAILED",
-  "ERR_JWE_DECRYPTION_FAILED",
-  "ERR_JWE_INVALID",
   "ERR_JOSE_ALG_NOT_ALLOWED",
 ]);
 
@@ -81,9 +79,11 @@ export function isTokenVerificationError(error: unknown): boolean {
     if (/^ERR_(JWT|JWS|JWE|JWK|JWKS|JOSE)_/.test(error.code)) {
       return JOSE_TOKEN_ERROR_CODES.has(error.code);
     }
-    if (CONNECTION_ERROR_CODES.has(error.code)) {
-      return false;
-    }
+  }
+
+  const cause: unknown = Object.getOwnPropertyDescriptor(error, "cause")?.value;
+  if (isConnectionError(error) || isConnectionError(cause)) {
+    return false;
   }
 
   if (error.name === "TokenExpiredError" || error.name === "NotBeforeError") {
@@ -121,4 +121,12 @@ export function isTokenVerificationError(error: unknown): boolean {
     message.includes("jwt expired") ||
     message.includes("token invalid")
   );
+}
+
+function isConnectionError(error: unknown): boolean {
+  if (typeof error !== "object" || error === null) {
+    return false;
+  }
+  const code: unknown = Object.getOwnPropertyDescriptor(error, "code")?.value;
+  return typeof code === "string" && CONNECTION_ERROR_CODES.has(code);
 }
