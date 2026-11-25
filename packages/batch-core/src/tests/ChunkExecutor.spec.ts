@@ -1398,6 +1398,11 @@ describe("ChunkExecutor", () => {
     const second = await secondManager.create(input);
     expect(second).toMatchObject({ id: first.id, createdAt: first.createdAt });
     const reader = createCheckpointReader([1, 2, 3, 4]);
+    const readCursor = reader.getCheckpoint.getMockImplementation();
+    if (!readCursor) throw new Error("Missing reader checkpoint fixture");
+    reader.getCheckpoint
+      .mockImplementationOnce(() => ({ partition: "source", ...readCursor() }))
+      .mockImplementation(() => ({ ...readCursor(), partition: "source" }));
     const failure = new Error("temporary sink outage");
     const writer = { write: vi.fn().mockRejectedValueOnce(failure) };
     const step = new Step({ name: "import-users", reader, writer, chunkSize: 2 });

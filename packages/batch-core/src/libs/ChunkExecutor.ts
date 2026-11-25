@@ -14,7 +14,7 @@ import { createStepExecutionError } from "./StepFailure";
 
 const CHUNK_CHECKPOINT_VERSION = 1;
 
-type ReaderCursorSnapshot = { cursor: unknown; serialized?: string };
+type ReaderCursorSnapshot = { cursor: unknown };
 
 type InitialReaderCursors = Map<string, Map<string, ReaderRun>>;
 
@@ -74,6 +74,18 @@ function unavailableInitialCursor(stepName: string): ExecutionProblem {
 
 function matchesOptionalIdentity(before?: string, current?: string): boolean {
   return before === undefined || current === undefined || before === current;
+}
+
+function comparableReaderCursor(cursor: unknown): string | undefined {
+  return JSON.stringify(cursor, (_key, value: unknown) => {
+    if (value === null || typeof value !== "object" || Array.isArray(value)) return value;
+    const record = value as Record<string, unknown>;
+    return Object.fromEntries(
+      Object.keys(record)
+        .sort()
+        .map((key) => [key, record[key]]),
+    );
+  });
 }
 
 function isProcessedCount(value: unknown): value is number {
@@ -169,8 +181,7 @@ async function captureReaderCursor(
   try {
     const cursor = await reader.getCheckpoint();
     if (cursor === undefined) return { cursor };
-    const { value, serialized } = prepareExecutionCheckpoint(`${stepName}.cursor`, cursor);
-    return { cursor: value, serialized };
+    return { cursor: prepareExecutionCheckpoint(`${stepName}.cursor`, cursor).value };
   } catch {
     // Without a usable starting cursor, retry before the first saved checkpoint needs a fresh reader.
     return undefined;
@@ -343,13 +354,14 @@ export class ChunkExecutor {
               // A reader already at the starting cursor can be used even if two stores have
               // indistinguishable execution metadata. Only the original manager can rewind it.
               const current = await captureReaderCursor(step.name, reader);
-              if (
-                current &&
-                possiblePriorRuns.every(
-                  ({ snapshot }) => snapshot && snapshot.serialized === current.serialized,
-                )
-              )
-                return;
+              if (current) {
+                const comparable = comparableReaderCursor(current.cursor);
+                const atStart = possiblePriorRuns.every(
+                  ({ snapshot }) =>
+                    snapshot && comparableReaderCursor(snapshot.cursor) === comparable,
+                );
+                if (atStart) return;
+              }
               throw unavailableInitialCursor(step.name);
             }
             const { snapshot } = initial;

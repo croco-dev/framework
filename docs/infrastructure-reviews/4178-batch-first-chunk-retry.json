@@ -6,7 +6,7 @@
       "classification": "pure-contract",
       "reason": "Restore the starting position of the same checkpointable reader after a failure before the first successful checkpoint.",
       "files": {
-        "packages/batch-core/src/libs/ChunkExecutor.ts": "c29d8bfdac501e759f948876eebe02c9e8b1d0dfdbd8622bf515a6ad974c2063"
+        "packages/batch-core/src/libs/ChunkExecutor.ts": "30724769e115a6e0b097569cf4893448b37345ce5c294b5701e9650a2e06abde"
       },
       "catalogRuntimes": [],
       "profiles": {
