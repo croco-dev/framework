@@ -82,7 +82,7 @@ const DEFAULT_MAX_STRING_LENGTH = 500;
 const DEFAULT_SENSITIVE_KEY_PATTERN =
   /authorization|cookie|credential|password|secret|token|api[-_]?key|private[-_]?key|access[-_]?key|database[-_]?url|redis[-_]?url|mongo(?:db)?[-_]?url|postgres(?:ql)?[-_]?url|connection[-_]?string|dsn/i;
 const AUTHORIZATION_LABEL = "(?:proxy[-_])?authorization";
-const LINE_BREAK = String.raw`(?:\r\n|[\r\n])`;
+const LINE_BREAK = String.raw`(?:\r\n|\r(?!\n)|\n)`;
 const NEXT_DIAGNOSTIC_FIELD = String.raw`[a-z][\w-]*(?:[ \t]+[\w-]+)*[ \t]*:(?=[ \t\r\n]|$)`;
 const ASSIGNMENT_SEPARATOR = String.raw`[ \t]*[:=][ \t]*(?:(?:${LINE_BREAK}[ \t]*)+(?!${NEXT_DIAGNOSTIC_FIELD})(?=\S))?`;
 const DOUBLE_QUOTED_TEXT = /"(?:\\[^\r\n]|[^"\\\r\n])*"/;
