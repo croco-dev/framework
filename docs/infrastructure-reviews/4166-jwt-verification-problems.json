@@ -1,0 +1,198 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "problems-core",
+      "classification": "pure-contract",
+      "reason": "Refresh source locations for the existing REST and GraphQL authentication Problems.",
+      "files": {
+        "packages/problems-core/src/generated/problem-code-registry.ts": "460154a659ffe4adf91219fc6583f0f78acb6c7084898cf9b4bb02e427689b40"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The generated source locations are error metadata and require no host capability, storage, or lifecycle behavior.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "scripts/problem-registry.mts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The generated source locations are error metadata and require no host capability, storage, or lifecycle behavior.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "scripts/problem-registry.mts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The generated source locations are error metadata and require no host capability, storage, or lifecycle behavior.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "scripts/problem-registry.mts"
+          ]
+        }
+      }
+    },
+    {
+      "package": "protocols-core",
+      "classification": "pure-contract",
+      "reason": "Classify JWT verifier exceptions for both protocol guards using JavaScript error metadata.",
+      "files": {
+        "packages/protocols-core/src/index.ts": "26194989a2d0c707ec5ad86ac224ea2c8dd9f868fe98b5cb38867b1142a67ecf",
+        "packages/protocols-core/src/libs/isTokenVerificationError.ts": "a0ebb60865c722f3f0ad12c3c1fd098c5d4812dc28b347834b0c7f75998de7f9"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The error classification runs after verification and requires no Node Host, storage, or lifecycle capability.",
+          "providers": ["@croco/protocols-core/isTokenVerificationError"],
+          "constraints": [
+            "The configured verifier continues to own key retrieval and its runtime requirements."
+          ],
+          "references": [
+            "packages/protocols-core/src/index.ts",
+            "packages/protocols-core/src/libs/isTokenVerificationError.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The error classification runs after verification and requires no Lambda invocation, storage, or lifecycle capability.",
+          "providers": ["@croco/protocols-core/isTokenVerificationError"],
+          "constraints": [
+            "The configured verifier continues to own key retrieval and its runtime requirements."
+          ],
+          "references": [
+            "packages/protocols-core/src/index.ts",
+            "packages/protocols-core/src/libs/isTokenVerificationError.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The error classification runs after verification and requires no Workers or Node Container capability, storage, or lifecycle behavior.",
+          "providers": ["@croco/protocols-core/isTokenVerificationError"],
+          "constraints": [
+            "The configured verifier continues to own key retrieval and its runtime requirements."
+          ],
+          "references": [
+            "packages/protocols-core/src/index.ts",
+            "packages/protocols-core/src/libs/isTokenVerificationError.ts"
+          ]
+        }
+      }
+    },
+    {
+      "package": "protocols-graphql",
+      "classification": "pure-contract",
+      "reason": "Use the shared classifier to choose the existing invalid-token or verifier-unavailable Problem in GraphQL.",
+      "files": {
+        "packages/protocols-graphql/package.json": "3bf76f82d6b1812c4f164d22adf80cf495cc21dde01667f87bcbb24ed76e8e6d",
+        "packages/protocols-graphql/src/libs/guards/AuthGuard.ts": "24399cab242d00b9ec2f6af8867312778ee7736590f0cc4f60d03bbf52ceba71"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The error classification runs after verification and requires no Node Host, storage, or lifecycle capability.",
+          "providers": ["@croco/protocols-graphql/GraphQLAuthGuard"],
+          "constraints": [
+            "The configured verifier continues to own key retrieval and its runtime requirements."
+          ],
+          "references": [
+            "packages/protocols-graphql/package.json",
+            "packages/protocols-graphql/src/libs/guards/AuthGuard.ts",
+            "packages/protocols-graphql/src/tests/GuardChain.spec.ts",
+            "packages/transports-graphql/src/tests/GraphQLServer.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The error classification runs after verification and requires no Lambda invocation, storage, or lifecycle capability.",
+          "providers": ["@croco/protocols-graphql/GraphQLAuthGuard"],
+          "constraints": [
+            "The configured verifier continues to own key retrieval and its runtime requirements."
+          ],
+          "references": [
+            "packages/protocols-graphql/package.json",
+            "packages/protocols-graphql/src/libs/guards/AuthGuard.ts",
+            "packages/protocols-graphql/src/tests/GuardChain.spec.ts",
+            "packages/transports-graphql/src/tests/GraphQLServer.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The error classification runs after verification and requires no Workers or Node Container capability, storage, or lifecycle behavior.",
+          "providers": ["@croco/protocols-graphql/GraphQLAuthGuard"],
+          "constraints": [
+            "The configured verifier continues to own key retrieval and its runtime requirements."
+          ],
+          "references": [
+            "packages/protocols-graphql/package.json",
+            "packages/protocols-graphql/src/libs/guards/AuthGuard.ts",
+            "packages/protocols-graphql/src/tests/GuardChain.spec.ts",
+            "packages/transports-graphql/src/tests/GraphQLServer.spec.ts"
+          ]
+        }
+      }
+    },
+    {
+      "package": "protocols-rest",
+      "classification": "pure-contract",
+      "reason": "Use the shared classifier to choose the existing invalid-token or verifier-unavailable Problem in REST.",
+      "files": {
+        "packages/protocols-rest/src/libs/guards/AuthGuard.ts": "fbcfccf21867c7f2b5c88df4ff3e480eee98c499cbdc679775a5c4e0a30109c0"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The error classification runs after verification and requires no Node Host, storage, or lifecycle capability.",
+          "providers": ["@croco/protocols-rest/AuthGuard"],
+          "constraints": [
+            "The configured verifier continues to own key retrieval and its runtime requirements."
+          ],
+          "references": [
+            "packages/protocols-rest/src/libs/guards/AuthGuard.ts",
+            "packages/protocols-rest/src/tests/AuthGuard.spec.ts",
+            "packages/transports-http/src/tests/HttpTransportIntegration.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The error classification runs after verification and requires no Lambda invocation, storage, or lifecycle capability.",
+          "providers": ["@croco/protocols-rest/AuthGuard"],
+          "constraints": [
+            "The configured verifier continues to own key retrieval and its runtime requirements."
+          ],
+          "references": [
+            "packages/protocols-rest/src/libs/guards/AuthGuard.ts",
+            "packages/protocols-rest/src/tests/AuthGuard.spec.ts",
+            "packages/transports-http/src/tests/HttpTransportIntegration.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The error classification runs after verification and requires no Workers or Node Container capability, storage, or lifecycle behavior.",
+          "providers": ["@croco/protocols-rest/AuthGuard"],
+          "constraints": [
+            "The configured verifier continues to own key retrieval and its runtime requirements."
+          ],
+          "references": [
+            "packages/protocols-rest/src/libs/guards/AuthGuard.ts",
+            "packages/protocols-rest/src/tests/AuthGuard.spec.ts",
+            "packages/transports-http/src/tests/HttpTransportIntegration.spec.ts"
+          ]
+        }
+      }
+    }
+  ]
+}

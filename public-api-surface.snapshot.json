@@ -36199,6 +36199,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "isTokenVerificationError",
+              "exportKind": "named",
+              "source": "./libs/isTokenVerificationError",
+              "declarationKind": "function"
+            },
+            {
               "name": "isZodArraySchema",
               "exportKind": "named",
               "source": "./libs/SchemaDescriptor",

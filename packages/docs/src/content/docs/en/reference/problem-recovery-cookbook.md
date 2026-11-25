@@ -17981,7 +17981,7 @@ Sources:
 
 Sources:
 
-- `packages/protocols-graphql/src/libs/guards/AuthGuard.ts:74:13` (problem-factory)
+- `packages/protocols-graphql/src/libs/guards/AuthGuard.ts:56:13` (problem-factory)
 
 <a id="protocols-graphql-auth-invalid-request"></a>
 
@@ -17999,7 +17999,7 @@ Sources:
 
 Sources:
 
-- `packages/protocols-graphql/src/libs/guards/AuthGuard.ts:57:13` (problem-factory)
+- `packages/protocols-graphql/src/libs/guards/AuthGuard.ts:39:13` (problem-factory)
 
 <a id="protocols-graphql-auth-invalid-token"></a>
 
@@ -18017,7 +18017,7 @@ Sources:
 
 Sources:
 
-- `packages/protocols-graphql/src/libs/guards/AuthGuard.ts:17:10` (problem-factory)
+- `packages/protocols-graphql/src/libs/guards/AuthGuard.ts:18:10` (problem-factory)
 
 <a id="protocols-graphql-auth-missing-header"></a>
 
@@ -18035,7 +18035,7 @@ Sources:
 
 Sources:
 
-- `packages/protocols-graphql/src/libs/guards/AuthGuard.ts:66:13` (problem-factory)
+- `packages/protocols-graphql/src/libs/guards/AuthGuard.ts:48:13` (problem-factory)
 
 <a id="protocols-graphql-auth-verifier-unavailable"></a>
 
@@ -18053,7 +18053,7 @@ Sources:
 
 Sources:
 
-- `packages/protocols-graphql/src/libs/guards/AuthGuard.ts:100:13` (problem-factory)
+- `packages/protocols-graphql/src/libs/guards/AuthGuard.ts:82:13` (problem-factory)
 
 <a id="protocols-graphql-guard-denied"></a>
 
@@ -18089,7 +18089,7 @@ Sources:
 
 Sources:
 
-- `packages/protocols-rest/src/libs/guards/AuthGuard.ts:77:13` (problem-factory)
+- `packages/protocols-rest/src/libs/guards/AuthGuard.ts:59:13` (problem-factory)
 
 <a id="protocols-rest-auth-invalid-request"></a>
 
@@ -18107,7 +18107,7 @@ Sources:
 
 Sources:
 
-- `packages/protocols-rest/src/libs/guards/AuthGuard.ts:59:13` (problem-factory)
+- `packages/protocols-rest/src/libs/guards/AuthGuard.ts:41:13` (problem-factory)
 
 <a id="protocols-rest-auth-invalid-token"></a>
 
@@ -18125,7 +18125,7 @@ Sources:
 
 Sources:
 
-- `packages/protocols-rest/src/libs/guards/AuthGuard.ts:15:10` (problem-factory)
+- `packages/protocols-rest/src/libs/guards/AuthGuard.ts:16:10` (problem-factory)
 
 <a id="protocols-rest-auth-missing-header"></a>
 
@@ -18143,7 +18143,7 @@ Sources:
 
 Sources:
 
-- `packages/protocols-rest/src/libs/guards/AuthGuard.ts:69:13` (problem-factory)
+- `packages/protocols-rest/src/libs/guards/AuthGuard.ts:51:13` (problem-factory)
 
 <a id="protocols-rest-auth-verifier-unavailable"></a>
 
@@ -18161,7 +18161,7 @@ Sources:
 
 Sources:
 
-- `packages/protocols-rest/src/libs/guards/AuthGuard.ts:102:13` (problem-factory)
+- `packages/protocols-rest/src/libs/guards/AuthGuard.ts:84:13` (problem-factory)
 
 <a id="protocols-rest-duplicate-parameter-index"></a>
 

@@ -1,6 +1,7 @@
 import { Inject, Token } from "@croco/framework-context";
 import type { Guard } from "@croco/framework-context";
 import { Problem, ProblemFactory } from "@croco/problems-core";
+import { isTokenVerificationError } from "@croco/protocols-core";
 import type { GraphQLGuardContext } from "../types/GuardTypes";
 
 export type TokenVerifier = (token: string) => Promise<unknown> | unknown;
@@ -17,25 +18,6 @@ function invalidTokenProblem(): Problem {
   return ProblemFactory.unauthorized(
     "protocols-graphql/auth-invalid-token",
     "Invalid or expired token",
-  );
-}
-
-function isTokenVerificationError(error: unknown): boolean {
-  if (!(error instanceof Error)) {
-    return false;
-  }
-
-  const name = error.name.toUpperCase();
-  const message = error.message.toLowerCase();
-
-  return (
-    name.startsWith("ERR_JWT_") ||
-    name.startsWith("ERR_JWS_") ||
-    name.startsWith("ERR_JWE_") ||
-    message.includes("token expired") ||
-    message.includes("invalid token") ||
-    message.includes("jwt expired") ||
-    message.includes("token invalid")
   );
 }
 

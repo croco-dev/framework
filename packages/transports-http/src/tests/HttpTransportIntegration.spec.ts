@@ -4,6 +4,7 @@ import { Container } from "@croco/framework-context";
 import { Logger } from "@croco/framework-logger";
 import type { HttpContext } from "@croco/protocols-rest";
 import {
+  AuthGuard as TokenAuthGuard,
   Body,
   Controller,
   Delete,
@@ -15,6 +16,7 @@ import {
   UseGuards,
 } from "@croco/protocols-rest";
 import { beforeEach, describe, expect, it } from "vitest";
+import { verifyJoseJwt } from "../../../../test-support/jwtVerificationFixtures";
 import type { CrocoApp } from "../libs/CrocoApp";
 import { createApp } from "../libs/CrocoApp";
 import { ErrorHandler } from "../libs/ErrorHandler";
@@ -149,6 +151,25 @@ describe("Transport Integration", () => {
     Container.set(HealthCheckRegistry, new HealthCheckRegistry());
 
     app = createApp({ controllers: [UserController], securityValidation: "off" });
+  });
+
+  it("returns a 401 Problem Details response when jose rejects a token", async () => {
+    app = createApp({
+      controllers: [UserController],
+      globalGuards: [new TokenAuthGuard({ verifier: verifyJoseJwt })],
+      securityValidation: "off",
+    });
+
+    const response = await app.fetch(
+      new Request("http://localhost/api/users", { headers: { authorization: "Bearer malformed" } }),
+    );
+
+    expect(response.status).toBe(401);
+    expect(response.headers.get("content-type")).toBe("application/problem+json");
+    expect(await response.json()).toMatchObject({
+      status: 401,
+      code: "protocols-rest/auth-invalid-token",
+    });
   });
 
   describe("Error response middleware", () => {
