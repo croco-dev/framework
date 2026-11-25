@@ -10,9 +10,12 @@ const QUOTED_DIAGNOSTIC_TEXT = String.raw`${DIAGNOSTIC_LITERAL}(?:[ \t]*\+[ \t]*
 const DIAGNOSTIC_LITERALS = new RegExp(DIAGNOSTIC_LITERAL, "g");
 const HTTP_TOKEN_CHARACTER = String.raw`[!#$%&'*+.^_\x60|~\da-z-]`;
 const HEADER_CONTINUATION = String.raw`(?:\r\n|[\r\n])\1[ \t]+`;
-const AUTHORIZATION_LABEL = String.raw`(?:^([ \t]*)|(?<!${HTTP_TOKEN_CHARACTER}))(["']?)(?:proxy[-_]?)?authorization\2`;
+const AUTHORIZATION_NAME = String.raw`(?:proxy[-_]?)?authorization`;
+const AUTHORIZATION_LABEL = String.raw`(?:^([ \t]*)|(?<!${HTTP_TOKEN_CHARACTER}))(["']?)${AUTHORIZATION_NAME}\2`;
 const VALUE_GAP = String.raw`[ \t]*(?:${HEADER_CONTINUATION})*`;
 const ASSIGNMENT_SEPARATOR = String.raw`(?:(?<=["'])\s*[:=]\s*|[ \t]*=${VALUE_GAP})`;
+const OBJECT_PROPERTY_SEPARATOR = String.raw`(?<=["']|[{,]\s*${AUTHORIZATION_NAME})\s*:\s*`;
+const OBJECT_PROPERTY_END = String.raw`(?=\s*(?:}|,\s*(?:${DIAGNOSTIC_LITERAL}|[\w$]+)\s*:))`;
 // RFC 9110 permits apostrophes in scheme tokens and defines token68 and named credential parameters.
 const CREDENTIAL_GAP = String.raw`(?:[ \t]*(?:${HEADER_CONTINUATION})+|[ \t]+)`;
 const HTTP_CREDENTIAL = String.raw`(?:(?:,${VALUE_GAP})*${HTTP_TOKEN_CHARACTER}+${VALUE_GAP}=|[a-z0-9._~+/-]+=*(?=[ \t]*(?:[\r\n]|$)))`;
@@ -21,15 +24,17 @@ const APOSTROPHE_SCHEME =
   String.raw`(?=${HTTP_TOKEN_CHARACTER}*?')${HTTP_TOKEN_CHARACTER}*${CREDENTIAL_GAP}\S|` +
   String.raw`${HTTP_TOKEN_CHARACTER}*${CREDENTIAL_GAP}${HTTP_CREDENTIAL})`;
 const AUTHORIZATION_VALUE =
-  String.raw`(?:${ASSIGNMENT_SEPARATOR}(${QUOTED_DIAGNOSTIC_TEXT})(?!${HTTP_TOKEN_CHARACTER})|` +
+  String.raw`(?:${OBJECT_PROPERTY_SEPARATOR}(?:(null)|(${QUOTED_DIAGNOSTIC_TEXT}))${OBJECT_PROPERTY_END}|` +
+  String.raw`${ASSIGNMENT_SEPARATOR}(${QUOTED_DIAGNOSTIC_TEXT})(?!${HTTP_TOKEN_CHARACTER})|` +
   String.raw`[ \t]*:${VALUE_GAP}(?!${APOSTROPHE_SCHEME})(${QUOTED_SECRET_VALUE.source})|` +
   String.raw`[ \t]*[:=]${VALUE_GAP}(\S[^\r\n]*(?:${HEADER_CONTINUATION}[^\r\n]*)*))`;
 const AUTHORIZATION_OR_QUOTED_TEXT = new RegExp(
   String.raw`${AUTHORIZATION_LABEL}${AUTHORIZATION_VALUE}|(?<![\w\\])(?:${QUOTED_DIAGNOSTIC_TEXT})`,
   "gim",
 );
+const LEGACY_AUTHORIZATION_LABEL = String.raw`(?<=${HTTP_TOKEN_CHARACTER})(?<!proxy[-_]?)(${AUTHORIZATION_NAME})(\s*[:=]\s*)`;
 const LABELLED_SECRET = new RegExp(
-  String.raw`(["']?)((?<=${HTTP_TOKEN_CHARACTER})(?<!proxy[-_]?)(?:proxy[-_]?)?authorization|credential|password|passphrase|passwd|pwd|secret|token|api[-_]?key|private[-_]?key|access[-_]?key(?:[-_]?id)?|access[-_]?token|refresh[-_]?token|client[-_]?secret|connection[-_]?string|dsn)\1(\s*[:=]\s*)(?:\[Redacted\]|${QUOTED_SECRET_VALUE.source}|(?:bearer|basic|digest|apikey)\s+[^\s,;}\]]+|[^,\s;}\]]+)`,
+  String.raw`(?:${LEGACY_AUTHORIZATION_LABEL}|(["']?)(credential|password|passphrase|passwd|pwd|secret|token|api[-_]?key|private[-_]?key|access[-_]?key(?:[-_]?id)?|access[-_]?token|refresh[-_]?token|client[-_]?secret|connection[-_]?string|dsn)\3(\s*[:=]\s*))(?:\[Redacted\]|${QUOTED_SECRET_VALUE.source}|(?:bearer|basic|digest|apikey)\s+[^\s,;}\]]+|[^,\s;}\]]+)`,
   "gi",
 );
 
@@ -151,8 +156,20 @@ function sanitizeQuotedDiagnostic(value: string): string {
 function sanitizeAuthorizationText(value: string): string {
   return value.replace(
     AUTHORIZATION_OR_QUOTED_TEXT,
-    (match, _indent, _keyQuote, assignedValue?, headerQuotedValue?, unquotedValue?) => {
-      const quotedValue: string | undefined = assignedValue ?? headerQuotedValue;
+    (
+      match,
+      _indent,
+      _keyQuote,
+      absentValue?,
+      objectQuotedValue?,
+      assignedValue?,
+      headerQuotedValue?,
+      unquotedValue?,
+    ) => {
+      if (absentValue !== undefined) return match;
+
+      const quotedValue: string | undefined =
+        objectQuotedValue ?? assignedValue ?? headerQuotedValue;
       const authorizationValue: string | undefined = quotedValue ?? unquotedValue;
       if (authorizationValue !== undefined) {
         const prefix = match.slice(0, -authorizationValue.length);
@@ -172,7 +189,11 @@ function sanitizeText(value: string): string {
     replaceSecretLabel,
   );
 
-  return sanitizedCookies.replace(LABELLED_SECRET, replaceSecretLabel);
+  return sanitizedCookies.replace(
+    LABELLED_SECRET,
+    (match, legacyLabel, legacySeparator, quote, label, separator) =>
+      replaceSecretLabel(match, quote ?? "", legacyLabel ?? label, legacySeparator ?? separator),
+  );
 }
 
 function sanitizeArray(value: unknown[], ancestors: WeakSet<object>): unknown[] | string {

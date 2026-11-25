@@ -14,6 +14,19 @@ describe("sanitizeAuditValue", () => {
     ["Authorization: \r\nrequest ID: abc", "Authorization: \r\nrequest ID: abc"],
     ["Authorization: Bearer\r\n\tfixture-value", "Authorization: [Redacted]"],
     ["Authorization: Bearer\r\n \r\n\tfixture-value", "Authorization: [Redacted]"],
+    [
+      inspect({ Authorization: null, requestId: "abc" }),
+      "{ Authorization: null, requestId: 'abc' }",
+    ],
+    [
+      inspect({ requestId: "abc", "Proxy-Authorization": null }),
+      "{ requestId: 'abc', 'Proxy-Authorization': null }",
+    ],
+    [
+      inspect({ Authorization: 'Digest realm="fixture"', requestId: "abc" }),
+      "{ Authorization: '[Redacted]', requestId: 'abc' }",
+    ],
+    ["Authorization: null , proof=fixture-value", "Authorization: [Redacted]"],
     ["Proxy-Authorization:\r\n ExampleAuth fixture-value", "Proxy-Authorization:\r\n [Redacted]"],
     ["Authorization: 'ExampleAuth' fixture-value", "Authorization: [Redacted]"],
     ["Authorization: 'ExampleAuth'\r\n\tfixture-value", "Authorization: [Redacted]"],
