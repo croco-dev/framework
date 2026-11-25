@@ -99,6 +99,38 @@
           "references": ["packages/diagnostics-core/src/libs/redactDiagnosticCredentials.ts"]
         }
       }
+    },
+    {
+      "package": "problems-core",
+      "classification": "pure-contract",
+      "reason": "Regenerate source locations for Clerk Problem declarations.",
+      "files": {
+        "packages/problems-core/src/generated/problem-code-registry.ts": "55d50a5af2ccf8824bcb62728ba10e7f2bfd239bfa755a3275490f53a1b37d73"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "String redaction requires no Node Host APIs, storage, or lifecycle hooks.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/problems-core/src/generated/problem-code-registry.ts"]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "String redaction requires no Lambda invocation APIs, storage, or lifecycle hooks.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/problems-core/src/generated/problem-code-registry.ts"]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "String redaction requires no Workers bindings, storage, or lifecycle hooks.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/problems-core/src/generated/problem-code-registry.ts"]
+        }
+      }
     }
   ]
 }
