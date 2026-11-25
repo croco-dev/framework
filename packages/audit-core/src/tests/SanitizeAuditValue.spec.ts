@@ -1,7 +1,141 @@
+import { inspect } from "node:util";
 import { describe, expect, it } from "vitest";
 import { sanitizeAuditValue } from "../libs/sanitizeAuditValue";
 
 describe("sanitizeAuditValue", () => {
+  it.each([
+    ["Authorization=ExampleAuth fixture-value", "Authorization=[Redacted]"],
+    ["Proxy-Authorization: ExampleAuth fixture-value", "Proxy-Authorization: [Redacted]"],
+    [
+      '{"authorization":"ExampleAuth proof=\\"fixture-value\\"","operation":"list"}',
+      '{"authorization":"[Redacted]","operation":"list"}',
+    ],
+    ["request recommends digest authentication", "request recommends digest authentication"],
+    ["Authorization: \r\nrequest ID: abc", "Authorization: \r\nrequest ID: abc"],
+    ["Authorization: Bearer\r\n\tfixture-value", "Authorization: [Redacted]"],
+    ["Authorization: Bearer\r\n \r\n\tfixture-value", "Authorization: [Redacted]"],
+    [
+      inspect({ Authorization: null, requestId: "abc" }),
+      "{ Authorization: null, requestId: 'abc' }",
+    ],
+    [
+      inspect({ requestId: "abc", "Proxy-Authorization": null }),
+      "{ requestId: 'abc', 'Proxy-Authorization': null }",
+    ],
+    [
+      inspect({ Authorization: undefined, requestId: "abc" }),
+      "{ Authorization: \"[Redacted]\", requestId: 'abc' }",
+    ],
+    [
+      inspect({ Authorization: false, requestId: "abc" }),
+      "{ Authorization: \"[Redacted]\", requestId: 'abc' }",
+    ],
+    [
+      JSON.stringify({ "Proxy-Authorization": -1.25e-12, requestId: "abc" }),
+      '{"Proxy-Authorization":"[Redacted]","requestId":"abc"}',
+    ],
+    [
+      inspect({ Authorization: 'Digest realm="fixture"', requestId: "abc" }),
+      "{ Authorization: '[Redacted]', requestId: 'abc' }",
+    ],
+    ["Authorization: null , proof=fixture-value", "Authorization: [Redacted]"],
+    ["Proxy-Authorization:\r\n ExampleAuth fixture-value", "Proxy-Authorization:\r\n [Redacted]"],
+    ["Authorization: 'ExampleAuth' fixture-value", "Authorization: [Redacted]"],
+    ["Authorization: 'ExampleAuth'\r\n\tfixture-value", "Authorization: [Redacted]"],
+    ["Authorization: 'ExampleAuth proof=fixture'part, id=fixture-id", "Authorization: [Redacted]"],
+    [
+      "Authorization: 'ExampleAuth , proof*\r\n\t=fixture'part, id=fixture-id",
+      "Authorization: [Redacted]",
+    ],
+    ["Authorization='fixture-value' operation=list", "Authorization='[Redacted]' operation=list"],
+    ["Authorization='Example'Auth fixture-value", "Authorization=[Redacted]"],
+    [
+      'Authorization: \'Digest realm="fixture"\nproof="fixture-value"\'\nrequest-id: abc',
+      "Authorization: '[Redacted]'\nrequest-id: abc",
+    ],
+    [
+      "Authorization: 'Digest realm=\"fixture\"' request-id=abc",
+      "Authorization: '[Redacted]' request-id=abc",
+    ],
+    [
+      "Authorization: 'Digest realm=\"fixture\"' request ID: abc",
+      "Authorization: '[Redacted]' request ID: abc",
+    ],
+    [
+      "Authorization: 'Digest realm=\"fixture\"'; request ID: abc",
+      "Authorization: '[Redacted]'; request ID: abc",
+    ],
+    [
+      "Authorization: 'ExampleAuth proof=\"fixture' request ID: fixture-value\"",
+      "Authorization: [Redacted]",
+    ],
+    [
+      "Authorization: 'ExampleAuth proof=fixture'\r\n\t, id=fixture-value",
+      "Authorization: [Redacted]",
+    ],
+    [
+      "Authorization: 'Bearer fixture-value' request ID: abc",
+      "Authorization: '[Redacted]' request ID: abc",
+    ],
+    [
+      "{'Authorization': 'Bearer fixture-value', 'requestId': 'abc'}",
+      "{'Authorization': '[Redacted]', 'requestId': 'abc'}",
+    ],
+    [
+      '{"Authorization"\n:\n"ExampleAuth fixture-value", "requestId": "abc"}',
+      '{"Authorization"\n:\n"[Redacted]", "requestId": "abc"}',
+    ],
+    [
+      "{ message: 'upstream\\nAuthorization: ExampleAuth fixture-value\\nrequest ID: abc' }",
+      "{ message: 'upstream\\nAuthorization: [Redacted]\\nrequest ID: abc' }",
+    ],
+    [
+      inspect("upstream\x1b\nAuthorization: ExampleAuth fixture-value\nrequest ID: abc"),
+      "'upstream\\u001b\\nAuthorization: [Redacted]\\nrequest ID: abc'",
+    ],
+    [
+      inspect("Authorization: ExampleAuth fixture-value\nupstream said \"ready\" at 'start'"),
+      "`Authorization: [Redacted]\\nupstream said \"ready\" at 'start'`",
+    ],
+    [
+      inspect(
+        `upstream ${"x".repeat(80)}\nAuthorization: Bearer\r\n\tfixture-value\nrequest ID: abc`,
+      ),
+      `'upstream ${"x".repeat(80)}\\nAuthorization: [Redacted]\\nrequest ID: abc'`,
+    ],
+    [
+      '{"message":"upstream Proxy-Authorization: ExampleAuth fixture-value","operation":"list"}',
+      '{"message":"upstream Proxy-Authorization: [Redacted]","operation":"list"}',
+    ],
+    [
+      '"Authorization: Bearer fixture-value" request ID: abc',
+      '"Authorization: [Redacted]" request ID: abc',
+    ],
+    [
+      JSON.stringify({
+        message: 'upstream\n"Authorization: ExampleAuth fixture-value" request ID: abc',
+      }),
+      JSON.stringify({ message: 'upstream\n"Authorization: [Redacted]" request ID: abc' }),
+    ],
+    [
+      JSON.stringify({
+        message: "upstream\nAuthorization: ExampleAuth fixture-value\nrequest ID: abc",
+      }),
+      JSON.stringify({ message: "upstream\nAuthorization: [Redacted]\nrequest ID: abc" }),
+    ],
+    [
+      "Headers:\r\n  Authorization: Bearer fixture-value\r\n  Cookie: sid=fixture-cookie\r\n  X-Request-Id: abc",
+      "Headers:\r\n  Authorization: [Redacted]\r\n  Cookie: [Redacted]\r\n  X-Request-Id: abc",
+    ],
+    [
+      "request.authorization=fixture-value; request ID: abc",
+      "request.authorization=[Redacted]; request ID: abc",
+    ],
+    ["Credential=Basic fixture-value", "Credential=[Redacted]"],
+  ])("sanitizes audit message %s", (message, expected) => {
+    expect(sanitizeAuditValue(message)).toBe(expected);
+  });
+
   it.each([
     [BigInt("0"), "0"],
     [BigInt("-1"), "-1"],
