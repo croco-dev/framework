@@ -72,7 +72,7 @@ describe("ClerkProblems", () => {
     });
 
     it("redacts sensitive detail values", () => {
-      const problem = new ClerkTokenVerificationProblem("secret=sk_test_123 token=tok_123");
+      const problem = new ClerkTokenVerificationProblem("secret=fixture]part}last token=tok_123");
 
       expect(problem.detail).toBe("secret=[Redacted] token=[Redacted]");
     });

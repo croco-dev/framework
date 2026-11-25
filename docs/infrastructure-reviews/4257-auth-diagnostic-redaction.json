@@ -4,11 +4,11 @@
     {
       "package": "auth-clerk",
       "classification": "pure-contract",
-      "reason": "Mask credential values in authentication Problem and readiness text using only JavaScript string operations.",
+      "reason": "Mask credential values in authentication Problems and readiness diagnostics using only JavaScript string operations.",
       "files": {
-        "packages/auth-clerk/src/libs/ClerkAuthDiagnosticsProvider.ts": "77531895d3e80634a724945b1f2dc0efa49e6b79d94a8c91419bfc22155454bc",
+        "packages/auth-clerk/src/libs/ClerkAuthDiagnosticsProvider.ts": "f3363c4965060d7e9ce9bf2965045888d05d49524f3ea3627f856c7a84e848d0",
         "packages/auth-clerk/src/libs/problems/ClerkProblems.ts": "fb66e6f924665972eaccc8ce488fea6f4be7ee3c1ea8ece63a79acd67ad2cc15",
-        "packages/auth-clerk/src/libs/redaction.ts": "bcfea5bed46182f9b78b606f3e2f228927d7deab1ea942bac73e351a0c291cff"
+        "packages/auth-clerk/src/libs/redaction.ts": "98b5773551cb4b243e816551b0c0e463f1e00e1ce05f893328ec606897f364c4"
       },
       "catalogRuntimes": ["node", "lambda"],
       "profiles": {
@@ -38,9 +38,9 @@
     {
       "package": "auth-better-auth",
       "classification": "pure-contract",
-      "reason": "Mask credential values in authentication Problem and readiness text using only JavaScript string operations.",
+      "reason": "Mask credential values in authentication Problems and readiness diagnostics using only JavaScript string operations.",
       "files": {
-        "packages/auth-better-auth/src/libs/redaction.ts": "825cf43dd44e2910dd263a07d3845cd840880dace41f3880e5cbc9f1d2970e35"
+        "packages/auth-better-auth/src/libs/redaction.ts": "e986c61efc16dbf50566630e379b47a96abdda43b0c59424d1ec388f2341afac"
       },
       "catalogRuntimes": ["node", "lambda"],
       "profiles": {
@@ -64,6 +64,39 @@
           "providers": [],
           "constraints": [],
           "references": ["packages/auth-better-auth/src/libs/redaction.ts"]
+        }
+      }
+    },
+    {
+      "package": "diagnostics-core",
+      "classification": "pure-contract",
+      "reason": "Mask credential values in authentication Problems and readiness diagnostics using only JavaScript string operations.",
+      "files": {
+        "packages/diagnostics-core/src/index.ts": "f6c13f2ef356780f38741510afb53bd87726958a4ce5202fcfbf5c22cfaa6ce7",
+        "packages/diagnostics-core/src/libs/redactDiagnosticCredentials.ts": "c109540dc7f9fe2d619c6ad9e2ef1a40411637672a676f9a7f822f9a1e6f81f5"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "String redaction requires no Node Host APIs, storage, or lifecycle hooks.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/diagnostics-core/src/libs/redactDiagnosticCredentials.ts"]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "String redaction requires no Lambda invocation APIs, storage, or lifecycle hooks.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/diagnostics-core/src/libs/redactDiagnosticCredentials.ts"]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "String redaction requires no Workers bindings, storage, or lifecycle hooks.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/diagnostics-core/src/libs/redactDiagnosticCredentials.ts"]
         }
       }
     }

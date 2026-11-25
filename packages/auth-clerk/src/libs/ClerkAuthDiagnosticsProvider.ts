@@ -2,7 +2,7 @@ import type { DiagnosticsProvider, HealthStatus } from "@croco/diagnostics-core"
 import { Problem } from "@croco/problems-core";
 import type { ClerkAuthOptions } from "./ClerkAuthProvider";
 import { createClerkTokenVerificationProblem } from "./problems/ClerkProblems";
-import { redactSensitiveValue } from "./redaction";
+import { redactSensitiveValue, SENSITIVE_DIAGNOSTIC_KEY } from "./redaction";
 
 export type ClerkAuthDiagnosticsConfig = Partial<ClerkAuthOptions> & {
   readonly webhookSecret?: string;
@@ -128,9 +128,6 @@ export class ClerkAuthDiagnosticsProvider implements DiagnosticsProvider {
     return [this.config.secretKey, this.config.webhookSecret].filter(isNonEmptyString);
   }
 }
-
-const SENSITIVE_DIAGNOSTIC_KEY =
-  /(authorization|cookie|credential|password|secret|token|api[-_]?key|private[-_]?key|access[-_]?key|access[-_]?token|connection[-_]?string|clerk[-_]?secret[-_]?key|dsn)/i;
 
 function sanitizeDiagnosticValue(value: unknown, redactionValues: readonly string[]): unknown {
   if (Array.isArray(value)) {

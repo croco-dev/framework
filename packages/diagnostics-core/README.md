@@ -14,6 +14,8 @@ reported without ad hoc strings.
 - `ErrorHistoryRingBuffer` - bounded error history for diagnostics output.
 - Diagnostic code helpers - validate, format, and describe stable Croco diagnostic
   codes.
+- `redactDiagnosticCredentials` masks fields in diagnostic text with a caller-supplied
+  sensitive-key pattern. Providers handle known secret values that appear without a field name.
 - `DuplicateDiagnosticsProviderProblem` - Problem emitted for duplicate provider
   registration.
 - `InvalidDiagnosticsTimeoutProblem` - Problem emitted when a default or per-provider

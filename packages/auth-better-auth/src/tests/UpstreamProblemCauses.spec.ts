@@ -9,12 +9,14 @@ describe("Upstream Problem causes", () => {
       new Error(
         JSON.stringify({
           authorization: "ExampleAuth sample",
-          password: 'sample" tail',
+          password: 'sample" Authorization: Bearer sample',
+          refreshToken: ["first sample", { fragment: "second sample" }],
           requestId: "abc",
         }),
       ),
     );
-    const redacted = '{"authorization":"[Redacted]","password":"[Redacted]","requestId":"abc"}';
+    const redacted =
+      '{"authorization":"[Redacted]","password":"[Redacted]","refreshToken":"[Redacted]","requestId":"abc"}';
 
     expect(problem.detail).toBe(`Better Auth authenticate failed: ${redacted}`);
     expect(problem.cause?.message).toBe(redacted);
@@ -66,8 +68,10 @@ describe("Upstream Problem causes", () => {
     (operation) => {
       const problem = new BetterAuthAuthenticationProblem(
         operation,
-        new Error("authorization: Bearer bearer-credential"),
+        new Error("authorization: Bearer bearer-credential, requestId=abc"),
       );
+      expect(problem.detail).toContain("authorization: [Redacted], requestId=abc");
+      expect(problem.cause?.message).toBe("authorization: [Redacted], requestId=abc");
       for (const rendered of [
         problem.message,
         problem.cause?.message,
@@ -79,4 +83,13 @@ describe("Upstream Problem causes", () => {
       }
     },
   );
+
+  it("masks authorization parameters separated by a comma", () => {
+    const problem = new BetterAuthAuthenticationProblem(
+      "authenticate",
+      new Error('Authorization: Digest name="sample", proof="other sample"; requestId=abc'),
+    );
+
+    expect(problem.cause?.message).toBe("Authorization: [Redacted]; requestId=abc");
+  });
 });

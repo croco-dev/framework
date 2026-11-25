@@ -263,7 +263,10 @@ describe("Better Auth conformance", () => {
             cookie: "session=unlisted-cookie",
             privateKey: "raw-private-key",
             rawValue: SECRET_SAMPLE,
-            nested: { safe: '{"token":"fixture-token","requestId":"abc"}' },
+            nested: {
+              safe: '{"token":"fixture-token","requestId":"abc"}',
+              configured: SECRET_SAMPLE,
+            },
           },
         }),
       },
@@ -276,7 +279,9 @@ describe("Better Auth conformance", () => {
     expect(serialized).not.toContain("unlisted-cookie");
     expect(health.message).toBe("ready [redacted]");
     expect(health.details).toMatchObject({
-      readiness: { nested: { safe: '{"token":"[redacted]","requestId":"abc"}' } },
+      readiness: {
+        nested: { safe: '{"token":"[redacted]","requestId":"abc"}', configured: "[redacted]" },
+      },
     });
   });
 

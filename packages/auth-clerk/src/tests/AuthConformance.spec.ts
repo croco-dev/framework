@@ -281,7 +281,10 @@ describe.each([
             cookie: "session=unlisted-cookie",
             privateKey: "raw-private-key",
             rawValue: SECRET_SAMPLE,
-            nested: { safe: '{"password":"fixture-password","requestId":"abc"}' },
+            nested: {
+              safe: '{"password":"fixture-password","requestId":"abc"}',
+              configured: SECRET_SAMPLE,
+            },
           },
         }),
       },
@@ -294,7 +297,9 @@ describe.each([
     expect(serialized).not.toContain("unlisted-cookie");
     expect(health.message).toBe("ready [redacted] authorization=[redacted]");
     expect(health.details).toMatchObject({
-      readiness: { nested: { safe: '{"password":"[redacted]","requestId":"abc"}' } },
+      readiness: {
+        nested: { safe: '{"password":"[redacted]","requestId":"abc"}', configured: "[redacted]" },
+      },
     });
   });
 
