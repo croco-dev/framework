@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "audit-core",
+      "classification": "pure-contract",
+      "reason": "Redact complete authorization header values before audit messages reach persistence. The change affects only string sanitization.",
+      "files": {
+        "packages/audit-core/src/libs/sanitizeAuditValue.ts": "598aaa3a1a914f9d4f19b4455eda88abe8ea60d66ad861f8497cb299f2453a9a"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "String sanitization has no Node Host capabilities, storage or lifecycle requirements.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/audit-core/src/libs/sanitizeAuditValue.ts"]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "String sanitization has no Lambda Host capabilities, storage or invocation lifecycle requirements.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/audit-core/src/libs/sanitizeAuditValue.ts"]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "String sanitization requires no Workers bindings, storage or lifecycle hooks.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/audit-core/src/libs/sanitizeAuditValue.ts"]
+        }
+      }
+    }
+  ]
+}
