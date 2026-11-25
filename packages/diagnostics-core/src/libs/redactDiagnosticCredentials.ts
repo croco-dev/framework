@@ -1,5 +1,5 @@
 const FIELD =
-  /(?<![\w.-])((?<!\\)(?:"(?:\\[\s\S]|[^"\\:=\r\n])*"|'(?:\\[\s\S]|[^'\\:=\r\n])*')|[\w.-]+)\s*([:=])\s*/g;
+  /(?:(?<=[{,]\s*)(?<jsonKey>"(?:\\[\s\S]|[^"\\\r\n])*")(?=\s*:\s*(?:["[{\d-]|true\b|false\b|null\b))|(?<![\w.-])(?<label>(?<!\\)(?:"(?:\\[\s\S]|[^"\\:=\r\n])*"|'(?:\\[\s\S]|[^'\\:=\r\n])*')|[\w.-]+))\s*(?<separator>[:=])\s*/g;
 const AUTHORIZATION_LABEL = /authorization$/i;
 const AUTHORIZATION_PARAMETERS = /[^\s,;]+[ \t]+[\w!#$%&'*+.^\x60|~-]+[ \t]*=[ \t]*[^=\s,;]/y;
 
@@ -23,9 +23,9 @@ export function redactDiagnosticCredentials(
     let copiedThrough = 0;
 
     for (let field = fields.exec(text); field; field = fields.exec(text)) {
-      const label = field[1] ?? "";
+      const label = field.groups?.jsonKey ?? field.groups?.label ?? "";
       const isQuotedKey = label.startsWith('"') || label.startsWith("'");
-      const isJsonField = label.startsWith('"') && field[2] === ":";
+      const isJsonField = label.startsWith('"') && field.groups?.separator === ":";
       const key = isQuotedKey ? (parseJsonString(label) ?? label.slice(1, -1)) : label;
       const start = fields.lastIndex;
       const first = text.charAt(start);
@@ -100,7 +100,7 @@ function findValueEnd(
   if (authorization && !isJsonField) {
     AUTHORIZATION_PARAMETERS.lastIndex = start;
     const hasParameters = AUTHORIZATION_PARAMETERS.test(message);
-    const delimiter = hasParameters ? /[;\r\n]/ : /[,;\r\n]/;
+    const delimiter = hasParameters ? /[\r\n]/ : /[,;\r\n]/;
     while (end < message.length && !delimiter.test(message.charAt(end))) {
       const char = message.charAt(end);
       end = char === '"' || char === "'" ? findStringEnd(message, end, char) : end + 1;

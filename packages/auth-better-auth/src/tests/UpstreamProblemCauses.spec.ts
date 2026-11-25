@@ -10,7 +10,7 @@ describe("Upstream Problem causes", () => {
         JSON.stringify({
           authorization: "ExampleAuth sample",
           password: 'sample" Authorization: Bearer sample',
-          refreshToken: ["first sample", { fragment: "second sample" }],
+          "session:refreshToken": ["first sample", { fragment: "second sample" }],
           message: "Upstream Authorization: Bearer example",
           requestId: "abc",
         }),
@@ -19,7 +19,7 @@ describe("Upstream Problem causes", () => {
     const redacted = JSON.stringify({
       authorization: "[Redacted]",
       password: "[Redacted]",
-      refreshToken: "[Redacted]",
+      "session:refreshToken": "[Redacted]",
       message: "Upstream Authorization: [Redacted]",
       requestId: "abc",
     });
@@ -90,12 +90,14 @@ describe("Upstream Problem causes", () => {
     },
   );
 
-  it("masks authorization parameters separated by a comma", () => {
+  it("masks authorization parameters containing inline delimiters", () => {
     const problem = new BetterAuthAuthenticationProblem(
       "authenticate",
-      new Error("Authorization: Digest name*=UTF-8''sample, proof=\"other sample\"; requestId=abc"),
+      new Error(
+        "Authorization: ExampleAuth name*=UTF-8''sample, fields=one;two, proof=sample\nrequestId=abc",
+      ),
     );
 
-    expect(problem.cause?.message).toBe("Authorization: [Redacted]; requestId=abc");
+    expect(problem.cause?.message).toBe("Authorization: [Redacted]\nrequestId=abc");
   });
 });

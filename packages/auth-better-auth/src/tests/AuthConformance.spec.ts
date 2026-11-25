@@ -1,7 +1,7 @@
 import { createHmac } from "node:crypto";
 import "reflect-metadata";
 import { InMemoryIdempotencyStore } from "@croco/idempotency-core";
-import { ProblemCategory } from "@croco/problems-core";
+import { ProblemCategory, ProblemFactory } from "@croco/problems-core";
 import { createAuthProviderConformanceSuite } from "@croco/testing";
 import { describe, expect, it, vi } from "vitest";
 import { BetterAuthDiagnosticsProvider } from "../libs/BetterAuthDiagnosticsProvider";
@@ -285,7 +285,11 @@ describe("Better Auth conformance", () => {
     });
   });
 
-  it("redacts readiness check failures", async () => {
+  it.each([
+    ["upstream Error", "auth-better-auth/authentication-failed"],
+    ["existing Problem", "auth-test/readiness-failed"],
+  ])("redacts readiness check failures from an %s", async (_label, problemCode) => {
+    const detail = `upstream timeout ${SECRET_SAMPLE} {"token":"fixture-token"}`;
     const health = await new BetterAuthDiagnosticsProvider(
       {
         baseURL: "https://auth.example.com",
@@ -295,21 +299,19 @@ describe("Better Auth conformance", () => {
       },
       {
         readinessCheck: async () => {
-          throw Object.assign(
-            new Error(`upstream timeout ${SECRET_SAMPLE} {"token":"fixture-token"}`),
-            {
-              status: 503,
-            },
-          );
+          if (problemCode === "auth-test/readiness-failed") {
+            throw ProblemFactory.internalServerError(problemCode, detail);
+          }
+          throw Object.assign(new Error(detail), { status: 503 });
         },
       },
     ).getHealth();
 
     expect(health.status).toBe("degraded");
     expect(JSON.stringify(health)).not.toContain(SECRET_SAMPLE);
-    expect(health.message).not.toContain("fixture-token");
+    expect(health.message).toContain('{"token":"[redacted]"}');
     expect(health.details).toMatchObject({
-      problemCode: "auth-better-auth/authentication-failed",
+      problemCode,
       problemStatus: 500,
     });
   });
