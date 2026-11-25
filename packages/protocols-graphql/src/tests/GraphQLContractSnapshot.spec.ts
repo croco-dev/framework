@@ -335,7 +335,7 @@ describe("GraphQL contract snapshots", () => {
     expect(diffGraphQLContractSnapshots(baselineSnapshot, currentSnapshot).changes).toEqual([]);
   });
 
-  it("isolates inherited resolver method metadata with clone-on-write problem responses", async () => {
+  it("extends inherited guard and problem metadata without changing the base resolver", async () => {
     class BaseGuard {
       canActivate(): boolean {
         return true;
@@ -414,7 +414,7 @@ describe("GraphQL contract snapshots", () => {
     expect(derivedSnapshot.resolvers[0]?.methods).toEqual([
       expect.objectContaining({
         methodName: "value",
-        guards: ["DerivedGuard"],
+        guards: ["BaseGuard", "DerivedGuard"],
         interceptors: ["DerivedInterceptor"],
         roles: ["derived"],
         problems: [

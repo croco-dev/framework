@@ -1,12 +1,15 @@
 import "reflect-metadata";
 import { GRAPHQL_GUARDS_KEY, GRAPHQL_INTERCEPTORS_KEY } from "../constants";
-import { appendGraphQLMethodOwnMetadata } from "../metadata/GraphQLMetadata";
+import {
+  appendGraphQLMethodMetadata,
+  appendGraphQLMethodOwnMetadata,
+} from "../metadata/GraphQLMetadata";
 import type { ClassType, GraphQLGuard, GraphQLInterceptor } from "../types";
 
 /**
  * Associates Croco guards with a GraphQL resolver method.
  *
- * Guards execute in declaration order before the resolver method runs.
+ * Inherited guards execute before guards declared on the overriding method.
  */
 export function UseGuards(...guards: ClassType<GraphQLGuard>[]): MethodDecorator {
   return (
@@ -14,7 +17,7 @@ export function UseGuards(...guards: ClassType<GraphQLGuard>[]): MethodDecorator
     propertyKey: string | symbol,
     descriptor: PropertyDescriptor,
   ): PropertyDescriptor => {
-    appendGraphQLMethodOwnMetadata(GRAPHQL_GUARDS_KEY, target, propertyKey, guards);
+    appendGraphQLMethodMetadata(GRAPHQL_GUARDS_KEY, target, propertyKey, guards);
     return descriptor;
   };
 }

@@ -1671,12 +1671,6 @@ describe("buildContractGraph", () => {
         code: "contract-consumer-unsupported-route-field",
         severity: "warning",
         routeId: "AdminController.listAdmins",
-        message: expect.stringContaining("access.guards"),
-      }),
-      expect.objectContaining({
-        code: "contract-consumer-unsupported-route-field",
-        severity: "warning",
-        routeId: "AdminController.listAdmins",
         message: expect.stringContaining("access.roles"),
       }),
       expect.objectContaining({
@@ -1693,10 +1687,7 @@ describe("buildContractGraph", () => {
       }),
     ]);
     const openApiCoverage = report.consumers.find((consumer) => consumer.consumerId === "openapi");
-    expect(openApiCoverage?.routes[0]?.unsupportedFields).toEqual([
-      "access.guards",
-      "access.roles",
-    ]);
+    expect(openApiCoverage?.routes[0]?.unsupportedFields).toEqual(["access.roles"]);
   });
 
   it("should reject generated consumers that omit graph routes", () => {
@@ -1751,6 +1742,7 @@ describe("buildContractGraph", () => {
           "request.headers",
           "response",
           "problems",
+          "access.guards",
         ],
         fieldFingerprints: {
           routeId: "UsersController.getUser",
@@ -1762,6 +1754,7 @@ describe("buildContractGraph", () => {
           "request.headers": "absent",
           response: "absent",
           problems: "[]",
+          "access.guards": "[]",
         },
       },
     ]);

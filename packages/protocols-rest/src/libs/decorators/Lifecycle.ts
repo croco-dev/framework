@@ -19,16 +19,14 @@ function appendLifecycleMetadata<T>(
   values: readonly T[],
 ): void {
   if (propertyKey === undefined) {
-    const existing =
-      (Reflect.getOwnMetadata(metadataKey, target) as readonly T[] | undefined) ?? [];
+    const existing = (Reflect.getMetadata(metadataKey, target) as readonly T[] | undefined) ?? [];
     Reflect.defineMetadata(metadataKey, [...existing, ...values], target);
     return;
   }
 
   const constructor = typeof target === "function" ? target : target.constructor;
   const existing =
-    (Reflect.getOwnMetadata(metadataKey, constructor, propertyKey) as readonly T[] | undefined) ??
-    [];
+    (Reflect.getMetadata(metadataKey, constructor, propertyKey) as readonly T[] | undefined) ?? [];
   Reflect.defineMetadata(metadataKey, [...existing, ...values], constructor, propertyKey);
 }
 

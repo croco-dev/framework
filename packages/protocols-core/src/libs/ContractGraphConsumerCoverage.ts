@@ -108,8 +108,9 @@ export const DEFAULT_CONTRACT_GRAPH_CONSUMERS = [
       "response",
       "problems",
       "entitlements",
+      "access.guards",
     ],
-    unsupportedRouteFields: ["access.guards", "access.roles"],
+    unsupportedRouteFields: ["access.roles"],
   },
   {
     id: "rpc-client",
@@ -363,6 +364,11 @@ function createRouteFieldFingerprint(
     case "entitlements":
       return entitlementRequirementsFingerprint(route.entitlements);
     case "access.guards":
+      if (consumerId === "openapi") {
+        return JSON.stringify(
+          route.access.guards.map(({ name, declaredAt }) => [name, declaredAt]),
+        );
+      }
       return accessGuardsFingerprint(route.access.guards);
     case "access.roles":
       return accessRolesFingerprint(route.access.roles);
