@@ -3,6 +3,24 @@ import { describe, expect, it } from "vitest";
 import { BetterAuthAuthenticationProblem } from "../libs/problems/BetterAuthAuthenticationProblem";
 
 describe("Upstream Problem causes", () => {
+  it("redacts quoted credential fields without removing adjacent diagnostics", () => {
+    const problem = new BetterAuthAuthenticationProblem(
+      "authenticate",
+      new Error(
+        JSON.stringify({
+          authorization: "ExampleAuth sample",
+          password: 'sample" tail',
+          requestId: "abc",
+        }),
+      ),
+    );
+    const redacted = '{"authorization":"[Redacted]","password":"[Redacted]","requestId":"abc"}';
+
+    expect(problem.detail).toBe(`Better Auth authenticate failed: ${redacted}`);
+    expect(problem.cause?.message).toBe(redacted);
+    expect(problem.toJSON().detail).toBe(problem.detail);
+  });
+
   it("retains BetterAuthAuthenticationProblem Error causes without serializing them", () => {
     const upstream = Object.assign(new Error("provider failed token=super-secret-token"), {
       secret: "private-upstream-value",

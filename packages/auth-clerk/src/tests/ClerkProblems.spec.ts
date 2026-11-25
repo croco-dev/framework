@@ -14,6 +14,25 @@ import {
 } from "../libs/problems/ClerkProblems";
 
 describe("ClerkProblems", () => {
+  it.each([
+    ["ClerkTokenVerificationProblem", ClerkTokenVerificationProblem],
+    ["ClerkTokenVerificationUpstreamProblem", ClerkTokenVerificationUpstreamProblem],
+  ])(
+    "%s redacts authorization and quoted secrets in the detail and cause",
+    (_name, VerificationProblem) => {
+      const problem = new VerificationProblem(
+        new Error(
+          'Authorization: Bearer fixture-value\n{"token":"fixture-token","requestId":"abc"}',
+        ),
+      );
+      const redacted = 'Authorization: [Redacted]\n{"token":"[Redacted]","requestId":"abc"}';
+
+      expect(problem.detail).toContain(redacted);
+      expect(problem.cause?.message).toBe(redacted);
+      expect(problem.toJSON().detail).toContain(redacted);
+    },
+  );
+
   describe("WebhookVerificationProblem", () => {
     it("has correct code and category", () => {
       const problem = new WebhookVerificationProblem();

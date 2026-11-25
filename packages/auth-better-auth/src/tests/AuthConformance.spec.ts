@@ -263,7 +263,7 @@ describe("Better Auth conformance", () => {
             cookie: "session=unlisted-cookie",
             privateKey: "raw-private-key",
             rawValue: SECRET_SAMPLE,
-            nested: { safe: `ready ${SECRET_SAMPLE}` },
+            nested: { safe: '{"token":"fixture-token","requestId":"abc"}' },
           },
         }),
       },
@@ -275,6 +275,9 @@ describe("Better Auth conformance", () => {
     expect(serialized).not.toContain("raw-private-key");
     expect(serialized).not.toContain("unlisted-cookie");
     expect(health.message).toBe("ready [redacted]");
+    expect(health.details).toMatchObject({
+      readiness: { nested: { safe: '{"token":"[redacted]","requestId":"abc"}' } },
+    });
   });
 
   it("redacts readiness check failures", async () => {
@@ -287,15 +290,19 @@ describe("Better Auth conformance", () => {
       },
       {
         readinessCheck: async () => {
-          throw Object.assign(new Error(`upstream timeout ${SECRET_SAMPLE}`), {
-            status: 503,
-          });
+          throw Object.assign(
+            new Error(`upstream timeout ${SECRET_SAMPLE} {"token":"fixture-token"}`),
+            {
+              status: 503,
+            },
+          );
         },
       },
     ).getHealth();
 
     expect(health.status).toBe("degraded");
     expect(JSON.stringify(health)).not.toContain(SECRET_SAMPLE);
+    expect(health.message).not.toContain("fixture-token");
     expect(health.details).toMatchObject({
       problemCode: "auth-better-auth/authentication-failed",
       problemStatus: 500,

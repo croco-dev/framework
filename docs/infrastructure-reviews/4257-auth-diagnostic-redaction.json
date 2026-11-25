@@ -1,0 +1,71 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "auth-clerk",
+      "classification": "pure-contract",
+      "reason": "Mask credential values in authentication Problem and readiness text using only JavaScript string operations.",
+      "files": {
+        "packages/auth-clerk/src/libs/ClerkAuthDiagnosticsProvider.ts": "77531895d3e80634a724945b1f2dc0efa49e6b79d94a8c91419bfc22155454bc",
+        "packages/auth-clerk/src/libs/problems/ClerkProblems.ts": "fb66e6f924665972eaccc8ce488fea6f4be7ee3c1ea8ece63a79acd67ad2cc15",
+        "packages/auth-clerk/src/libs/redaction.ts": "bcfea5bed46182f9b78b606f3e2f228927d7deab1ea942bac73e351a0c291cff"
+      },
+      "catalogRuntimes": ["node", "lambda"],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "String redaction requires no Node Host APIs, storage, or lifecycle hooks.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/auth-clerk/src/libs/redaction.ts"]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "String redaction requires no Lambda invocation APIs, storage, or lifecycle hooks.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/auth-clerk/src/libs/redaction.ts"]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "String redaction requires no Workers bindings, storage, or lifecycle hooks.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/auth-clerk/src/libs/redaction.ts"]
+        }
+      }
+    },
+    {
+      "package": "auth-better-auth",
+      "classification": "pure-contract",
+      "reason": "Mask credential values in authentication Problem and readiness text using only JavaScript string operations.",
+      "files": {
+        "packages/auth-better-auth/src/libs/redaction.ts": "825cf43dd44e2910dd263a07d3845cd840880dace41f3880e5cbc9f1d2970e35"
+      },
+      "catalogRuntimes": ["node", "lambda"],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "String redaction requires no Node Host APIs, storage, or lifecycle hooks.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/auth-better-auth/src/libs/redaction.ts"]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "String redaction requires no Lambda invocation APIs, storage, or lifecycle hooks.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/auth-better-auth/src/libs/redaction.ts"]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "String redaction requires no Workers bindings, storage, or lifecycle hooks.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/auth-better-auth/src/libs/redaction.ts"]
+        }
+      }
+    }
+  ]
+}

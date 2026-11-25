@@ -276,12 +276,12 @@ describe.each([
       },
       {
         readinessCheck: async () => ({
-          message: `ready ${SECRET_SAMPLE}`,
+          message: `ready ${SECRET_SAMPLE} authorization=ExampleAuth fixture-value`,
           details: {
             cookie: "session=unlisted-cookie",
             privateKey: "raw-private-key",
             rawValue: SECRET_SAMPLE,
-            nested: { safe: `ready ${SECRET_SAMPLE}` },
+            nested: { safe: '{"password":"fixture-password","requestId":"abc"}' },
           },
         }),
       },
@@ -292,7 +292,10 @@ describe.each([
     expect(serialized).not.toContain(SECRET_SAMPLE);
     expect(serialized).not.toContain("raw-private-key");
     expect(serialized).not.toContain("unlisted-cookie");
-    expect(health.message).toBe("ready [redacted]");
+    expect(health.message).toBe("ready [redacted] authorization=[redacted]");
+    expect(health.details).toMatchObject({
+      readiness: { nested: { safe: '{"password":"[redacted]","requestId":"abc"}' } },
+    });
   });
 
   it("redacts readiness check failures", async () => {
@@ -304,15 +307,20 @@ describe.each([
       },
       {
         readinessCheck: async () => {
-          throw Object.assign(new Error(`Clerk timeout ${SECRET_SAMPLE}`), {
-            status: 503,
-          });
+          throw Object.assign(
+            new Error(`Clerk timeout ${SECRET_SAMPLE}; Authorization: Basic fixture-value`),
+            {
+              status: 503,
+            },
+          );
         },
       },
     ).getHealth();
 
     expect(health.status).toBe("degraded");
     expect(JSON.stringify(health)).not.toContain(SECRET_SAMPLE);
+    expect(health.message).toContain("Authorization: [redacted]");
+    expect(health.message).not.toContain("fixture-value");
     expect(health.details).toMatchObject({
       problemCode: "auth-clerk/token-verification-upstream-failed",
       problemStatus: 500,

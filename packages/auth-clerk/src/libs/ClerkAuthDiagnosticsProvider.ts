@@ -2,6 +2,7 @@ import type { DiagnosticsProvider, HealthStatus } from "@croco/diagnostics-core"
 import { Problem } from "@croco/problems-core";
 import type { ClerkAuthOptions } from "./ClerkAuthProvider";
 import { createClerkTokenVerificationProblem } from "./problems/ClerkProblems";
+import { redactSensitiveValue } from "./redaction";
 
 export type ClerkAuthDiagnosticsConfig = Partial<ClerkAuthOptions> & {
   readonly webhookSecret?: string;
@@ -164,12 +165,7 @@ function sanitizeDiagnosticValue(value: unknown, redactionValues: readonly strin
 }
 
 function sanitizeDiagnosticText(value: string, redactionValues: readonly string[]): string {
-  const labelRedacted = value.replace(
-    /(authorization|cookie|credential|password|secret|token|api[-_]?key|private[-_]?key|access[-_]?key|access[-_]?token|connection[-_]?string|clerk[-_]?secret[-_]?key|dsn)(\s*[:=]\s*)([^,\s;]+)/gi,
-    "$1$2[redacted]",
-  );
-
-  return redactKnownValues(labelRedacted, redactionValues);
+  return redactKnownValues(redactSensitiveValue(value, "[redacted]"), redactionValues);
 }
 
 function redactKnownValues(value: string, redactionValues: readonly string[]): string {
