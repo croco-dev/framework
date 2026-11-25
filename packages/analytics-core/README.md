@@ -257,6 +257,9 @@ Manual corrections append rows with `supersedes` and batch correction metadata:
 the store's scope-wide revision for compare-and-set; an intervening write in that
 scope requires the caller to reread before retrying a correction. Prior rows are
 retained as correction provenance until subject deletion.
+When calling `evaluateFactsAt` directly, pass the complete history through
+`knownAt`, including corrections whose effective intervals exclude `effectiveAt`.
+A correction withdraws its original once the correction is known.
 
 Both `authorize` and `mask` are required application policies. Authorization runs
 for the exact scope, subject, operation, and definition before persistence. A null
