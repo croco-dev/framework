@@ -56,6 +56,10 @@ describe("PolicyDecisionTrace", () => {
       'authorization: Digest username="sample;user", response="sample-proof"; request ID: sample-request',
       "authorization: [Redacted]; request ID: sample-request",
     ],
+    [
+      'authorization: Digest username="sample;user", response="sample-proof", request ID: sample-request',
+      "authorization: [Redacted], request ID: sample-request",
+    ],
     ["authorization=sample-credential", "authorization=[Redacted]"],
     [
       "authorization=sample-credential; request ID: sample-request",
@@ -89,6 +93,10 @@ describe("PolicyDecisionTrace", () => {
     ],
     [
       "Authorization='Custom sample;credential' request ID: sample-request",
+      "Authorization='[Redacted]' request ID: sample-request",
+    ],
+    [
+      "Authorization='Custom\r\n\tsample-credential' request ID: sample-request",
       "Authorization='[Redacted]' request ID: sample-request",
     ],
     [

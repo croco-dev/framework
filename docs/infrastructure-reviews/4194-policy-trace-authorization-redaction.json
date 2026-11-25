@@ -6,7 +6,7 @@
       "classification": "pure-contract",
       "reason": "Policy decision traces mask complete authorization values in diagnostic strings before passing them to existing sinks.",
       "files": {
-        "packages/access-core/src/libs/PolicyDecisionTrace.ts": "2e090f434be786baba5c6be4a51023a65670fcd1b9a5a58844addb58c3f72dfb"
+        "packages/access-core/src/libs/PolicyDecisionTrace.ts": "55965d5d62c4f3af3804d73cf831777dd5ea54d791f397015b7c491e52b84bce"
       },
       "catalogRuntimes": [],
       "profiles": {

@@ -88,16 +88,19 @@ const ASSIGNMENT_SEPARATOR = String.raw`[ \t]*[:=][ \t]*(?:(?:${LINE_BREAK}[ \t]
 const DOUBLE_QUOTED_TEXT = /"(?:\\[^\r\n]|[^"\\\r\n])*"/;
 const SINGLE_QUOTED_TEXT = /'(?:\\[^\r\n]|[^'\\\r\n])*'/;
 const QUOTED_VALUE = String.raw`(?:${DOUBLE_QUOTED_TEXT.source}|(?='(?:\\[^\r\n]|[^'\\\r\n])*[ \t;])${SINGLE_QUOTED_TEXT.source}|${SINGLE_QUOTED_TEXT.source}(?=[ \t]*(?:[,;}&\]\r\n]|${NEXT_DIAGNOSTIC_FIELD}|$)))`;
-const HEADER_CONTINUATION = String.raw`${LINE_BREAK}\k<indent>[ \t]+`;
-const UNQUOTED_HEADER_CONTINUATION = String.raw`${LINE_BREAK}\k<indent>(?![ \t]*${NEXT_DIAGNOSTIC_FIELD})[ \t]+`;
+const CONTINUATION_INDENT = String.raw`[ \t]+(?![ \t])`;
+const HEADER_CONTINUATION = String.raw`${LINE_BREAK}\k<indent>${CONTINUATION_INDENT}`;
+const UNQUOTED_HEADER_CONTINUATION = String.raw`${LINE_BREAK}\k<indent>(?![ \t]*${NEXT_DIAGNOSTIC_FIELD})${CONTINUATION_INDENT}`;
 const HEADER_END = String.raw`\\?(?=[\r\n]|$)`;
 const HEADER_QUOTED_PARAM = String.raw`"(?:\\[^\r\n]|[^"\\\r\n]|${HEADER_CONTINUATION})*(?:"|${HEADER_END})`;
-const TRUNCATED_SINGLE_QUOTED_VALUE = String.raw`'(?:\\[^\r\n]|[^'\\\r\n]|${HEADER_CONTINUATION})*${HEADER_END}`;
-const UNQUOTED_HEADER_VALUE = String.raw`(?![ \t])(?:[^";\r\n]|${HEADER_QUOTED_PARAM}|${UNQUOTED_HEADER_CONTINUATION})+`;
+const SINGLE_QUOTED_HEADER_PART = String.raw`(?:\\[^\r\n]|[^'\\\r\n]|${HEADER_CONTINUATION})`;
+const FOLDED_SINGLE_QUOTED_VALUE = String.raw`'(?:\\[^\r\n]|[^'\\\r\n])*${HEADER_CONTINUATION}${SINGLE_QUOTED_HEADER_PART}*'`;
+const TRUNCATED_SINGLE_QUOTED_VALUE = String.raw`'${SINGLE_QUOTED_HEADER_PART}*${HEADER_END}`;
+const UNQUOTED_HEADER_VALUE = String.raw`(?![ \t])(?:(?!,[ \t]*${NEXT_DIAGNOSTIC_FIELD})[^";\r\n]|${HEADER_QUOTED_PARAM}|${UNQUOTED_HEADER_CONTINUATION})+`;
 const SCHEME_AND_TOKEN = String.raw`[!#$%&'*+.^_\x60|~\da-z-]+[ \t]+[a-z0-9._~+/-]+=*`;
 const DELIMITED_TOKEN_VALUE = String.raw`(?:${SCHEME_AND_TOKEN}|[^\s,;&"']+)(?=[ \t]*[,&])`;
 const JSON_SCALAR = String.raw`(?:null|true|false|-?(?:0|[1-9]\d*)(?:\.\d+)?(?:e[+-]?\d+)?)(?=\s*(?:[,}]|$))`;
-const AUTHORIZATION_ASSIGNMENT = String.raw`((?:^(?<indent>[ \t]*)|)(?<keyQuote>["']?)${AUTHORIZATION_LABEL}\k<keyQuote>${ASSIGNMENT_SEPARATOR})(?:(${QUOTED_VALUE})|(${JSON_SCALAR})|${TRUNCATED_SINGLE_QUOTED_VALUE}|${DELIMITED_TOKEN_VALUE}|${UNQUOTED_HEADER_VALUE})`;
+const AUTHORIZATION_ASSIGNMENT = String.raw`((?:^(?<indent>[ \t]*)|)(?<keyQuote>["']?)${AUTHORIZATION_LABEL}\k<keyQuote>${ASSIGNMENT_SEPARATOR})(?:(${QUOTED_VALUE}|${FOLDED_SINGLE_QUOTED_VALUE})|(${JSON_SCALAR})|${TRUNCATED_SINGLE_QUOTED_VALUE}|${DELIMITED_TOKEN_VALUE}|${UNQUOTED_HEADER_VALUE})`;
 const AUTHORIZATION_OR_QUOTED_TEXT = new RegExp(
   String.raw`${AUTHORIZATION_ASSIGNMENT}|(?<![\p{ID_Continue}\\])(?:${DOUBLE_QUOTED_TEXT.source}|${SINGLE_QUOTED_TEXT.source})`,
   "gimu",
