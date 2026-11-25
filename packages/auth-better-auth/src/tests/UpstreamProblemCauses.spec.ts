@@ -102,4 +102,13 @@ describe("Upstream Problem causes", () => {
 
     expect(problem.cause?.message).toBe("Authorization: [Redacted]\nrequestId=abc");
   });
+
+  it("redacts a plain authorization value with a quoted label", () => {
+    const problem = new BetterAuthAuthenticationProblem(
+      "authenticate",
+      new Error('"Authorization": ExampleAuth fixture, requestId=abc'),
+    );
+
+    expect(problem.cause?.message).toBe('"Authorization": [Redacted], requestId=abc');
+  });
 });

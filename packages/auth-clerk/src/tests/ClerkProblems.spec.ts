@@ -79,10 +79,21 @@ describe("ClerkProblems", () => {
       expect(problem.detail).toBe("secret\n=\n[Redacted] token=[Redacted]");
     });
 
-    it("redacts assignments inside quoted diagnostic prose", () => {
-      const problem = new ClerkTokenVerificationProblem('"token=fixture : note": upstream error');
+    it.each([
+      ['"token=fixture : note": upstream error', '"token=[Redacted] : note": upstream error'],
+      [
+        '"upstream\t token=fixture; reason=unavailable"',
+        '"upstream\t token=[Redacted]; reason=unavailable"',
+      ],
+    ])("redacts assignments inside quoted diagnostic prose", (detail, expected) => {
+      expect(new ClerkTokenVerificationProblem(detail).detail).toBe(expected);
+    });
 
-      expect(problem.detail).toBe('"token=[Redacted] : note": upstream error');
+    it("retains a separate diagnostic after an empty Authorization header", () => {
+      const detail = "Authorization:\r\nrequestId=abc provider=ready";
+      const problem = new ClerkTokenVerificationProblem(detail);
+
+      expect(problem.detail).toBe(detail);
     });
   });
 
