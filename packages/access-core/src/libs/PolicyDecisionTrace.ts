@@ -94,8 +94,8 @@ const TRUNCATED_SINGLE_QUOTED_VALUE = String.raw`'(?:\\[^\r\n]|[^'\\\r\n]|${HEAD
 const UNQUOTED_HEADER_VALUE = String.raw`(?![ \t])(?:[^";\r\n]|${HEADER_QUOTED_PARAM}|${HEADER_CONTINUATION})+`;
 const AUTHORIZATION_ASSIGNMENT = String.raw`((?:^(?<indent>[ \t]*)|)(?<keyQuote>["']?)${AUTHORIZATION_LABEL}\k<keyQuote>${ASSIGNMENT_SEPARATOR})(?:(${QUOTED_VALUE})|${TRUNCATED_SINGLE_QUOTED_VALUE}|[^\s,;&"']+(?=[,&])|${UNQUOTED_HEADER_VALUE})`;
 const AUTHORIZATION_OR_QUOTED_TEXT = new RegExp(
-  String.raw`${AUTHORIZATION_ASSIGNMENT}|(?<![\w\\])(?:${DOUBLE_QUOTED_TEXT.source}|${SINGLE_QUOTED_TEXT.source})`,
-  "gim",
+  String.raw`${AUTHORIZATION_ASSIGNMENT}|(?<![\p{ID_Continue}\\])(?:${DOUBLE_QUOTED_TEXT.source}|${SINGLE_QUOTED_TEXT.source})`,
+  "gimu",
 );
 const DEFAULT_SENSITIVE_VALUE_PATTERN =
   /((?:password|secret|token|api[-_]?key|access[-_]?key|private[-_]?key|credential|dsn)\s*[:=]\s*)[^\s,;&]+|((?:bearer|basic)\s+)[^\s,;]+|((?:postgres(?:ql)?|mysql|mongodb(?:\+srv)?|redis):\/\/)[^\s]+/gi;

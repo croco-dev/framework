@@ -81,6 +81,7 @@ describe("PolicyDecisionTrace", () => {
       "The provider's Authorization='Custom sample-credential'",
       "The provider's Authorization='[Redacted]'",
     ],
+    ["René's Authorization='Custom sample-credential'", "René's Authorization='[Redacted]'"],
     ["Authorization='Custom sample;credential", "Authorization=[Redacted]"],
     [
       '{"authorization":"Custom sample-credential","requestId":"sample-request"}',
