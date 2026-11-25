@@ -14,27 +14,25 @@ import { createStepExecutionError } from "./StepFailure";
 
 const CHUNK_CHECKPOINT_VERSION = 1;
 
-type InitialReaderCheckpoint = {
-  attempt: number;
-  snapshot?: { cursor: unknown };
-  registration: ReaderRegistration;
-};
+type ReaderCursorSnapshot = { cursor: unknown; serialized?: string };
 
 type InitialReaderCursors = Map<string, Map<string, ReaderRun>>;
 
 type ReaderRun = {
-  checkpoints: WeakMap<Checkpointable, InitialReaderCheckpoint>;
+  checkpoints: WeakMap<Checkpointable, ReaderRegistration>;
   registrations: Set<ReaderRegistration>;
 };
 
 type ReaderRegistration = {
   manager: WeakRef<ExecutionManager>;
+  attempt: number;
   executionId: string;
   executionType: string;
   createdAt: number;
   idempotencyKey?: string;
   requestFingerprint?: string;
   stepName: string;
+  snapshot?: ReaderCursorSnapshot;
   history: Set<ReaderRegistration>;
 };
 
@@ -159,9 +157,24 @@ function forgetReaderCursor(
   const checkpoint = run?.checkpoints.get(reader);
   if (!run || !checkpoint) return;
   run.checkpoints.delete(reader);
-  run.registrations.delete(checkpoint.registration);
-  unregisterReader(checkpoint.registration);
+  run.registrations.delete(checkpoint);
+  unregisterReader(checkpoint);
   if (run.registrations.size === 0) forgetInitialCursors(cursors, executionId, stepName);
+}
+
+async function captureReaderCursor(
+  stepName: string,
+  reader: Checkpointable,
+): Promise<ReaderCursorSnapshot | undefined> {
+  try {
+    const cursor = await reader.getCheckpoint();
+    if (cursor === undefined) return { cursor };
+    const { value, serialized } = prepareExecutionCheckpoint(`${stepName}.cursor`, cursor);
+    return { cursor: value, serialized };
+  } catch {
+    // Without a usable starting cursor, retry before the first saved checkpoint needs a fresh reader.
+    return undefined;
+  }
 }
 
 async function rememberInitialCursor(
@@ -171,19 +184,7 @@ async function rememberInitialCursor(
   cursors: InitialReaderCursors,
   manager: ExecutionManager,
 ): Promise<void> {
-  let snapshot: InitialReaderCheckpoint["snapshot"];
-  try {
-    const cursor = await reader.getCheckpoint();
-    snapshot = {
-      cursor:
-        cursor === undefined
-          ? undefined
-          : prepareExecutionCheckpoint(`${stepName}.cursor`, cursor).value,
-    };
-  } catch {
-    // Without a usable starting cursor, retry before the first saved checkpoint needs a fresh reader.
-    snapshot = undefined;
-  }
+  const snapshot = await captureReaderCursor(stepName, reader);
   let steps = cursors.get(execution.id);
   if (!steps) {
     steps = new Map();
@@ -197,15 +198,17 @@ async function rememberInitialCursor(
   const history = readerHistory.get(reader) ?? new Set<ReaderRegistration>();
   const registration = {
     manager: new WeakRef(manager),
+    attempt: execution.attempts,
     executionId: execution.id,
     executionType: execution.type,
     createdAt: execution.createdAt.getTime(),
     idempotencyKey: execution.idempotencyKey,
     requestFingerprint: execution.requestFingerprint,
     stepName,
+    snapshot,
     history,
   };
-  run.checkpoints.set(reader, { attempt: execution.attempts, snapshot, registration });
+  run.checkpoints.set(reader, registration);
   run.registrations.add(registration);
   history.add(registration);
   readerHistory.set(reader, history);
@@ -321,24 +324,38 @@ export class ChunkExecutor {
               savedReaderCheckpointKey(previous.checkpoints, step.name)
             )
               return;
-            if (!initial) {
-              const matchingExecution = otherManagerCursors.some(
-                (entry) =>
-                  entry.executionType === previous.type &&
-                  entry.createdAt === previous.createdAt.getTime() &&
-                  matchesOptionalIdentity(entry.idempotencyKey, previous.idempotencyKey) &&
-                  matchesOptionalIdentity(entry.requestFingerprint, previous.requestFingerprint),
-              );
-              if (!matchingExecution) return;
-            }
+            const possiblePriorRuns = initial
+              ? []
+              : otherManagerCursors.filter(
+                  (entry) =>
+                    entry.executionType === previous.type &&
+                    entry.createdAt === previous.createdAt.getTime() &&
+                    matchesOptionalIdentity(entry.idempotencyKey, previous.idempotencyKey) &&
+                    matchesOptionalIdentity(entry.requestFingerprint, previous.requestFingerprint),
+                );
+            if (!initial && possiblePriorRuns.length === 0) return;
             if (previous.error?.indeterminate === true) {
               throw ExecutionProblems.indeterminateRetryBlocked(
                 `Cannot rewind step '${step.name}' before resolving the indeterminate execution outcome`,
               );
             }
-            if (!initial?.snapshot) throw unavailableInitialCursor(step.name);
+            if (!initial) {
+              // A reader already at the starting cursor can be used even if two stores have
+              // indistinguishable execution metadata. Only the original manager can rewind it.
+              const current = await captureReaderCursor(step.name, reader);
+              if (
+                current &&
+                possiblePriorRuns.every(
+                  ({ snapshot }) => snapshot && snapshot.serialized === current.serialized,
+                )
+              )
+                return;
+              throw unavailableInitialCursor(step.name);
+            }
+            const { snapshot } = initial;
+            if (!snapshot) throw unavailableInitialCursor(step.name);
             try {
-              await reader.restoreCheckpoint(structuredClone(initial.snapshot.cursor));
+              await reader.restoreCheckpoint(structuredClone(snapshot.cursor));
             } catch (error) {
               const problem = unavailableInitialCursor(step.name);
               Object.defineProperty(problem, "cause", { configurable: true, value: error });

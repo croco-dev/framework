@@ -1390,6 +1390,33 @@ describe("ChunkExecutor", () => {
     });
   });
 
+  it("accepts an already reset reader first reached on retry in another store", async () => {
+    const firstManager = new ExecutionManagerImpl(new TestExecutionStore());
+    const secondManager = new ExecutionManagerImpl(new TestExecutionStore());
+    const input = { type: "import-users", maxAttempts: 2 };
+    const first = await firstManager.create(input);
+    const second = await secondManager.create(input);
+    expect(second).toMatchObject({ id: first.id, createdAt: first.createdAt });
+    const reader = createCheckpointReader([1, 2, 3, 4]);
+    const failure = new Error("temporary sink outage");
+    const writer = { write: vi.fn().mockRejectedValueOnce(failure) };
+    const step = new Step({ name: "import-users", reader, writer, chunkSize: 2 });
+    await expect(new ChunkExecutor(firstManager).execute(first.id, step)).rejects.toBe(failure);
+    await secondManager.start(second.id);
+    await secondManager.fail(second.id, { message: "earlier step failed", retryable: true });
+    reader.restoreCheckpoint({ offset: 0 });
+    writer.write.mockClear();
+
+    await new ChunkExecutor(secondManager).execute(second.id, step);
+
+    expect(writer.write.mock.calls).toEqual([[[1, 2]], [[3, 4]]]);
+    expect(await secondManager.get(second.id)).toMatchObject({
+      status: "completed",
+      attempts: 2,
+      result: { processedCount: 4 },
+    });
+  });
+
   it.each([
     "immediately",
     "after another execution",
