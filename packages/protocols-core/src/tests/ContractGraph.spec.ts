@@ -1742,7 +1742,6 @@ describe("buildContractGraph", () => {
           "request.headers",
           "response",
           "problems",
-          "access.guards",
         ],
         fieldFingerprints: {
           routeId: "UsersController.getUser",
@@ -1754,7 +1753,6 @@ describe("buildContractGraph", () => {
           "request.headers": "absent",
           response: "absent",
           problems: "[]",
-          "access.guards": "[]",
         },
       },
     ]);
@@ -1771,6 +1769,33 @@ describe("buildContractGraph", () => {
       expect.stringContaining("problems"),
       expect.stringContaining("response"),
     ]);
+  });
+
+  it("should require guard evidence for guarded OpenAPI operations", () => {
+    class AuthGuard {}
+
+    @Controller("/reports")
+    @UseGuards(AuthGuard)
+    class ReportsController {
+      @Get("/")
+      list(): void {}
+    }
+
+    const graph = buildContractGraph([ReportsController]);
+    const diagnostics = getContractGraphConsumerRouteCoverageDiagnostics(graph, "openapi", [
+      {
+        routeId: "ReportsController.list",
+        operationId: "ReportsController_list",
+        fieldFingerprints: {},
+      },
+    ]);
+
+    expect(diagnostics).toContainEqual(
+      expect.objectContaining({
+        code: "contract-consumer-missing-generated-route-field",
+        message: expect.stringContaining("access.guards"),
+      }),
+    );
   });
 
   it("should reject admin-generated consumers that drift access metadata", () => {

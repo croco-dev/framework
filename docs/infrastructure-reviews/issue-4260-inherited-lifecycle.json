@@ -38,7 +38,7 @@
       "classification": "pure-contract",
       "reason": "Checks that the guard names and scopes emitted in OpenAPI match the effective REST route contract.",
       "files": {
-        "packages/protocols-core/src/libs/ContractGraphConsumerCoverage.ts": "0914ffa3ab56930699b770b47d721719b1215272d42b8052e931c963267d8b40"
+        "packages/protocols-core/src/libs/ContractGraphConsumerCoverage.ts": "879faace6e69c6f3b3289bb8792ab082e1af44cc40a7d2012bd8c749756a24dc"
       },
       "catalogRuntimes": [],
       "profiles": {

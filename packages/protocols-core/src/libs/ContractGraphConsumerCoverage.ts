@@ -243,6 +243,16 @@ function getObservedRouteFieldDiagnostics(
     : undefined;
 
   for (const field of consumer.requiredRouteFields) {
+    // Older OpenAPI observations omit guard evidence for unguarded routes.
+    if (
+      consumer.id === "openapi" &&
+      field === "access.guards" &&
+      route.access.guards.length === 0 &&
+      observedRoute.fieldFingerprints?.[field] === undefined
+    ) {
+      continue;
+    }
+
     if (!hasRouteField(route, field)) {
       diagnostics.push(createMissingFieldDiagnostic(consumer, toRouteCoverage(route), field));
       continue;
