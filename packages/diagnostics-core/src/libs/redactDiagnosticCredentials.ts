@@ -1,5 +1,12 @@
-const FIELD =
-  /(?:(?<=[{,]\s*)("(?:\\[\s\S]|[^"\\\r\n])*")(?=\s*:\s*(?:["[{\d-]|true\b|false\b|null\b))|(?<![\w.-])((?<!\\)(?:"(?:\\[\s\S]|[^"\\:=\r\n])*"|'(?:\\[\s\S]|[^'\\:=\r\n])*')|[\w.-]+))\s*([:=])\s*/g;
+const JSON_STRING = /"(?:\\[\s\S]|[^"\\\r\n])*"/;
+const JSON_KEY = String.raw`(?=")(?<=[{,]\s*)(${JSON_STRING.source})(?=\s*:\s*(?:["[{\d-]|true\b|false\b|null\b))`;
+const TEXT_LABEL =
+  /(?<![\w.-])((?<!\\)(?:"(?:\\[\s\S]|[^"\\:=\r\n])*"|'(?:\\[\s\S]|[^'\\:=\r\n])*')|[\w.-]+)/;
+const QUOTED_TEXT = String.raw`(?=")(?<![\w\\])(${JSON_STRING.source})(?!\s*[:=])`;
+const FIELD_OR_STRING = new RegExp(
+  String.raw`(?:${JSON_KEY}|${TEXT_LABEL.source})\s*([:=])\s*|${QUOTED_TEXT}`,
+  "g",
+);
 const AUTHORIZATION_LABEL = /authorization$/i;
 const AUTHORIZATION_PARAMETERS = /[^\s,;]+[ \t]+[\w!#$%&'*+.^\x60|~-]+[ \t]*=[ \t]*[^=\s,;]/y;
 
@@ -18,19 +25,20 @@ export function redactDiagnosticCredentials(
   return redactText(message);
 
   function redactText(text: string): string {
-    const fields = new RegExp(FIELD);
+    const fields = new RegExp(FIELD_OR_STRING);
     const parts: string[] = [];
     let copiedThrough = 0;
 
     for (let field = fields.exec(text); field; field = fields.exec(text)) {
-      const [, jsonKey, textLabel, separator] = field;
+      const [, jsonKey, textLabel, separator, quotedText] = field;
       const label = jsonKey ?? textLabel ?? "";
       const isQuotedKey = label.startsWith('"') || label.startsWith("'");
       const isJsonField = label.startsWith('"') && separator === ":";
       const key = isQuotedKey ? (parseJsonString(label) ?? label.slice(1, -1)) : label;
-      const start = fields.lastIndex;
+      const start = quotedText === undefined ? fields.lastIndex : field.index;
       const first = text.charAt(start);
-      const sensitive = (isQuotedKey ? quotedKeyMatcher : plainKeyMatcher).test(key);
+      const sensitive =
+        quotedText === undefined && (isQuotedKey ? quotedKeyMatcher : plainKeyMatcher).test(key);
 
       let end: number;
       let marker: string;
@@ -42,9 +50,9 @@ export function redactDiagnosticCredentials(
         const quotedValue = (isQuotedKey || authorization) && first === text.charAt(end - 1);
         const quote = quotedValue && /["']/.test(first) ? first : "";
         marker = isJsonField ? JSON.stringify(replacement) : quote + replacement + quote;
-      } else if (isJsonField && first === '"') {
-        end = findStringEnd(text, start, first);
-        const decoded = parseJsonString(text.slice(start, end));
+      } else if (quotedText !== undefined || (isJsonField && first === '"')) {
+        end = quotedText === undefined ? findStringEnd(text, start, first) : fields.lastIndex;
+        const decoded = parseJsonString(quotedText ?? text.slice(start, end));
         if (decoded === undefined) continue;
 
         fields.lastIndex = end;
@@ -89,7 +97,10 @@ function findValueEnd(
   const first = message.charAt(start);
   if ((isQuotedKey || authorization) && (first === '"' || first === "'")) {
     const end = findStringEnd(message, start, first);
-    if (!authorization || isJsonField || /^[ \t]*(?:[,;}\]\r\n]|$)/.test(message.slice(end))) {
+    const quotedAuthValue =
+      !/[\r\n]/.test(message.slice(start, end)) &&
+      /^[ \t]*(?:[,;}\]\r\n]|$)/.test(message.slice(end));
+    if (isQuotedKey || quotedAuthValue) {
       return end;
     }
   }
@@ -102,10 +113,7 @@ function findValueEnd(
     AUTHORIZATION_PARAMETERS.lastIndex = start;
     const hasParameters = AUTHORIZATION_PARAMETERS.test(message);
     const delimiter = hasParameters ? /[\r\n]/ : /[,;\r\n]/;
-    while (end < message.length && !delimiter.test(message.charAt(end))) {
-      const char = message.charAt(end);
-      end = char === '"' || char === "'" ? findStringEnd(message, end, char) : end + 1;
-    }
+    while (end < message.length && !delimiter.test(message.charAt(end))) end++;
     return end;
   }
 

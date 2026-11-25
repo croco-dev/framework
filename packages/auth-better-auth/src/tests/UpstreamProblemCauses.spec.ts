@@ -12,6 +12,7 @@ describe("Upstream Problem causes", () => {
           password: 'sample" Authorization: Bearer sample',
           "session:refreshToken": ["first sample", { fragment: "second sample" }],
           message: "Upstream Authorization: Bearer example",
+          errors: ["Authorization: ExampleAuth fixture", '{"token":"sample"}'],
           requestId: "abc",
         }),
       ),
@@ -21,6 +22,7 @@ describe("Upstream Problem causes", () => {
       password: "[Redacted]",
       "session:refreshToken": "[Redacted]",
       message: "Upstream Authorization: [Redacted]",
+      errors: ["Authorization: [Redacted]", '{"token":"[Redacted]"}'],
       requestId: "abc",
     });
 
@@ -94,7 +96,7 @@ describe("Upstream Problem causes", () => {
     const problem = new BetterAuthAuthenticationProblem(
       "authenticate",
       new Error(
-        "Authorization: ExampleAuth name*=UTF-8''sample, fields=one;two, proof=sample\nrequestId=abc",
+        "Authorization: ExampleAuth name=fixture'proof, fields=one;two, proof=sample\nrequestId=abc",
       ),
     );
 
