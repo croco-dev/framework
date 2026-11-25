@@ -1184,6 +1184,12 @@
       "owner": "@croco/auth-core"
     },
     {
+      "path": "packages/auth-core/src/tests/RequirePermission.spec.ts",
+      "lane": "fast",
+      "qualifiers": ["coverage"],
+      "owner": "@croco/auth-core"
+    },
+    {
       "path": "packages/auth-core/src/tests/Role.spec.ts",
       "lane": "fast",
       "qualifiers": ["coverage"],

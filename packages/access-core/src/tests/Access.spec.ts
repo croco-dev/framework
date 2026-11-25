@@ -38,6 +38,37 @@ describe("Access", () => {
     expect(viewMetadata.relation).toBe("viewer");
   });
 
+  it("should reject a second access rule during method declaration", () => {
+    expect(() => {
+      class DocumentController {
+        @Access("document", "editor")
+        @Access("folder", "viewer")
+        update() {}
+      }
+
+      return DocumentController;
+    }).toThrow(expect.objectContaining({ code: "access-core/duplicate-access-declaration" }));
+  });
+
+  it("should allow a subclass to declare its own rule on an overridden method", () => {
+    class BaseController {
+      @Access("document", "viewer")
+      read() {}
+    }
+
+    class DocumentController extends BaseController {
+      @Access("document", "editor")
+      override read() {}
+    }
+
+    expect(Reflect.getMetadata(ACCESS_METADATA_KEY, BaseController, "read")).toMatchObject({
+      relation: "viewer",
+    });
+    expect(Reflect.getMetadata(ACCESS_METADATA_KEY, DocumentController, "read")).toMatchObject({
+      relation: "editor",
+    });
+  });
+
   it("should store metadata with different object types", () => {
     class TestController {
       @Access("document", "owner")

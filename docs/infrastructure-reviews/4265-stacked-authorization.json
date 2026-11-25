@@ -1,0 +1,101 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "access-core",
+      "classification": "pure-contract",
+      "reason": "Rejects a second access rule during method decoration.",
+      "files": {
+        "packages/access-core/src/libs/decorators/Access.ts": "e5b9b91245bad5906a4178483fb0e14e1a1f903670a67be675b5c219aee786a7"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "This contract requires no Node Host capability, storage, or lifecycle hook.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/access-core/src/libs/decorators/Access.ts"]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "This contract requires no Lambda invocation capability, storage, or lifecycle hook.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/access-core/src/libs/decorators/Access.ts"]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "This contract requires no Workers or Node Container capability, storage, or lifecycle hook.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/access-core/src/libs/decorators/Access.ts"]
+        }
+      }
+    },
+    {
+      "package": "auth-core",
+      "classification": "pure-contract",
+      "reason": "Keeps all permissions declared on the same method in the existing permission metadata.",
+      "files": {
+        "packages/auth-core/src/libs/decorators/RequirePermission.ts": "251cba52833a49dccf67dc8aee85748aa334bedb7836a8d777415368ce45357c"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "This contract requires no Node Host capability, storage, or lifecycle hook.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/auth-core/src/libs/decorators/RequirePermission.ts"]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "This contract requires no Lambda invocation capability, storage, or lifecycle hook.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/auth-core/src/libs/decorators/RequirePermission.ts"]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "This contract requires no Workers or Node Container capability, storage, or lifecycle hook.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/auth-core/src/libs/decorators/RequirePermission.ts"]
+        }
+      }
+    },
+    {
+      "package": "problems-core",
+      "classification": "pure-contract",
+      "reason": "Registers the duplicate access declaration Problem and its recovery guidance.",
+      "files": {
+        "packages/problems-core/src/generated/problem-code-registry.ts": "9ca5c3280ddfd6719baa8057f9414f12e220bfd68dfa0268b146790b6ce8f697"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "This contract requires no Node Host capability, storage, or lifecycle hook.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/problems-core/src/generated/problem-code-registry.ts"]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "This contract requires no Lambda invocation capability, storage, or lifecycle hook.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/problems-core/src/generated/problem-code-registry.ts"]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "This contract requires no Workers or Node Container capability, storage, or lifecycle hook.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/problems-core/src/generated/problem-code-registry.ts"]
+        }
+      }
+    }
+  ]
+}
