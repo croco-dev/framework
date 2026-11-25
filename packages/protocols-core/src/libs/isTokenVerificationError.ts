@@ -35,8 +35,13 @@ function isJsonWebTokenPayloadParseError(error: SyntaxError): boolean {
   // jsonwebtoken forwards the native SyntaxError from jws without a credential error code.
   // Require decoder frames so configuration and key lookup parsers can still fail as outages.
   const headline = `${error.name}: ${error.message}\n`;
-  const stack = error.stack;
-  if (!stack?.startsWith(headline)) {
+  let stack: unknown;
+  try {
+    stack = error.stack;
+  } catch {
+    return false;
+  }
+  if (typeof stack !== "string" || !stack.startsWith(headline)) {
     return false;
   }
 
@@ -69,14 +74,8 @@ export function isTokenVerificationError(error: unknown): boolean {
           error.message.endsWith(" is not supported either by JOSE or your javascript runtime"))
       );
     }
-    const cause = error.cause;
-    if (
-      error.code === "ERR_JWS_SIGNATURE_VERIFICATION_FAILED" &&
-      typeof cause === "object" &&
-      cause !== null &&
-      "name" in cause &&
-      (cause.name === "InvalidAccessError" || cause.name === "NotSupportedError")
-    ) {
+    // jose attaches a cause when WebCrypto throws instead of returning a signature verdict.
+    if (error.code === "ERR_JWS_SIGNATURE_VERIFICATION_FAILED" && Object.hasOwn(error, "cause")) {
       return false;
     }
     if (/^ERR_(JWT|JWS|JWE|JWK|JWKS|JOSE)_/.test(error.code)) {

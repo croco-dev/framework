@@ -116,9 +116,35 @@ export const unavailableJwtVerifierCases = [
     },
   },
   {
+    name: "jose signature check with a failed crypto operation",
+    verifier: () => {
+      throw new errors.JWSSignatureVerificationFailed(undefined, {
+        cause: new DOMException("Verification operation failed", "OperationError"),
+      });
+    },
+  },
+  {
     name: "verifier configuration JSON parse failure",
     token: invalidJsonJwt,
     verifier: () => JSON.parse("not JSON"),
+  },
+  {
+    name: "verifier failure with structured stack frames",
+    verifier: () => {
+      throw Object.defineProperty(new SyntaxError("Invalid verifier configuration"), "stack", {
+        value: [],
+      });
+    },
+  },
+  {
+    name: "verifier failure with an unavailable stack formatter",
+    verifier: () => {
+      throw Object.defineProperty(new SyntaxError("Invalid verifier configuration"), "stack", {
+        get() {
+          throw new TypeError("Could not format the stack");
+        },
+      });
+    },
   },
   {
     name: "jsonwebtoken key lookup failure",
