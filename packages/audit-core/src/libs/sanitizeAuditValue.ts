@@ -16,6 +16,7 @@ const VALUE_GAP = String.raw`[ \t]*(?:${HEADER_CONTINUATION})*`;
 const ASSIGNMENT_SEPARATOR = String.raw`(?:(?<=["'])\s*[:=]\s*|[ \t]*=${VALUE_GAP})`;
 const OBJECT_PROPERTY_SEPARATOR = String.raw`(?<=["']|[{,]\s*${AUTHORIZATION_NAME})\s*:\s*`;
 const OBJECT_PROPERTY_END = String.raw`(?=\s*(?:}|,\s*(?:${DIAGNOSTIC_LITERAL}|[\w$]+)\s*:))`;
+const OBJECT_SCALAR = String.raw`(?:null|undefined|true|false|NaN|[+-]?(?:Infinity|\d+n|\d+(?:\.\d+)?(?:e[+-]?\d+)?))`;
 // RFC 9110 permits apostrophes in scheme tokens and defines token68 and named credential parameters.
 const CREDENTIAL_GAP = String.raw`(?:[ \t]*(?:${HEADER_CONTINUATION})+|[ \t]+)`;
 const HTTP_CREDENTIAL = String.raw`(?:(?:,${VALUE_GAP})*${HTTP_TOKEN_CHARACTER}+${VALUE_GAP}=|[a-z0-9._~+/-]+=*(?=[ \t]*(?:[\r\n]|$)))`;
@@ -24,7 +25,7 @@ const APOSTROPHE_SCHEME =
   String.raw`(?=${HTTP_TOKEN_CHARACTER}*?')${HTTP_TOKEN_CHARACTER}*${CREDENTIAL_GAP}\S|` +
   String.raw`${HTTP_TOKEN_CHARACTER}*${CREDENTIAL_GAP}${HTTP_CREDENTIAL})`;
 const AUTHORIZATION_VALUE =
-  String.raw`(?:${OBJECT_PROPERTY_SEPARATOR}(?:(null)|(${QUOTED_DIAGNOSTIC_TEXT}))${OBJECT_PROPERTY_END}|` +
+  String.raw`(?:${OBJECT_PROPERTY_SEPARATOR}(${QUOTED_DIAGNOSTIC_TEXT}|${OBJECT_SCALAR})${OBJECT_PROPERTY_END}|` +
   String.raw`${ASSIGNMENT_SEPARATOR}(${QUOTED_DIAGNOSTIC_TEXT})(?!${HTTP_TOKEN_CHARACTER})|` +
   String.raw`[ \t]*:${VALUE_GAP}(?!${APOSTROPHE_SCHEME})(${QUOTED_SECRET_VALUE.source})|` +
   String.raw`[ \t]*[:=]${VALUE_GAP}(\S[^\r\n]*(?:${HEADER_CONTINUATION}[^\r\n]*)*))`;
@@ -160,20 +161,21 @@ function sanitizeAuthorizationText(value: string): string {
       match,
       _indent,
       _keyQuote,
-      absentValue?,
-      objectQuotedValue?,
+      objectValue?,
       assignedValue?,
       headerQuotedValue?,
       unquotedValue?,
     ) => {
-      if (absentValue !== undefined) return match;
+      if (objectValue?.toLowerCase() === "null") return match;
 
-      const quotedValue: string | undefined =
-        objectQuotedValue ?? assignedValue ?? headerQuotedValue;
-      const authorizationValue: string | undefined = quotedValue ?? unquotedValue;
+      const quotedValue: string | undefined = assignedValue ?? headerQuotedValue;
+      const authorizationValue = objectValue ?? quotedValue ?? unquotedValue;
       if (authorizationValue !== undefined) {
         const prefix = match.slice(0, -authorizationValue.length);
-        const quote = quotedValue?.[0] ?? "";
+        const quote =
+          objectValue === undefined
+            ? (quotedValue?.[0] ?? "")
+            : (objectValue.match(/^["'`]/)?.[0] ?? '"');
         return `${prefix}${quote}${REDACTED_VALUE}${quote}`;
       }
 

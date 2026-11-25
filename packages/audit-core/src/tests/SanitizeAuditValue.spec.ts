@@ -23,6 +23,18 @@ describe("sanitizeAuditValue", () => {
       "{ requestId: 'abc', 'Proxy-Authorization': null }",
     ],
     [
+      inspect({ Authorization: undefined, requestId: "abc" }),
+      "{ Authorization: \"[Redacted]\", requestId: 'abc' }",
+    ],
+    [
+      inspect({ Authorization: false, requestId: "abc" }),
+      "{ Authorization: \"[Redacted]\", requestId: 'abc' }",
+    ],
+    [
+      JSON.stringify({ "Proxy-Authorization": -1.25e-12, requestId: "abc" }),
+      '{"Proxy-Authorization":"[Redacted]","requestId":"abc"}',
+    ],
+    [
       inspect({ Authorization: 'Digest realm="fixture"', requestId: "abc" }),
       "{ Authorization: '[Redacted]', requestId: 'abc' }",
     ],
