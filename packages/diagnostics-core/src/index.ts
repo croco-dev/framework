@@ -18,6 +18,7 @@ export {
   InvalidDiagnosticsTimeoutProblem,
   MAX_DIAGNOSTICS_TIMEOUT_MS,
 } from "./libs/problems/DiagnosticsProblems";
+export { redactDiagnosticCredentials } from "./libs/redactDiagnosticCredentials";
 export type {
   CreateDiagnosticMessageOptions,
   DiagnosticCategory,

@@ -8735,7 +8735,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/auth-clerk/src/libs/problems/ClerkProblems.ts";
-          readonly line: 133;
+          readonly line: 134;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -8763,7 +8763,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/auth-clerk/src/libs/problems/ClerkProblems.ts";
-          readonly line: 173;
+          readonly line: 174;
           readonly column: 5;
           readonly kind: "problem-constructor";
         },
@@ -8791,7 +8791,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/auth-clerk/src/libs/problems/ClerkProblems.ts";
-          readonly line: 18;
+          readonly line: 19;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -8819,7 +8819,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/auth-clerk/src/libs/problems/ClerkProblems.ts";
-          readonly line: 122;
+          readonly line: 123;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -8847,7 +8847,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/auth-clerk/src/libs/problems/ClerkProblems.ts";
-          readonly line: 160;
+          readonly line: 161;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -8875,7 +8875,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/auth-clerk/src/libs/problems/ClerkProblems.ts";
-          readonly line: 73;
+          readonly line: 74;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -8903,7 +8903,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/auth-clerk/src/libs/problems/ClerkProblems.ts";
-          readonly line: 98;
+          readonly line: 99;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -8931,7 +8931,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/auth-clerk/src/libs/problems/ClerkProblems.ts";
-          readonly line: 148;
+          readonly line: 149;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -8959,7 +8959,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/auth-clerk/src/libs/problems/ClerkProblems.ts";
-          readonly line: 54;
+          readonly line: 55;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -8987,7 +8987,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/auth-clerk/src/libs/problems/ClerkProblems.ts";
-          readonly line: 35;
+          readonly line: 36;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -9015,7 +9015,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/auth-clerk/src/libs/problems/ClerkProblems.ts";
-          readonly line: 7;
+          readonly line: 8;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -43580,7 +43580,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/auth-clerk/src/libs/problems/ClerkProblems.ts",
-          line: 133,
+          line: 134,
           column: 1,
           kind: "problem-class",
         },
@@ -43612,7 +43612,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/auth-clerk/src/libs/problems/ClerkProblems.ts",
-          line: 173,
+          line: 174,
           column: 5,
           kind: "problem-constructor",
         },
@@ -43642,7 +43642,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/auth-clerk/src/libs/problems/ClerkProblems.ts",
-          line: 18,
+          line: 19,
           column: 1,
           kind: "problem-class",
         },
@@ -43672,7 +43672,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/auth-clerk/src/libs/problems/ClerkProblems.ts",
-          line: 122,
+          line: 123,
           column: 1,
           kind: "problem-class",
         },
@@ -43704,7 +43704,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/auth-clerk/src/libs/problems/ClerkProblems.ts",
-          line: 160,
+          line: 161,
           column: 1,
           kind: "problem-class",
         },
@@ -43734,7 +43734,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/auth-clerk/src/libs/problems/ClerkProblems.ts",
-          line: 73,
+          line: 74,
           column: 1,
           kind: "problem-class",
         },
@@ -43767,7 +43767,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/auth-clerk/src/libs/problems/ClerkProblems.ts",
-          line: 98,
+          line: 99,
           column: 1,
           kind: "problem-class",
         },
@@ -43800,7 +43800,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/auth-clerk/src/libs/problems/ClerkProblems.ts",
-          line: 148,
+          line: 149,
           column: 1,
           kind: "problem-class",
         },
@@ -43833,7 +43833,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/auth-clerk/src/libs/problems/ClerkProblems.ts",
-          line: 54,
+          line: 55,
           column: 1,
           kind: "problem-class",
         },
@@ -43866,7 +43866,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/auth-clerk/src/libs/problems/ClerkProblems.ts",
-          line: 35,
+          line: 36,
           column: 1,
           kind: "problem-class",
         },
@@ -43896,7 +43896,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/auth-clerk/src/libs/problems/ClerkProblems.ts",
-          line: 7,
+          line: 8,
           column: 1,
           kind: "problem-class",
         },

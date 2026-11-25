@@ -14,6 +14,25 @@ import {
 } from "../libs/problems/ClerkProblems";
 
 describe("ClerkProblems", () => {
+  it.each([
+    ["ClerkTokenVerificationProblem", ClerkTokenVerificationProblem],
+    ["ClerkTokenVerificationUpstreamProblem", ClerkTokenVerificationUpstreamProblem],
+  ])(
+    "%s redacts authorization and quoted secrets in the detail and cause",
+    (_name, VerificationProblem) => {
+      const problem = new VerificationProblem(
+        new Error(
+          'Authorization: Bearer fixture-value\n{"token":"fixture-token","requestId":"abc"}',
+        ),
+      );
+      const redacted = 'Authorization: [Redacted]\n{"token":"[Redacted]","requestId":"abc"}';
+
+      expect(problem.detail).toContain(redacted);
+      expect(problem.cause?.message).toBe(redacted);
+      expect(problem.toJSON().detail).toContain(redacted);
+    },
+  );
+
   describe("WebhookVerificationProblem", () => {
     it("has correct code and category", () => {
       const problem = new WebhookVerificationProblem();
@@ -53,9 +72,28 @@ describe("ClerkProblems", () => {
     });
 
     it("redacts sensitive detail values", () => {
-      const problem = new ClerkTokenVerificationProblem("secret=sk_test_123 token=tok_123");
+      const problem = new ClerkTokenVerificationProblem(
+        "secret\n=\nfixture]part}last token=tok_123",
+      );
 
-      expect(problem.detail).toBe("secret=[Redacted] token=[Redacted]");
+      expect(problem.detail).toBe("secret\n=\n[Redacted] token=[Redacted]");
+    });
+
+    it.each([
+      ['"token=fixture : note": upstream error', '"token=[Redacted] : note": upstream error'],
+      [
+        '"upstream\t token=fixture; reason=unavailable"',
+        '"upstream\t token=[Redacted]; reason=unavailable"',
+      ],
+    ])("redacts assignments inside quoted diagnostic prose", (detail, expected) => {
+      expect(new ClerkTokenVerificationProblem(detail).detail).toBe(expected);
+    });
+
+    it("retains a separate diagnostic after an empty Authorization header", () => {
+      const detail = "Authorization:\r\nrequestId=abc provider=ready";
+      const problem = new ClerkTokenVerificationProblem(detail);
+
+      expect(problem.detail).toBe(detail);
     });
   });
 

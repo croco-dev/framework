@@ -14,6 +14,11 @@ reported without ad hoc strings.
 - `ErrorHistoryRingBuffer` - bounded error history for diagnostics output.
 - Diagnostic code helpers - validate, format, and describe stable Croco diagnostic
   codes.
+- `redactDiagnosticCredentials` masks fields in diagnostic text with a caller-supplied
+  sensitive-key pattern. It matches unquoted labels by suffix and applies the pattern to the
+  full decoded key in JSON. Parameterized Authorization values are masked through the end of
+  the line when inline delimiters could belong to the value. Providers handle known secret
+  values that appear without a field name.
 - `DuplicateDiagnosticsProviderProblem` - Problem emitted for duplicate provider
   registration.
 - `InvalidDiagnosticsTimeoutProblem` - Problem emitted when a default or per-provider
