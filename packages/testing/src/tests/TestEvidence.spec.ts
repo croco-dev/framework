@@ -1145,7 +1145,7 @@ for (const [title, label] of ${JSON.stringify([
       symlinkSync(vitestDirectory, resolve(workspace, "node_modules/vitest"), "dir");
       writeFileSync(
         resolve(workspace, "Run.spec.mjs"),
-        "import {test, expect} from 'vitest'; test('same test', () => expect(process.env.CROCO_FIXTURE_PASS).toBe('yes'));",
+        "import {test} from 'vitest'; test('same test', () => { if (process.env.CROCO_FIXTURE_PASS !== 'yes') throw new Error('fixture failure'); });",
       );
       writeFileSync(
         resolve(workspace, "vitest.config.mjs"),
@@ -1172,6 +1172,7 @@ for (const [title, label] of ${JSON.stringify([
           },
         );
         expect(result.status, result.stdout + result.stderr).toBe(expectedExit);
+        expect(result.stderr).not.toContain("Unhandled Errors");
       }
       const bundles = readdirSync(resolve(outputDirectory, "runs")).map((runId) => {
         const directory = resolve(outputDirectory, "runs", runId);
@@ -1183,6 +1184,12 @@ for (const [title, label] of ${JSON.stringify([
       });
       expect(bundles.map(({ status }) => status).sort()).toEqual(["failed", "passed"]);
       expect(bundles.every(({ records }) => records.length === 1)).toBe(true);
+      expect(bundles.find(({ status }) => status === "failed")?.records[0]?.diagnostics).toEqual([
+        {
+          code: "CROCO_VITEST_TEST_FAILED",
+          recoveryAction: expect.stringContaining("fixture failure"),
+        },
+      ]);
     } finally {
       rmSync(workspace, { force: true, recursive: true });
     }
@@ -1353,7 +1360,12 @@ for (const [title, label] of ${JSON.stringify([
     }
   });
 
-  it("emits default Vitest failure diagnostics from runner errors", async () => {
+  it.each([
+    { error: new Error("expected true"), recovery: "Inspect the runner failure: expected true" },
+    { error: "plain failure", recovery: "Inspect the runner failure: plain failure" },
+    { error: undefined, recovery: "Inspect the runner output." },
+    { error: { toString: null, valueOf: null }, recovery: "Inspect the runner output." },
+  ])("emits default Vitest failure diagnostics for $error", async ({ error, recovery }) => {
     const write = vi.fn();
     const reporter = new CrocoVitestEvidenceReporter({ fidelity: isolatedFidelity, write });
     await reporter.onTestCaseResult({
@@ -1361,14 +1373,14 @@ for (const [title, label] of ${JSON.stringify([
       name: "fails",
       fullName: "suite fails",
       diagnostic: () => ({ duration: 1, flaky: false, retryCount: 0 }),
-      result: () => ({ errors: [new Error("expected true")], state: "failed" }),
+      result: () => ({ errors: [error], state: "failed" }),
     });
     expect(write).toHaveBeenCalledWith(
       expect.objectContaining({
         diagnostics: [
           expect.objectContaining({
             code: "CROCO_VITEST_TEST_FAILED",
-            recoveryAction: expect.stringContaining("expected true"),
+            recoveryAction: `Vitest test 'suite fails' failed. ${recovery}`,
           }),
         ],
       }),
@@ -1391,8 +1403,7 @@ for (const [title, label] of ${JSON.stringify([
     reporter.onTestEnd(test, {
       attachments: [{ name: "trace", path: "test-results/trace.zip" }],
       duration: 10,
-      error: new Error("page did not load"),
-      errors: [new Error("page did not load")],
+      errors: [{ message: "page did not load", stack: "test stack" }],
       retry: 0,
       status: "failed",
     });

@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "testing",
+      "classification": "pure-contract",
+      "reason": "The test reporters preserve failure records and extract messages from serialized runner errors using the existing evidence schema.",
+      "files": {
+        "packages/testing/src/libs/test-evidence-reporters.ts": "16c43d04be758f7766107a4badb50f2c33003314a92c03fa8d2ca60af36ee8e2"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The Node test runner formats the diagnostic locally. It does not execute in the application Host or use cluster storage or lifecycle hooks.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/testing/src/tests/TestEvidence.spec.ts"]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Diagnostic formatting runs in the test runner and does not use Lambda execution, storage, invocation, or shutdown behavior.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/testing/src/tests/TestEvidence.spec.ts"]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The Node test runner handles serialized errors without a Workers or Container Host or a Cloudflare binding.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/testing/src/tests/TestEvidence.spec.ts"]
+        }
+      }
+    }
+  ]
+}
