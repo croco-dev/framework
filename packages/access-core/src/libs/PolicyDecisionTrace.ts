@@ -85,13 +85,16 @@ const AUTHORIZATION_LABEL = "(?:proxy[-_])?authorization";
 const ASSIGNMENT_SEPARATOR = String.raw`[ \t]*[:=][ \t]*`;
 const DOUBLE_QUOTED_TEXT = /"(?:\\[^\r\n]|[^"\\\r\n])*"/;
 const SINGLE_QUOTED_TEXT = /'(?:\\[^\r\n]|[^'\\\r\n])*'/;
-const QUOTED_VALUE = String.raw`(?:${DOUBLE_QUOTED_TEXT.source}|(?='(?:\\[^\r\n]|[^'\\\r\n])*[ \t;])${SINGLE_QUOTED_TEXT.source}|${SINGLE_QUOTED_TEXT.source}(?=[ \t]*(?:[,;}&\]\r\n]|$)))`;
+const NEXT_DIAGNOSTIC_FIELD = String.raw`[a-z][\w-]*(?:[ \t]+[\w-]+)*[ \t]*:`;
+const QUOTED_VALUE = String.raw`(?:${DOUBLE_QUOTED_TEXT.source}|(?='(?:\\[^\r\n]|[^'\\\r\n])*[ \t;])${SINGLE_QUOTED_TEXT.source}|${SINGLE_QUOTED_TEXT.source}(?=[ \t]*(?:[,;}&\]\r\n]|${NEXT_DIAGNOSTIC_FIELD}|$)))`;
 const HEADER_CONTINUATION = String.raw`(?:\r\n|[\r\n])\k<indent>[ \t]+`;
-const HEADER_QUOTED_PARAM = String.raw`"(?:\\[^\r\n]|[^"\\\r\n]|${HEADER_CONTINUATION})*(?:"|\\?(?=[\r\n]|$))`;
+const HEADER_END = String.raw`\\?(?=[\r\n]|$)`;
+const HEADER_QUOTED_PARAM = String.raw`"(?:\\[^\r\n]|[^"\\\r\n]|${HEADER_CONTINUATION})*(?:"|${HEADER_END})`;
+const TRUNCATED_SINGLE_QUOTED_VALUE = String.raw`'(?:\\[^\r\n]|[^'\\\r\n]|${HEADER_CONTINUATION})*${HEADER_END}`;
 const UNQUOTED_HEADER_VALUE = String.raw`(?![ \t])(?:[^";\r\n]|${HEADER_QUOTED_PARAM}|${HEADER_CONTINUATION})+`;
-const AUTHORIZATION_ASSIGNMENT = String.raw`((?:^(?<indent>[ \t]*)|)(?<keyQuote>["']?)${AUTHORIZATION_LABEL}\k<keyQuote>${ASSIGNMENT_SEPARATOR})(?:(${QUOTED_VALUE})|[^\s,;&"']+(?=[,&])|${UNQUOTED_HEADER_VALUE})`;
+const AUTHORIZATION_ASSIGNMENT = String.raw`((?:^(?<indent>[ \t]*)|)(?<keyQuote>["']?)${AUTHORIZATION_LABEL}\k<keyQuote>${ASSIGNMENT_SEPARATOR})(?:(${QUOTED_VALUE})|${TRUNCATED_SINGLE_QUOTED_VALUE}|[^\s,;&"']+(?=[,&])|${UNQUOTED_HEADER_VALUE})`;
 const AUTHORIZATION_OR_QUOTED_TEXT = new RegExp(
-  `${AUTHORIZATION_ASSIGNMENT}|${DOUBLE_QUOTED_TEXT.source}|${SINGLE_QUOTED_TEXT.source}`,
+  String.raw`${AUTHORIZATION_ASSIGNMENT}|(?<![\w\\])(?:${DOUBLE_QUOTED_TEXT.source}|${SINGLE_QUOTED_TEXT.source})`,
   "gim",
 );
 const DEFAULT_SENSITIVE_VALUE_PATTERN =
