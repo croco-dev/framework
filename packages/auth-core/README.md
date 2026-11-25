@@ -87,7 +87,7 @@ class ProjectController {
 
 - `@Public`, 공개 엔드포인트를 표시합니다.
 - `@RequireApiKey`, API 키 인증이 필요한 엔드포인트를 표시합니다.
-- `@RequirePermission`, 필요한 권한을 선언합니다.
+- `@RequirePermission`은 한 메서드에 나열하거나 여러 번 선언한 권한을 모두 요구합니다.
 - `@CurrentPrincipal`, `@CurrentApiKey`, `@User`, 현재 인증 주체를 주입합니다.
 
 ### 주요 타입

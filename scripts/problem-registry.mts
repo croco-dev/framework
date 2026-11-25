@@ -3762,6 +3762,15 @@ const recoveryMetadataByCategory = {
 } as const satisfies Record<ProblemCategory, ProblemRecoveryMetadata>;
 
 const recoveryMetadataByCode = {
+  "access-core/duplicate-access-declaration": recovery({
+    cause: "A method declares more than one @Access rule.",
+    userAction: "Ask the application maintainer to correct the access policy.",
+    operatorAction:
+      "Inspect the named method and declare one @Access rule that enforces the intended policy before restarting the application.",
+    retryability: "not-retryable",
+    redactionPolicy: "operator-only",
+    severity: "error",
+  }),
   "metrics-core/invalid-revenue-carrying-capacity-metric": recovery({
     cause:
       "The selected revenue metrics contain invalid net retention or yield a non-finite capacity.",

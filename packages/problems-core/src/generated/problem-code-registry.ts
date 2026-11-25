@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export type CrocoProblemRegistry = {
   readonly version: "croco.problem-code-registry.v1";
-  readonly problemCount: 1197;
+  readonly problemCount: 1198;
   readonly problems: readonly [
     {
       readonly code: "ACCESS_DENIED";
@@ -4538,6 +4538,34 @@ export type CrocoProblemRegistry = {
           readonly line: 3;
           readonly column: 1;
           readonly kind: "problem-class";
+        },
+      ];
+    },
+    {
+      readonly code: "access-core/duplicate-access-declaration";
+      readonly category: "InternalServerError";
+      readonly status: 500;
+      readonly title: "Internal Server Error";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#access-core-duplicate-access-declaration";
+      readonly recovery: {
+        readonly cause: "A method declares more than one @Access rule.";
+        readonly userAction: "Ask the application maintainer to correct the access policy.";
+        readonly operatorAction: "Inspect the named method and declare one @Access rule that enforces the intended policy before restarting the application.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "operator-only";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.error";
+          readonly severity: "error";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/access-core/src/libs/decorators/Access.ts";
+          readonly line: 11;
+          readonly column: 5;
+          readonly kind: "problem-constructor";
         },
       ];
     },
@@ -33830,7 +33858,7 @@ export type CrocoProblemRegistry = {
 
 export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 1197,
+  problemCount: 1198,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -38872,6 +38900,38 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
           line: 3,
           column: 1,
           kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "access-core/duplicate-access-declaration",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#access-core-duplicate-access-declaration",
+      recovery: {
+        cause: "A method declares more than one @Access rule.",
+        userAction: "Ask the application maintainer to correct the access policy.",
+        operatorAction:
+          "Inspect the named method and declare one @Access rule that enforces the intended policy before restarting the application.",
+        retryability: "not-retryable",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/access-core/src/libs/decorators/Access.ts",
+          line: 11,
+          column: 5,
+          kind: "problem-constructor",
         },
       ],
     },
