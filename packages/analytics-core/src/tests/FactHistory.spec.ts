@@ -234,6 +234,41 @@ describe("FactHistory", () => {
       false,
     );
   });
+  it.each([
+    ["moves the start later", { validFrom: time(12) }, time(12)],
+    ["moves the end earlier", { validTo: time(11) }, time(10)],
+  ])("withdraws the original when a correction %s", async (_, interval, correctedEffectiveAt) => {
+    const original = row();
+    const correction = row({
+      id: "correction",
+      sourceEventId: "corrected-event",
+      supersedes: original.id,
+      recordedAt: time(12),
+      value: true,
+      ...interval,
+    });
+    const service = new FactHistoryService(store([original, correction]), [definition], {
+      authorize: () => undefined,
+      mask: (value) => value,
+    });
+
+    expect(await service.readFactsAt(query({ knownAt: time(11) }))).toMatchObject({
+      status: "known",
+      value: false,
+      provenance: [original],
+    });
+    expect(await service.readFactsAt(query({ knownAt: time(12) }))).toEqual({
+      status: "unknown",
+      provenance: [],
+      effectiveAt: time(11),
+      knownAt: time(12),
+    });
+    expect(await service.readFactsAt(query({ effectiveAt: correctedEffectiveAt }))).toMatchObject({
+      status: "known",
+      value: true,
+      provenance: [correction],
+    });
+  });
   it("selects one generation, subject kind and tenant", () => {
     const rows = [
       row(),

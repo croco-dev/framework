@@ -266,7 +266,8 @@ export function evaluateFactsAt(
       compareTimestamps(parseTimestamp(row.validFrom), effective) <= 0 &&
       (row.validTo === undefined || compareTimestamps(effective, parseTimestamp(row.validTo)) < 0),
   );
-  const superseded = new Set(candidates.flatMap((row) => (row.supersedes ? [row.supersedes] : [])));
+  // A recorded correction replaces its original even outside the corrected effective interval.
+  const superseded = new Set(visible.flatMap((row) => (row.supersedes ? [row.supersedes] : [])));
   let active = candidates.filter((row) => !superseded.has(row.id));
   if (definition.sourcePriority && active.length > 1) {
     const priorities = definition.sourcePriority;

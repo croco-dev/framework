@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "analytics-core",
+      "classification": "pure-contract",
+      "reason": "Fact History excludes a superseded row when its correction is known, including effective times outside the corrected interval. The evaluator uses the existing append-only history.",
+      "files": {
+        "packages/analytics-core/src/libs/FactHistory.ts": "66d9cf5c1d8f237494c0d349c8d83aea63a5ec3ba77058ee1758e3d7f7312575"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Supersession uses the rows loaded by the existing store and has no dependency on Node host capabilities, storage changes or deployment lifecycle.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/analytics-core/src/libs/FactHistory.ts"]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The evaluator runs on the returned history rows and has no dependency on Lambda invocation, connection or flush lifecycle.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/analytics-core/src/libs/FactHistory.ts"]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The evaluator uses only the provided history rows and timestamps. It requires no Workers binding, container or runtime API.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/analytics-core/src/libs/FactHistory.ts"]
+        }
+      }
+    }
+  ]
+}
