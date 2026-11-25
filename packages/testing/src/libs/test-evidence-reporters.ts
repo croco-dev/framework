@@ -595,14 +595,31 @@ function failureDiagnostics(
   fallback: string,
   failed: boolean,
 ): readonly TestEvidenceDiagnostic[] {
-  const messages = errors
-    .filter((error) => error !== undefined)
-    .map((error) => (error instanceof Error ? error.message : String(error)));
-  if (messages.length === 0) {
-    return failed ? [{ code, recoveryAction: `${fallback} Inspect the runner output.` }] : [];
+  const inspectRunnerOutput = `${fallback} Inspect the runner output.`;
+  const reportedErrors = errors.filter((error) => error !== undefined);
+  if (reportedErrors.length === 0) {
+    return failed ? [{ code, recoveryAction: inspectRunnerOutput }] : [];
   }
-  return messages.map((message) => ({
-    code,
-    recoveryAction: `${fallback} Inspect the runner failure: ${message}`,
-  }));
+  return reportedErrors.map((error) => {
+    const message = runnerFailureMessage(error);
+    return {
+      code,
+      recoveryAction:
+        message === undefined
+          ? inspectRunnerOutput
+          : `${fallback} Inspect the runner failure: ${message}`,
+    };
+  });
+}
+
+function runnerFailureMessage(error: unknown): string | undefined {
+  try {
+    if (typeof error === "object" && error !== null && "message" in error) {
+      const { message } = error;
+      if (typeof message === "string") return message;
+    }
+    return String(error);
+  } catch {
+    return undefined;
+  }
 }
