@@ -48,7 +48,7 @@
       "reason": "Classify JWT verifier exceptions for both protocol guards using error metadata and the original decoder frames for native jsonwebtoken parse errors.",
       "files": {
         "packages/protocols-core/src/index.ts": "26194989a2d0c707ec5ad86ac224ea2c8dd9f868fe98b5cb38867b1142a67ecf",
-        "packages/protocols-core/src/libs/isTokenVerificationError.ts": "733dc0b1c034ab0b2fdf21cfc28bb2c1ff34bc4f8dabee77af70dae535a76c1a"
+        "packages/protocols-core/src/libs/isTokenVerificationError.ts": "5bcbf318ea8619410fdb16449d3c63ccd8e79542a504455a37d1b7384772cd2f"
       },
       "catalogRuntimes": [],
       "profiles": {

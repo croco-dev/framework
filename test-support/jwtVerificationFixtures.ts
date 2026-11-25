@@ -1,5 +1,5 @@
 import { generateKeyPairSync } from "node:crypto";
-import { createRemoteJWKSet, customFetch, errors, jwtVerify } from "jose";
+import { createLocalJWKSet, createRemoteJWKSet, customFetch, errors, jwtVerify } from "jose";
 import jwt from "jsonwebtoken";
 
 const now = 1_700_000_000;
@@ -27,6 +27,7 @@ const unknownAlgorithmHeader = Buffer.from(
   JSON.stringify({ alg: "test-unknown", typ: "JWT" }),
 ).toString("base64url");
 const { privateKey, publicKey } = generateKeyPairSync("ec", { namedCurve: "P-256" });
+const localJwtKeys = createLocalJWKSet({ keys: [publicKey.export({ format: "jwk" })] });
 const [ecHeader, ecPayload] = jwt
   .sign({ sub: "test-user" }, privateKey, { algorithm: "ES256", noTimestamp: true })
   .split(".");
@@ -46,6 +47,11 @@ export const rejectedJwtCases = [
     name: "jose unknown signing algorithm",
     token: `${unknownAlgorithmHeader}.${knownPayload}.${knownSignature}`,
     verifier: verifyJoseJwt,
+  },
+  {
+    name: "jose unknown signing algorithm with a healthy key set",
+    token: `${unknownAlgorithmHeader}.${knownPayload}.${knownSignature}`,
+    verifier: (token: string) => jwtVerify(token, localJwtKeys),
   },
   { name: "jsonwebtoken expired token", token: expiredJwt, verifier: verifyJsonWebToken },
   {
@@ -100,6 +106,14 @@ export const unavailableJwtVerifierCases = [
       jwtVerify(token, () => {
         throw new errors.JOSENotSupported("Invalid or unsupported key format");
       }),
+  },
+  {
+    name: "jose signature check with an unusable verification key",
+    verifier: () => {
+      throw new errors.JWSSignatureVerificationFailed(undefined, {
+        cause: new DOMException("Cannot use the verification key", "InvalidAccessError"),
+      });
+    },
   },
   {
     name: "verifier configuration JSON parse failure",

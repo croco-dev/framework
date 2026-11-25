@@ -62,11 +62,22 @@ export function isTokenVerificationError(error: unknown): boolean {
   if ("code" in error && typeof error.code === "string") {
     if (error.code === "ERR_JOSE_NOT_SUPPORTED") {
       return (
+        error.message === 'Unsupported "alg" value for a JSON Web Key Set' ||
         (error.message.startsWith('Extension Header Parameter "') &&
           error.message.endsWith('" is not recognized')) ||
         (error.message.startsWith("alg ") &&
           error.message.endsWith(" is not supported either by JOSE or your javascript runtime"))
       );
+    }
+    const cause = error.cause;
+    if (
+      error.code === "ERR_JWS_SIGNATURE_VERIFICATION_FAILED" &&
+      typeof cause === "object" &&
+      cause !== null &&
+      "name" in cause &&
+      (cause.name === "InvalidAccessError" || cause.name === "NotSupportedError")
+    ) {
+      return false;
     }
     if (/^ERR_(JWT|JWS|JWE|JWK|JWKS|JOSE)_/.test(error.code)) {
       return JOSE_TOKEN_ERROR_CODES.has(error.code);
