@@ -132,7 +132,7 @@
     {
       "package": "@croco/protocols-core",
       "file": "packages/protocols-core/src/libs/ContractGraphConsumerCoverage.ts",
-      "line": 612,
+      "line": 628,
       "excerpt": "throw new Error(`Unknown contract graph consumer '${consumerId}'.`);",
       "reason": "Reviewed 2026-10-30 (#4004): getConsumerDefinition accepts only the closed ContractGraphConsumerId union. A missing definition is an invalid programmer-supplied consumer identity, not a valid graph diagnostic; preserve rejection instead of inventing coverage for an unknown consumer.",
       "owner": "framework-error-handling",

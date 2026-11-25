@@ -59,6 +59,59 @@ describe("GraphQL execution metadata inheritance", () => {
 
   afterEach(() => Container.reset());
 
+  it("runs base guards before stacked guards on an overriding resolver", async () => {
+    class BaseGuard {
+      canActivate() {
+        calls.push("base");
+        return true;
+      }
+    }
+    class ChildGuard {
+      canActivate() {
+        calls.push("child");
+        return true;
+      }
+    }
+    class OtherChildGuard {
+      canActivate() {
+        calls.push("other-child");
+        return true;
+      }
+    }
+    Container.set(BaseGuard, new BaseGuard());
+    Container.set(ChildGuard, new ChildGuard());
+    Container.set(OtherChildGuard, new OtherChildGuard());
+
+    @Resolver()
+    class BaseResolver {
+      @Query(() => String)
+      @UseGuards(BaseGuard)
+      inherited() {
+        return "base";
+      }
+    }
+    const baseSchema = await SchemaCompiler.compileSchema({
+      resolvers: [BaseResolver],
+      autoDiscover: false,
+    });
+
+    @Resolver()
+    class ChildResolver extends BaseResolver {
+      @UseGuards(ChildGuard)
+      @UseGuards(OtherChildGuard)
+      override inherited() {
+        return "child";
+      }
+    }
+
+    expect(await execute([ChildResolver])).toEqual({ data: { inherited: "child" } });
+    expect(calls.splice(0)).toEqual(["base", "other-child", "child"]);
+    expect(await graphql({ schema: baseSchema, source: "{ inherited }" })).toEqual({
+      data: { inherited: "base" },
+    });
+    expect(calls).toEqual(["base"]);
+  });
+
   it("executes the interceptor once for both the base and child schemas", async () => {
     @Resolver()
     class BaseResolver {

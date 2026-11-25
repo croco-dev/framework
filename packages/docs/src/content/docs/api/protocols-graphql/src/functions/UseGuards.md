@@ -9,7 +9,7 @@ title: "UseGuards"
 
 Associates Croco guards with a GraphQL resolver method.
 
-Guards execute in declaration order before the resolver method runs.
+Inherited guards execute before guards declared on the overriding method.
 
 ## Parameters
 

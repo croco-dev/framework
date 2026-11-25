@@ -32,6 +32,12 @@ the named field of the contract's input object. Object-level refinements cannot 
 represented as OpenAPI parameters, so only the field schema is emitted while runtime
 validation keeps the full refined schema.
 
+REST routes with guards include an `x-croco-guards` operation extension. It lists each
+guard's name and attachment scope (`controller` or `route`) in execution order, including
+inherited guards. Configure OpenAPI security schemes separately.
+Custom coverage callers that supply observed fields or fingerprints must include guard
+evidence for guarded routes. Earlier observations still validate for routes without guards.
+
 ## Verification
 
 ```bash

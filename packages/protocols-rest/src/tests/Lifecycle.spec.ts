@@ -180,7 +180,7 @@ describe("Lifecycle decorators stacking", () => {
       expect(executionOrder).toEqual(["guard1", "guard3", "guard2"]);
     });
 
-    it("should isolate subclass own metadata when derived class stacks guards", () => {
+    it("keeps inherited class guards ahead of stacked child guards without changing the base", () => {
       @Controller("/base")
       @UseGuards(GuardA)
       class BaseController {}
@@ -191,8 +191,37 @@ describe("Lifecycle decorators stacking", () => {
       class DerivedController extends BaseController {}
 
       expect(Reflect.getOwnMetadata(REST_GUARDS_KEY, BaseController)).toEqual([GuardA]);
-      expect(Reflect.getOwnMetadata(REST_GUARDS_KEY, DerivedController)).toEqual([GuardC, GuardB]);
+      expect(getGuards(DerivedController)).toEqual([GuardA, GuardC, GuardB]);
     });
+  });
+
+  it("keeps base method lifecycle metadata ahead of child metadata", () => {
+    const action = Symbol("action");
+
+    class BaseController {
+      @UseGuards(GuardA)
+      @UsePipes(PipeA)
+      @UseInterceptors(InterceptorA)
+      @UseFilters(FilterA)
+      [action]() {}
+    }
+
+    class DerivedController extends BaseController {
+      @UseGuards(GuardB)
+      @UsePipes(PipeB)
+      @UseInterceptors(InterceptorB)
+      @UseFilters(FilterB)
+      override [action]() {}
+    }
+
+    expect(getGuards(DerivedController, action)).toEqual([GuardA, GuardB]);
+    expect(getPipes(DerivedController, action)).toEqual([PipeA, PipeB]);
+    expect(getInterceptors(DerivedController, action)).toEqual([InterceptorA, InterceptorB]);
+    expect(getFilters(DerivedController, action)).toEqual([FilterA, FilterB]);
+    expect(getGuards(BaseController, action)).toEqual([GuardA]);
+    expect(getPipes(BaseController, action)).toEqual([PipeA]);
+    expect(getInterceptors(BaseController, action)).toEqual([InterceptorA]);
+    expect(getFilters(BaseController, action)).toEqual([FilterA]);
   });
 
   describe("@UsePipes stacking", () => {

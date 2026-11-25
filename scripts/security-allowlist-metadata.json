@@ -63,6 +63,13 @@
           "owner": "kang-heewon",
           "reason": "Issue #3866 infrastructure evidence contains public source SHA-256 digests, not credentials. The BetterAuthSessionManager.ts digest was independently recomputed from the tracked source blob at 105db03 and exactly matches the recorded value that triggers generic-api-key. This fully anchored evidence-record path survives squash merge; production source and all other review records remain scanned. Re-review the entire public-evidence record by the deadline.",
           "reviewBy": "2026-11-30"
+        },
+        {
+          "kind": "path",
+          "value": "^docs/infrastructure-reviews/issue-4260-inherited-lifecycle\\.json$",
+          "owner": "kang-heewon",
+          "reason": "Gitleaks reported the public emitOpenAPI.ts SHA-256 digest in the #4260 infrastructure review as a generic API key. The digest exactly matches the tracked source blob. This anchored path covers the single public review record across squash commits. Re-review the record by the deadline.",
+          "reviewBy": "2027-01-31"
         }
       ],
       "ignoreFingerprints": [

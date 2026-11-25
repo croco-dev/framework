@@ -273,6 +273,14 @@ function toRouteConfig(
     ...(route.entitlements.length > 0
       ? { "x-croco-entitlements": toOpenAPIEntitlements(route.entitlements) }
       : {}),
+    ...(route.access.guards.length > 0
+      ? {
+          "x-croco-guards": route.access.guards.map(({ name, declaredAt }) => ({
+            name,
+            declaredAt,
+          })),
+        }
+      : {}),
     ...(route.params.length > 0 || route.inputSchema ? { request: toRequestConfig(route) } : {}),
   };
 }
@@ -559,6 +567,7 @@ function collectOpenAPICoveredRoutes(
             : "absent",
           problems: openAPIProblemsFingerprint(operation),
           entitlements: openAPIEntitlementsFingerprint(operation),
+          "access.guards": openAPIGuardsFingerprint(operation),
         },
       });
     }
@@ -586,6 +595,7 @@ function collectOpenAPIConsumedFields(
     "response",
     "problems",
     "entitlements",
+    "access.guards",
   ];
 }
 
@@ -643,6 +653,12 @@ function openAPIEntitlementsFingerprint(operation: Record<string, unknown>): str
     : [];
 
   return JSON.stringify(entitlements.sort(compareOpenAPIEntitlementFingerprints));
+}
+
+function openAPIGuardsFingerprint(operation: Record<string, unknown>): string {
+  const guards = Array.isArray(operation["x-croco-guards"]) ? operation["x-croco-guards"] : [];
+
+  return JSON.stringify(guards.filter(isRecord).map(({ name, declaredAt }) => [name, declaredAt]));
 }
 
 function toOpenAPIProblemFingerprint(problem: Record<string, unknown>): DeclaredProblemOpenAPI {

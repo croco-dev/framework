@@ -1671,12 +1671,6 @@ describe("buildContractGraph", () => {
         code: "contract-consumer-unsupported-route-field",
         severity: "warning",
         routeId: "AdminController.listAdmins",
-        message: expect.stringContaining("access.guards"),
-      }),
-      expect.objectContaining({
-        code: "contract-consumer-unsupported-route-field",
-        severity: "warning",
-        routeId: "AdminController.listAdmins",
         message: expect.stringContaining("access.roles"),
       }),
       expect.objectContaining({
@@ -1693,10 +1687,7 @@ describe("buildContractGraph", () => {
       }),
     ]);
     const openApiCoverage = report.consumers.find((consumer) => consumer.consumerId === "openapi");
-    expect(openApiCoverage?.routes[0]?.unsupportedFields).toEqual([
-      "access.guards",
-      "access.roles",
-    ]);
+    expect(openApiCoverage?.routes[0]?.unsupportedFields).toEqual(["access.roles"]);
   });
 
   it("should reject generated consumers that omit graph routes", () => {
@@ -1778,6 +1769,33 @@ describe("buildContractGraph", () => {
       expect.stringContaining("problems"),
       expect.stringContaining("response"),
     ]);
+  });
+
+  it("should require guard evidence for guarded OpenAPI operations", () => {
+    class AuthGuard {}
+
+    @Controller("/reports")
+    @UseGuards(AuthGuard)
+    class ReportsController {
+      @Get("/")
+      list(): void {}
+    }
+
+    const graph = buildContractGraph([ReportsController]);
+    const diagnostics = getContractGraphConsumerRouteCoverageDiagnostics(graph, "openapi", [
+      {
+        routeId: "ReportsController.list",
+        operationId: "ReportsController_list",
+        fieldFingerprints: {},
+      },
+    ]);
+
+    expect(diagnostics).toContainEqual(
+      expect.objectContaining({
+        code: "contract-consumer-missing-generated-route-field",
+        message: expect.stringContaining("access.guards"),
+      }),
+    );
   });
 
   it("should reject admin-generated consumers that drift access metadata", () => {

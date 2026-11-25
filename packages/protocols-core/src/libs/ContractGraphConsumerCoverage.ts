@@ -108,8 +108,9 @@ export const DEFAULT_CONTRACT_GRAPH_CONSUMERS = [
       "response",
       "problems",
       "entitlements",
+      "access.guards",
     ],
-    unsupportedRouteFields: ["access.guards", "access.roles"],
+    unsupportedRouteFields: ["access.roles"],
   },
   {
     id: "rpc-client",
@@ -242,6 +243,16 @@ function getObservedRouteFieldDiagnostics(
     : undefined;
 
   for (const field of consumer.requiredRouteFields) {
+    // Older OpenAPI observations omit guard evidence for unguarded routes.
+    if (
+      consumer.id === "openapi" &&
+      field === "access.guards" &&
+      route.access.guards.length === 0 &&
+      observedRoute.fieldFingerprints?.[field] === undefined
+    ) {
+      continue;
+    }
+
     if (!hasRouteField(route, field)) {
       diagnostics.push(createMissingFieldDiagnostic(consumer, toRouteCoverage(route), field));
       continue;
@@ -363,6 +374,11 @@ function createRouteFieldFingerprint(
     case "entitlements":
       return entitlementRequirementsFingerprint(route.entitlements);
     case "access.guards":
+      if (consumerId === "openapi") {
+        return JSON.stringify(
+          route.access.guards.map(({ name, declaredAt }) => [name, declaredAt]),
+        );
+      }
       return accessGuardsFingerprint(route.access.guards);
     case "access.roles":
       return accessRolesFingerprint(route.access.roles);

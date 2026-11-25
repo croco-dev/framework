@@ -1,0 +1,133 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "openapi-spec",
+      "classification": "pure-contract",
+      "reason": "Emits the names and attachment scopes of effective REST guards in generated OpenAPI documents.",
+      "files": {
+        "packages/openapi-spec/src/libs/emitOpenAPI.ts": "d96faddff50983aa586f5cc633a3c97fa00c4ad3f6808af002075fef8420a5cd"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The metadata operation requires no Kubernetes capability, storage, or Node Host lifecycle hook.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/openapi-spec/src/libs/emitOpenAPI.ts"]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The metadata operation requires no Lambda capability, storage, or invocation lifecycle hook.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/openapi-spec/src/libs/emitOpenAPI.ts"]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The metadata operation requires no Worker or Node Container API, storage binding, or execution lifecycle hook.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/openapi-spec/src/libs/emitOpenAPI.ts"]
+        }
+      }
+    },
+    {
+      "package": "protocols-core",
+      "classification": "pure-contract",
+      "reason": "Checks that the guard names and scopes emitted in OpenAPI match the effective REST route contract.",
+      "files": {
+        "packages/protocols-core/src/libs/ContractGraphConsumerCoverage.ts": "879faace6e69c6f3b3289bb8792ab082e1af44cc40a7d2012bd8c749756a24dc"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The metadata operation requires no Kubernetes capability, storage, or Node Host lifecycle hook.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/protocols-core/src/libs/ContractGraphConsumerCoverage.ts"]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The metadata operation requires no Lambda capability, storage, or invocation lifecycle hook.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/protocols-core/src/libs/ContractGraphConsumerCoverage.ts"]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The metadata operation requires no Worker or Node Container API, storage binding, or execution lifecycle hook.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/protocols-core/src/libs/ContractGraphConsumerCoverage.ts"]
+        }
+      }
+    },
+    {
+      "package": "protocols-graphql",
+      "classification": "pure-contract",
+      "reason": "Extends inherited GraphQL guard metadata when a resolver overrides a method.",
+      "files": {
+        "packages/protocols-graphql/src/libs/decorators/Lifecycle.ts": "5f56ba26c47d65f25a910cbda91f57bef7ba29b25e135c9a9552d698b4e88a5e"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The metadata operation requires no Kubernetes capability, storage, or Node Host lifecycle hook.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/protocols-graphql/src/libs/decorators/Lifecycle.ts"]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The metadata operation requires no Lambda capability, storage, or invocation lifecycle hook.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/protocols-graphql/src/libs/decorators/Lifecycle.ts"]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The metadata operation requires no Worker or Node Container API, storage binding, or execution lifecycle hook.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/protocols-graphql/src/libs/decorators/Lifecycle.ts"]
+        }
+      }
+    },
+    {
+      "package": "protocols-rest",
+      "classification": "pure-contract",
+      "reason": "Extends inherited REST lifecycle metadata when a controller declares class or method policies.",
+      "files": {
+        "packages/protocols-rest/src/libs/decorators/Lifecycle.ts": "59d01ecd61b7cde4e63ab969bb1e3dc9bdd7ff0a57a1c3a2651b5b8b312255c3"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The metadata operation requires no Kubernetes capability, storage, or Node Host lifecycle hook.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/protocols-rest/src/libs/decorators/Lifecycle.ts"]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The metadata operation requires no Lambda capability, storage, or invocation lifecycle hook.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/protocols-rest/src/libs/decorators/Lifecycle.ts"]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The metadata operation requires no Worker or Node Container API, storage binding, or execution lifecycle hook.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/protocols-rest/src/libs/decorators/Lifecycle.ts"]
+        }
+      }
+    }
+  ]
+}

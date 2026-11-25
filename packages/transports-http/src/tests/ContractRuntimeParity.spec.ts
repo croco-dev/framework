@@ -30,6 +30,7 @@ import {
   ResponseSchema,
   type RouteHandlerReturn,
   routeProblemResponses,
+  UseGuards,
   UseInterceptors,
 } from "@croco/protocols-rest";
 import ts from "typescript";
@@ -419,6 +420,65 @@ describe("REST contract-to-runtime parity", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
     fs.rmSync(GENERATED_RPC_TEMP_ROOT, { recursive: true, force: true });
+  });
+
+  it("keeps inherited guards in HTTP, tRPC, and the route contracts", async () => {
+    const calls: string[] = [];
+    class BaseGuard {
+      canActivate() {
+        calls.push("base");
+        return true;
+      }
+    }
+    class ChildGuard {
+      canActivate() {
+        calls.push("child");
+        return true;
+      }
+    }
+    class MethodGuard {
+      canActivate() {
+        calls.push("method");
+        return true;
+      }
+    }
+
+    @Controller("/inherited")
+    @UseGuards(BaseGuard)
+    class BaseController {
+      @Get("/read")
+      @UseGuards(MethodGuard)
+      read(): string {
+        return "ok";
+      }
+    }
+    @Controller("/inherited")
+    @UseGuards(ChildGuard)
+    class InheritedController extends BaseController {}
+
+    const graph = buildContractGraph([InheritedController]);
+    const guards = [
+      { name: "BaseGuard", declaredAt: "controller" },
+      { name: "ChildGuard", declaredAt: "controller" },
+      { name: "MethodGuard", declaredAt: "route" },
+    ];
+    expect(
+      graph.routes[0]?.access.guards.map(({ name, declaredAt }) => ({ name, declaredAt })),
+    ).toEqual(guards);
+    expect(emitOpenAPIFromContractGraph(graph).paths?.["/inherited/read"]?.get).toMatchObject({
+      "x-croco-guards": guards,
+    });
+
+    const app = createApp({ controllers: [InheritedController], securityValidation: "off" });
+    const response = await app.fetch(new Request("http://localhost/inherited/read"));
+    expect(response.status).toBe(200);
+    expect(calls.splice(0)).toEqual(["base", "child", "method"]);
+
+    const caller = createTrpcRouter([InheritedController]).createCaller({}) as unknown as {
+      inherited: { read(): Promise<string> };
+    };
+    await expect(caller.inherited.read()).resolves.toBe("ok");
+    expect(calls).toEqual(["base", "child", "method"]);
   });
 
   it("rejects unknown strict query keys in both HTTP and tRPC", async () => {
