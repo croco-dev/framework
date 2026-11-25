@@ -21,6 +21,11 @@ const unsupportedHeaderJwt = jwt.sign({ sub: "test-user", exp: now + 60 }, signi
   noTimestamp: true,
 });
 const invalidJsonJwt = jwt.sign("not JSON", signingKey, { header: { alg: "HS256", typ: "JWT" } });
+const [jsonHeader, , jsonSignature] = invalidJsonJwt.split(".");
+const [, knownPayload, knownSignature] = testJwt.split(".");
+const unknownAlgorithmHeader = Buffer.from(
+  JSON.stringify({ alg: "test-unknown", typ: "JWT" }),
+).toString("base64url");
 const { privateKey, publicKey } = generateKeyPairSync("ec", { namedCurve: "P-256" });
 const [ecHeader, ecPayload] = jwt
   .sign({ sub: "test-user" }, privateKey, { algorithm: "ES256", noTimestamp: true })
@@ -37,6 +42,11 @@ export const rejectedJwtCases = [
   { name: "jose invalid signature", token: wrongSignatureJwt, verifier: verifyJoseJwt },
   { name: "jose malformed token", token: "malformed", verifier: verifyJoseJwt },
   { name: "jose unknown critical header", token: unsupportedHeaderJwt, verifier: verifyJoseJwt },
+  {
+    name: "jose unknown signing algorithm",
+    token: `${unknownAlgorithmHeader}.${knownPayload}.${knownSignature}`,
+    verifier: verifyJoseJwt,
+  },
   { name: "jsonwebtoken expired token", token: expiredJwt, verifier: verifyJsonWebToken },
   {
     name: "jsonwebtoken invalid signature",
@@ -47,6 +57,11 @@ export const rejectedJwtCases = [
   {
     name: "jsonwebtoken malformed payload JSON",
     token: invalidJsonJwt,
+    verifier: verifyJsonWebToken,
+  },
+  {
+    name: "jsonwebtoken malformed payload encoding",
+    token: `${jsonHeader}.A.${jsonSignature}`,
     verifier: verifyJsonWebToken,
   },
   {
@@ -88,6 +103,7 @@ export const unavailableJwtVerifierCases = [
   },
   {
     name: "verifier configuration JSON parse failure",
+    token: invalidJsonJwt,
     verifier: () => JSON.parse("not JSON"),
   },
   {

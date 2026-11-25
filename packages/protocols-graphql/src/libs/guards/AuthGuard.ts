@@ -75,7 +75,7 @@ export class GraphQLAuthGuard implements Guard<GraphQLGuardContext> {
         throw error;
       }
 
-      if (isTokenVerificationError(error, token)) {
+      if (isTokenVerificationError(error)) {
         throw invalidTokenProblem();
       }
 

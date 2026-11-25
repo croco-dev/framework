@@ -144,9 +144,9 @@ describe("GraphQLAuthGuard", () => {
 
   it.each(unavailableJwtVerifierCases)(
     "should report $name as verifier unavailable",
-    async ({ verifier }) => {
+    async ({ token = testJwt, verifier }) => {
       const context = createMockContext({
-        context: { headers: { authorization: `Bearer ${testJwt}` } },
+        context: { headers: { authorization: `Bearer ${token}` } },
       });
 
       await expect(new GraphQLAuthGuard({ verifier }).canActivate(context)).rejects.toMatchObject(

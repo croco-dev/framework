@@ -77,7 +77,7 @@ export class AuthGuard implements Guard<ExecutionContext> {
         throw error;
       }
 
-      if (isTokenVerificationError(error, token)) {
+      if (isTokenVerificationError(error)) {
         throw invalidTokenProblem();
       }
 

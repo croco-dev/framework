@@ -108,10 +108,10 @@ describe("AuthGuard", () => {
 
   it.each(unavailableJwtVerifierCases)(
     "should report $name as verifier unavailable",
-    async ({ verifier }) => {
+    async ({ token = testJwt, verifier }) => {
       mockContext.getRequest = vi
         .fn()
-        .mockReturnValue({ headers: { authorization: `Bearer ${testJwt}` } });
+        .mockReturnValue({ headers: { authorization: `Bearer ${token}` } });
 
       await expect(new AuthGuard({ verifier }).canActivate(mockContext)).rejects.toMatchObject(
         authGuardConformance.rest.verifierUnavailable,

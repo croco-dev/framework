@@ -5,19 +5,16 @@ prev: false
 title: "isTokenVerificationError"
 ---
 
-> **isTokenVerificationError**(`error`, `token`): `boolean`
+> **isTokenVerificationError**(`error`): `boolean`
 
 Identifies a credential rejection reported by a protocol guard's token verifier.
+Native jsonwebtoken payload parse errors require the original decoder stack frames.
 
 ## Parameters
 
 ### error
 
 `unknown`
-
-### token
-
-`string`
 
 ## Returns
 
