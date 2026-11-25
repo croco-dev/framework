@@ -134,7 +134,11 @@ await chunkExecutor.execute(executionId, loadStep, { startExecution: false });
 - `progress.current`와 완료 결과의 `processedCount`도 필터링된 입력을 포함합니다. 진행률 갱신은 유효한
   `progress.total`이 설정된 실행에만 적용됩니다.
 - 재시도 가능한 실패는 `execution-core`가 실행을 `retrying` 상태로 남기며, 다음 `execute()` 호출은 마지막
-  체크포인트를 reader에 복원합니다.
+  체크포인트를 reader에 복원합니다. 첫 청크의 체크포인트를 저장하기 전에 실패했다면 같은
+  `Checkpointable` reader를 실행 시작 위치로 되돌립니다. 이전 호출에서 아직 사용 중이거나 시작 위치를
+  복원할 수 없는 reader는 시작 위치로 초기화한 새 인스턴스로 교체한 뒤 재시도합니다.
+  실행 관리자가 바뀌었고 저장된 체크포인트가 없다면 기존 reader가 기록된 시작 위치에 있는지 확인합니다.
+  확인할 수 없으면 시작 위치로 초기화한 새 인스턴스로 재시도합니다.
 - 재시도할 때는 같은 체크포인트에서 커서와 누적 입력 건수를 복원합니다. `progress.total`을 설정하지
   않아도 완료 결과에는 복원한 건수가 포함됩니다. 진행률을 별도로 저장하다 실패한 경우에도 재시도 시
   복원한 건수로 갱신합니다. 기존 실행에 새 키가 없으면 `<스텝 이름>.cursor`와
@@ -146,7 +150,8 @@ await chunkExecutor.execute(executionId, loadStep, { startExecution: false });
 - `classifyFailure`가 실패하면 원래 오류 메시지는 유지하되 `batch-core/failure-classification-failed` 코드로
   실행 실패 메타데이터에 남깁니다. 분류기 오류가 실제 처리 실패를 성공처럼 숨기지 않습니다.
 
-운영 재시도 예:
+아래 운영 예제는 같은 reader를 되감을 수 있을 때 적용합니다. 시작 위치를 복원할 수 없으면 해당 위치로
+초기화한 새 reader로 `Step`을 만들고 같은 실행 ID로 재시도합니다.
 
 ```typescript
 const execution = await manager.create({

@@ -1,5 +1,5 @@
 import {
-  type CreateExecutionParams,
+  type CreateExecutionRecordParams,
   type Execution,
   type ExecutionManager,
   ExecutionManagerImpl,
@@ -1000,6 +1000,744 @@ describe("ChunkExecutor", () => {
     expect(writes).toEqual([[1, 2], [3], [3]]);
   });
 
+  it.each(["writer", "processor", "checkpoint"] as const)(
+    "replays all input with the same step after a first-chunk %s failure",
+    async (boundary) => {
+      const store = new TestExecutionStore();
+      const manager = new ExecutionManagerImpl(store);
+      const execution = await manager.create({ type: "import-users", maxAttempts: 2 });
+      const failure = new Error("first chunk failed");
+      if (boundary === "checkpoint") {
+        vi.spyOn(store, "mergeCheckpoint").mockRejectedValueOnce(failure);
+      }
+      const processor = { process: vi.fn(async (item: number) => item) };
+      if (boundary === "processor") processor.process.mockRejectedValueOnce(failure);
+      const writer = { write: vi.fn(async (_items: number[]) => {}) };
+      if (boundary === "writer") writer.write.mockRejectedValueOnce(failure);
+      const step = new Step({
+        name: "import-users",
+        reader: createCheckpointReader([1, 2, 3, 4]),
+        processor,
+        writer,
+        chunkSize: 2,
+      });
+
+      await expect(new ChunkExecutor(manager).execute(execution.id, step)).rejects.toBe(failure);
+      expect(await manager.get(execution.id)).toMatchObject({ status: "retrying" });
+      writer.write.mockClear();
+
+      await new ChunkExecutor(manager).execute(execution.id, step);
+
+      expect(writer.write.mock.calls).toEqual([[[1, 2]], [[3, 4]]]);
+      expect(await manager.get(execution.id)).toMatchObject({
+        status: "completed",
+        attempts: 2,
+        result: { processedCount: 4 },
+      });
+    },
+  );
+
+  it("does not start without a rewind if manual retry changes the observed failed status", async () => {
+    const manager = new ExecutionManagerImpl(new TestExecutionStore());
+    const execution = await manager.create({ type: "import-users", maxAttempts: 2 });
+    const failure = new Error("temporary sink outage");
+    const writer = { write: vi.fn(async (_items: number[]) => {}) };
+    writer.write.mockRejectedValueOnce(failure);
+    const step = new Step({
+      name: "import-users",
+      reader: createCheckpointReader([1, 2, 3, 4]),
+      writer,
+      chunkSize: 2,
+      classifyFailure: () => false,
+    });
+    const executor = new ChunkExecutor(manager);
+    await expect(executor.execute(execution.id, step)).rejects.toBe(failure);
+    expect(await manager.get(execution.id)).toMatchObject({ status: "failed", attempts: 1 });
+
+    const get = manager.get.bind(manager);
+    vi.spyOn(manager, "get").mockImplementationOnce(async (id) => {
+      const failed = await get(id);
+      await manager.retry(id);
+      return failed;
+    });
+    await expect(executor.execute(execution.id, step)).rejects.toMatchObject({
+      code: "execution/invalid-state-transition",
+    });
+    expect(await manager.get(execution.id)).toMatchObject({ status: "retrying", attempts: 1 });
+
+    await executor.execute(execution.id, step);
+    expect(writer.write.mock.calls).toEqual([[[1, 2]], [[1, 2]], [[3, 4]]]);
+    expect(await manager.get(execution.id)).toMatchObject({
+      status: "completed",
+      result: { processedCount: 4 },
+    });
+  });
+
+  it("preserves the recovery Problem if a tracked reader's execution is indeterminate", async () => {
+    const manager = new ExecutionManagerImpl(new TestExecutionStore());
+    const execution = await manager.create({ type: "import-users", maxAttempts: 3 });
+    const failure = new Error("temporary sink outage");
+    const reader = createCheckpointReader([1, 2, 3, 4]);
+    const writer = { write: vi.fn().mockRejectedValueOnce(failure) };
+    const step = new Step({ name: "import-users", reader, writer, chunkSize: 2 });
+    const executor = new ChunkExecutor(manager);
+    await expect(executor.execute(execution.id, step)).rejects.toBe(failure);
+    await manager.start(execution.id);
+    await manager.timeout(execution.id);
+
+    await expect(executor.execute(execution.id, step)).rejects.toMatchObject({
+      code: "execution/indeterminate-retry-blocked",
+    });
+    expect(reader.restoreCheckpoint).not.toHaveBeenCalled();
+    expect(await manager.get(execution.id)).toMatchObject({ status: "timed_out", attempts: 2 });
+  });
+
+  it("leaves the next retry available when an attempt fails during reader preparation", async () => {
+    const manager = new ExecutionManagerImpl(new TestExecutionStore());
+    const execution = await manager.create({ type: "import-users", maxAttempts: 3 });
+    const failure = new Error("temporary sink outage");
+    const writer = { write: vi.fn(async (_items: number[]) => {}) };
+    writer.write.mockRejectedValueOnce(failure);
+    const reader = createCheckpointReader([1, 2, 3, 4]);
+    const step = new Step({
+      name: "import-users",
+      reader,
+      writer,
+      chunkSize: 2,
+    });
+    const executor = new ChunkExecutor(manager);
+
+    await expect(executor.execute(execution.id, step)).rejects.toBe(failure);
+    const restoring = createBarrier();
+    const releaseRestore = createBarrier();
+    const restore = reader.restoreCheckpoint.getMockImplementation();
+    reader.restoreCheckpoint.mockImplementationOnce(async (cursor) => {
+      restoring.resolve();
+      await releaseRestore.promise;
+      restore?.(cursor);
+    });
+    vi.mocked(reader.read).mockClear();
+    writer.write.mockClear();
+    const retry = expect(executor.execute(execution.id, step)).rejects.toMatchObject({
+      code: "execution/conflict",
+    });
+    await restoring.promise;
+    try {
+      await manager.start(execution.id);
+      await manager.fail(execution.id, { message: "another attempt failed", retryable: true });
+    } finally {
+      releaseRestore.resolve();
+      await retry;
+    }
+    expect(reader.read).not.toHaveBeenCalled();
+    expect(writer.write).not.toHaveBeenCalled();
+    expect(await manager.get(execution.id)).toMatchObject({
+      status: "retrying",
+      attempts: 2,
+      error: { message: "another attempt failed" },
+    });
+
+    await executor.execute(execution.id, step);
+    expect(writer.write.mock.calls).toEqual([[[1, 2]], [[3, 4]]]);
+    expect(await manager.get(execution.id)).toMatchObject({
+      status: "completed",
+      attempts: 3,
+      result: { processedCount: 4 },
+    });
+  });
+
+  it("uses the saved checkpoint of the attempt it actually starts", async () => {
+    const manager = new ExecutionManagerImpl(new TestExecutionStore());
+    const execution = await manager.create({ type: "import-users", maxAttempts: 3 });
+    const failure = new Error("temporary sink outage");
+    const reader = createCheckpointReader([1, 2, 3, 4]);
+    const writer = { write: vi.fn().mockRejectedValueOnce(failure) };
+    const step = new Step({ name: "import-users", reader, writer, chunkSize: 2 });
+    const executor = new ChunkExecutor(manager);
+    await expect(executor.execute(execution.id, step)).rejects.toBe(failure);
+    writer.write.mockClear();
+
+    const competingStep = new Step({
+      name: step.name,
+      reader: createCheckpointReader([1, 2, 3, 4]),
+      writer: { write: vi.fn().mockResolvedValueOnce(undefined).mockRejectedValueOnce(failure) },
+      chunkSize: 2,
+    });
+    const start = manager.start.bind(manager);
+    vi.spyOn(manager, "start").mockImplementationOnce(async (id) => {
+      await expect(executor.execute(id, competingStep)).rejects.toBe(failure);
+      return start(id);
+    });
+
+    await executor.execute(execution.id, step);
+
+    expect(reader.restoreCheckpoint.mock.calls).toEqual([[{ offset: 0 }], [{ offset: 2 }]]);
+    expect(writer.write.mock.calls).toEqual([[[3, 4]]]);
+    expect(await manager.get(execution.id)).toMatchObject({
+      status: "completed",
+      attempts: 3,
+      result: { processedCount: 4 },
+    });
+  });
+
+  it("waits for a lazy reader to restore its unset starting cursor before starting", async () => {
+    const manager = new ExecutionManagerImpl(new TestExecutionStore());
+    const execution = await manager.create({ type: "import-users", maxAttempts: 2 });
+    const items = [1, 2, 3, 4];
+    let offset: number | undefined;
+    let restores = 0;
+    const restoring = createBarrier();
+    const releaseRestore = createBarrier();
+    const reader = {
+      async read() {
+        offset ??= 0;
+        return items[offset++] ?? null;
+      },
+      getCheckpoint: () => (offset === undefined ? Promise.resolve(undefined) : offset),
+      async restoreCheckpoint(cursor: unknown) {
+        if (++restores > 1) throw new Error("already restored the cursor");
+        restoring.resolve();
+        await releaseRestore.promise;
+        offset = typeof cursor === "number" ? cursor : undefined;
+      },
+    };
+    const failure = new Error("temporary sink outage");
+    const writer = { write: vi.fn(async (_items: number[]) => {}) };
+    writer.write.mockRejectedValueOnce(failure);
+    const step = new Step({ name: "import-users", reader, writer, chunkSize: 2 });
+    const executor = new ChunkExecutor(manager);
+
+    await expect(executor.execute(execution.id, step)).rejects.toBe(failure);
+    const retry = executor.execute(execution.id, step);
+    await restoring.promise;
+    try {
+      expect(await manager.get(execution.id)).toMatchObject({ status: "retrying", attempts: 1 });
+      expect(writer.write.mock.calls).toEqual([[[1, 2]]]);
+    } finally {
+      releaseRestore.resolve();
+      await retry;
+    }
+
+    expect(writer.write.mock.calls).toEqual([[[1, 2]], [[1, 2]], [[3, 4]]]);
+    expect(restores).toBe(1);
+    expect(await manager.get(execution.id)).toMatchObject({
+      status: "completed",
+      result: { processedCount: 4 },
+    });
+  });
+
+  it.each([
+    [true, "capture"],
+    [true, "restore"],
+    [false, "capture"],
+    [false, "restore"],
+  ] as const)(
+    "preserves the retry for a fresh reader (startExecution=%s, cursor %s fails)",
+    async (startExecution, boundary) => {
+      const manager = new ExecutionManagerImpl(new TestExecutionStore());
+      const execution = await manager.create({ type: "import-users", maxAttempts: 2 });
+      const reader = createCheckpointReader([1, 2, 3, 4]);
+      if (boundary === "capture") {
+        reader.getCheckpoint.mockImplementationOnce(() => {
+          throw new Error("reader has not started");
+        });
+      } else {
+        reader.restoreCheckpoint.mockImplementation(async () => {
+          throw new Error("reader cannot restore the initial cursor");
+        });
+      }
+      const failure = new Error("temporary sink outage");
+      const writer = { write: vi.fn(async (_items: number[]) => {}) };
+      writer.write.mockRejectedValueOnce(failure);
+      const step = new Step({ name: "import-users", reader, writer, chunkSize: 2 });
+      const executor = new ChunkExecutor(manager);
+      const options = { startExecution };
+
+      if (!startExecution) await manager.start(execution.id);
+      await expect(executor.execute(execution.id, step, options)).rejects.toBe(failure);
+      if (!startExecution) await manager.start(execution.id);
+      await expect(executor.execute(execution.id, step, options)).rejects.toMatchObject({
+        code: "execution/conflict",
+      });
+      expect(await manager.get(execution.id)).toMatchObject(
+        startExecution ? { status: "retrying", attempts: 1 } : { status: "running", attempts: 2 },
+      );
+      expect(writer.write.mock.calls).toEqual([[[1, 2]]]);
+
+      await executor.execute(
+        execution.id,
+        new Step({
+          name: step.name,
+          reader: createCheckpointReader([1, 2, 3, 4]),
+          writer,
+          chunkSize: 2,
+        }),
+        options,
+      );
+
+      expect(writer.write.mock.calls).toEqual([[[1, 2]], [[1, 2]], [[3, 4]]]);
+      expect(await manager.get(execution.id)).toMatchObject({
+        status: "completed",
+        result: { processedCount: 4 },
+      });
+    },
+  );
+
+  it("normalizes the initial cursor to the same representation as a stored cursor", async () => {
+    const manager = new ExecutionManagerImpl(new TestExecutionStore());
+    const execution = await manager.create({ type: "import-users", maxAttempts: 2 });
+    const source = createCheckpointReader([1, 2, 3, 4]);
+    const reader = {
+      read: source.read,
+      getCheckpoint: () => new Date(source.getCheckpoint().offset),
+      restoreCheckpoint(cursor: unknown) {
+        if (typeof cursor !== "string") throw new Error("expected a serialized cursor");
+        source.restoreCheckpoint({ offset: Date.parse(cursor) });
+      },
+    };
+    const failure = new Error("temporary sink outage");
+    const writer = { write: vi.fn(async (_items: number[]) => {}) };
+    writer.write.mockRejectedValueOnce(failure);
+    const step = new Step({ name: "import-users", reader, writer, chunkSize: 2 });
+    const executor = new ChunkExecutor(manager);
+
+    await expect(executor.execute(execution.id, step)).rejects.toBe(failure);
+    await executor.execute(execution.id, step);
+
+    expect(writer.write.mock.calls).toEqual([[[1, 2]], [[1, 2]], [[3, 4]]]);
+    expect(await manager.get(execution.id)).toMatchObject({
+      status: "completed",
+      result: { processedCount: 4 },
+    });
+  });
+
+  it("counts input from zero when restoring a nonzero starting position", async () => {
+    const manager = new ExecutionManagerImpl(new TestExecutionStore());
+    const execution = await manager.create({ type: "import-users", maxAttempts: 2 });
+    await manager.updateProgress(execution.id, { current: 2, total: 4 });
+    const progress = vi.spyOn(manager, "updateProgress");
+    const source = createCheckpointReader([-2, -1, 1, 2, 3, 4]);
+    source.restoreCheckpoint({ offset: 2 });
+    const reader = {
+      ...source,
+      getRestoredProcessedCount: () => source.getCheckpoint().offset,
+    };
+    const failure = new Error("temporary sink outage");
+    const writer = { write: vi.fn(async (_items: number[]) => {}) };
+    writer.write.mockRejectedValueOnce(failure);
+    const step = new Step({ name: "import-users", reader, writer, chunkSize: 2 });
+    const executor = new ChunkExecutor(manager);
+
+    await expect(executor.execute(execution.id, step)).rejects.toBe(failure);
+    await executor.execute(execution.id, step);
+
+    expect(writer.write.mock.calls).toEqual([[[1, 2]], [[1, 2]], [[3, 4]]]);
+    expect(progress.mock.calls.map(([, value]) => value.current)).toEqual([2, 4]);
+    expect(await manager.get(execution.id)).toMatchObject({
+      status: "completed",
+      result: { processedCount: 4 },
+    });
+  });
+
+  it("keeps the retry cursor when the same reader runs another execution", async () => {
+    const manager = new ExecutionManagerImpl(new TestExecutionStore());
+    const first = await manager.create({ type: "import-users", maxAttempts: 2 });
+    const second = await manager.create({ type: "import-users", maxAttempts: 2 });
+    const reader = createCheckpointReader([1, 2, 3, 4]);
+    const failure = new Error("temporary sink outage");
+    const writer = { write: vi.fn(async (_items: number[]) => {}) };
+    writer.write.mockRejectedValueOnce(failure);
+    const step = new Step({ name: "import-users", reader, writer, chunkSize: 2 });
+    const executor = new ChunkExecutor(manager);
+
+    await expect(executor.execute(first.id, step)).rejects.toBe(failure);
+    reader.restoreCheckpoint({ offset: 0 });
+    await executor.execute(second.id, step);
+    writer.write.mockClear();
+    await executor.execute(first.id, step);
+
+    expect(writer.write.mock.calls).toEqual([[[1, 2]], [[3, 4]]]);
+    expect(await manager.get(first.id)).toMatchObject({
+      status: "completed",
+      result: { processedCount: 4 },
+    });
+  });
+
+  it("keeps retry cursors separate across stores with identical execution IDs", async () => {
+    const firstManager = new ExecutionManagerImpl(new TestExecutionStore());
+    const secondManager = new ExecutionManagerImpl(new TestExecutionStore());
+    const first = await firstManager.create({ type: "import-users", maxAttempts: 2 });
+    const second = await secondManager.create({ type: "import-users", maxAttempts: 2 });
+    expect(second.id).toBe(first.id);
+    const reader = createCheckpointReader([1, 2, 3, 4]);
+    const failure = new Error("temporary sink outage");
+    const writer = { write: vi.fn(async (_items: number[]) => {}) };
+    writer.write.mockRejectedValueOnce(failure).mockRejectedValueOnce(failure);
+    const step = new Step({ name: "import-users", reader, writer, chunkSize: 2 });
+    const firstExecutor = new ChunkExecutor(firstManager);
+    const secondExecutor = new ChunkExecutor(secondManager);
+
+    await expect(firstExecutor.execute(first.id, step)).rejects.toBe(failure);
+    reader.restoreCheckpoint({ offset: 2 });
+    await expect(secondExecutor.execute(second.id, step)).rejects.toBe(failure);
+    writer.write.mockClear();
+
+    await secondExecutor.execute(second.id, step);
+    expect(writer.write.mock.calls).toEqual([[[3, 4]]]);
+    expect(await secondManager.get(second.id)).toMatchObject({
+      status: "completed",
+      result: { processedCount: 2 },
+    });
+  });
+
+  it("accepts an already reset reader first reached on retry in another store", async () => {
+    const firstManager = new ExecutionManagerImpl(new TestExecutionStore());
+    const secondManager = new ExecutionManagerImpl(new TestExecutionStore());
+    const input = { type: "import-users", maxAttempts: 2 };
+    const first = await firstManager.create(input);
+    const second = await secondManager.create(input);
+    expect(second).toMatchObject({ id: first.id, createdAt: first.createdAt });
+    const reader = createCheckpointReader([1, 2, 3, 4]);
+    const readCursor = reader.getCheckpoint.getMockImplementation();
+    if (!readCursor) throw new Error("Missing reader checkpoint fixture");
+    reader.getCheckpoint
+      .mockImplementationOnce(() => ({ partition: "source", ...readCursor() }))
+      .mockImplementation(() => ({ ...readCursor(), partition: "source" }));
+    const failure = new Error("temporary sink outage");
+    const writer = { write: vi.fn().mockRejectedValueOnce(failure) };
+    const step = new Step({ name: "import-users", reader, writer, chunkSize: 2 });
+    await expect(new ChunkExecutor(firstManager).execute(first.id, step)).rejects.toBe(failure);
+    await secondManager.start(second.id);
+    await secondManager.fail(second.id, { message: "earlier step failed", retryable: true });
+    reader.restoreCheckpoint({ offset: 0 });
+    writer.write.mockClear();
+
+    await new ChunkExecutor(secondManager).execute(second.id, step);
+
+    expect(writer.write.mock.calls).toEqual([[[1, 2]], [[3, 4]]]);
+    expect(await secondManager.get(second.id)).toMatchObject({
+      status: "completed",
+      attempts: 2,
+      result: { processedCount: 4 },
+    });
+  });
+
+  it.each([
+    "immediately",
+    "after another execution",
+    "after claiming a legacy replay key",
+  ] as const)("keeps the retry available after a manager change %s", async (transition) => {
+    const store = new TestExecutionStore();
+    const originalManager = new ExecutionManagerImpl(store);
+    const replacementManager = new ExecutionManagerImpl(store);
+    const execution = await originalManager.create({ type: "import-users", maxAttempts: 2 });
+    const failure = new Error("temporary sink outage");
+    const writer = { write: vi.fn(async (_items: number[]) => {}) };
+    writer.write.mockRejectedValueOnce(failure);
+    const reader = createCheckpointReader([1, 2, 3, 4]);
+    const step = new Step({
+      name: "import-users",
+      reader,
+      writer,
+      chunkSize: 2,
+    });
+    await expect(new ChunkExecutor(originalManager).execute(execution.id, step)).rejects.toBe(
+      failure,
+    );
+
+    const executor = new ChunkExecutor(replacementManager);
+    if (transition === "after another execution") {
+      const other = await replacementManager.create({ type: "import-users", maxAttempts: 2 });
+      reader.restoreCheckpoint({ offset: 0 });
+      await executor.execute(
+        other.id,
+        new Step({
+          name: step.name,
+          reader,
+          writer: { write: vi.fn() },
+          chunkSize: 2,
+        }),
+      );
+    }
+    if (transition === "after claiming a legacy replay key") {
+      await store.update(execution.id, {
+        idempotencyKey: "claimed-key",
+        requestFingerprint: "claimed-request",
+      });
+    }
+    await expect(executor.execute(execution.id, step)).rejects.toMatchObject({
+      code: "execution/conflict",
+    });
+    expect(await replacementManager.get(execution.id)).toMatchObject({
+      status: "retrying",
+      attempts: 1,
+    });
+
+    await executor.execute(
+      execution.id,
+      new Step({
+        name: step.name,
+        reader: createCheckpointReader([1, 2, 3, 4]),
+        writer,
+        chunkSize: 2,
+      }),
+    );
+    expect(writer.write.mock.calls).toEqual([[[1, 2]], [[1, 2]], [[3, 4]]]);
+    expect(await replacementManager.get(execution.id)).toMatchObject({
+      status: "completed",
+      result: { processedCount: 4 },
+    });
+  });
+
+  it.each(["type", "fingerprint"] as const)(
+    "runs a step first reached on retry when matching IDs differ by %s",
+    async (distinction) => {
+      const otherManager = new ExecutionManagerImpl(new TestExecutionStore());
+      const prior = await otherManager.create(
+        distinction === "type"
+          ? { type: "other-job", maxAttempts: 2 }
+          : {
+              type: "import-users",
+              maxAttempts: 2,
+              idempotencyKey: "job",
+              payload: { source: "old" },
+            },
+      );
+      const reader = createCheckpointReader([1, 2, 3, 4]);
+      const failure = new Error("temporary sink outage");
+      const otherStep = new Step({
+        name: "import-users",
+        reader,
+        writer: { write: vi.fn().mockRejectedValueOnce(failure) },
+        chunkSize: 2,
+      });
+      await expect(new ChunkExecutor(otherManager).execute(prior.id, otherStep)).rejects.toBe(
+        failure,
+      );
+
+      const manager = new ExecutionManagerImpl(new TestExecutionStore());
+      const execution = await manager.create(
+        distinction === "type"
+          ? { type: "import-users", maxAttempts: 2 }
+          : {
+              type: "import-users",
+              maxAttempts: 2,
+              idempotencyKey: "job",
+              payload: { source: "new" },
+            },
+      );
+      expect(execution.id).toBe(prior.id);
+      if (distinction === "fingerprint") {
+        expect(prior.requestFingerprint).toBeDefined();
+        expect(execution.requestFingerprint).toBeDefined();
+        expect(execution.requestFingerprint).not.toBe(prior.requestFingerprint);
+      }
+      await manager.start(execution.id);
+      await manager.fail(execution.id, { message: "earlier step failed", retryable: true });
+      await manager.start(execution.id);
+      reader.restoreCheckpoint({ offset: 0 });
+      const writer = { write: vi.fn() };
+      const step = new Step({ name: "import-users", reader, writer, chunkSize: 2 });
+
+      await new ChunkExecutor(manager).execute(execution.id, step, { startExecution: false });
+
+      expect(writer.write.mock.calls).toEqual([[[1, 2]], [[3, 4]]]);
+      expect(await manager.get(execution.id)).toMatchObject({
+        status: "completed",
+        attempts: 2,
+        result: { processedCount: 4 },
+      });
+    },
+  );
+
+  it("holds the reader until an asynchronous durable restore completes", async () => {
+    const manager = new ExecutionManagerImpl(new TestExecutionStore());
+    const execution = await manager.create({ type: "import-users", maxAttempts: 2 });
+    const source = createCheckpointReader([1, 2, 3, 4]);
+    const restoring = createBarrier();
+    const release = createBarrier();
+    const reader = {
+      ...source,
+      async restoreCheckpoint(cursor: unknown) {
+        restoring.resolve();
+        await release.promise;
+        source.restoreCheckpoint(cursor);
+      },
+    };
+    const failure = new Error("second chunk failed");
+    const writer = { write: vi.fn(async (_items: number[]) => {}) };
+    writer.write.mockResolvedValueOnce(undefined).mockRejectedValueOnce(failure);
+    const step = new Step({ name: "import-users", reader, writer, chunkSize: 2 });
+    const executor = new ChunkExecutor(manager);
+    await expect(executor.execute(execution.id, step)).rejects.toBe(failure);
+
+    const retry = executor.execute(execution.id, step);
+    await restoring.promise;
+    try {
+      await expect(executor.execute(execution.id, step)).rejects.toMatchObject({
+        code: "execution/conflict",
+      });
+      expect(await manager.get(execution.id)).toMatchObject({ status: "running", attempts: 2 });
+      expect(writer.write.mock.calls).toEqual([[[1, 2]], [[3, 4]]]);
+    } finally {
+      release.resolve();
+      await retry;
+    }
+
+    expect(writer.write.mock.calls).toEqual([[[1, 2]], [[3, 4]], [[3, 4]]]);
+    expect(await manager.get(execution.id)).toMatchObject({
+      status: "completed",
+      result: { processedCount: 4 },
+    });
+  });
+
+  it("keeps a retry available when the checkpointable reader is still in use", async () => {
+    const manager = new ExecutionManagerImpl(new TestExecutionStore());
+    const execution = await manager.create({ type: "import-users", maxAttempts: 2 });
+    const executor = new ChunkExecutor(manager);
+    const writing = createBarrier();
+    const release = createBarrier();
+    const writer = {
+      write: vi.fn(async (_items: number[]) => {
+        writing.resolve();
+        await release.promise;
+      }),
+    };
+    const step = new Step({
+      name: "import-users",
+      reader: createCheckpointReader([1, 2, 3, 4]),
+      writer,
+      chunkSize: 2,
+    });
+
+    const first = executor.execute(execution.id, step);
+    await writing.promise;
+    try {
+      await manager.fail(execution.id, { message: "restart", retryable: true });
+      await expect(executor.execute(execution.id, step)).rejects.toMatchObject({
+        code: "execution/conflict",
+      });
+      expect(await manager.get(execution.id)).toMatchObject({ status: "retrying", attempts: 1 });
+    } finally {
+      release.resolve();
+      await first;
+    }
+
+    expect((await manager.get(execution.id)).checkpoints).toMatchObject({
+      "import-users.chunkCheckpoint": { cursor: { offset: 2 }, processedCount: 2 },
+    });
+    writer.write.mockClear();
+    await executor.execute(execution.id, step);
+    expect(writer.write.mock.calls).toEqual([[[3, 4]]]);
+    expect(await manager.get(execution.id)).toMatchObject({
+      status: "completed",
+      result: { processedCount: 4 },
+    });
+  });
+
+  it("retries the replacement reader from its own start after a superseded attempt settles", async () => {
+    const manager = new ExecutionManagerImpl(new TestExecutionStore());
+    const execution = await manager.create({ type: "import-users", maxAttempts: 3 });
+    const executor = new ChunkExecutor(manager);
+    const writing = createBarrier();
+    const release = createBarrier();
+    const originalReader = createCheckpointReader([1, 2, 3, 4]);
+    originalReader.restoreCheckpoint({ offset: 2 });
+    const original = executor.execute(
+      execution.id,
+      new Step({
+        name: "import-users",
+        reader: originalReader,
+        writer: {
+          async write() {
+            writing.resolve();
+            await release.promise;
+          },
+        },
+        chunkSize: 2,
+      }),
+    );
+    const failure = new Error("replacement writer failed");
+    const writer = { write: vi.fn(async (_items: number[]) => {}) };
+    writer.write.mockRejectedValueOnce(failure);
+    const replacement = new Step({
+      name: "import-users",
+      reader: createCheckpointReader([1, 2, 3, 4]),
+      writer,
+      chunkSize: 2,
+    });
+
+    await writing.promise;
+    try {
+      await manager.fail(execution.id, { message: "restart", retryable: true });
+      await expect(executor.execute(execution.id, replacement)).rejects.toBe(failure);
+    } finally {
+      release.resolve();
+      await original;
+    }
+
+    await executor.execute(execution.id, replacement);
+    expect(writer.write.mock.calls).toEqual([[[1, 2]], [[1, 2]], [[3, 4]]]);
+    expect(await manager.get(execution.id)).toMatchObject({
+      status: "completed",
+      result: { processedCount: 4 },
+    });
+  });
+
+  it("keeps a replacement reader's cursor after a late intermediate step returns", async () => {
+    const manager = new ExecutionManagerImpl(new TestExecutionStore());
+    const executor = new ChunkExecutor(manager);
+    const execution = await manager.create({ type: "import-users", maxAttempts: 3 });
+    const finishing = createBarrier();
+    const release = createBarrier();
+    const get = manager.get.bind(manager);
+    const oldReader = {
+      ...createCheckpointReader<number>([]),
+      async read() {
+        vi.spyOn(manager, "get")
+          .mockImplementationOnce(get)
+          .mockImplementationOnce(async (id) => {
+            const current = await get(id);
+            finishing.resolve();
+            await release.promise;
+            return current;
+          });
+        return null;
+      },
+    };
+    const oldAttempt = executor.execute(
+      execution.id,
+      new Step({ name: "import-users", reader: oldReader, writer: { write: vi.fn() } }),
+      { completeExecution: false },
+    );
+    const failure = new Error("replacement writer failed");
+    const writer = { write: vi.fn(async (_items: number[]) => {}) };
+    writer.write.mockRejectedValueOnce(failure);
+    const replacement = new Step({
+      name: "import-users",
+      reader: createCheckpointReader([1, 2, 3, 4]),
+      writer,
+      chunkSize: 2,
+    });
+
+    await finishing.promise;
+    try {
+      await manager.fail(execution.id, { message: "restart", retryable: true });
+      await expect(executor.execute(execution.id, replacement)).rejects.toBe(failure);
+    } finally {
+      release.resolve();
+      await oldAttempt;
+    }
+
+    await executor.execute(execution.id, replacement);
+    expect(writer.write.mock.calls).toEqual([[[1, 2]], [[1, 2]], [[3, 4]]]);
+    expect(await manager.get(execution.id)).toMatchObject({
+      status: "completed",
+      attempts: 3,
+      result: { processedCount: 4 },
+    });
+  });
+
   it.each(["before", "after"] as const)(
     "resumes cursor and input count together after a failure %s checkpoint commit",
     async (boundary) => {
@@ -1546,7 +2284,7 @@ class TestExecutionStore implements ExecutionStore {
   private readonly executions = new Map<string, Execution>();
   private idCounter = 0;
 
-  async create(params: CreateExecutionParams): Promise<Execution> {
+  async create(params: CreateExecutionRecordParams): Promise<Execution> {
     const execution: Execution = {
       id: `exec-${++this.idCounter}`,
       type: params.type,
@@ -1556,6 +2294,7 @@ class TestExecutionStore implements ExecutionStore {
       maxAttempts: params.maxAttempts ?? 1,
       createdAt: new Date("2026-01-01T00:00:00.000Z"),
       idempotencyKey: params.idempotencyKey,
+      requestFingerprint: params.requestFingerprint,
       replayOf: params.replayOf,
       logs: params.logs,
       metadata: params.metadata,
