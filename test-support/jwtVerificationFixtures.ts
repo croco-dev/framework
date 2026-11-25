@@ -1,4 +1,5 @@
-import { errors, jwtVerify } from "jose";
+import { generateKeyPairSync } from "node:crypto";
+import { createRemoteJWKSet, customFetch, errors, jwtVerify } from "jose";
 import jwt from "jsonwebtoken";
 
 const now = 1_700_000_000;
@@ -14,6 +15,16 @@ const expiredJwt = jwt.sign({ sub: "test-user", exp: now - 60 }, signingKey, {
 const wrongSignatureJwt = jwt.sign({ sub: "test-user", exp: now + 60 }, otherKey, {
   noTimestamp: true,
 });
+const unknownCriticalHeader = { alg: "HS256", crit: ["test-extension"], "test-extension": true };
+const unsupportedHeaderJwt = jwt.sign({ sub: "test-user", exp: now + 60 }, signingKey, {
+  header: unknownCriticalHeader,
+  noTimestamp: true,
+});
+const invalidJsonJwt = jwt.sign("not JSON", signingKey, { header: { alg: "HS256", typ: "JWT" } });
+const { privateKey, publicKey } = generateKeyPairSync("ec", { namedCurve: "P-256" });
+const [ecHeader, ecPayload] = jwt
+  .sign({ sub: "test-user" }, privateKey, { algorithm: "ES256", noTimestamp: true })
+  .split(".");
 
 export const verifyJoseJwt = (token: string) =>
   jwtVerify(token, new TextEncoder().encode(signingKey), { currentDate: new Date(now * 1000) });
@@ -25,6 +36,7 @@ export const rejectedJwtCases = [
   { name: "jose expired token", token: expiredJwt, verifier: verifyJoseJwt },
   { name: "jose invalid signature", token: wrongSignatureJwt, verifier: verifyJoseJwt },
   { name: "jose malformed token", token: "malformed", verifier: verifyJoseJwt },
+  { name: "jose unknown critical header", token: unsupportedHeaderJwt, verifier: verifyJoseJwt },
   { name: "jsonwebtoken expired token", token: expiredJwt, verifier: verifyJsonWebToken },
   {
     name: "jsonwebtoken invalid signature",
@@ -32,6 +44,16 @@ export const rejectedJwtCases = [
     verifier: verifyJsonWebToken,
   },
   { name: "jsonwebtoken malformed token", token: "malformed", verifier: verifyJsonWebToken },
+  {
+    name: "jsonwebtoken malformed payload JSON",
+    token: invalidJsonJwt,
+    verifier: verifyJsonWebToken,
+  },
+  {
+    name: "jsonwebtoken wrong-width ECDSA signature",
+    token: `${ecHeader}.${ecPayload}.AA`,
+    verifier: (token: string) => jwt.verify(token, publicKey),
+  },
 ];
 
 export const unavailableJwtVerifierCases = [
@@ -41,6 +63,32 @@ export const unavailableJwtVerifierCases = [
       jwtVerify(token, () => {
         throw new errors.JWKSTimeout();
       }),
+  },
+  {
+    name: "jose unwrapped JWKS connection error",
+    verifier: (token: string) =>
+      jwtVerify(
+        token,
+        createRemoteJWKSet(new URL("https://example.test/jwks"), {
+          [customFetch]: () =>
+            Promise.reject(
+              Object.assign(new Error("invalid token key lookup failed"), {
+                code: "ECONNRESET",
+              }),
+            ),
+        }),
+      ),
+  },
+  {
+    name: "jose unsupported verifier configuration",
+    verifier: (token: string) =>
+      jwtVerify(token, () => {
+        throw new errors.JOSENotSupported("Invalid or unsupported key format");
+      }),
+  },
+  {
+    name: "verifier configuration JSON parse failure",
+    verifier: () => JSON.parse("not JSON"),
   },
   {
     name: "jsonwebtoken key lookup failure",

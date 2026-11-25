@@ -5,7 +5,7 @@ prev: false
 title: "isTokenVerificationError"
 ---
 
-> **isTokenVerificationError**(`error`): `boolean`
+> **isTokenVerificationError**(`error`, `token`): `boolean`
 
 Identifies a credential rejection reported by a protocol guard's token verifier.
 
@@ -14,6 +14,10 @@ Identifies a credential rejection reported by a protocol guard's token verifier.
 ### error
 
 `unknown`
+
+### token
+
+`string`
 
 ## Returns
 
