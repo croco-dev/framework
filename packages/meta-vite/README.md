@@ -471,6 +471,8 @@ request rules, `2xx`-only response caching, and `getOrSet()` singleflight behavi
   the requesting caller and are never stored or reused by ISR. During an initial fill, concurrent
   waiters render independently. Previously stored entries are bypassed until they expire. ISR does
   not perform conditional revalidation.
+- responses with `Set-Cookie` or `Cache-Control: private` or `no-store` also bypass shared storage
+  and reuse. During an initial fill, concurrent waiters render their own responses.
 - if the request that started the fill disconnects and the renderer returns 503, live waiters can join one replacement
   cache attempt. A live replacement owner retains its own response. Other callers can only share a
   cacheable replacement result; if it is cancelled or cannot be shared, they receive a 503 with
