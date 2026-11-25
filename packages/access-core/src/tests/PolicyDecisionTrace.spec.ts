@@ -48,6 +48,31 @@ describe("PolicyDecisionTrace", () => {
     });
   });
 
+  it.each([
+    ["Authorization: Bearer sample-credential", "Authorization: [Redacted]"],
+    ["proxy-authorization=Basic sample-credential", "proxy-authorization=[Redacted]"],
+    ["authorization: Custom sample-credential", "authorization: [Redacted]"],
+    [
+      'authorization: Digest username="sample-user", response="sample-proof"',
+      "authorization: [Redacted]",
+    ],
+    ["authorization=sample-credential", "authorization=[Redacted]"],
+    ["Bearer sample-credential", "Bearer [Redacted]"],
+    ["password=sample-credential denied", "password=[Redacted] denied"],
+  ])("redacts credentials in trace strings (%s)", (header, redactedHeader) => {
+    const trace = createPolicyDecisionTrace({
+      policyKind: "access",
+      result: "deny",
+      ruleId: "access:document:viewer",
+      reason: `Request rejected: ${header}\nRequest ID: sample-request`,
+      inputs: { diagnostic: header },
+    });
+
+    expect(trace.reason).toBe(`Request rejected: ${redactedHeader}\nRequest ID: sample-request`);
+    expect(trace.inputs.diagnostic).toBe(redactedHeader);
+    expect(trace.redaction).toEqual({ applied: true, paths: ["diagnostic", "$"] });
+  });
+
   it("records telemetry attributes and forwards the audit trace", async () => {
     const recordEventSpy = vi.spyOn(telemetry, "recordEvent").mockImplementation(() => {});
     const auditSink = {

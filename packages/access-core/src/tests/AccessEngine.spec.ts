@@ -203,13 +203,19 @@ describe("AccessEngine", () => {
       const traceSink = {
         recordPolicyDecisionTrace: vi.fn(async () => undefined),
       };
+      const recordEventSpy = vi.spyOn(telemetry, "recordEvent").mockImplementation(() => undefined);
       accessEngine = new AccessEngine(mockProvider, { traceSink });
-      vi.mocked(mockProvider.check).mockResolvedValue({ decision: "deny", allowed: false });
+      vi.mocked(mockProvider.check).mockResolvedValue({
+        decision: "deny",
+        allowed: false,
+        reason: "Authorization: Bearer sample-credential",
+      });
 
       const result = await accessEngine.check(request);
 
       expect(result.trace).toMatchObject({
         result: "deny",
+        reason: "Authorization: [Redacted]",
         ruleId: "access:document:viewer",
         sourceLocation: {
           file: "routes/documents.ts",
@@ -218,6 +224,10 @@ describe("AccessEngine", () => {
       });
       expect(result.trace?.inputs.authorization).toBe("[Redacted]");
       expect(traceSink.recordPolicyDecisionTrace).toHaveBeenCalledWith(result.trace);
+      expect(recordEventSpy).toHaveBeenCalledWith(
+        "policy.decision",
+        expect.objectContaining({ "policy.reason": "Authorization: [Redacted]" }),
+      );
     });
 
     it("should return the provider decision when the trace sink rejects", async () => {

@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "access-core",
+      "classification": "pure-contract",
+      "reason": "Policy decision traces mask complete authorization values in diagnostic strings before passing them to existing sinks.",
+      "files": {
+        "packages/access-core/src/libs/PolicyDecisionTrace.ts": "73253efba7731014e7a34bc4d54575ecf6b01f50cf570d5c6d14b25bcceda9ef"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Trace string redaction uses no Node Host capabilities, storage or lifecycle hooks.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/access-core/src/libs/PolicyDecisionTrace.ts"]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Trace string redaction uses no Lambda Host capabilities, storage or invocation lifecycle hooks.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/access-core/src/libs/PolicyDecisionTrace.ts"]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Trace string redaction uses no Workers bindings, storage or lifecycle hooks.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/access-core/src/libs/PolicyDecisionTrace.ts"]
+        }
+      }
+    }
+  ]
+}

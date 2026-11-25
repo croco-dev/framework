@@ -82,7 +82,7 @@ const DEFAULT_MAX_STRING_LENGTH = 500;
 const DEFAULT_SENSITIVE_KEY_PATTERN =
   /authorization|cookie|credential|password|secret|token|api[-_]?key|private[-_]?key|access[-_]?key|database[-_]?url|redis[-_]?url|mongo(?:db)?[-_]?url|postgres(?:ql)?[-_]?url|connection[-_]?string|dsn/i;
 const DEFAULT_SENSITIVE_VALUE_PATTERN =
-  /((?:authorization|password|secret|token|api[-_]?key|access[-_]?key|private[-_]?key|credential|dsn)\s*[:=]\s*)[^\s,;&]+|((?:bearer|basic)\s+)[^\s,;]+|((?:postgres(?:ql)?|mysql|mongodb(?:\+srv)?|redis):\/\/)[^\s]+/gi;
+  /(authorization\s*[:=]\s*)[^\r\n]+|((?:password|secret|token|api[-_]?key|access[-_]?key|private[-_]?key|credential|dsn)\s*[:=]\s*)[^\s,;&]+|((?:bearer|basic)\s+)[^\s,;]+|((?:postgres(?:ql)?|mysql|mongodb(?:\+srv)?|redis):\/\/)[^\s]+/gi;
 
 export function createPolicyDecisionTrace(input: PolicyDecisionTraceInput): PolicyDecisionTrace {
   const state: RedactionState = {
@@ -298,9 +298,9 @@ function sanitizePolicyDecisionString(
   let redacted = false;
   const scrubbed = value.replace(
     DEFAULT_SENSITIVE_VALUE_PATTERN,
-    (_match, assignmentPrefix, authPrefix, urlPrefix) => {
+    (_match, authorizationPrefix, assignmentPrefix, authSchemePrefix, urlPrefix) => {
       redacted = true;
-      return `${assignmentPrefix ?? authPrefix ?? urlPrefix ?? ""}${POLICY_DECISION_REDACTED_VALUE}`;
+      return `${authorizationPrefix ?? assignmentPrefix ?? authSchemePrefix ?? urlPrefix ?? ""}${POLICY_DECISION_REDACTED_VALUE}`;
     },
   );
 
