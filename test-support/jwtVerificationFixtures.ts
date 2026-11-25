@@ -52,6 +52,13 @@ const verifyWithFailedKeyFetch = (token: string, error: Error) =>
   );
 
 export const rejectedJwtCases = [
+  {
+    name: "legacy explicit JWT rejection name on a SyntaxError",
+    token: testJwt,
+    verifier: () => {
+      throw Object.assign(new SyntaxError("Rejected JWT"), { name: "ERR_JWT_INVALID" });
+    },
+  },
   { name: "jose expired token", token: expiredJwt, verifier: verifyJoseJwt },
   { name: "jose invalid signature", token: wrongSignatureJwt, verifier: verifyJoseJwt },
   { name: "jose malformed token", token: "malformed", verifier: verifyJoseJwt },
@@ -124,6 +131,28 @@ export const unavailableJwtVerifierCases = [
         new Error("invalid token key lookup failed", {
           cause: new TypeError("fetch failed", {
             cause: Object.assign(new Error("Connect timeout"), { code: "UND_ERR_CONNECT_TIMEOUT" }),
+          }),
+        }),
+      ),
+  },
+  {
+    name: "jose wrapped JWKS timeout",
+    verifier: (token: string) =>
+      verifyWithFailedKeyFetch(
+        token,
+        new Error("invalid token key lookup failed", {
+          cause: new errors.JWKSTimeout(),
+        }),
+      ),
+  },
+  {
+    name: "jose wrapped JWKS TLS failure",
+    verifier: (token: string) =>
+      verifyWithFailedKeyFetch(
+        token,
+        new Error("invalid token key lookup failed", {
+          cause: Object.assign(new Error("Key server identity failed TLS verification"), {
+            code: "ERR_TLS_CERT_ALTNAME_INVALID",
           }),
         }),
       ),

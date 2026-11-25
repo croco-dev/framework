@@ -83,7 +83,7 @@ export function isTokenVerificationError(error: unknown): boolean {
     }
   }
 
-  if (hasConnectionError(error)) {
+  if (hasConnectionOrKeyLookupError(error)) {
     return false;
   }
 
@@ -99,6 +99,11 @@ export function isTokenVerificationError(error: unknown): boolean {
     );
   }
 
+  const name = error.name.toUpperCase();
+  if (name.startsWith("ERR_JWT_") || name.startsWith("ERR_JWS_") || name.startsWith("ERR_JWE_")) {
+    return true;
+  }
+
   if (error instanceof SyntaxError) {
     return isJsonWebTokenPayloadParseError(error);
   }
@@ -111,12 +116,8 @@ export function isTokenVerificationError(error: unknown): boolean {
     return true;
   }
 
-  const name = error.name.toUpperCase();
   const message = error.message.toLowerCase();
   return (
-    name.startsWith("ERR_JWT_") ||
-    name.startsWith("ERR_JWS_") ||
-    name.startsWith("ERR_JWE_") ||
     message.includes("token expired") ||
     message.includes("invalid token") ||
     message.includes("jwt expired") ||
@@ -124,13 +125,16 @@ export function isTokenVerificationError(error: unknown): boolean {
   );
 }
 
-function hasConnectionError(error: Error): boolean {
+function hasConnectionOrKeyLookupError(error: Error): boolean {
   const seen = new Set<object>();
   let cause: unknown = error;
   while (typeof cause === "object" && cause !== null && !seen.has(cause)) {
     seen.add(cause);
     const code: unknown = Object.getOwnPropertyDescriptor(cause, "code")?.value;
-    if (typeof code === "string" && CONNECTION_ERROR_CODES.has(code)) {
+    if (
+      typeof code === "string" &&
+      (CONNECTION_ERROR_CODES.has(code) || /^ERR_(JWK|JWKS|TLS|SSL)_/.test(code))
+    ) {
       return true;
     }
     cause = Object.getOwnPropertyDescriptor(cause, "cause")?.value;
