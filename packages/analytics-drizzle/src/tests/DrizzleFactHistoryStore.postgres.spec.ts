@@ -135,6 +135,55 @@ describe.skipIf(!connectionString)("PostgreSQL fact history", () => {
     });
   });
 
+  it("retires the original outside the corrected interval at the PostgreSQL receipt cutoff", async () => {
+    const initial = await store.appendFacts(batch(), recordedAt);
+    const original = initial.rows[0];
+    const correctedAt = "2026-09-25T13:00:00.000001Z";
+    const correctedFrom = "2026-09-25T12:30:00.000Z";
+    const correction = await store.appendFacts(
+      {
+        ...batch("correction"),
+        rows: [
+          {
+            ...batch().rows[0],
+            value: "paused",
+            validFrom: correctedFrom,
+            supersedes: original.id,
+          },
+        ],
+        correction: {
+          actor: "operator",
+          reason: "Effective time verified",
+          expectedRevision: initial.revision,
+          idempotencyKey: "correction",
+        },
+      },
+      correctedAt,
+    );
+    const service = new FactHistoryService(
+      store,
+      [{ id: "plan", version: "1", validate: () => true }],
+      { authorize: () => undefined, mask: (value) => value },
+    );
+    const effectiveAt = "2026-09-25T12:00:00.000Z";
+    expect(
+      await service.readFactsAt({ ...query, effectiveAt, knownAt: "2026-09-25T13:00:00.000000Z" }),
+    ).toMatchObject({ status: "known", value: "active", provenance: [{ id: original.id }] });
+    expect(
+      await service.readFactsAt({ ...query, effectiveAt, knownAt: correctedAt }),
+    ).toMatchObject({ status: "unknown", provenance: [] });
+    expect(
+      await service.readFactsAt({ ...query, effectiveAt: correctedFrom, knownAt: correctedAt }),
+    ).toMatchObject({
+      status: "known",
+      value: "paused",
+      provenance: [{ id: correction.rows[0].id }],
+    });
+    expect(await service.readHistory({ ...query, knownAt: correctedAt })).toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: original.id })]),
+    );
+  });
+
   it.each([
     ["0000-01-01T12:00:00.000001Z", "0000-01-01T12:00:00.000000Z"],
     ["+250000-01-01T12:00:00.000001Z", "+250000-01-01T12:00:00.000000Z"],
