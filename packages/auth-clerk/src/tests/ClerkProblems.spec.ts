@@ -72,9 +72,17 @@ describe("ClerkProblems", () => {
     });
 
     it("redacts sensitive detail values", () => {
-      const problem = new ClerkTokenVerificationProblem("secret=fixture]part}last token=tok_123");
+      const problem = new ClerkTokenVerificationProblem(
+        "secret\n=\nfixture]part}last token=tok_123",
+      );
 
-      expect(problem.detail).toBe("secret=[Redacted] token=[Redacted]");
+      expect(problem.detail).toBe("secret\n=\n[Redacted] token=[Redacted]");
+    });
+
+    it("redacts assignments inside quoted diagnostic prose", () => {
+      const problem = new ClerkTokenVerificationProblem('"token=fixture : note": upstream error');
+
+      expect(problem.detail).toBe('"token=[Redacted] : note": upstream error');
     });
   });
 

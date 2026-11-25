@@ -1,7 +1,7 @@
 const FIELD =
-  /(?<![\w.-])("(?:\\[\s\S]|[^"\\])*"|'(?:\\[\s\S]|[^'\\])*'|[\w.-]+)(?:[ \t]*([:=])[ \t]*|(?<=["'])\s*([:=])\s*)/g;
+  /(?<![\w.-])((?<!\\)(?:"(?:\\[\s\S]|[^"\\:=\r\n])*"|'(?:\\[\s\S]|[^'\\:=\r\n])*')|[\w.-]+)\s*([:=])\s*/g;
 const AUTHORIZATION_LABEL = /authorization$/i;
-const AUTHORIZATION_PARAMETERS = /[^\s,;]+[ \t]+[\w-]+[ \t]*=[ \t]*[^=\s,;]/y;
+const AUTHORIZATION_PARAMETERS = /[^\s,;]+[ \t]+[\w!#$%&'*+.^\x60|~-]+[ \t]*=[ \t]*[^=\s,;]/y;
 
 /**
  * Masks credential fields in diagnostic text. The caller supplies its sensitive-key policy
@@ -15,49 +15,61 @@ export function redactDiagnosticCredentials(
   const flags = sensitiveKey.flags.replace(/[gy]/g, "");
   const quotedKeyMatcher = new RegExp(sensitiveKey.source, flags);
   const plainKeyMatcher = new RegExp(`(?:${sensitiveKey.source})$`, flags);
-  const fields = new RegExp(FIELD);
-  const parts: string[] = [];
-  let copiedThrough = 0;
+  return redactText(message);
 
-  for (let field = fields.exec(message); field; field = fields.exec(message)) {
-    const label = field[1] ?? "";
-    const isQuotedKey = label.startsWith('"') || label.startsWith("'");
-    const key = isQuotedKey ? decodeKey(label) : label;
-    if (!(isQuotedKey ? quotedKeyMatcher : plainKeyMatcher).test(key)) continue;
+  function redactText(text: string): string {
+    const fields = new RegExp(FIELD);
+    const parts: string[] = [];
+    let copiedThrough = 0;
 
-    const separator = field[2] ?? field[3];
-    const isJsonField = label.startsWith('"') && separator === ":";
-    const authorization = AUTHORIZATION_LABEL.test(key);
-    let start = fields.lastIndex;
-    if (isJsonField) {
-      while (start < message.length && /\s/.test(message.charAt(start))) start++;
+    for (let field = fields.exec(text); field; field = fields.exec(text)) {
+      const label = field[1] ?? "";
+      const isQuotedKey = label.startsWith('"') || label.startsWith("'");
+      const isJsonField = label.startsWith('"') && field[2] === ":";
+      const key = isQuotedKey ? (parseJsonString(label) ?? label.slice(1, -1)) : label;
+      const start = fields.lastIndex;
+      const first = text.charAt(start);
+      const sensitive = (isQuotedKey ? quotedKeyMatcher : plainKeyMatcher).test(key);
+
+      let end: number;
+      let marker: string;
+      if (sensitive) {
+        const authorization = AUTHORIZATION_LABEL.test(key);
+        end = findValueEnd(text, start, { isQuotedKey, isJsonField, authorization });
+        if (start === end) continue;
+
+        const quotedValue = (isQuotedKey || authorization) && first === text.charAt(end - 1);
+        const quote = quotedValue && /["']/.test(first) ? first : "";
+        marker = isJsonField ? JSON.stringify(replacement) : quote + replacement + quote;
+      } else if (isJsonField && first === '"') {
+        end = findStringEnd(text, start, first);
+        const decoded = parseJsonString(text.slice(start, end));
+        if (decoded === undefined) continue;
+
+        fields.lastIndex = end;
+        const redacted = redactText(decoded);
+        if (redacted === decoded) continue;
+        marker = JSON.stringify(redacted);
+      } else {
+        continue;
+      }
+
+      parts.push(text.slice(copiedThrough, start), marker);
+      copiedThrough = end;
+      fields.lastIndex = end;
     }
 
-    const end = findValueEnd(message, start, { isQuotedKey, isJsonField, authorization });
-    if (start === end) continue;
-
-    const first = message.charAt(start);
-    const quotedValue = (isQuotedKey || authorization) && first === message.charAt(end - 1);
-    const quote = quotedValue && /["']/.test(first) ? first : "";
-    const marker = isJsonField ? JSON.stringify(replacement) : quote + replacement + quote;
-    parts.push(message.slice(copiedThrough, start), marker);
-    copiedThrough = end;
-    fields.lastIndex = end;
+    return parts.length === 0 ? text : parts.join("") + text.slice(copiedThrough);
   }
-
-  return parts.length === 0 ? message : parts.join("") + message.slice(copiedThrough);
 }
 
-function decodeKey(label: string): string {
-  if (label.startsWith('"')) {
-    try {
-      return JSON.parse(label) as string;
-    } catch {
-      // Inspect-style output can quote keys without using JSON escapes.
-    }
+function parseJsonString(value: string): string | undefined {
+  if (!value.startsWith('"')) return undefined;
+  try {
+    return JSON.parse(value) as string;
+  } catch {
+    return undefined;
   }
-
-  return label.slice(1, -1);
 }
 
 function findValueEnd(
