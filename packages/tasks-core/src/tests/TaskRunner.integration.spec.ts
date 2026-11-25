@@ -325,6 +325,59 @@ describe("TaskRunner integration", () => {
     expect(await manager.get(execution.id)).toMatchObject({ status: "completed", attempts: 2 });
   });
 
+  it("rejects a duplicate retry after the resumed handler has started", async () => {
+    let signalResumedHandler: (() => void) | undefined;
+    let releaseResumedHandler: (() => void) | undefined;
+    const resumedHandlerStarted = new Promise<void>((resolve) => {
+      signalResumedHandler = resolve;
+    });
+    const resumeHandler = new Promise<void>((resolve) => {
+      releaseResumedHandler = resolve;
+    });
+    const handle = vi.fn(async (attempt: number) => {
+      if (attempt === 1) throw new Error("Temporary network failure");
+      if (attempt === 2) {
+        signalResumedHandler?.();
+        await resumeHandler;
+      }
+      return `attempt ${attempt}`;
+    });
+
+    @Component()
+    class RetriedTask {
+      @Task({ name: "held-retry-task", maxAttempts: 3 })
+      async run(_payload: unknown, context: TaskExecutionContext): Promise<string> {
+        return handle(context.attempt);
+      }
+    }
+
+    Container.set(RetriedTask, new RetriedTask());
+    const store = new MemoryExecutionStore();
+    const manager = new ExecutionManagerImpl(store);
+    const registry = TaskRegistry.fromMetadata();
+    const runner = new TaskRunner(manager, registry);
+    const otherRunner = new TaskRunner(new ExecutionManagerImpl(store), registry);
+    await expect(runner.execute("held-retry-task", {})).rejects.toThrow(
+      "Temporary network failure",
+    );
+    const [execution] = await manager.list({ type: "held-retry-task" });
+
+    const resumed = runner.retry(execution.id);
+    try {
+      await Promise.race([resumedHandlerStarted, resumed]);
+      await expect(otherRunner.retry(execution.id)).rejects.toMatchObject({
+        code: "execution/invalid-state-transition",
+      });
+      expect(await manager.get(execution.id)).toMatchObject({ status: "running", attempts: 2 });
+      expect(handle.mock.calls).toEqual([[1], [2]]);
+    } finally {
+      releaseResumedHandler?.();
+      await Promise.allSettled([resumed]);
+    }
+    await expect(resumed).resolves.toBe("attempt 2");
+    expect(await manager.get(execution.id)).toMatchObject({ status: "completed", attempts: 2 });
+  });
+
   it("fails immediately when an error is explicitly non-retryable", async () => {
     @Component()
     class PermanentFailureTask {
