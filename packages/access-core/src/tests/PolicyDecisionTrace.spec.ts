@@ -53,10 +53,27 @@ describe("PolicyDecisionTrace", () => {
     ["proxy-authorization=Basic sample-credential", "proxy-authorization=[Redacted]"],
     ["authorization: Custom sample-credential", "authorization: [Redacted]"],
     [
-      'authorization: Digest username="sample-user", response="sample-proof"',
-      "authorization: [Redacted]",
+      'authorization: Digest username="sample;user", response="sample-proof"; request ID: sample-request',
+      "authorization: [Redacted]; request ID: sample-request",
     ],
     ["authorization=sample-credential", "authorization=[Redacted]"],
+    [
+      "authorization=sample-credential; request ID: sample-request",
+      "authorization=[Redacted]; request ID: sample-request",
+    ],
+    [
+      '"Authorization: Bearer sample-credential" request ID: sample-request',
+      '"Authorization: [Redacted]" request ID: sample-request',
+    ],
+    [
+      'Authorization="Custom sample-credential" request ID: sample-request',
+      'Authorization="[Redacted]" request ID: sample-request',
+    ],
+    [
+      '{"authorization":"Custom sample-credential","requestId":"sample-request"}',
+      '{"authorization":"[Redacted]","requestId":"sample-request"}',
+    ],
+    ["Authorization: Custom\r\n\tsample-credential", "Authorization: [Redacted]"],
     ["Bearer sample-credential", "Bearer [Redacted]"],
     ["password=sample-credential denied", "password=[Redacted] denied"],
   ])("redacts credentials in trace strings (%s)", (header, redactedHeader) => {
@@ -71,6 +88,19 @@ describe("PolicyDecisionTrace", () => {
     expect(trace.reason).toBe(`Request rejected: ${redactedHeader}\nRequest ID: sample-request`);
     expect(trace.inputs.diagnostic).toBe(redactedHeader);
     expect(trace.redaction).toEqual({ applied: true, paths: ["diagnostic", "$"] });
+  });
+
+  it("preserves independent diagnostic lines after an empty authorization field", () => {
+    const reason = "Authorization: \r\nRequest ID: sample-request";
+    const trace = createPolicyDecisionTrace({
+      policyKind: "access",
+      result: "deny",
+      ruleId: "access:document:viewer",
+      reason,
+    });
+
+    expect(trace.reason).toBe(reason);
+    expect(trace.redaction.applied).toBe(false);
   });
 
   it("records telemetry attributes and forwards the audit trace", async () => {

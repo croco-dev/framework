@@ -81,8 +81,21 @@ const DEFAULT_MAX_DEPTH = 5;
 const DEFAULT_MAX_STRING_LENGTH = 500;
 const DEFAULT_SENSITIVE_KEY_PATTERN =
   /authorization|cookie|credential|password|secret|token|api[-_]?key|private[-_]?key|access[-_]?key|database[-_]?url|redis[-_]?url|mongo(?:db)?[-_]?url|postgres(?:ql)?[-_]?url|connection[-_]?string|dsn/i;
+const AUTHORIZATION_LABEL = "(?:proxy[-_])?authorization";
+const ASSIGNMENT_SEPARATOR = String.raw`[ \t]*[:=][ \t]*`;
+const QUOTED_VALUE =
+  /"(?:\\[^\r\n]|[^"\\\r\n])*"|'(?:\\[^\r\n]|[^'\\\r\n])*'(?=[ \t]*(?:[,;}&\]\r\n]|$))/;
+const HEADER_CONTINUATION = String.raw`(?:\r\n|[\r\n])[ \t]+`;
+const UNQUOTED_HEADER_LINE = String.raw`(?:[^";\r\n]|"(?:\\[^\r\n]|[^"\\\r\n])*(?:"|\\?(?=[\r\n]|$)))+`;
+const QUOTED_AUTHORIZATION_HEADER = String.raw`((["'])${AUTHORIZATION_LABEL}${ASSIGNMENT_SEPARATOR})(?:\\[^\r\n]|(?!\2)[^\\\r\n])+\2`;
+const UNQUOTED_HEADER_VALUE = String.raw`(?![ \t])(?:${HEADER_CONTINUATION})?${UNQUOTED_HEADER_LINE}(?:${HEADER_CONTINUATION}${UNQUOTED_HEADER_LINE})*`;
+const AUTHORIZATION_ASSIGNMENT = String.raw`((["']?)${AUTHORIZATION_LABEL}\4${ASSIGNMENT_SEPARATOR})(?:(${QUOTED_VALUE.source})|[^\s,;&"']+(?=[,&])|${UNQUOTED_HEADER_VALUE})`;
+const AUTHORIZATION_VALUE_PATTERN = new RegExp(
+  `${QUOTED_AUTHORIZATION_HEADER}|${AUTHORIZATION_ASSIGNMENT}`,
+  "gi",
+);
 const DEFAULT_SENSITIVE_VALUE_PATTERN =
-  /(authorization\s*[:=]\s*)[^\r\n]+|((?:password|secret|token|api[-_]?key|access[-_]?key|private[-_]?key|credential|dsn)\s*[:=]\s*)[^\s,;&]+|((?:bearer|basic)\s+)[^\s,;]+|((?:postgres(?:ql)?|mysql|mongodb(?:\+srv)?|redis):\/\/)[^\s]+/gi;
+  /((?:password|secret|token|api[-_]?key|access[-_]?key|private[-_]?key|credential|dsn)\s*[:=]\s*)[^\s,;&]+|((?:bearer|basic)\s+)[^\s,;]+|((?:postgres(?:ql)?|mysql|mongodb(?:\+srv)?|redis):\/\/)[^\s]+/gi;
 
 export function createPolicyDecisionTrace(input: PolicyDecisionTraceInput): PolicyDecisionTrace {
   const state: RedactionState = {
@@ -296,13 +309,22 @@ function sanitizePolicyDecisionString(
   path: readonly string[] = [],
 ): string {
   let redacted = false;
-  const scrubbed = value.replace(
-    DEFAULT_SENSITIVE_VALUE_PATTERN,
-    (_match, authorizationPrefix, assignmentPrefix, authSchemePrefix, urlPrefix) => {
+  const scrubbed = value
+    .replace(
+      AUTHORIZATION_VALUE_PATTERN,
+      (_match, headerPrefix, headerQuote, assignmentPrefix, _labelQuote, quotedValue) => {
+        redacted = true;
+        if (headerPrefix !== undefined) {
+          return `${headerPrefix}${POLICY_DECISION_REDACTED_VALUE}${headerQuote}`;
+        }
+        const quote = quotedValue?.[0] ?? "";
+        return `${assignmentPrefix}${quote}${POLICY_DECISION_REDACTED_VALUE}${quote}`;
+      },
+    )
+    .replace(DEFAULT_SENSITIVE_VALUE_PATTERN, (_match, assignmentPrefix, authPrefix, urlPrefix) => {
       redacted = true;
-      return `${authorizationPrefix ?? assignmentPrefix ?? authSchemePrefix ?? urlPrefix ?? ""}${POLICY_DECISION_REDACTED_VALUE}`;
-    },
-  );
+      return `${assignmentPrefix ?? authPrefix ?? urlPrefix ?? ""}${POLICY_DECISION_REDACTED_VALUE}`;
+    });
 
   if (redacted) {
     state.paths.push(formatPath(path));

@@ -208,14 +208,14 @@ describe("AccessEngine", () => {
       vi.mocked(mockProvider.check).mockResolvedValue({
         decision: "deny",
         allowed: false,
-        reason: "Authorization: Bearer sample-credential",
+        reason: '{"authorization":"Custom sample-credential","requestId":"sample-request"}',
       });
 
       const result = await accessEngine.check(request);
 
       expect(result.trace).toMatchObject({
         result: "deny",
-        reason: "Authorization: [Redacted]",
+        reason: '{"authorization":"[Redacted]","requestId":"sample-request"}',
         ruleId: "access:document:viewer",
         sourceLocation: {
           file: "routes/documents.ts",
@@ -226,7 +226,9 @@ describe("AccessEngine", () => {
       expect(traceSink.recordPolicyDecisionTrace).toHaveBeenCalledWith(result.trace);
       expect(recordEventSpy).toHaveBeenCalledWith(
         "policy.decision",
-        expect.objectContaining({ "policy.reason": "Authorization: [Redacted]" }),
+        expect.objectContaining({
+          "policy.reason": '{"authorization":"[Redacted]","requestId":"sample-request"}',
+        }),
       );
     });
 
