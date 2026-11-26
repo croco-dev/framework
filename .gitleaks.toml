@@ -11,6 +11,7 @@ paths = [
   '''^docs/infrastructure-reviews/3866-session-lookup-failures\.json$''',
   '''^docs/infrastructure-reviews/issue-4260-inherited-lifecycle\.json$''',
   '''^docs/infrastructure-reviews/4265-stacked-authorization\.json$''',
+  '''^docs/infrastructure-reviews/4257-auth-diagnostic-redaction\.json$''',
   '''^docs/infrastructure-reviews/zod4-collection-bounds\.json$''',
   '''^docs/infrastructure-reviews/2842-operation-rest\.json$''',
   '''^docs/infrastructure-reviews/clerk-workers-auth-subset\.json$''',
