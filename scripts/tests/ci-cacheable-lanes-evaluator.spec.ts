@@ -254,8 +254,8 @@ describe("cacheable CI lane evaluator contract", () => {
     ).toThrow(/must be a subset/);
   });
 
-  it("validates the exact 56-check and five-security ownership ledger", () => {
-    expect(manifestOwnership).toHaveLength(56);
+  it("validates the exact 57-check and five-security ownership ledger", () => {
+    expect(manifestOwnership).toHaveLength(57);
     expect(manifestOwnership).toContainEqual({
       id: "infrastructure-review",
       owner: "core-verification",

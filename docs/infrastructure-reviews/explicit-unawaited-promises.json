@@ -1,0 +1,78 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "tx-drizzle",
+      "classification": "internal-pure-refactor",
+      "reason": "Transaction abort tracking marks its intentionally unawaited promises with void and moves the async abort drain behind a synchronous listener. The tracked promises, drain order, rejection reason and public signatures are unchanged.",
+      "files": {
+        "packages/tx-drizzle/src/libs/DrizzleTxAdapter.ts": "431bb3b6fbb930ad29751968cfae648d614ae4ff39045e01d83782a02d97dace"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Making unawaited promises explicit changes no host capability, connection lifecycle, storage or deployment boundary. Existing platform support is not expanded or certified.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/tx-drizzle/src/libs/DrizzleTxAdapter.ts",
+            "packages/tx-drizzle/src/tests/DrizzleTxAdapter.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Making unawaited promises explicit changes no host capability, connection lifecycle, storage or deployment boundary. Existing platform support is not expanded or certified.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/tx-drizzle/src/libs/DrizzleTxAdapter.ts",
+            "packages/tx-drizzle/src/tests/DrizzleTxAdapter.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Making unawaited promises explicit changes no host capability, connection lifecycle, storage or deployment boundary. Existing platform support is not expanded or certified.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/tx-drizzle/src/libs/DrizzleTxAdapter.ts",
+            "packages/tx-drizzle/src/tests/DrizzleTxAdapter.spec.ts"
+          ]
+        }
+      }
+    },
+    {
+      "package": "esbuild-plugin",
+      "classification": "internal-pure-refactor",
+      "reason": "The DI manifest builder names the bindings it discards while omitting compiler-only fields. The emitted manifest providers, bindings and public signatures are unchanged.",
+      "files": {
+        "packages/esbuild-plugin/src/libs/DiCompiler.ts": "3329af0eb3170205c175775a664cd8a9621f9a8cfe61a41c01860866db9f9d91"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Renaming discarded local bindings in the build-time DI compiler changes no generated output, host capability, storage or lifecycle boundary. Existing platform support is not expanded or certified.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/esbuild-plugin/src/libs/DiCompiler.ts"]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Renaming discarded local bindings in the build-time DI compiler changes no generated output, host capability, storage or lifecycle boundary. Existing platform support is not expanded or certified.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/esbuild-plugin/src/libs/DiCompiler.ts"]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Renaming discarded local bindings in the build-time DI compiler changes no generated output, host capability, storage or lifecycle boundary. Existing platform support is not expanded or certified.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/esbuild-plugin/src/libs/DiCompiler.ts"]
+        }
+      }
+    }
+  ]
+}

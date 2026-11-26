@@ -15,7 +15,7 @@ const repositoryRoot = resolve(__dirname, "../..");
 
 describe("compiler baseline check", () => {
   it("uses pinned tsrs checks while retaining the TypeScript 6 Compiler API and consumers", () => {
-    expect(TYPECHECK_BASELINE).toBe("0.18.0-ts7.1.0-dev.20260929");
+    expect(TYPECHECK_BASELINE).toBe("7.1.0-beta.tsrs5");
     expect(TYPESCRIPT_BASELINE).toBe("6.0.3");
     expect(GENERATED_TYPESCRIPT_RANGE).toBe("^6.0.3");
     expect(collectCompilerBaselineDiagnostics(repositoryRoot)).toEqual([]);

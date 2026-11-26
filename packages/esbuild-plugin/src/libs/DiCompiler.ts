@@ -430,11 +430,19 @@ export function compileDiGraph(options: DiCompilerOptions = {}): DiCompilerResul
     .flatMap(({ descriptor }) => descriptor.providers)
     .filter((provider) => !overriddenTokens.has(provider.tokenId));
   const manifestProviders = [
-    ...moduleProviders.map(({ tokenExpression: _, ...provider }) => provider),
-    ...bindings.map(({ tokenExpression: _, targetExpression: __, ...binding }) => binding),
+    ...moduleProviders.map(({ tokenExpression: _tokenExpression, ...provider }) => provider),
+    ...bindings.map(
+      ({ tokenExpression: _tokenExpression, targetExpression: _targetExpression, ...binding }) =>
+        binding,
+    ),
     ...packageProviders,
     ...sortedProviders.map(
-      ({ classDeclaration: _, classExpression: __, sourceFile: ___, ...provider }) => provider,
+      ({
+        classDeclaration: _classDeclaration,
+        classExpression: _classExpression,
+        sourceFile: _sourceFile,
+        ...provider
+      }) => provider,
     ),
   ].sort((left, right) => compareStrings(left.tokenId, right.tokenId));
   for (const provider of manifestProviders) {

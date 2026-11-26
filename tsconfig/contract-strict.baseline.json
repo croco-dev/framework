@@ -128,7 +128,7 @@
       "line": 189,
       "column": 3,
       "code": "TS2375",
-      "message": "Type '{ target: string | undefined; nodes: readonly ResolvedRequestPipelineNode[]; edges: RequestPipelineGraphEdge[]; successOrder: string[]; errorOrder: string[]; executionOrder: string[]; phaseOrder: RequestPipelinePhaseOrder; debugDump: string; }' is not assignable to type 'RequestPipelineGraph' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
+      "message": "Type '{ target: string | undefined; nodes: readonly ResolvedRequestPipelineNode[]; edges: RequestPipelineGraphEdge[]; successOrder: string[]; errorOrder: ...; executionOrder: ...; phaseOrder: RequestPipelinePhaseOrder; debugDump: string; }' is not assignable to type 'RequestPipelineGraph' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
     },
     {
       "packageName": "@croco/framework-context",
@@ -136,7 +136,7 @@
       "line": 191,
       "column": 41,
       "code": "TS2379",
-      "message": "Argument of type '{ target: string | undefined; nodes: readonly ResolvedRequestPipelineNode[]; edges: RequestPipelineGraphEdge[]; successOrder: string[]; errorOrder: string[]; executionOrder: string[]; phaseOrder: RequestPipelinePhaseOrder; debugDump: string; }' is not assignable to parameter of type 'Omit<RequestPipelineGraph, \"debugDump\">' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
+      "message": "Argument of type '{ target: string | undefined; nodes: readonly ResolvedRequestPipelineNode[]; edges: RequestPipelineGraphEdge[]; successOrder: string[]; errorOrder: ...; executionOrder: ...; phaseOrder: RequestPipelinePhaseOrder; debugDump: string; }' is not assignable to parameter of type 'Omit<RequestPipelineGraph, \"debugDump\">' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
     },
     {
       "packageName": "@croco/framework-context",
@@ -144,7 +144,7 @@
       "line": 246,
       "column": 3,
       "code": "TS2375",
-      "message": "Type '{ id: string; kind: \"filter\" | \"guard\" | \"handler\" | \"interceptor\" | \"middleware\" | \"pipe\" | \"policy\"; phase: \"after\" | \"before\" | \"error\" | \"handler\"; label: string; order: number; dependsOn: readonly string[]; failurePropagation: RequestPipelineFailurePropagation; policyKind: \"retry\" | ... 2 more ... | undefined; ...' is not assignable to type 'ResolvedRequestPipelineNode' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
+      "message": "Type '{ id: string; kind: \"filter\" | \"guard\" | \"handler\" | \"interceptor\" | \"middleware\" | \"pipe\" | \"policy\"; phase: \"after\" | \"before\" | \"error\" | \"handler\"; label: string; order: number; dependsOn: ...; failurePropagation: RequestPipelineFailurePropagation; policyKind: \"retry\" | ... 2 more ... | undefined; source: Policy...' is not assignable to type 'ResolvedRequestPipelineNode' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
     },
     {
       "packageName": "@croco/framework-context",
@@ -160,7 +160,7 @@
       "line": 190,
       "column": 11,
       "code": "TS2375",
-      "message": "Type '{ id: `${string}-${string}-${string}-${string}-${string}`; requestId: string; method: string | undefined; path: string | undefined; route: string | undefined; url: string | undefined; outcome: \"running\"; ... 6 more ...; timeline: never[]; }' is not assignable to type 'MutableRuntimeInspectionRecord' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
+      "message": "Type '{ id: `${string}-${string}-${string}-${string}-${string}`; requestId: string; method: string | undefined; path: string | undefined; route: string | undefined; url: string | undefined; outcome: \"running\"; ... 6 more ...; timeline: ...; }' is not assignable to type 'MutableRuntimeInspectionRecord' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
     },
     {
       "packageName": "@croco/framework-context",
@@ -192,7 +192,7 @@
       "line": 485,
       "column": 5,
       "code": "TS2375",
-      "message": "Type '{ id: string; requestId: string; method: string | undefined; path: string | undefined; route: string | undefined; url: string | undefined; status: number | undefined; outcome: RuntimeInspectionOutcome; ... 7 more ...; timeline: RuntimeInspectorTimelineEvent[]; }' is not assignable to type 'RuntimeInspectionRecord' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
+      "message": "Type '{ id: string; requestId: string; method: string | undefined; path: string | undefined; route: string | undefined; url: string | undefined; status: number | undefined; outcome: RuntimeInspectionOutcome; ... 7 more ...; timeline: ...; }' is not assignable to type 'RuntimeInspectionRecord' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
     },
     {
       "packageName": "@croco/framework-context",
@@ -304,7 +304,7 @@
       "line": 142,
       "column": 35,
       "code": "TS2379",
-      "message": "Argument of type '{ openapi: string; info: { [x: `x-${string}`]: any; title: string; description?: string; termsOfService?: string; contact?: ContactObject; license?: LicenseObject; version: string; }; servers: ServerObject[] | undefined; security: SecurityRequirementObject[]; tags: TagObject[] | ...[]; }' is not assignable to parameter of type 'OpenAPIObjectConfigV31' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
+      "message": "Argument of type '{ openapi: string; info: { [x: `x-${string}`]: any; title: string; description?: string; termsOfService?: string; contact?: ContactObject; license?: LicenseObject; version: string; }; servers: ServerObject[] | undefined; security: ...; tags: ... | ...; }' is not assignable to parameter of type 'OpenAPIObjectConfigV31' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
     },
     {
       "packageName": "@croco/openapi-spec",
@@ -312,7 +312,7 @@
       "line": 266,
       "column": 3,
       "code": "TS2375",
-      "message": "Type '{ method: \"delete\" | \"get\" | \"head\" | \"options\" | \"patch\" | \"post\" | \"put\" | \"trace\"; path: string; operationId: string; summary: string; tags: string[]; responses: { [statusCode: string]: ResponseConfig | ReferenceObject; }; \"x-croco-entitlements\"?: readonly DeclaredEntitlementOpenAPI[]; \"x-croco-guards\"?: ...[]; r...' is not assignable to type 'RouteConfig' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
+      "message": "Type '{ method: \"delete\" | \"get\" | \"head\" | \"options\" | \"patch\" | \"post\" | \"put\" | \"trace\"; path: string; operationId: string; summary: string; tags: string[]; responses: { [statusCode: string]: ResponseConfig | ReferenceObject; }; \"x-croco-entitlements\"?: ...; \"x-croco-guards\"?: ...; request?: ... | undefined; }' is not assignable to type 'RouteConfig' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
     },
     {
       "packageName": "@croco/openapi-spec",
@@ -776,7 +776,7 @@
       "line": 139,
       "column": 3,
       "code": "TS2375",
-      "message": "Type '{ exposure: DiagnosticsExposureMode; token: string | undefined; tokenHeader: string; guard: DiagnosticsGuard | undefined; collector: DiagnosticsCollector | undefined; providers: readonly DiagnosticsProvider[] | undefined; recentErrorLimit: number; messageLimit: number; }' is not assignable to type 'DiagnosticsEndpointPolicy' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
+      "message": "Type '{ exposure: DiagnosticsExposureMode; token: string | undefined; tokenHeader: string; guard: DiagnosticsGuard | undefined; collector: DiagnosticsCollector | undefined; providers: ... | undefined; recentErrorLimit: number; messageLimit: number; }' is not assignable to type 'DiagnosticsEndpointPolicy' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
     },
     {
       "packageName": "@croco/transports-http",
@@ -832,7 +832,7 @@
       "line": 144,
       "column": 3,
       "code": "TS2375",
-      "message": "Type '{ consumerId: string; messageId: string; inboxKey: string; eventType: string; status: InboxMessageStatus; attempts: number; lockedUntil?: Date; processedAt?: Date; failedAt?: Date; lastError?: TransactionalEventError; ... 4 more ...; diagnostics: TransactionalEventDiagnostic[]; }' is not assignable to type 'TransactionalInboxRecord' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
+      "message": "Type '{ consumerId: string; messageId: string; inboxKey: string; eventType: string; status: InboxMessageStatus; attempts: number; lockedUntil?: Date; processedAt?: Date; failedAt?: Date; lastError?: TransactionalEventError; ... 4 more ...; diagnostics: ...; }' is not assignable to type 'TransactionalInboxRecord' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
     },
     {
       "packageName": "@croco/events-tx",
@@ -840,7 +840,7 @@
       "line": 464,
       "column": 11,
       "code": "TS2375",
-      "message": "Type '{ id: string; eventId: string; eventType: string; aggregateId?: string; idempotencyKey: string; payload: Record<string, unknown>; metadata: Record<string, unknown>; traceContext?: EventTraceContext; ... 12 more ...; diagnostics: TransactionalEventDiagnostic[]; }' is not assignable to type 'TransactionalOutboxMessage' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
+      "message": "Type '{ id: string; eventId: string; eventType: string; aggregateId?: string; idempotencyKey: string; payload: Record<string, unknown>; metadata: Record<string, unknown>; traceContext?: EventTraceContext; ... 12 more ...; diagnostics: ...; }' is not assignable to type 'TransactionalOutboxMessage' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
     },
     {
       "packageName": "@croco/events-tx",
@@ -848,7 +848,7 @@
       "line": 494,
       "column": 11,
       "code": "TS2375",
-      "message": "Type '{ id: string; eventId: string; eventType: string; aggregateId?: string; idempotencyKey: string; payload: Record<string, unknown>; metadata: Record<string, unknown>; traceContext?: EventTraceContext; ... 12 more ...; diagnostics: TransactionalEventDiagnostic[]; }' is not assignable to type 'TransactionalOutboxMessage' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
+      "message": "Type '{ id: string; eventId: string; eventType: string; aggregateId?: string; idempotencyKey: string; payload: Record<string, unknown>; metadata: Record<string, unknown>; traceContext?: EventTraceContext; ... 12 more ...; diagnostics: ...; }' is not assignable to type 'TransactionalOutboxMessage' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
     },
     {
       "packageName": "@croco/events-tx",
@@ -856,7 +856,7 @@
       "line": 559,
       "column": 11,
       "code": "TS2375",
-      "message": "Type '{ id: string; eventId: string; eventType: string; aggregateId?: string; idempotencyKey: string; payload: Record<string, unknown>; metadata: Record<string, unknown>; traceContext?: EventTraceContext; ... 12 more ...; diagnostics: TransactionalEventDiagnostic[]; }' is not assignable to type 'TransactionalOutboxMessage' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
+      "message": "Type '{ id: string; eventId: string; eventType: string; aggregateId?: string; idempotencyKey: string; payload: Record<string, unknown>; metadata: Record<string, unknown>; traceContext?: EventTraceContext; ... 12 more ...; diagnostics: ...; }' is not assignable to type 'TransactionalOutboxMessage' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
     },
     {
       "packageName": "@croco/events-tx",
@@ -864,7 +864,7 @@
       "line": 689,
       "column": 11,
       "code": "TS2375",
-      "message": "Type '{ consumerId: string; messageId: string; inboxKey: string; eventType: string; attempts: number; createdAt: Date; lockedUntil?: Date; processedAt?: Date; metadata: Record<string, unknown>; ... 5 more ...; diagnostics: TransactionalEventDiagnostic[]; }' is not assignable to type 'TransactionalInboxRecord' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
+      "message": "Type '{ consumerId: string; messageId: string; inboxKey: string; eventType: string; attempts: number; createdAt: Date; lockedUntil?: Date; processedAt?: Date; metadata: Record<string, unknown>; ... 5 more ...; diagnostics: ...; }' is not assignable to type 'TransactionalInboxRecord' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
     },
     {
       "packageName": "@croco/events-tx",
@@ -872,7 +872,7 @@
       "line": 124,
       "column": 3,
       "code": "TS2375",
-      "message": "Type '{ id: string; eventId: string; eventType: string; aggregateId?: string; idempotencyKey: string; traceContext?: EventTraceContext; attempts: number; maxAttempts: number; status: OutboxMessageStatus; ... 11 more ...; diagnostics: TransactionalEventDiagnostic[]; }' is not assignable to type 'TransactionalOutboxMessage' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
+      "message": "Type '{ id: string; eventId: string; eventType: string; aggregateId?: string; idempotencyKey: string; traceContext?: EventTraceContext; attempts: number; maxAttempts: number; status: OutboxMessageStatus; ... 11 more ...; diagnostics: ...; }' is not assignable to type 'TransactionalOutboxMessage' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
     },
     {
       "packageName": "@croco/events-tx",
@@ -888,7 +888,7 @@
       "line": 540,
       "column": 11,
       "code": "TS2379",
-      "message": "Argument of type '{ id: string; eventId: string; eventType: string; aggregateId: string | undefined; idempotencyKey: string; payload: Record<string, unknown>; metadata: { [x: string]: unknown; traceContext?: EventTraceContext; }; ... 4 more ...; diagnostics: TransactionalEventDiagnostic[]; }' is not assignable to parameter of type 'AppendOutboxMessageInput' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
+      "message": "Argument of type '{ id: string; eventId: string; eventType: string; aggregateId: string | undefined; idempotencyKey: string; payload: Record<string, unknown>; metadata: { [x: string]: unknown; traceContext?: EventTraceContext; }; ... 4 more ...; diagnostics: ...; }' is not assignable to parameter of type 'AppendOutboxMessageInput' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
     },
     {
       "packageName": "@croco/idempotency-core",
@@ -2808,7 +2808,7 @@
       "line": 1538,
       "column": 3,
       "code": "TS2375",
-      "message": "Type '{ version: string | undefined; schemaVersion: string | undefined; target: RuntimePlatform | undefined; runtime: { readonly platform?: RuntimePlatform; readonly capabilities?: Partial<Record<RuntimeCapabilityName, boolean>>; readonly source?: PolicySource; } | undefined; table: PolicyTable | undefined; plans: readonl...' is not assignable to type 'RuntimePolicyCheckManifest' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
+      "message": "Type '{ version: string | undefined; schemaVersion: string | undefined; target: RuntimePlatform | undefined; runtime: { readonly platform?: RuntimePlatform; readonly capabilities?: Partial<Record<RuntimeCapabilityName, boolean>>; readonly source?: PolicySource; } | undefined; table: PolicyTable | undefined; plans: ... | u...' is not assignable to type 'RuntimePolicyCheckManifest' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
     },
     {
       "packageName": "@croco/cli",
@@ -2944,7 +2944,7 @@
       "line": 522,
       "column": 51,
       "code": "TS2379",
-      "message": "Argument of type '{ frameworkManifest: FrameworkManifest; contractGraphSnapshot: ContractGraphSnapshot | undefined; runtimePolicyManifest: RuntimePolicyProjectMapInput | undefined; providerProfileManifest: ProviderProfileProjectMapInput | undefined; packages: readonly ProjectMapPackage[]; routes: ...[]; }' is not assignable to parameter of type '{ readonly frameworkManifest: FrameworkManifest; readonly contractGraphSnapshot?: ContractGraphSnapshot; readonly runtimePolicyManifest?: RuntimePolicyProjectMapInput; readonly providerProfileManifest?: ProviderProfileProjectMapInput; readonly packages: readonly ProjectMapPackage[]; readonly routes: readonly Framewo...' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
+      "message": "Argument of type '{ frameworkManifest: FrameworkManifest; contractGraphSnapshot: ContractGraphSnapshot | undefined; runtimePolicyManifest: RuntimePolicyProjectMapInput | undefined; providerProfileManifest: ProviderProfileProjectMapInput | undefined; packages: ...; routes: ...; }' is not assignable to parameter of type '{ readonly frameworkManifest: FrameworkManifest; readonly contractGraphSnapshot?: ContractGraphSnapshot; readonly runtimePolicyManifest?: RuntimePolicyProjectMapInput; readonly providerProfileManifest?: ProviderProfileProjectMapInput; readonly packages: ...; readonly routes: ...; }' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
     },
     {
       "packageName": "@croco/cli",
@@ -2960,7 +2960,7 @@
       "line": 215,
       "column": 3,
       "code": "TS2375",
-      "message": "Type '{ version: string | undefined; target: string | undefined; runtime: { readonly platform?: RuntimePlatform; readonly capabilities?: Partial<Record<RuntimeCapabilityName, boolean>>; readonly source?: PolicySource; } | undefined; table: PolicyTable | undefined; plans: readonly PolicyExecutionPlan[] | undefined; }' is not assignable to type 'RuntimePolicyCheckManifest' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
+      "message": "Type '{ version: string | undefined; target: string | undefined; runtime: { readonly platform?: RuntimePlatform; readonly capabilities?: Partial<Record<RuntimeCapabilityName, boolean>>; readonly source?: PolicySource; } | undefined; table: PolicyTable | undefined; plans: ... | undefined; }' is not assignable to type 'RuntimePolicyCheckManifest' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
     },
     {
       "packageName": "@croco/cli",

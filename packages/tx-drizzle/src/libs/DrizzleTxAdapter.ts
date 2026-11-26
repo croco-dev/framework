@@ -347,7 +347,7 @@ function createAbortGuardedValue<TValue>(
 
         if (isExecutionPromise(result)) {
           if (result instanceof Promise) {
-            coordinator.trackOperation(result);
+            void coordinator.trackOperation(result);
             return result;
           }
 
@@ -362,7 +362,7 @@ function createAbortGuardedValue<TValue>(
           const executeOnce = (): Promise<unknown> => {
             if (!trackedPromise) {
               trackedPromise = originalThen();
-              coordinator.trackOperation(trackedPromise);
+              void coordinator.trackOperation(trackedPromise);
             }
             return trackedPromise;
           };
@@ -418,12 +418,15 @@ async function runAbortableCallback<T>(
   let abortListener: (() => void) | undefined;
 
   const abortCleanupPromise = new Promise<never>((_, reject) => {
-    abortListener = async () => {
+    const drainThenReject = async (): Promise<void> => {
       try {
         await coordinator.drainOnAbort(signal);
       } finally {
         reject(getAbortReason(signal));
       }
+    };
+    abortListener = () => {
+      void drainThenReject();
     };
 
     signal.addEventListener("abort", abortListener, { once: true });

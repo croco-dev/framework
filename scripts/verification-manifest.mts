@@ -69,6 +69,7 @@ const VERIFICATION_COMMAND_IDS = [
   "generated-app-smoke",
   "alpha-release-smoke",
   "typecheck",
+  "type-aware-lint",
   "test",
   "integration-test-lane",
   "published-test-lane",
@@ -130,6 +131,7 @@ export const VERIFICATION_LANE_OWNERSHIP = {
   "generated-app-smoke": "generated-apps",
   "alpha-release-smoke": "package-artifacts",
   typecheck: "core-verification",
+  "type-aware-lint": "core-verification",
   test: "core-verification",
   "integration-test-lane": "core-verification",
   "cli-packed-e2e": "core-verification",
@@ -1026,6 +1028,13 @@ const spineOnly = (
       timeoutMs: minutes(30),
     },
     {
+      id: "type-aware-lint",
+      label: "Type-aware lint",
+      category: "quality",
+      command: ["pnpm", "exec", "oxlint", "-c", ".oxlintrc.type-aware.json", "packages"],
+      timeoutMs: minutes(15),
+    },
+    {
       id: "test",
       label: "Summarized tests",
       category: "quality",
@@ -1405,6 +1414,7 @@ const VERIFICATION_DEPENDENCIES: Readonly<Record<string, readonly string[]>> = {
   "generated-app-smoke": ["build"],
   "alpha-release-smoke": ["build"],
   typecheck: ["build"],
+  "type-aware-lint": ["build"],
   test: ["build", "typecheck"],
   "integration-test-lane": ["build"],
   "published-test-lane": ["build"],
@@ -1443,6 +1453,7 @@ type VerificationDependencyEdge =
   | "generated-app-smoke->build"
   | "alpha-release-smoke->build"
   | "typecheck->build"
+  | "type-aware-lint->build"
   | "test->build"
   | "test->typecheck"
   | "integration-test-lane->build"
@@ -1491,6 +1502,7 @@ export const VERIFICATION_DEPENDENCY_CLASSIFICATION = {
   "generated-app-smoke->build": ["physical-local", "logical-synthesis"],
   "alpha-release-smoke->build": ["physical-local", "logical-synthesis"],
   "typecheck->build": ["physical-local"],
+  "type-aware-lint->build": ["physical-local"],
   "test->build": ["physical-local"],
   "test->typecheck": ["physical-local"],
   "integration-test-lane->build": ["physical-local"],
@@ -1531,6 +1543,7 @@ const WORKSPACE_ARTIFACT_CONCURRENCY_GROUP = new Set([
   "infrastructure-review",
   "docs-examples",
   "typecheck",
+  "type-aware-lint",
   "test",
   "package-bins-smoke",
   "generated-app-smoke",

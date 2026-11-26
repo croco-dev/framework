@@ -1,8 +1,8 @@
 # TypeScript compiler support
 
-Repository typechecks use exactly `tsrs@0.18.0-ts7.1.0-dev.20260929`, which targets a TypeScript 7.1 development
-build. The pinned prerelease has been checked against all 179 workspace typecheck tasks. Upgrades must rerun
-the full task graph and strict contract diagnostic baseline before changing the pin.
+Repository typechecks use exactly `tsrs@7.1.0-beta.tsrs5`, which targets the TypeScript 7.1 beta. The pinned
+prerelease has been checked against all 183 workspace typecheck tasks. Upgrades must rerun the full task graph,
+the strict contract diagnostic baseline and the type-aware lint before changing the pin.
 
 TypeScript 6.0.3 remains the Compiler API and emission baseline. The workspace pins `typescript` to that exact
 version and forces dependencies on it to the same version through the pnpm override. DI compilation, code
@@ -28,9 +28,26 @@ those tests; accepting unknown compiler options or suppressing diagnostics is no
 - Packed consumer and decorator emission smokes deliberately invoke TypeScript 6 to verify the supported
   consumer ABI. Their compiler identity and diagnostics remain separate from native repository typechecking.
 
-The pinned tsrs package supplies macOS ARM64 and Linux ARM64/x64 binaries; the repository's local macOS and
-Ubuntu CI paths use those binaries. It does not supply a Windows binary. See the
+The pinned tsrs package supplies macOS ARM64/x64, Linux ARM64/x64 (glibc and musl) and Windows x64/ARM64
+binaries; the repository's local macOS and Ubuntu CI paths use those binaries, and no repository check runs on
+Windows. See the
 [upstream compatibility contract](https://github.com/oxc-project/tsrs/blob/main/docs/COMPATIBILITY.md).
+
+## Type-aware lint
+
+`pnpm lint:types` runs Oxlint with `.oxlintrc.type-aware.json` over `packages`. Oxlint selects the `tsrs-lint`
+binary that the pinned tsrs package installs, so the lint and the typecheck share one checker version;
+`oxlint-tsgolint` is not installed. Oxlint and tsrs must be upgraded together because a rule that the installed
+`tsrs-lint` does not implement fails the whole run.
+
+- The config enables only `typescript/no-floating-promises` and `typescript/no-misused-promises` as errors and
+  turns the default categories off. It covers package sources; tests, type tests, package scripts and
+  `create-croco-app` templates are ignored.
+- Packages whose `types` entry points at `dist` resolve only after a build. Without that build the lint cannot see
+  their Promise-returning signatures and passes code it would otherwise reject, so run it after `pnpm build`.
+  The `type-aware-lint` verification check depends on `build` and runs in the workspace-artifacts group for the
+  same reason.
+- `pnpm lint` and the pre-commit hook stay syntax-only and need no build.
 
 ## Decorator contract
 

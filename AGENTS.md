@@ -18,6 +18,7 @@ pnpm --dir packages/retry-core vitest run -t "should retry"  # 테스트 이름�
 # Lint & Format
 pnpm lint               # 전체 lint (read-only)
 pnpm --filter @croco/retry-core lint  # 단일 패키지 lint (read-only)
+pnpm lint:types         # 패키지 소스 type-aware lint (read-only, pnpm build 이후 실행)
 pnpm format             # 전체 formatter 적용 (파일 변경)
 
 # Repository Verification
@@ -91,6 +92,9 @@ formatter는 Oxfmt, linter는 Oxlint를 사용한다. 아래 요약보다 `.oxfm
 - `any` 명시적 사용 금지 (Oxlint error)
 - Non-null assertion 금지 (Oxlint error)
 - test file에는 `.oxlintrc.json`의 override가 적용되어 일부 규칙이 완화된다.
+- 타입 정보가 필요한 규칙은 `.oxlintrc.type-aware.json`이 source of truth다. 패키지 소스에서 처리되지 않은 Promise와
+  `void` 자리에 넘긴 Promise 반환 함수를 금지한다 (Oxlint error). 경계와 실행 조건은
+  [TypeScript support](docs/typescript-support.md#type-aware-lint)를 따른다.
 
 ## Import Order
 

@@ -185,6 +185,7 @@ export const RELEASE_GATE_POLICY_INPUT_PATHS = [
   ".oxfmtignore",
   ".oxfmtrc.json",
   ".oxlintrc.json",
+  ".oxlintrc.type-aware.json",
   ".prettierignore",
   "AGENTS.md",
   "CONTRIBUTING.md",
