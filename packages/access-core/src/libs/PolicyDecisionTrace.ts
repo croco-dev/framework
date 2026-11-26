@@ -81,8 +81,32 @@ const DEFAULT_MAX_DEPTH = 5;
 const DEFAULT_MAX_STRING_LENGTH = 500;
 const DEFAULT_SENSITIVE_KEY_PATTERN =
   /authorization|cookie|credential|password|secret|token|api[-_]?key|private[-_]?key|access[-_]?key|database[-_]?url|redis[-_]?url|mongo(?:db)?[-_]?url|postgres(?:ql)?[-_]?url|connection[-_]?string|dsn/i;
+const AUTHORIZATION_LABEL = "(?:proxy[-_])?authorization";
+const LINE_BREAK = String.raw`(?:\r\n|\r(?!\n)|\n)`;
+const NEXT_DIAGNOSTIC_FIELD = String.raw`[a-z][\w-]*(?:[ \t]+[\w-]+)*[ \t]*:(?=[ \t\r\n]|$)`;
+const ASSIGNMENT_SEPARATOR = String.raw`[ \t]*[:=][ \t]*(?:(?:${LINE_BREAK}[ \t]*)+(?!${NEXT_DIAGNOSTIC_FIELD})(?=\S))?`;
+const DOUBLE_QUOTED_TEXT = /"(?:\\[^\r\n]|[^"\\\r\n])*"/;
+const SINGLE_QUOTED_TEXT = /'(?:\\[^\r\n]|[^'\\\r\n])*'/;
+const QUOTED_VALUE = String.raw`(?:${DOUBLE_QUOTED_TEXT.source}|(?='(?:\\[^\r\n]|[^'\\\r\n])*[ \t;])${SINGLE_QUOTED_TEXT.source}|${SINGLE_QUOTED_TEXT.source}(?=[ \t]*(?:[,;}&\]\r\n]|${NEXT_DIAGNOSTIC_FIELD}|$)))`;
+const CONTINUATION_INDENT = String.raw`[ \t]+(?![ \t])`;
+const HEADER_CONTINUATION = String.raw`${LINE_BREAK}\k<indent>${CONTINUATION_INDENT}`;
+const UNQUOTED_HEADER_CONTINUATION = String.raw`${LINE_BREAK}\k<indent>(?![ \t]*${NEXT_DIAGNOSTIC_FIELD})${CONTINUATION_INDENT}`;
+const HEADER_END = String.raw`\\?(?=[\r\n]|$)`;
+const HEADER_QUOTED_PARAM = String.raw`"(?:\\[^\r\n]|[^"\\\r\n]|${HEADER_CONTINUATION})*(?:"|${HEADER_END})`;
+const SINGLE_QUOTED_HEADER_PART = String.raw`(?:\\[^\r\n]|[^'\\\r\n]|${HEADER_CONTINUATION})`;
+const FOLDED_SINGLE_QUOTED_VALUE = String.raw`'(?:\\[^\r\n]|[^'\\\r\n])*${HEADER_CONTINUATION}${SINGLE_QUOTED_HEADER_PART}*'`;
+const TRUNCATED_SINGLE_QUOTED_VALUE = String.raw`'${SINGLE_QUOTED_HEADER_PART}*${HEADER_END}`;
+const UNQUOTED_HEADER_VALUE = String.raw`(?![ \t])(?:(?!,[ \t]*${NEXT_DIAGNOSTIC_FIELD})[^";\r\n]|${HEADER_QUOTED_PARAM}|${UNQUOTED_HEADER_CONTINUATION})+`;
+const SCHEME_AND_TOKEN = String.raw`[!#$%&'*+.^_\x60|~\da-z-]+[ \t]+[a-z0-9._~+/-]+=*`;
+const DELIMITED_TOKEN_VALUE = String.raw`(?:${SCHEME_AND_TOKEN}|[^\s,;&"']+)(?=[ \t]*[,&])`;
+const JSON_SCALAR = String.raw`(?:null|true|false|-?(?:0|[1-9]\d*)(?:\.\d+)?(?:e[+-]?\d+)?)(?=\s*(?:[,}]|$))`;
+const AUTHORIZATION_ASSIGNMENT = String.raw`((?:^(?<indent>[ \t]*)|)(?<keyQuote>["']?)${AUTHORIZATION_LABEL}\k<keyQuote>${ASSIGNMENT_SEPARATOR})(?:(${QUOTED_VALUE}|${FOLDED_SINGLE_QUOTED_VALUE})|(${JSON_SCALAR})|${TRUNCATED_SINGLE_QUOTED_VALUE}|${DELIMITED_TOKEN_VALUE}|${UNQUOTED_HEADER_VALUE})`;
+const AUTHORIZATION_OR_QUOTED_TEXT = new RegExp(
+  String.raw`${AUTHORIZATION_ASSIGNMENT}|(?<![\p{ID_Continue}\\])(?:${DOUBLE_QUOTED_TEXT.source}|${SINGLE_QUOTED_TEXT.source})`,
+  "gimu",
+);
 const DEFAULT_SENSITIVE_VALUE_PATTERN =
-  /((?:authorization|password|secret|token|api[-_]?key|access[-_]?key|private[-_]?key|credential|dsn)\s*[:=]\s*)[^\s,;&]+|((?:bearer|basic)\s+)[^\s,;]+|((?:postgres(?:ql)?|mysql|mongodb(?:\+srv)?|redis):\/\/)[^\s]+/gi;
+  /((?:password|secret|token|api[-_]?key|access[-_]?key|private[-_]?key|credential|dsn)\s*[:=]\s*)[^\s,;&]+|((?:bearer|basic)\s+)[^\s,;]+|((?:postgres(?:ql)?|mysql|mongodb(?:\+srv)?|redis):\/\/)[^\s]+/gi;
 
 export function createPolicyDecisionTrace(input: PolicyDecisionTraceInput): PolicyDecisionTrace {
   const state: RedactionState = {
@@ -290,13 +314,49 @@ function sanitizePolicyDecisionValue(
   return output;
 }
 
+function decodeDiagnosticString(value: string): string | undefined {
+  try {
+    const decoded: unknown = JSON.parse(value);
+    return typeof decoded === "string" ? decoded : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function redactAuthorizationText(value: string, onRedaction: () => void): string {
+  return value.replace(
+    AUTHORIZATION_OR_QUOTED_TEXT,
+    (match, prefix, _indent, keyQuote, quotedValue, scalar) => {
+      if (prefix !== undefined) {
+        const isJsonScalar =
+          scalar !== undefined && keyQuote === '"' && prefix.trimEnd().endsWith(":");
+        if (isJsonScalar && scalar === "null") return match;
+        onRedaction();
+        const quote = isJsonScalar ? '"' : (quotedValue?.[0] ?? "");
+        return `${prefix}${quote}${POLICY_DECISION_REDACTED_VALUE}${quote}`;
+      }
+
+      const quote = match[0];
+      const decoded =
+        quote === '"' && match.includes("\\") ? decodeDiagnosticString(match) : undefined;
+      const content = decoded ?? match.slice(1, -1);
+      const redacted = redactAuthorizationText(content, onRedaction);
+      if (redacted === content) return match;
+      return decoded === undefined ? `${quote}${redacted}${quote}` : JSON.stringify(redacted);
+    },
+  );
+}
+
 function sanitizePolicyDecisionString(
   value: string,
   state: RedactionState,
   path: readonly string[] = [],
 ): string {
   let redacted = false;
-  const scrubbed = value.replace(
+  const authorizationRedacted = redactAuthorizationText(value, () => {
+    redacted = true;
+  });
+  const scrubbed = authorizationRedacted.replace(
     DEFAULT_SENSITIVE_VALUE_PATTERN,
     (_match, assignmentPrefix, authPrefix, urlPrefix) => {
       redacted = true;

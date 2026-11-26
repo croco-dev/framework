@@ -48,6 +48,132 @@ describe("PolicyDecisionTrace", () => {
     });
   });
 
+  it.each([
+    ["Authorization: Bearer sample-credential", "Authorization: [Redacted]"],
+    ["proxy-authorization=Basic sample-credential", "proxy-authorization=[Redacted]"],
+    ["authorization: Custom sample-credential", "authorization: [Redacted]"],
+    [
+      'authorization: Digest username="sample;user", response="sample-proof"; request ID: sample-request',
+      "authorization: [Redacted]; request ID: sample-request",
+    ],
+    [
+      'authorization: Digest username="sample;user", response="sample-proof", request ID: sample-request',
+      "authorization: [Redacted], request ID: sample-request",
+    ],
+    ["authorization=sample-credential", "authorization=[Redacted]"],
+    [
+      "authorization=sample-credential; request ID: sample-request",
+      "authorization=[Redacted]; request ID: sample-request",
+    ],
+    [
+      "Authorization: Bearer sample-credential, requestId=sample-request",
+      "Authorization: [Redacted], requestId=sample-request",
+    ],
+    [
+      "Authorization=Custom sample-credential&requestId=sample-request",
+      "Authorization=[Redacted]&requestId=sample-request",
+    ],
+    [
+      "Upstream Authorization: Bearer sample-credential\n  Request ID: sample-request",
+      "Upstream Authorization: [Redacted]\n  Request ID: sample-request",
+    ],
+    ["Authorization:\nopaque-credential", "Authorization:\n[Redacted]"],
+    ["Authorization:\r\n \r\nopaque-credential", "Authorization:\r\n \r\n[Redacted]"],
+    [
+      '{"authorization":716,"requestId":"sample-request"}',
+      '{"authorization":"[Redacted]","requestId":"sample-request"}',
+    ],
+    [
+      '"Authorization: Bearer sample-credential" request ID: sample-request',
+      '"Authorization: [Redacted]" request ID: sample-request',
+    ],
+    [
+      'Authorization="Custom sample-credential" request ID: sample-request',
+      'Authorization="[Redacted]" request ID: sample-request',
+    ],
+    [
+      "Authorization='Custom sample;credential' request ID: sample-request",
+      "Authorization='[Redacted]' request ID: sample-request",
+    ],
+    [
+      "Authorization='Custom\r\n\tsample-credential' request ID: sample-request",
+      "Authorization='[Redacted]' request ID: sample-request",
+    ],
+    [
+      "Authorization='sample-credential' request ID: sample-request",
+      "Authorization='[Redacted]' request ID: sample-request",
+    ],
+    [
+      "The provider's Authorization='Custom sample-credential'",
+      "The provider's Authorization='[Redacted]'",
+    ],
+    ["René's Authorization='Custom sample-credential'", "René's Authorization='[Redacted]'"],
+    ["Authorization='Custom sample;credential", "Authorization=[Redacted]"],
+    [
+      '{"authorization":"Custom sample-credential","requestId":"sample-request"}',
+      '{"authorization":"[Redacted]","requestId":"sample-request"}',
+    ],
+    ["Authorization: Custom\r\n\tsample-credential", "Authorization: [Redacted]"],
+    ["Authorization: Custom\r\n \r\n\tsample-credential", "Authorization: [Redacted]"],
+    [
+      "Headers:\r\n  Authorization: Bearer sample-credential\r\n  X-Request-Id: sample-request",
+      "Headers:\r\n  Authorization: [Redacted]\r\n  X-Request-Id: sample-request",
+    ],
+    [
+      'Authorization: Digest username="sample\r\n\t;user", response="sample-proof"',
+      "Authorization: [Redacted]",
+    ],
+    [
+      JSON.stringify({
+        message: 'upstream Authorization: Digest username="sample;user", response="sample-proof"',
+        operation: "list",
+      }),
+      '{"message":"upstream Authorization: [Redacted]","operation":"list"}',
+    ],
+    ["Bearer sample-credential", "Bearer [Redacted]"],
+    ["password=sample-credential denied", "password=[Redacted] denied"],
+  ])("redacts credentials in trace strings (%s)", (header, redactedHeader) => {
+    const trace = createPolicyDecisionTrace({
+      policyKind: "access",
+      result: "deny",
+      ruleId: "access:document:viewer",
+      reason: `Request rejected: ${header}\nRequest ID: sample-request`,
+      inputs: { diagnostic: header },
+    });
+
+    expect(trace.reason).toBe(`Request rejected: ${redactedHeader}\nRequest ID: sample-request`);
+    expect(trace.inputs.diagnostic).toBe(redactedHeader);
+    expect(trace.redaction).toEqual({ applied: true, paths: ["diagnostic", "$"] });
+  });
+
+  it("preserves independent diagnostic lines after an empty authorization field", () => {
+    const reason = "Authorization: \r\nRequest ID: sample-request";
+    const trace = createPolicyDecisionTrace({
+      policyKind: "access",
+      result: "deny",
+      ruleId: "access:document:viewer",
+      reason,
+    });
+
+    expect(trace.reason).toBe(reason);
+    expect(trace.redaction.applied).toBe(false);
+  });
+
+  it("preserves JSON null for an absent authorization value", () => {
+    const diagnostic = '{"authorization":null,"requestId":"sample-request"}';
+    const trace = createPolicyDecisionTrace({
+      policyKind: "access",
+      result: "deny",
+      ruleId: "access:document:viewer",
+      reason: diagnostic,
+      inputs: { diagnostic },
+    });
+
+    expect(trace.reason).toBe(diagnostic);
+    expect(trace.inputs.diagnostic).toBe(diagnostic);
+    expect(trace.redaction.applied).toBe(false);
+  });
+
   it("records telemetry attributes and forwards the audit trace", async () => {
     const recordEventSpy = vi.spyOn(telemetry, "recordEvent").mockImplementation(() => {});
     const auditSink = {

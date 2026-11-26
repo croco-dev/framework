@@ -6882,7 +6882,7 @@ Sources:
 
 Sources:
 
-- `packages/auth-clerk/src/libs/problems/ClerkProblems.ts:133:1` (problem-class)
+- `packages/auth-clerk/src/libs/problems/ClerkProblems.ts:134:1` (problem-class)
 
 <a id="auth-clerk-external-service-error"></a>
 
@@ -6900,7 +6900,7 @@ Sources:
 
 Sources:
 
-- `packages/auth-clerk/src/libs/problems/ClerkProblems.ts:173:5` (problem-constructor)
+- `packages/auth-clerk/src/libs/problems/ClerkProblems.ts:174:5` (problem-constructor)
 
 <a id="auth-clerk-invalid-webhook-payload"></a>
 
@@ -6918,7 +6918,7 @@ Sources:
 
 Sources:
 
-- `packages/auth-clerk/src/libs/problems/ClerkProblems.ts:18:1` (problem-class)
+- `packages/auth-clerk/src/libs/problems/ClerkProblems.ts:19:1` (problem-class)
 
 <a id="auth-clerk-malformed-claim"></a>
 
@@ -6936,7 +6936,7 @@ Sources:
 
 Sources:
 
-- `packages/auth-clerk/src/libs/problems/ClerkProblems.ts:122:1` (problem-class)
+- `packages/auth-clerk/src/libs/problems/ClerkProblems.ts:123:1` (problem-class)
 
 <a id="auth-clerk-public-user-data-missing"></a>
 
@@ -6954,7 +6954,7 @@ Sources:
 
 Sources:
 
-- `packages/auth-clerk/src/libs/problems/ClerkProblems.ts:160:1` (problem-class)
+- `packages/auth-clerk/src/libs/problems/ClerkProblems.ts:161:1` (problem-class)
 
 <a id="auth-clerk-token-verification-failed"></a>
 
@@ -6972,7 +6972,7 @@ Sources:
 
 Sources:
 
-- `packages/auth-clerk/src/libs/problems/ClerkProblems.ts:73:1` (problem-class)
+- `packages/auth-clerk/src/libs/problems/ClerkProblems.ts:74:1` (problem-class)
 
 <a id="auth-clerk-token-verification-upstream-failed"></a>
 
@@ -6990,7 +6990,7 @@ Sources:
 
 Sources:
 
-- `packages/auth-clerk/src/libs/problems/ClerkProblems.ts:98:1` (problem-class)
+- `packages/auth-clerk/src/libs/problems/ClerkProblems.ts:99:1` (problem-class)
 
 <a id="auth-clerk-unexpected-tenant-mapping-claim"></a>
 
@@ -7008,7 +7008,7 @@ Sources:
 
 Sources:
 
-- `packages/auth-clerk/src/libs/problems/ClerkProblems.ts:148:1` (problem-class)
+- `packages/auth-clerk/src/libs/problems/ClerkProblems.ts:149:1` (problem-class)
 
 <a id="auth-clerk-webhook-delivery-failed"></a>
 
@@ -7026,7 +7026,7 @@ Sources:
 
 Sources:
 
-- `packages/auth-clerk/src/libs/problems/ClerkProblems.ts:54:1` (problem-class)
+- `packages/auth-clerk/src/libs/problems/ClerkProblems.ts:55:1` (problem-class)
 
 <a id="auth-clerk-webhook-delivery-in-flight"></a>
 
@@ -7044,7 +7044,7 @@ Sources:
 
 Sources:
 
-- `packages/auth-clerk/src/libs/problems/ClerkProblems.ts:35:1` (problem-class)
+- `packages/auth-clerk/src/libs/problems/ClerkProblems.ts:36:1` (problem-class)
 
 <a id="auth-clerk-webhook-verification-failed"></a>
 
@@ -7062,7 +7062,7 @@ Sources:
 
 Sources:
 
-- `packages/auth-clerk/src/libs/problems/ClerkProblems.ts:7:1` (problem-class)
+- `packages/auth-clerk/src/libs/problems/ClerkProblems.ts:8:1` (problem-class)
 
 <a id="auth-core-api-key-creation-failed"></a>
 

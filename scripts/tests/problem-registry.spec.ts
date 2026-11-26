@@ -658,6 +658,44 @@ class Missing extends Base { constructor() { super("literal"); } }`,
   }, 30_000);
 
   it.each([
+    { delegate: "@croco/diagnostics-core", message: "value", status: "pass" },
+    { delegate: "@croco/diagnostics-core", message: "'unrelated'", status: "fail" },
+    { delegate: "./not-diagnostics-core", message: "value", status: "fail" },
+  ] as const)(
+    "checks message forwarding through diagnostics redaction ($delegate, $message)",
+    ({ delegate, message, status }) => {
+      const repo = createTempRepo();
+      writeFile(
+        repo,
+        "packages/alpha/src/problems.ts",
+        [
+          'import { Problem, ProblemCategory } from "@croco/problems-core";',
+          `import { redactDiagnosticCredentials } from "${delegate}";`,
+          "",
+          "const SENSITIVE_KEY = /token/i;",
+          'function redactSensitiveValue(value: string, replacement = "[Redacted]"): string {',
+          `  return redactDiagnosticCredentials(${message}, SENSITIVE_KEY, replacement);`,
+          "}",
+          "export class DelegatingRedactedProblem extends Problem {",
+          "  constructor(error: unknown) {",
+          '    super("alpha/delegating-redacted", ProblemCategory.InternalServerError, "failed", { cause: error instanceof Error ? new Error(redactSensitiveValue(error.message)) : undefined });',
+          "  }",
+          "}",
+        ].join("\n"),
+      );
+
+      const result = runProblemRegistryCheck(repo, "write");
+      expect(result.status).toBe(status);
+      if (status === "fail") {
+        expect(result.diagnostics).toContainEqual(
+          expect.stringContaining("DelegatingRedactedProblem must forward 'error'"),
+        );
+      }
+    },
+    30_000,
+  );
+
+  it.each([
     "constant",
     "shadowed",
     "imported-constant",

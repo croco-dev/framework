@@ -276,12 +276,15 @@ describe.each([
       },
       {
         readinessCheck: async () => ({
-          message: `ready ${SECRET_SAMPLE}`,
+          message: `ready ${SECRET_SAMPLE} authorization=ExampleAuth fixture-value`,
           details: {
             cookie: "session=unlisted-cookie",
             privateKey: "raw-private-key",
             rawValue: SECRET_SAMPLE,
-            nested: { safe: `ready ${SECRET_SAMPLE}` },
+            nested: {
+              safe: '{"password":"fixture-password","requestId":"abc"}',
+              configured: SECRET_SAMPLE,
+            },
           },
         }),
       },
@@ -292,10 +295,19 @@ describe.each([
     expect(serialized).not.toContain(SECRET_SAMPLE);
     expect(serialized).not.toContain("raw-private-key");
     expect(serialized).not.toContain("unlisted-cookie");
-    expect(health.message).toBe("ready [redacted]");
+    expect(health.message).toBe("ready [redacted] authorization=[redacted]");
+    expect(health.details).toMatchObject({
+      readiness: {
+        nested: { safe: '{"password":"[redacted]","requestId":"abc"}', configured: "[redacted]" },
+      },
+    });
   });
 
-  it("redacts readiness check failures", async () => {
+  it.each([
+    ["upstream Error", "auth-clerk/token-verification-upstream-failed"],
+    ["existing Problem", "auth-clerk/external-service-error"],
+  ])("redacts readiness check failures from an %s", async (_label, problemCode) => {
+    const detail = `Clerk timeout ${SECRET_SAMPLE}; Authorization: Basic fixture-value`;
     const health = await new ClerkAuthDiagnosticsProvider(
       {
         secretKey: SECRET_SAMPLE,
@@ -304,17 +316,20 @@ describe.each([
       },
       {
         readinessCheck: async () => {
-          throw Object.assign(new Error(`Clerk timeout ${SECRET_SAMPLE}`), {
-            status: 503,
-          });
+          if (problemCode === "auth-clerk/external-service-error") {
+            throw new ClerkExternalServiceProblem(detail);
+          }
+          throw Object.assign(new Error(detail), { status: 503 });
         },
       },
     ).getHealth();
 
     expect(health.status).toBe("degraded");
     expect(JSON.stringify(health)).not.toContain(SECRET_SAMPLE);
+    expect(health.message).toContain("Authorization: [redacted]");
+    expect(health.message).not.toContain("fixture-value");
     expect(health.details).toMatchObject({
-      problemCode: "auth-clerk/token-verification-upstream-failed",
+      problemCode,
       problemStatus: 500,
     });
   });

@@ -13649,6 +13649,12 @@
               "exportKind": "named",
               "source": "./libs/DiagnosticCodes",
               "declarationKind": "function"
+            },
+            {
+              "name": "redactDiagnosticCredentials",
+              "exportKind": "named",
+              "source": "./libs/redactDiagnosticCredentials",
+              "declarationKind": "function"
             }
           ],
           "typeExports": [

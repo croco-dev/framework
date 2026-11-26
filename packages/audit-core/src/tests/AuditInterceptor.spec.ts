@@ -650,7 +650,10 @@ describe("AuditInterceptor", () => {
       authorization: "Bearer request-secret",
     };
     requestBody["self"] = requestBody;
-    const handlerError = new Error("request failed password=result-secret");
+    const handlerError = new Error(
+      'request failed {"Authorization":null,"requestId":"abc","password":"result-secret"}\n' +
+        "Proxy-Authorization: ExampleAuth fixture-value",
+    );
     const context = createExecutionContext({
       controller: TestController,
       handler: "update",
@@ -673,7 +676,9 @@ describe("AuditInterceptor", () => {
     expect(createSpy).toHaveBeenCalledWith(
       expect.objectContaining({
         payload: {
-          error: "request failed password=[Redacted]",
+          error:
+            'request failed {"Authorization":null,"requestId":"abc","password":"[Redacted]"}\n' +
+            "Proxy-Authorization: [Redacted]",
         },
         metadata: {
           http: {

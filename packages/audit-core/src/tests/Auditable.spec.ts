@@ -736,7 +736,10 @@ describe("@Auditable", () => {
       @Auditable({ action: "session.fail", resourceType: "Session" })
       async fail(): Promise<void> {
         throw new Error(
-          'request failed {"password":"pa\'ss,tail","apiKey":"key\\\"value,tail"}\nCookie: sid=first-secret; csrf=second-secret\nauthorization=Bearer bearer-value',
+          'request failed {"password":"pa\'ss,tail","apiKey":"key\\\"value,tail"}\n' +
+            "Cookie: sid=first-secret; csrf=second-secret\nauthorization=Bearer bearer-value\n" +
+            'Proxy-Authorization: ExampleAuth first="fixture-one", second="fixture-two"\n' +
+            "request ID: req-error-redaction",
         );
       }
     }
@@ -747,7 +750,9 @@ describe("@Auditable", () => {
     expect(createSpy.mock.calls[0]?.[0].payload).toEqual({
       arguments: [],
       error:
-        'request failed {"password":"[Redacted]","apiKey":"[Redacted]"}\nCookie: [Redacted]\nauthorization=[Redacted]',
+        'request failed {"password":"[Redacted]","apiKey":"[Redacted]"}\n' +
+        "Cookie: [Redacted]\nauthorization=[Redacted]\nProxy-Authorization: [Redacted]\n" +
+        "request ID: req-error-redaction",
     });
   });
 

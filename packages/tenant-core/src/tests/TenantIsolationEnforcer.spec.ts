@@ -92,6 +92,7 @@ describe("TenantIsolationEnforcer", () => {
       },
       inputs: {
         authorization: "Bearer tenant-secret",
+        diagnostic: "Authorization: Custom sample-credential",
       },
       metadata: {
         route: "orders.show",
@@ -131,6 +132,7 @@ describe("TenantIsolationEnforcer", () => {
         },
         inputs: {
           authorization: "[Redacted]",
+          diagnostic: "Authorization: [Redacted]",
         },
       },
     });
