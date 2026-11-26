@@ -10,6 +10,7 @@ import {
   readExpectedBranchProtectionPolicy,
 } from "../branch-protection-policy.mts";
 import {
+  createPackagedProblemRegistry,
   createProblemCodeRegistry,
   createProblemRegistryArtifacts,
   discoverProblemCodes,
@@ -112,7 +113,7 @@ describe("problem-registry.mts", () => {
     const correlated = problems.find((entry) => entry.categoryPolicy);
 
     const precision = `
-const expected = ${JSON.stringify(registry)} as const;
+const expected = ${JSON.stringify(createPackagedProblemRegistry(registry))} as const;
 type Equal<A, B> = (<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B ? 1 : 2) ? true : false;
 type Assert<T extends true> = T;
 type RootKeys = Assert<Equal<keyof CrocoProblemRegistry, keyof typeof expected>>;
@@ -424,6 +425,38 @@ new GenericProblem("alpha/known", ProblemCategory.NotFound);
       line: 3,
     });
     expect(runProblemRegistryCheck(repo, "check").status).toBe("pass");
+  });
+
+  it("keeps the packaged registry module unchanged when declarations only move", () => {
+    const repo = createTempRepo();
+    const declarations = `import { Problem, ProblemCategory } from "@croco/problems-core";
+class GenericProblem extends Problem {
+  constructor(code: string, category: ProblemCategory) { super(code, category, "failed"); }
+}
+new GenericProblem("alpha/known", ProblemCategory.NotFound);
+`;
+    const packagedRegistryPath = join(
+      repo,
+      "packages/problems-core/src/generated/problem-code-registry.ts",
+    );
+    const sourceLine = () =>
+      readRegistry(repo).problems.find((problem) => problem.code === "alpha/known")?.sources[0]
+        ?.line;
+
+    writeFile(repo, "packages/alpha/src/problems.ts", declarations);
+    expect(runProblemRegistryCheck(repo, "write").diagnostics).toEqual([]);
+    const originalLine = sourceLine();
+    const packagedRegistry = readFileSync(packagedRegistryPath, "utf-8");
+
+    writeFile(repo, "packages/alpha/src/problems.ts", `\n\n${declarations}`);
+    expect(runProblemRegistryCheck(repo, "check").status).toBe("fail");
+    expect(runProblemRegistryCheck(repo, "write").diagnostics).toEqual([]);
+
+    expect(sourceLine()).toBe((originalLine ?? Number.NaN) + 2);
+    expect(readFileSync(packagedRegistryPath, "utf-8")).toBe(packagedRegistry);
+    expect(packagedRegistry).toContain('"alpha/known"');
+    expect(packagedRegistry).toContain('"GenericProblem"');
+    expect(packagedRegistry).not.toContain("packages/alpha/src/problems.ts");
   });
 
   it("checks aliased and transitively inherited concrete classes but permits abstract bases", () => {

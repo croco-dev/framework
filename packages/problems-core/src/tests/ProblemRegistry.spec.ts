@@ -210,8 +210,16 @@ describe("Problem code registry", () => {
     ).toThrow(ProblemRegistryValidationProblem);
   });
 
-  it("accepts the generated registry through the public validation contract", () => {
-    expect(() => assertProblemCodeRegistryValid(CROCO_PROBLEM_CODE_REGISTRY)).not.toThrow();
+  it("packages the generated registry without declaration source locations", () => {
+    expect(CROCO_PROBLEM_CODE_REGISTRY.problemCount).toBe(
+      CROCO_PROBLEM_CODE_REGISTRY.problems.length,
+    );
+    for (const problem of CROCO_PROBLEM_CODE_REGISTRY.problems) {
+      expect(problem).not.toHaveProperty("sources");
+    }
+    for (const factory of CROCO_PROBLEM_CODE_REGISTRY.dynamicCodeFactories ?? []) {
+      expect(factory).not.toHaveProperty("source");
+    }
   });
 
   it("defines package ProblemRegistry manifests with visibility and redaction metadata", () => {

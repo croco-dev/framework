@@ -179,7 +179,7 @@ describe("Turbo task contract", () => {
 });
 
 describe("Turbo compiler configuration cache inputs", () => {
-  it("invalidates build and typecheck for inherited and local configs while reusing identical inputs", () => {
+  it("invalidates build and typecheck for inherited and local configs while reusing identical inputs and the strict contract baseline", () => {
     const root = mkdtempSync(resolve(tmpdir(), "croco-tsconfig-cache-"));
     const write = (path: string, value: unknown) =>
       writeFileSync(resolve(root, path), JSON.stringify(value));
@@ -291,6 +291,14 @@ describe("Turbo compiler configuration cache inputs", () => {
         expect(executions(), path).toBe(after);
         writeFileSync(resolve(root, path), original);
       }
+      const beforeBaselineChange = executions();
+      write("tsconfig/contract-strict.baseline.json", { regenerated: true });
+      const afterBaselineChange = run();
+      expect(afterBaselineChange.tasks.map((task) => task.hash)).toEqual(
+        baseline.tasks.map((task) => task.hash),
+      );
+      expect(afterBaselineChange.tasks.map((task) => task.cache.status)).toEqual(["HIT", "HIT"]);
+      expect(executions()).toBe(beforeBaselineChange);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
