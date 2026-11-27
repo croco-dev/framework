@@ -10,7 +10,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { resolve } from "node:path";
+import { dirname, relative, resolve, sep } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
@@ -26,6 +26,7 @@ type TurboTask = {
 };
 
 type TurboConfiguration = {
+  readonly globalDependencies?: readonly string[];
   readonly globalPassThroughEnv?: readonly string[];
   readonly tasks: Readonly<Record<string, TurboTask>>;
 };
@@ -120,26 +121,110 @@ describe("Turbo task contract", () => {
 
   it("hashes or reruns core coverage tests that read files outside their package", () => {
     const coverage = turbo.tasks["test:coverage"];
-    const withInputs = (...inputs: string[]) => ({
+    const override = (extra: { inputs?: string[]; dependsOn?: string[] }) => ({
       ...coverage,
-      inputs: [...(coverage?.inputs ?? []), ...inputs],
+      dependsOn: [...(coverage?.dependsOn ?? []), ...(extra.dependsOn ?? [])],
+      inputs: [...(coverage?.inputs ?? []), ...(extra.inputs ?? [])],
     });
     const overrides = Object.fromEntries(
       Object.entries(turbo.tasks).filter(([name]) => name.endsWith("#test:coverage")),
     );
 
     expect(overrides).toEqual({
-      "@croco/openapi-spec#test:coverage": withInputs(
-        "$TURBO_ROOT$/scripts/fixtures/protocol-codegen/**",
-      ),
-      "@croco/rpc-codegen#test:coverage": withInputs(
-        "$TURBO_ROOT$/scripts/fixtures/protocol-codegen/**",
-        "$TURBO_ROOT$/test-fixtures/**",
-      ),
-      // Their tests read other packages' sources and manifests, which no input list keeps complete.
+      "@croco/openapi-spec#test:coverage": override({
+        inputs: ["$TURBO_ROOT$/scripts/fixtures/protocol-codegen/**"],
+      }),
+      "@croco/rpc-codegen#test:coverage": override({
+        inputs: [
+          "$TURBO_ROOT$/scripts/fixtures/protocol-codegen/**",
+          "$TURBO_ROOT$/test-fixtures/**",
+        ],
+        dependsOn: ["@croco/frontend-problems#build"],
+      }),
+      "@croco/transports-http#test:coverage": override({
+        dependsOn: [
+          "@croco/openapi-spec#build",
+          "@croco/rpc-codegen#build",
+          "@croco/protocols-trpc#build",
+          "@croco/frontend-problems#build",
+        ],
+      }),
+      "@croco/framework-context#test:coverage": override({
+        dependsOn: [
+          "@croco/framework-config#build",
+          "@croco/framework-logger#build",
+          "@croco/health-core#build",
+        ],
+      }),
+      // Their tests scan or pack other packages and read root files, which no input list keeps complete.
       "@croco/protocols-core#test:coverage": { ...coverage, cache: false },
       "@croco/cli#test:coverage": { ...coverage, cache: false },
+      "create-croco-app#test:coverage": { ...coverage, cache: false },
     });
+  });
+
+  it("declares every path outside the package that a cached core coverage test reaches", () => {
+    const readManifest = (directory: string) =>
+      JSON.parse(
+        readFileSync(resolve(repositoryRoot, "packages", directory, "package.json"), "utf-8"),
+      ) as {
+        name: string;
+        dependencies?: Record<string, string>;
+        devDependencies?: Record<string, string>;
+        peerDependencies?: Record<string, string>;
+      };
+    const globalPrefixes = (turbo.globalDependencies ?? [])
+      .filter((pattern) => !pattern.startsWith("!"))
+      .map((pattern) => pattern.replace(/\*.*$/, ""));
+    const testFiles = (directory: string): string[] =>
+      readdirSync(directory, { withFileTypes: true, recursive: true })
+        .filter((entry) => entry.isFile() && /\.(?:m?ts|tsx)$/.test(entry.name))
+        .map((entry) => resolve(entry.parentPath, entry.name))
+        .filter((file) => file.includes(`${sep}tests${sep}`) || file.endsWith(".spec.ts"));
+    const undeclared: string[] = [];
+
+    for (const directory of CORE_COVERAGE_PACKAGE_DIRECTORIES) {
+      const manifest = readManifest(directory);
+      const task = turbo.tasks[`${manifest.name}#test:coverage`] ?? turbo.tasks["test:coverage"];
+      if (task?.cache === false) continue;
+      const dependencies = new Set(
+        Object.keys({
+          ...manifest.dependencies,
+          ...manifest.devDependencies,
+          ...manifest.peerDependencies,
+        }),
+      );
+      const inputPrefixes = (task?.inputs ?? [])
+        .filter((input) => input.startsWith("$TURBO_ROOT$/"))
+        .map((input) => input.slice("$TURBO_ROOT$/".length).replace(/\*.*$/, ""));
+      const packageRoot = resolve(repositoryRoot, "packages", directory);
+
+      for (const file of testFiles(resolve(packageRoot, "src"))) {
+        const source = readFileSync(file, "utf-8");
+        for (const [, specifier = ""] of source.matchAll(/["'`]((?:\.\.\/){3,}[^"'`$]*)/g)) {
+          const target = relative(repositoryRoot, resolve(dirname(file), specifier));
+          if (target === `packages/${directory}` || target.startsWith(`packages/${directory}/`))
+            continue;
+          const [top, sibling] = target.split("/");
+          const siblingName =
+            top === "packages" &&
+            sibling &&
+            existsSync(resolve(repositoryRoot, "packages", sibling, "package.json"))
+              ? readManifest(sibling).name
+              : undefined;
+          const declared =
+            (siblingName !== undefined &&
+              (dependencies.has(siblingName) ||
+                (task?.dependsOn ?? []).includes(`${siblingName}#build`))) ||
+            [...inputPrefixes, ...globalPrefixes].some(
+              (prefix) => prefix !== "" && `${target}/`.startsWith(prefix),
+            );
+          if (!declared) undeclared.push(`${relative(repositoryRoot, file)} -> ${target || "."}`);
+        }
+      }
+    }
+
+    expect(undeclared).toEqual([]);
   });
 
   it("forwards the explicit executable-evidence destination to test reporters", () => {
