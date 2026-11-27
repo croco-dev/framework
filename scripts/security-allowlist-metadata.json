@@ -77,6 +77,13 @@
           "owner": "kang-heewon",
           "reason": "Gitleaks reports the public Access.ts SHA-256 digest in the #4265 infrastructure review as a generic API key. The digest was recomputed from the source file and matches exactly. The exception covers this single public review record across squash commits. Re-review the record by the deadline.",
           "reviewBy": "2027-01-31"
+        },
+        {
+          "kind": "path",
+          "value": "^docs/infrastructure-reviews/4257-auth-diagnostic-redaction\\.json$",
+          "owner": "kang-heewon",
+          "reason": "Gitleaks reports the public redactDiagnosticCredentials.ts SHA-256 digest in the #4257 infrastructure review as a generic API key. The digest was recomputed from the source file and matches exactly. The exception covers this single public review record across squash commits, which commit-bound fingerprints did not. Re-review the record by the deadline.",
+          "reviewBy": "2027-01-31"
         }
       ],
       "ignoreFingerprints": [
@@ -91,48 +98,6 @@
           "owner": "kang-heewon",
           "reason": "Historical source-digest false positive from the provider cause review before its Better Auth entry was consolidated into the Zod review. Its SHA-256 exactly matches the tracked BetterAuthAuthenticationProblem.ts blob at 6b3f29a. Only this immutable commit/path/rule/line is ignored; the current provider review remains scanned.",
           "reviewBy": "2026-11-30"
-        },
-        {
-          "fingerprint": "019f09ddc0436710b63e38a299188eb83201dc3d:docs/infrastructure-reviews/4257-auth-diagnostic-redaction.json:generic-api-key:76",
-          "owner": "kang-heewon",
-          "reason": "The flagged value is the public SHA-256 digest of redactDiagnosticCredentials.ts in the infrastructure review for #4257. It matches the digest recomputed from the source at this exact commit.",
-          "reviewBy": "2026-12-07"
-        },
-        {
-          "fingerprint": "2bc2e5dbcaaf8124bd94dccf208f3a7aea057936:docs/infrastructure-reviews/4257-auth-diagnostic-redaction.json:generic-api-key:76",
-          "owner": "kang-heewon",
-          "reason": "The flagged value is the public SHA-256 digest of redactDiagnosticCredentials.ts in the infrastructure review for #4257. It matches the digest recomputed from the source at this exact commit.",
-          "reviewBy": "2026-12-07"
-        },
-        {
-          "fingerprint": "3349574dac6d57d0aa098508b55c6bdd1772bd10:docs/infrastructure-reviews/4257-auth-diagnostic-redaction.json:generic-api-key:76",
-          "owner": "kang-heewon",
-          "reason": "The flagged value is the public SHA-256 digest of redactDiagnosticCredentials.ts in the infrastructure review for #4257. It matches the digest recomputed from the source at this exact commit.",
-          "reviewBy": "2026-12-07"
-        },
-        {
-          "fingerprint": "6227dc4d8fb320abec29d457393e8fa953f513d5:docs/infrastructure-reviews/4257-auth-diagnostic-redaction.json:generic-api-key:76",
-          "owner": "kang-heewon",
-          "reason": "The flagged value is the public SHA-256 digest of redactDiagnosticCredentials.ts in the infrastructure review for #4257. It matches the digest recomputed from the source at this exact commit.",
-          "reviewBy": "2026-12-07"
-        },
-        {
-          "fingerprint": "68fcc680787b9c52f517c42f0591912f3d5d41d7:docs/infrastructure-reviews/4257-auth-diagnostic-redaction.json:generic-api-key:76",
-          "owner": "kang-heewon",
-          "reason": "The flagged value is the public SHA-256 digest of redactDiagnosticCredentials.ts in the infrastructure review for #4257. It matches the digest recomputed from the source at this exact commit.",
-          "reviewBy": "2026-12-07"
-        },
-        {
-          "fingerprint": "6c8c033e79f3c4f4783c0be5a6718288e36f6a88:docs/infrastructure-reviews/4257-auth-diagnostic-redaction.json:generic-api-key:76",
-          "owner": "kang-heewon",
-          "reason": "The flagged value is the public SHA-256 digest of redactDiagnosticCredentials.ts in the infrastructure review for #4257. It matches the digest recomputed from the source at this exact commit.",
-          "reviewBy": "2026-12-07"
-        },
-        {
-          "fingerprint": "733f0f14d7b80c0eeba5ef0d68cdd5d0f73799b4:docs/infrastructure-reviews/4257-auth-diagnostic-redaction.json:generic-api-key:76",
-          "owner": "kang-heewon",
-          "reason": "The flagged value is the public SHA-256 digest of redactDiagnosticCredentials.ts in the infrastructure review for #4257. It matches the digest recomputed from the source at this exact commit.",
-          "reviewBy": "2026-12-07"
         }
       ]
     },
