@@ -13,8 +13,9 @@ Before this change, moving a Problem declaration by one line in any package rewr
 compiled into `@croco/problems-core`, which invalidated the build and test cache of every package
 that depends on it.
 
-The packaged constant no longer satisfies `ProblemCodeRegistry`, so passing it to
-`assertProblemCodeRegistryValid()` or `getProblemCodeRegistryValidationErrors()` fails to typecheck.
+The packaged constant no longer satisfies `ProblemCodeRegistry`. Do not pass it to
+`assertProblemCodeRegistryValid()` or `getProblemCodeRegistryValidationErrors()`: the call fails to
+typecheck, and an untyped call throws a `TypeError` when it reads the missing locations.
 
 Migration: read source locations from `docs/problem-code-registry.json` in the croco-dev/framework
 repository at the release tag. The file is not part of the npm package.

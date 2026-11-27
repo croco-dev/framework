@@ -45,10 +45,12 @@
 - Reading `sources` from an entry of the registry constant that `@croco/problems-core` exports no longer
   typechecks and returns `undefined` at runtime. The changeset records it as a minor change with the JSON file
   as the replacement.
-- `assertProblemCodeRegistryValid()` no longer accepts the packaged constant, because it validates source
-  locations. `scripts/tests/problem-registry.spec.ts` runs that package validator over
-  `docs/problem-code-registry.json`, which keeps the locations, so status and title drift between the registry
-  and the runtime category mapper still fails a test. The test lives under `scripts/tests`, which Turbo does not
-  cache, because making the JSON a `problems-core` input would bring back the invalidation this change removes.
+- `assertProblemCodeRegistryValid()` no longer accepts the packaged constant as is, because it validates source
+  locations. The `problems-core` test gives each packaged entry a placeholder location and runs the validator, so a
+  pull request that changes the runtime category mapper fails in that package's own test when the registry's
+  statuses or titles no longer match. `scripts/tests/problem-registry.spec.ts` also runs the validator over
+  `docs/problem-code-registry.json` with its real locations; change-scoped CI selects it only when `scripts/`
+  changes. The JSON is not a `problems-core` input, because that would bring back the invalidation this change
+  removes.
 - A file added under `tsconfig/` that is not a shared preset must be excluded from the global dependencies the
   same way, or it invalidates every task.
