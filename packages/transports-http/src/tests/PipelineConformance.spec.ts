@@ -3,6 +3,7 @@ import { Container, type Guard, type RequestPipelineGraph } from "@croco/framewo
 import { Logger } from "@croco/framework-logger";
 import { Problem, ProblemFactory } from "@croco/problems-core";
 import {
+  AuthGuard,
   type CallHandler,
   Controller,
   type ExceptionFilter,
@@ -10,6 +11,8 @@ import {
   Get,
   type HttpExceptionFilterResponse,
   type Interceptor,
+  Roles,
+  RolesGuard,
   UseFilters,
   UseGuards,
   UseInterceptors,
@@ -322,6 +325,41 @@ describe("HTTP request pipeline conformance", () => {
     expect(runtimeEvents).not.toContain("handler:success");
     expect(graphNodeIdsForEvents(runtimeEvents, SUCCESS_HANDLER_ID)).toEqual(expectedNodeIds);
     expectGuardShortCircuitGraphOrder(graph, expectedNodeIds);
+  });
+
+  it.each([
+    { label: "required role in an array", roles: ["maintainer"], status: 200 },
+    { label: "different role in an array", roles: ["reader"], status: 403 },
+    { label: "numeric claim", roles: 42, status: 403 },
+  ])("enforces declared roles for a $label", async ({ roles, status }) => {
+    const handler = vi.fn(() => ({ ok: true }));
+    Container.set(AuthGuard, new AuthGuard({ verifier: () => ({ roles }) }));
+
+    @Controller("/role-claims")
+    class RoleClaimsController {
+      @Get()
+      @Roles("maintainer")
+      @UseGuards(AuthGuard, RolesGuard)
+      protectedRoute() {
+        return handler();
+      }
+    }
+
+    const app = createApp({ controllers: [RoleClaimsController], securityValidation: "off" });
+    const response = await app.fetch(
+      new Request("http://localhost/role-claims", {
+        headers: { authorization: "Bearer test-session" },
+      }),
+    );
+
+    expect(response.status).toBe(status);
+    if (status === 403) {
+      expect(await response.json()).toMatchObject({ code: "ACCESS_DENIED", status: 403 });
+      expect(handler).not.toHaveBeenCalled();
+    } else {
+      expect(await response.json()).toEqual({ ok: true });
+      expect(handler).toHaveBeenCalledTimes(1);
+    }
   });
 
   it.each<PipelineScenario>([

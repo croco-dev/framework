@@ -226,6 +226,25 @@ describe("GraphQLRolesGuard", () => {
     }
   });
 
+  it("should ignore string claims without comparing them as role lists", () => {
+    const roles = "reader";
+    const resolver = {};
+    Reflect.defineMetadata(GRAPHQL_ROLES_KEY, ["editor"], resolver, "test");
+    const guard = new GraphQLRolesGuard();
+    const context = createMockContext({ root: resolver, context: { user: { roles } } });
+    const stringIncludes = vi.spyOn(String.prototype, "includes");
+
+    try {
+      const allowed = guard.canActivate(context);
+      const comparedClaim = stringIncludes.mock.contexts.some((receiver) => receiver === roles);
+
+      expect(allowed).toBe(false);
+      expect(comparedClaim).toBe(false);
+    } finally {
+      stringIncludes.mockRestore();
+    }
+  });
+
   it("should enforce metadata on function roots", () => {
     const resolver = () => {};
     Reflect.defineMetadata(GRAPHQL_ROLES_KEY, ["admin"], resolver, "test");

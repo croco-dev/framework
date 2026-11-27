@@ -2081,13 +2081,16 @@ describe("GraphQLServer integration", () => {
       }
     });
 
-    it("should deny access when declared roles do not match the request context", async () => {
+    it.each([
+      { label: "different role in an array", roles: ["member"] },
+      { label: "numeric claim", roles: 42 },
+    ])("should deny access to a $label without a matching role", async ({ roles }) => {
       const policyServer = new GraphQLServer({
         schemaOptions: {
           resolvers: [PolicyResolver],
           autoDiscover: false,
         },
-        context: () => ({ user: { roles: ["member"] } }),
+        context: () => ({ user: { roles } }),
       });
 
       await policyServer.initialize();

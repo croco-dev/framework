@@ -23,9 +23,12 @@ export class RolesGuard implements Guard<ExecutionContext> {
       return true;
     }
 
-    const request = context.getRequest() as { user?: UserWithRoles };
-    const userRoles = request.user?.roles ?? [];
+    const request = context.getRequest() as { user?: { roles?: unknown } };
+    const userRoles = request.user?.roles;
 
-    return requiredRoles.some((role) => userRoles.includes(role));
+    return (
+      Array.isArray(userRoles) &&
+      requiredRoles.some((role) => Array.prototype.includes.call(userRoles, role))
+    );
   }
 }
