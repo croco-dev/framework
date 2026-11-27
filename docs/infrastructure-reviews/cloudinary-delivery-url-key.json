@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "storage-cloudinary",
+      "classification": "runtime-adapter",
+      "reason": "Reject keys that URL normalization would resolve to another public ID before any delivery, public, signed, transform or upload URL is built or requested. The rejected characters are excluded by Cloudinary's public ID rules or rewritten by URL parsing. Valid keys keep the same URLs; no public API, credentials, retry policy, or runtime support claim changes.",
+      "files": {
+        "packages/storage-cloudinary/src/libs/CloudinaryProvider.ts": "4835ec6e217d4b632ce823c716ec10ae147b6f9e1a15a3055d107f51090728d8"
+      },
+      "catalogRuntimes": ["node", "lambda"],
+      "profiles": {
+        "kubernetes": {
+          "result": "unverified",
+          "reason": "The existing Node Host uses the Cloudinary SDK and fetch adapter. Key validation runs synchronously before any network call and adds no host capability; no Kubernetes host execution is included.",
+          "providers": ["@croco/storage-cloudinary", "@croco/preset-node"],
+          "constraints": [
+            "Requires Node.js and the existing Cloudinary SDK. How Cloudinary resolves delivery paths is not observed; no live Cloudinary or Kubernetes deployment is certified."
+          ],
+          "references": [
+            "packages/storage-cloudinary/src/libs/CloudinaryProvider.ts",
+            "packages/storage-cloudinary/src/libs/CloudinaryStoragePlugin.ts",
+            "packages/storage-core/src/libs/BaseStorageProvider.ts",
+            "packages/preset-node/src/index.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "unverified",
+          "reason": "Reuse the existing Lambda-compatible Node adapter; key validation runs inside the awaited storage operation and adds no new invocation owner. The Lambda Host path is not executed by the local fixtures.",
+          "providers": ["@croco/storage-cloudinary", "@croco/preset-lambda"],
+          "constraints": [
+            "Await storage operations before invocation completion. No live AWS or Cloudinary certification."
+          ],
+          "references": [
+            "packages/storage-cloudinary/src/libs/CloudinaryProvider.ts",
+            "packages/storage-cloudinary/src/libs/CloudinaryStoragePlugin.ts",
+            "packages/storage-core/src/libs/BaseStorageProvider.ts",
+            "packages/preset-lambda/src/index.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "unsupported",
+          "host": "workers",
+          "reason": "The Cloudinary provider declares Node and Lambda compatibility and imports Node crypto and the Cloudinary Node SDK. This key validation fix does not establish Worker isolate support.",
+          "providers": ["@croco/storage-cloudinary"],
+          "constraints": ["No Cloudflare Workers or Node Container deployment support is added."],
+          "references": [
+            "packages/storage-cloudinary/src/libs/CloudinaryProvider.ts",
+            "packages/storage-cloudinary/src/libs/CloudinaryStoragePlugin.ts"
+          ]
+        }
+      }
+    }
+  ]
+}

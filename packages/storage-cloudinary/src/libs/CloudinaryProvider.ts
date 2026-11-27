@@ -277,6 +277,26 @@ export class CloudinaryProvider extends BaseStorageProvider implements ImageProv
     this.ttl = config.ttl ?? 3600;
   }
 
+  // Delivery URLs carry the key as a raw path. URL parsing resolves `%2e` and `\` segments, cuts at `?`
+  // and `#`, drops tabs and line breaks, trims edge spaces and replaces lone surrogates, so such a key
+  // would address another public ID. Cloudinary's public ID rules already exclude the listed
+  // characters and edge spaces: https://cloudinary.com/documentation/upload_parameters
+  protected override validateKey(key: string): void {
+    super.validateKey(key);
+    if (/[?&#\\%<>]/.test(key)) {
+      throw new InvalidKeyProblem(key, "Cloudinary keys must not contain ?, &, #, \\, %, < or >");
+    }
+    if (key.startsWith(" ") || key.endsWith(" ")) {
+      throw new InvalidKeyProblem(key, "Cloudinary keys must not start or end with a space");
+    }
+    if (hasAsciiControlCharacter(key)) {
+      throw new InvalidKeyProblem(key, "Cloudinary keys must not contain control characters");
+    }
+    if (/[\uD800-\uDFFF]/u.test(key)) {
+      throw new InvalidKeyProblem(key, "Cloudinary keys must contain well-formed Unicode");
+    }
+  }
+
   async put(key: string, data: StorageBody, options?: PutOptions): Promise<void> {
     this.validateKey(key);
     this.validateSupportedContentType(key, options?.contentType);
@@ -960,4 +980,14 @@ export class CloudinaryProvider extends BaseStorageProvider implements ImageProv
 
 function hasFileExtension(filename: string): boolean {
   return /\.[^./]+$/.test(filename);
+}
+
+function hasAsciiControlCharacter(value: string): boolean {
+  for (let index = 0; index < value.length; index += 1) {
+    const codeUnit = value.charCodeAt(index);
+    if (codeUnit < 0x20 || codeUnit === 0x7f) {
+      return true;
+    }
+  }
+  return false;
 }
