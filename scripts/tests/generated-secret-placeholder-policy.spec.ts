@@ -1,8 +1,15 @@
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
+
+import { readGeneratedTemplateSecretAllowlistsFromMetadata } from "../../packages/create-croco-app/src/secret-placeholder-policy.ts";
+import {
+  findOverdueReviews,
+  GENERATED_TEMPLATE_ALLOWLISTS_POINTER,
+  readGeneratedTemplateReviewDeadlines,
+} from "../security-policy-enforcement.mts";
 
 const scriptPath = resolve(__dirname, "../generated-secret-placeholder-policy.mts");
 const tempRoots: string[] = [];
@@ -11,6 +18,7 @@ type ScriptResult = {
   readonly stdout: string;
   readonly stderr: string;
   readonly status: number | null;
+  readonly summary: string;
 };
 
 describe("generated-secret-placeholder-policy.mts", () => {
@@ -155,8 +163,39 @@ describe("generated-secret-placeholder-policy.mts", () => {
       expect(result.stdout).toContain(
         "secretScan.generatedTemplates.allowlists[0].reviewBy is stale (2026-07-02 is before 2026-07-03)",
       );
+      expect(result.summary.includes("deferred to the Release workflow")).toBe(
+        enforcement === "warn",
+      );
     },
   );
+
+  it("finds the same overdue review dates as the create-croco-app allowlist reader", () => {
+    const entry = {
+      pathPattern: "^templates/fixture\\.env$",
+      matchPattern: "^POLAR_ACCESS_TOKEN=",
+      owner: "security",
+      reason: "Intentional scanner fixture.",
+    };
+    const metadata = metadataFixture({
+      generatedTemplateAllowlists: [
+        { ...entry, reviewBy: "2026-07-02" },
+        { ...entry, reviewBy: "2027-01-31", expiresOn: "2026-07-01" },
+        { ...entry, reviewBy: "2026-07-03" },
+      ],
+    });
+
+    const readerStale = readGeneratedTemplateSecretAllowlistsFromMetadata(metadata, "2026-07-03")
+      .violations.map(({ message }) => message)
+      .filter((message) => message.includes(" is stale "));
+    const deferred = findOverdueReviews(
+      readGeneratedTemplateReviewDeadlines(metadata),
+      GENERATED_TEMPLATE_ALLOWLISTS_POINTER,
+      "2026-07-03",
+    ).map(({ message }) => message);
+
+    expect(readerStale).toHaveLength(2);
+    expect(deferred).toEqual(readerStale);
+  });
 
   it("reports malformed security allowlist metadata as a policy violation", () => {
     const root = createTempRoot();
@@ -237,6 +276,8 @@ function runScript(
   scanPaths: readonly string[] = ["templates"],
   enforcement = "enforce",
 ): ScriptResult {
+  const summaryPath = join(root, "step-summary.md");
+  writeFileSync(summaryPath, "");
   const result = spawnSync(
     "node",
     [
@@ -250,7 +291,11 @@ function runScript(
     ],
     {
       encoding: "utf-8",
-      env: { ...process.env, CROCO_SECURITY_POLICY_ENFORCEMENT: enforcement },
+      env: {
+        ...process.env,
+        CROCO_SECURITY_POLICY_ENFORCEMENT: enforcement,
+        GITHUB_STEP_SUMMARY: summaryPath,
+      },
       timeout: 10_000,
     },
   );
@@ -259,5 +304,6 @@ function runScript(
     stdout: result.stdout,
     stderr: result.stderr,
     status: result.status,
+    summary: readFileSync(summaryPath, "utf-8"),
   };
 }

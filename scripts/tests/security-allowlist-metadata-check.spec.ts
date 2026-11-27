@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -11,6 +11,7 @@ type ScriptResult = {
   readonly stdout: string;
   readonly stderr: string;
   readonly status: number | null;
+  readonly summary: string;
 };
 
 describe("security-allowlist-metadata-check.mts", () => {
@@ -812,6 +813,11 @@ describe("security-allowlist-metadata-check.mts", () => {
       "::warning title=Security exception reviews deferred to release::audit.ignoreGhsas[0].reviewBy is stale (2026-07-02 is before 2026-07-03)",
     );
     expect(result.stdout).toContain("security-allowlist-metadata: passed");
+    expect(result.summary).toContain(
+      "### Security exception reviews: deferred to the Release workflow",
+    );
+    expect(result.summary).toContain("audit.ignoreGhsas[0].reviewBy is stale");
+    expect(runScript(root).summary).toBe("");
   });
 
   it("defers an overdue generated-template review and keeps its pointer under warn enforcement", () => {
@@ -1225,12 +1231,18 @@ function runScriptWithEnforcement(
   enforcement: string,
   ...args: string[]
 ): ScriptResult {
+  const summaryPath = join(root, "step-summary.md");
+  writeFileSync(summaryPath, "");
   const result = spawnSync(
     "node",
     ["--experimental-strip-types", scriptPath, "--root", root, "--today", "2026-07-03", ...args],
     {
       encoding: "utf-8",
-      env: { ...process.env, CROCO_SECURITY_POLICY_ENFORCEMENT: enforcement },
+      env: {
+        ...process.env,
+        CROCO_SECURITY_POLICY_ENFORCEMENT: enforcement,
+        GITHUB_STEP_SUMMARY: summaryPath,
+      },
       timeout: 10_000,
     },
   );
@@ -1239,6 +1251,7 @@ function runScriptWithEnforcement(
     stdout: result.stdout,
     stderr: result.stderr,
     status: result.status,
+    summary: readFileSync(summaryPath, "utf-8"),
   };
 }
 

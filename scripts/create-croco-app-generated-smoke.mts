@@ -79,6 +79,7 @@ import {
   resolveGeneratedSmokeConcurrency,
   runWithResourceLocks,
 } from "./create-croco-app-generated-smoke-parallel.mts";
+import { NO_REVIEW_DEADLINE } from "./security-policy-enforcement.mts";
 import { inventoryDigest, readTestInventory } from "./test-inventory.mts";
 import { readCompletedPlaywrightPaths, readCompletedVitestPaths } from "./test-lane-runner.mts";
 import type { AppGoal } from "../packages/create-croco-app/src/types.ts";
@@ -4139,9 +4140,11 @@ function assertNoGeneratedCredentialLookingValues(projectDir: string, smokeCase:
     join(rootDir, "scripts", "security-allowlist-metadata.json"),
     smokeCase.name,
   );
+  // Review dates are enforced by generated-secret-placeholders:check and security-allowlists,
+  // which follow CROCO_SECURITY_POLICY_ENFORCEMENT; this scan validates the entries' shape.
   const allowlistRead = readGeneratedTemplateSecretAllowlistsFromMetadata(
     metadata,
-    new Date().toISOString().slice(0, 10),
+    NO_REVIEW_DEADLINE,
   );
 
   if (allowlistRead.violations.length > 0) {
