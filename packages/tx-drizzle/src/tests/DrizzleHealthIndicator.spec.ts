@@ -115,6 +115,41 @@ describe("DrizzleHealthIndicator", () => {
       "failed DATABASE_DSN='postgres://db.example/app?token=query-value' dbname=app",
       "failed DATABASE_DSN=[redacted] dbname=app",
     ],
+    [
+      "punctuation in URL userinfo",
+      "failed postgres://user:sample?part#tail@db.example/app?sslmode=require",
+      "failed postgres://[redacted]@db.example/app?sslmode=require",
+    ],
+    [
+      "at-signs in a password-only URL",
+      "failed postgres://:sample@part@db.example/app?sslmode=require",
+      "failed postgres://[redacted]@db.example/app?sslmode=require",
+    ],
+    [
+      "punctuation and escaped whitespace in unquoted credentials",
+      "failed sslpassword=sample,part;tail&last POSTGRES_PASSWORD=two\\ words host=db.example",
+      "failed sslpassword=[redacted] POSTGRES_PASSWORD=[redacted] host=db.example",
+    ],
+    [
+      "a double-quoted credential followed by a value suffix",
+      'failed password="sample"tail sslmode=require',
+      "failed password=[redacted] sslmode=require",
+    ],
+    [
+      "credential-like text in a URL database name",
+      "failed postgres://user@db.example/apptoken=reporting?sslmode=require",
+      "failed postgres://[redacted]@db.example/apptoken=reporting?sslmode=require",
+    ],
+    [
+      "credential-like text in a keyword database name",
+      "failed host=db.example dbname='app apptoken=reporting' sslmode=require",
+      "failed host=db.example dbname='app apptoken=reporting' sslmode=require",
+    ],
+    [
+      "a bare credential inside a diagnostic field",
+      "failed reason=password=sample dbname=app",
+      "failed reason=password=[redacted] dbname=app",
+    ],
   ])("should redact connection failure details for %s", async (_case, message, redactedMessage) => {
     const db = {
       transaction: vi.fn().mockRejectedValue(new Error(message)),
