@@ -93,12 +93,14 @@ describe("createIsrMiddleware", () => {
     await expect(cache.get(`GET:${url}`)).resolves.toBeUndefined();
   });
 
-  it("renders around a previously stored no-cache response while it remains in the store", async () => {
-    const url = "https://example.com/legacy-no-cache";
-    await cache.set(
-      `GET:${url}`,
-      new Response("old", { headers: { "Cache-Control": "no-cache" } }),
-    );
+  it.each([
+    ["Cache-Control", "no-cache"],
+    ["Cache-Control", "private"],
+    ["Cache-Control", "no-store"],
+    ["Set-Cookie", "label=old"],
+  ])("renders around a stored response with %s: %s", async (name, value) => {
+    const url = "https://example.com/stored-response";
+    await cache.set(`GET:${url}`, new Response("old", { headers: { [name]: value } }));
     let renderCount = 0;
     const middleware = createIsrMiddleware({
       cache,
@@ -136,6 +138,65 @@ describe("createIsrMiddleware", () => {
 
     await expect((await first).text()).resolves.toBe("render-1");
     await expect((await second).text()).resolves.toBe("render-2");
+  });
+
+  describe.each([
+    { name: "memory store", createCache: () => new InMemoryCacheStore<Response>() },
+    { name: "adapter", createCache: () => new TestAdapter() },
+  ])("response isolation with $name", ({ createCache }) => {
+    it.each([
+      {
+        name: "Set-Cookie",
+        cacheControl: "",
+        ownerCookie: "label=first",
+        waiterCookie: "label=second",
+      },
+      {
+        name: "private",
+        cacheControl: 'max-age=60, PrIvAtE="X-Label"',
+        ownerCookie: null,
+        waiterCookie: null,
+      },
+      { name: "no-store", cacheControl: "no-store", ownerCookie: null, waiterCookie: null },
+    ])("delivers $name responses only to the request that rendered them", async (fixture) => {
+      const firstStarted = createLatch();
+      const firstReleased = createLatch();
+      const url = "https://example.test/page";
+      const owner = new Request(url);
+      const waiter = new Request(url);
+      const store = createCache();
+      const middleware = createIsrMiddleware({
+        cache: store,
+        ttlMs: 60_000,
+        render: async (request) => {
+          const isOwner = request === owner;
+          if (isOwner) {
+            firstStarted.release();
+            await firstReleased.promise;
+          }
+          const headers = new Headers();
+          if (fixture.cacheControl) headers.set("Cache-Control", fixture.cacheControl);
+          const cookie = isOwner ? fixture.ownerCookie : fixture.waiterCookie;
+          if (cookie) headers.set("Set-Cookie", cookie);
+          return new Response(isOwner ? "first" : "second", { headers });
+        },
+      });
+
+      const firstPending = middleware(owner);
+      await firstStarted.promise;
+      const secondPending = middleware(waiter);
+      firstReleased.release();
+      const [first, second] = await Promise.all([firstPending, secondPending]);
+
+      expect(first.headers.get("Set-Cookie")).toBe(fixture.ownerCookie);
+      expect(second.headers.get("Set-Cookie")).toBe(fixture.waiterCookie);
+      await expect(first.text()).resolves.toBe("first");
+      await expect(second.text()).resolves.toBe("second");
+      const key = `GET:${url}`;
+      await expect(
+        store instanceof TestAdapter ? store._get(key) : store.get(key),
+      ).resolves.toBeUndefined();
+    });
   });
 
   it.each(["memory store", "adapter"] as const)(

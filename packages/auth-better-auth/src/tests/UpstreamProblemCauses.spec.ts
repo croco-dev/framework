@@ -3,6 +3,36 @@ import { describe, expect, it } from "vitest";
 import { BetterAuthAuthenticationProblem } from "../libs/problems/BetterAuthAuthenticationProblem";
 
 describe("Upstream Problem causes", () => {
+  it("redacts quoted credential fields without removing adjacent diagnostics", () => {
+    const problem = new BetterAuthAuthenticationProblem(
+      "authenticate",
+      new Error(
+        JSON.stringify({
+          authorization: "ExampleAuth sample",
+          password: 'sample" Authorization: Bearer sample',
+          "session:refreshToken": ["first sample", { fragment: "second sample" }],
+          "upstream token=fixture : note": "upstream error",
+          message: "Upstream Authorization: Bearer example",
+          errors: ["Authorization: ExampleAuth fixture", '{"token":"sample"}'],
+          requestId: "abc",
+        }),
+      ),
+    );
+    const redacted = JSON.stringify({
+      authorization: "[Redacted]",
+      password: "[Redacted]",
+      "session:refreshToken": "[Redacted]",
+      "upstream token=[Redacted] : note": "[Redacted]",
+      message: "Upstream Authorization: [Redacted]",
+      errors: ["Authorization: [Redacted]", '{"token":"[Redacted]"}'],
+      requestId: "abc",
+    });
+
+    expect(problem.detail).toBe(`Better Auth authenticate failed: ${redacted}`);
+    expect(problem.cause?.message).toBe(redacted);
+    expect(problem.toJSON().detail).toBe(problem.detail);
+  });
+
   it("retains BetterAuthAuthenticationProblem Error causes without serializing them", () => {
     const upstream = Object.assign(new Error("provider failed token=super-secret-token"), {
       secret: "private-upstream-value",
@@ -48,8 +78,10 @@ describe("Upstream Problem causes", () => {
     (operation) => {
       const problem = new BetterAuthAuthenticationProblem(
         operation,
-        new Error("authorization: Bearer bearer-credential"),
+        new Error("authorization: Bearer bearer-credential, requestId=abc"),
       );
+      expect(problem.detail).toContain("authorization: [Redacted], requestId=abc");
+      expect(problem.cause?.message).toBe("authorization: [Redacted], requestId=abc");
       for (const rendered of [
         problem.message,
         problem.cause?.message,
@@ -61,4 +93,24 @@ describe("Upstream Problem causes", () => {
       }
     },
   );
+
+  it("masks authorization parameters containing inline delimiters", () => {
+    const problem = new BetterAuthAuthenticationProblem(
+      "authenticate",
+      new Error(
+        "Authorization: ExampleAuth name=fixture'proof, fields=one;two, proof=sample\nrequestId=abc",
+      ),
+    );
+
+    expect(problem.cause?.message).toBe("Authorization: [Redacted]\nrequestId=abc");
+  });
+
+  it("redacts a plain authorization value with a quoted label", () => {
+    const problem = new BetterAuthAuthenticationProblem(
+      "authenticate",
+      new Error('"Authorization": ExampleAuth fixture, requestId=abc'),
+    );
+
+    expect(problem.cause?.message).toBe('"Authorization": [Redacted], requestId=abc');
+  });
 });

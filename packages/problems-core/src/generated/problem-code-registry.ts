@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export type CrocoProblemRegistry = {
   readonly version: "croco.problem-code-registry.v1";
-  readonly problemCount: 1197;
+  readonly problemCount: 1198;
   readonly problems: readonly [
     {
       readonly code: "ACCESS_DENIED";
@@ -4542,6 +4542,34 @@ export type CrocoProblemRegistry = {
       ];
     },
     {
+      readonly code: "access-core/duplicate-access-declaration";
+      readonly category: "InternalServerError";
+      readonly status: 500;
+      readonly title: "Internal Server Error";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#access-core-duplicate-access-declaration";
+      readonly recovery: {
+        readonly cause: "A method declares more than one @Access rule.";
+        readonly userAction: "Ask the application maintainer to correct the access policy.";
+        readonly operatorAction: "Inspect the named method and declare one @Access rule that enforces the intended policy before restarting the application.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "operator-only";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.error";
+          readonly severity: "error";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/access-core/src/libs/decorators/Access.ts";
+          readonly line: 11;
+          readonly column: 5;
+          readonly kind: "problem-constructor";
+        },
+      ];
+    },
+    {
       readonly code: "access-core/forbidden";
       readonly category: "Forbidden";
       readonly status: 403;
@@ -8707,7 +8735,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/auth-clerk/src/libs/problems/ClerkProblems.ts";
-          readonly line: 133;
+          readonly line: 134;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -8735,7 +8763,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/auth-clerk/src/libs/problems/ClerkProblems.ts";
-          readonly line: 173;
+          readonly line: 174;
           readonly column: 5;
           readonly kind: "problem-constructor";
         },
@@ -8763,7 +8791,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/auth-clerk/src/libs/problems/ClerkProblems.ts";
-          readonly line: 18;
+          readonly line: 19;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -8791,7 +8819,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/auth-clerk/src/libs/problems/ClerkProblems.ts";
-          readonly line: 122;
+          readonly line: 123;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -8819,7 +8847,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/auth-clerk/src/libs/problems/ClerkProblems.ts";
-          readonly line: 160;
+          readonly line: 161;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -8847,7 +8875,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/auth-clerk/src/libs/problems/ClerkProblems.ts";
-          readonly line: 73;
+          readonly line: 74;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -8875,7 +8903,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/auth-clerk/src/libs/problems/ClerkProblems.ts";
-          readonly line: 98;
+          readonly line: 99;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -8903,7 +8931,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/auth-clerk/src/libs/problems/ClerkProblems.ts";
-          readonly line: 148;
+          readonly line: 149;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -8931,7 +8959,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/auth-clerk/src/libs/problems/ClerkProblems.ts";
-          readonly line: 54;
+          readonly line: 55;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -8959,7 +8987,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/auth-clerk/src/libs/problems/ClerkProblems.ts";
-          readonly line: 35;
+          readonly line: 36;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -8987,7 +9015,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/auth-clerk/src/libs/problems/ClerkProblems.ts";
-          readonly line: 7;
+          readonly line: 8;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -33830,7 +33858,7 @@ export type CrocoProblemRegistry = {
 
 export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 1197,
+  problemCount: 1198,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -38876,6 +38904,38 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       ],
     },
     {
+      code: "access-core/duplicate-access-declaration",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#access-core-duplicate-access-declaration",
+      recovery: {
+        cause: "A method declares more than one @Access rule.",
+        userAction: "Ask the application maintainer to correct the access policy.",
+        operatorAction:
+          "Inspect the named method and declare one @Access rule that enforces the intended policy before restarting the application.",
+        retryability: "not-retryable",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/access-core/src/libs/decorators/Access.ts",
+          line: 11,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
       code: "access-core/forbidden",
       category: "Forbidden",
       status: 403,
@@ -43520,7 +43580,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/auth-clerk/src/libs/problems/ClerkProblems.ts",
-          line: 133,
+          line: 134,
           column: 1,
           kind: "problem-class",
         },
@@ -43552,7 +43612,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/auth-clerk/src/libs/problems/ClerkProblems.ts",
-          line: 173,
+          line: 174,
           column: 5,
           kind: "problem-constructor",
         },
@@ -43582,7 +43642,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/auth-clerk/src/libs/problems/ClerkProblems.ts",
-          line: 18,
+          line: 19,
           column: 1,
           kind: "problem-class",
         },
@@ -43612,7 +43672,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/auth-clerk/src/libs/problems/ClerkProblems.ts",
-          line: 122,
+          line: 123,
           column: 1,
           kind: "problem-class",
         },
@@ -43644,7 +43704,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/auth-clerk/src/libs/problems/ClerkProblems.ts",
-          line: 160,
+          line: 161,
           column: 1,
           kind: "problem-class",
         },
@@ -43674,7 +43734,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/auth-clerk/src/libs/problems/ClerkProblems.ts",
-          line: 73,
+          line: 74,
           column: 1,
           kind: "problem-class",
         },
@@ -43707,7 +43767,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/auth-clerk/src/libs/problems/ClerkProblems.ts",
-          line: 98,
+          line: 99,
           column: 1,
           kind: "problem-class",
         },
@@ -43740,7 +43800,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/auth-clerk/src/libs/problems/ClerkProblems.ts",
-          line: 148,
+          line: 149,
           column: 1,
           kind: "problem-class",
         },
@@ -43773,7 +43833,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/auth-clerk/src/libs/problems/ClerkProblems.ts",
-          line: 54,
+          line: 55,
           column: 1,
           kind: "problem-class",
         },
@@ -43806,7 +43866,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/auth-clerk/src/libs/problems/ClerkProblems.ts",
-          line: 35,
+          line: 36,
           column: 1,
           kind: "problem-class",
         },
@@ -43836,7 +43896,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/auth-clerk/src/libs/problems/ClerkProblems.ts",
-          line: 7,
+          line: 8,
           column: 1,
           kind: "problem-class",
         },

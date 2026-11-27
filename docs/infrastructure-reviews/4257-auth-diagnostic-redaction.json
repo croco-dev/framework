@@ -1,0 +1,136 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "auth-clerk",
+      "classification": "pure-contract",
+      "reason": "Mask credential values in authentication Problems and readiness diagnostics using only JavaScript string operations.",
+      "files": {
+        "packages/auth-clerk/src/libs/ClerkAuthDiagnosticsProvider.ts": "f3363c4965060d7e9ce9bf2965045888d05d49524f3ea3627f856c7a84e848d0",
+        "packages/auth-clerk/src/libs/problems/ClerkProblems.ts": "fb66e6f924665972eaccc8ce488fea6f4be7ee3c1ea8ece63a79acd67ad2cc15",
+        "packages/auth-clerk/src/libs/redaction.ts": "98b5773551cb4b243e816551b0c0e463f1e00e1ce05f893328ec606897f364c4"
+      },
+      "catalogRuntimes": ["node", "lambda"],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "String redaction requires no Node Host APIs, storage, or lifecycle hooks.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/auth-clerk/src/libs/redaction.ts"]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "String redaction requires no Lambda invocation APIs, storage, or lifecycle hooks.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/auth-clerk/src/libs/redaction.ts"]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "String redaction requires no Workers bindings, storage, or lifecycle hooks.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/auth-clerk/src/libs/redaction.ts"]
+        }
+      }
+    },
+    {
+      "package": "auth-better-auth",
+      "classification": "pure-contract",
+      "reason": "Mask credential values in authentication Problems and readiness diagnostics using only JavaScript string operations.",
+      "files": {
+        "packages/auth-better-auth/src/libs/redaction.ts": "e986c61efc16dbf50566630e379b47a96abdda43b0c59424d1ec388f2341afac"
+      },
+      "catalogRuntimes": ["node", "lambda"],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "String redaction requires no Node Host APIs, storage, or lifecycle hooks.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/auth-better-auth/src/libs/redaction.ts"]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "String redaction requires no Lambda invocation APIs, storage, or lifecycle hooks.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/auth-better-auth/src/libs/redaction.ts"]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "String redaction requires no Workers bindings, storage, or lifecycle hooks.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/auth-better-auth/src/libs/redaction.ts"]
+        }
+      }
+    },
+    {
+      "package": "diagnostics-core",
+      "classification": "pure-contract",
+      "reason": "Mask credential values in authentication Problems and readiness diagnostics using only JavaScript string operations.",
+      "files": {
+        "packages/diagnostics-core/src/index.ts": "f6c13f2ef356780f38741510afb53bd87726958a4ce5202fcfbf5c22cfaa6ce7",
+        "packages/diagnostics-core/src/libs/redactDiagnosticCredentials.ts": "8ca9ef6e2159d958d0c2770485ec7b7d8050da4543de977b2e717edc23fabab6"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "String redaction requires no Node Host APIs, storage, or lifecycle hooks.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/diagnostics-core/src/libs/redactDiagnosticCredentials.ts"]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "String redaction requires no Lambda invocation APIs, storage, or lifecycle hooks.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/diagnostics-core/src/libs/redactDiagnosticCredentials.ts"]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "String redaction requires no Workers bindings, storage, or lifecycle hooks.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/diagnostics-core/src/libs/redactDiagnosticCredentials.ts"]
+        }
+      }
+    },
+    {
+      "package": "problems-core",
+      "classification": "pure-contract",
+      "reason": "Regenerate source locations for Clerk Problem declarations.",
+      "files": {
+        "packages/problems-core/src/generated/problem-code-registry.ts": "55d50a5af2ccf8824bcb62728ba10e7f2bfd239bfa755a3275490f53a1b37d73"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "String redaction requires no Node Host APIs, storage, or lifecycle hooks.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/problems-core/src/generated/problem-code-registry.ts"]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "String redaction requires no Lambda invocation APIs, storage, or lifecycle hooks.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/problems-core/src/generated/problem-code-registry.ts"]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "String redaction requires no Workers bindings, storage, or lifecycle hooks.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/problems-core/src/generated/problem-code-registry.ts"]
+        }
+      }
+    }
+  ]
+}

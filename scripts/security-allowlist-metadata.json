@@ -70,6 +70,20 @@
           "owner": "kang-heewon",
           "reason": "Gitleaks reported the public emitOpenAPI.ts SHA-256 digest in the #4260 infrastructure review as a generic API key. The digest exactly matches the tracked source blob. This anchored path covers the single public review record across squash commits. Re-review the record by the deadline.",
           "reviewBy": "2027-01-31"
+        },
+        {
+          "kind": "path",
+          "value": "^docs/infrastructure-reviews/4265-stacked-authorization\\.json$",
+          "owner": "kang-heewon",
+          "reason": "Gitleaks reports the public Access.ts SHA-256 digest in the #4265 infrastructure review as a generic API key. The digest was recomputed from the source file and matches exactly. The exception covers this single public review record across squash commits. Re-review the record by the deadline.",
+          "reviewBy": "2027-01-31"
+        },
+        {
+          "kind": "path",
+          "value": "^docs/infrastructure-reviews/4257-auth-diagnostic-redaction\\.json$",
+          "owner": "kang-heewon",
+          "reason": "Gitleaks reports the public redactDiagnosticCredentials.ts SHA-256 digest in the #4257 infrastructure review as a generic API key. The digest was recomputed from the source file and matches exactly. The exception covers this single public review record across squash commits, which commit-bound fingerprints did not. Re-review the record by the deadline.",
+          "reviewBy": "2027-01-31"
         }
       ],
       "ignoreFingerprints": [

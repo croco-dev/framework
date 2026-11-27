@@ -2474,18 +2474,19 @@ function hasVerifiedRedactionHelper(call: ts.CallExpression, parameter: string):
   };
   const statements = helper.body.statements;
   const result = statements.at(-1);
+  const replacement = helper.parameters[1];
   if (
     !result ||
     !ts.isReturnStatement(result) ||
     !result.expression ||
-    !isReplaceChain(result.expression)
+    (!isReplaceChain(result.expression) &&
+      !isDiagnosticRedactionCall(result.expression, input, replacement?.name, helperSource))
   )
     return false;
   if (statements.length === 1) return true;
   // The shared auth sanitizer may intentionally suppress the entire message.
   // Require its explicit, default-off flag and replacement parameter; no arbitrary body is accepted.
   const suppression = statements[0];
-  const replacement = helper.parameters[1];
   const flag = helper.parameters[2];
   if (
     statements.length !== 2 ||
@@ -2514,6 +2515,79 @@ function hasVerifiedRedactionHelper(call: ts.CallExpression, parameter: string):
     branch.expression !== undefined &&
     ts.isIdentifier(branch.expression) &&
     branch.expression.text === replacement.name.text
+  );
+}
+
+function isDiagnosticRedactionCall(
+  expression: ts.Expression,
+  input: ts.Identifier,
+  replacement: ts.BindingName | undefined,
+  source: ts.SourceFile,
+): boolean {
+  const call = unwrapExpression(expression);
+  if (
+    !call ||
+    !ts.isCallExpression(call) ||
+    !ts.isIdentifier(call.expression) ||
+    call.arguments.length !== 3 ||
+    !replacement ||
+    !ts.isIdentifier(replacement)
+  ) {
+    return false;
+  }
+
+  const [message, policy, marker] = call.arguments;
+  if (
+    !message ||
+    !ts.isIdentifier(message) ||
+    getLocalBindingKey(message) !== getLocalBindingKey(input) ||
+    !policy ||
+    !ts.isIdentifier(policy) ||
+    !marker ||
+    !ts.isIdentifier(marker) ||
+    getLocalBindingKey(marker) !== getLocalBindingKey(replacement)
+  ) {
+    return false;
+  }
+
+  const delegateBinding = getLocalBindingKey(call.expression);
+  const isDiagnosticsImport = source.statements.some((statement) => {
+    if (
+      !ts.isImportDeclaration(statement) ||
+      !ts.isStringLiteral(statement.moduleSpecifier) ||
+      statement.moduleSpecifier.text !== "@croco/diagnostics-core" ||
+      !statement.importClause ||
+      statement.importClause.isTypeOnly
+    ) {
+      return false;
+    }
+    const bindings = statement.importClause.namedBindings;
+    return (
+      bindings !== undefined &&
+      ts.isNamedImports(bindings) &&
+      bindings.elements.some(
+        (entry) =>
+          !entry.isTypeOnly &&
+          (entry.propertyName ?? entry.name).text === "redactDiagnosticCredentials" &&
+          getLocalBindingKey(entry.name) === delegateBinding,
+      )
+    );
+  });
+  const policyBinding = getLocalBindingKey(policy);
+  return (
+    isDiagnosticsImport &&
+    source.statements.some(
+      (statement) =>
+        ts.isVariableStatement(statement) &&
+        (statement.declarationList.flags & ts.NodeFlags.Const) !== 0 &&
+        statement.declarationList.declarations.some(
+          (entry) =>
+            ts.isIdentifier(entry.name) &&
+            getLocalBindingKey(entry.name) === policyBinding &&
+            entry.initializer !== undefined &&
+            ts.isRegularExpressionLiteral(entry.initializer),
+        ),
+    )
   );
 }
 
@@ -3762,6 +3836,15 @@ const recoveryMetadataByCategory = {
 } as const satisfies Record<ProblemCategory, ProblemRecoveryMetadata>;
 
 const recoveryMetadataByCode = {
+  "access-core/duplicate-access-declaration": recovery({
+    cause: "A method declares more than one @Access rule.",
+    userAction: "Ask the application maintainer to correct the access policy.",
+    operatorAction:
+      "Inspect the named method and declare one @Access rule that enforces the intended policy before restarting the application.",
+    retryability: "not-retryable",
+    redactionPolicy: "operator-only",
+    severity: "error",
+  }),
   "metrics-core/invalid-revenue-carrying-capacity-metric": recovery({
     cause:
       "The selected revenue metrics contain invalid net retention or yield a non-finite capacity.",

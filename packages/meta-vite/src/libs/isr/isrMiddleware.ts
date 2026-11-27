@@ -60,7 +60,7 @@ export function createIsrMiddleware(options: IsrMiddlewareOptions): IsrMiddlewar
 
         // Older writers may have persisted a response this middleware cannot reuse.
         // The store only exposes getOrSet here, so bypass that entry until it expires.
-        if (isPartialResponse(response) || hasVary(response) || requiresFreshResponse(response)) {
+        if (isPartialResponse(response) || requiresFreshResponse(response)) {
           return render(request);
         }
 
@@ -81,8 +81,7 @@ export function createIsrMiddleware(options: IsrMiddlewareOptions): IsrMiddlewar
               continue;
             }
             return createCancelledFillResponse();
-          } else if (hasVary(error.response) || requiresFreshResponse(error.response)) {
-            // Vary and no-cache responses may be specific to the original request.
+          } else if (requiresFreshResponse(error.response)) {
             return render(request);
           }
         }
@@ -106,30 +105,26 @@ function isCacheableRequest(request: Request): boolean {
 }
 
 function isCacheableResponse(response: Response): boolean {
-  if (response.status < 200 || response.status >= 300 || isPartialResponse(response)) {
-    return false;
-  }
-
-  // Final personalized responses must never enter the shared cache:
-  // Set-Cookie and private/no-store directives mean the bytes are request-specific.
-  if (response.headers.has("set-cookie")) {
-    return false;
-  }
-
-  // This exact-key TTL cache does not implement Vary-aware representation keys.
-  const directives = cacheControlNames(response);
   return (
-    directives !== undefined &&
-    !directives.has("private") &&
-    !directives.has("no-store") &&
-    !directives.has("no-cache") &&
-    !hasVary(response)
+    response.status >= 200 &&
+    response.status < 300 &&
+    !isPartialResponse(response) &&
+    !requiresFreshResponse(response)
   );
 }
 
 function requiresFreshResponse(response: Response): boolean {
+  // This exact-key TTL cache does not implement Vary-aware representation keys.
+  if (response.headers.has("set-cookie") || hasVary(response)) {
+    return true;
+  }
   const directives = cacheControlNames(response);
-  return directives === undefined || directives.has("no-cache");
+  return (
+    directives === undefined ||
+    directives.has("private") ||
+    directives.has("no-store") ||
+    directives.has("no-cache")
+  );
 }
 
 // Read the complete list in order. Malformed arguments must not hide a cache directive.

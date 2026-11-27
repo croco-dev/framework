@@ -437,6 +437,7 @@ describe("EntitlementManager", () => {
       },
       inputs: {
         apiKey: "secret-key",
+        diagnostic: "proxy-authorization=Basic sample-credential",
       },
     });
 
@@ -454,6 +455,7 @@ describe("EntitlementManager", () => {
       },
     });
     expect(result.trace?.inputs.apiKey).toBe("[Redacted]");
+    expect(result.trace?.inputs.diagnostic).toBe("proxy-authorization=[Redacted]");
     expect(traces).toEqual([result.trace]);
   });
 

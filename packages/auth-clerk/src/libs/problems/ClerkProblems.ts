@@ -1,5 +1,6 @@
 import type { ProblemOptions } from "@croco/problems-core";
 import { Problem, ProblemCategory } from "@croco/problems-core";
+import { redactSensitiveValue } from "../redaction";
 
 /**
  * Clerk 웹훅 서명 검증이 실패했을 때 발생하는 Problem입니다.
@@ -292,11 +293,4 @@ function asRecord(value: unknown): Record<string, unknown> | undefined {
   return typeof value === "object" && value !== null
     ? (value as Record<string, unknown>)
     : undefined;
-}
-
-function redactSensitiveValue(value: string): string {
-  return value.replace(
-    /(authorization|cookie|credential|password|secret|token|api[-_]?key|private[-_]?key|access[-_]?key|connection[-_]?string|clerk[-_]?secret[-_]?key|dsn)(\s*[:=]\s*)([^,\s;]+)/gi,
-    "$1$2[Redacted]",
-  );
 }

@@ -1,6 +1,6 @@
 {
   "version": "croco.problem-code-registry.v1",
-  "problemCount": 1197,
+  "problemCount": 1198,
   "problems": [
     {
       "code": "ACCESS_DENIED",
@@ -4847,6 +4847,36 @@
       ]
     },
     {
+      "code": "access-core/duplicate-access-declaration",
+      "category": "InternalServerError",
+      "status": 500,
+      "title": "Internal Server Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#access-core-duplicate-access-declaration",
+      "recovery": {
+        "cause": "A method declares more than one @Access rule.",
+        "userAction": "Ask the application maintainer to correct the access policy.",
+        "operatorAction": "Inspect the named method and declare one @Access rule that enforces the intended policy before restarting the application.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "operator-only",
+        "telemetry": {
+          "eventName": "croco.problem.error",
+          "severity": "error",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/access-core/src/libs/decorators/Access.ts",
+          "line": 11,
+          "column": 5,
+          "kind": "problem-constructor"
+        }
+      ]
+    },
+    {
       "code": "access-core/forbidden",
       "category": "Forbidden",
       "status": 403,
@@ -9308,7 +9338,7 @@
       "sources": [
         {
           "file": "packages/auth-clerk/src/libs/problems/ClerkProblems.ts",
-          "line": 133,
+          "line": 134,
           "column": 1,
           "kind": "problem-class"
         }
@@ -9338,7 +9368,7 @@
       "sources": [
         {
           "file": "packages/auth-clerk/src/libs/problems/ClerkProblems.ts",
-          "line": 173,
+          "line": 174,
           "column": 5,
           "kind": "problem-constructor"
         }
@@ -9368,7 +9398,7 @@
       "sources": [
         {
           "file": "packages/auth-clerk/src/libs/problems/ClerkProblems.ts",
-          "line": 18,
+          "line": 19,
           "column": 1,
           "kind": "problem-class"
         }
@@ -9398,7 +9428,7 @@
       "sources": [
         {
           "file": "packages/auth-clerk/src/libs/problems/ClerkProblems.ts",
-          "line": 122,
+          "line": 123,
           "column": 1,
           "kind": "problem-class"
         }
@@ -9428,7 +9458,7 @@
       "sources": [
         {
           "file": "packages/auth-clerk/src/libs/problems/ClerkProblems.ts",
-          "line": 160,
+          "line": 161,
           "column": 1,
           "kind": "problem-class"
         }
@@ -9458,7 +9488,7 @@
       "sources": [
         {
           "file": "packages/auth-clerk/src/libs/problems/ClerkProblems.ts",
-          "line": 73,
+          "line": 74,
           "column": 1,
           "kind": "problem-class"
         }
@@ -9488,7 +9518,7 @@
       "sources": [
         {
           "file": "packages/auth-clerk/src/libs/problems/ClerkProblems.ts",
-          "line": 98,
+          "line": 99,
           "column": 1,
           "kind": "problem-class"
         }
@@ -9518,7 +9548,7 @@
       "sources": [
         {
           "file": "packages/auth-clerk/src/libs/problems/ClerkProblems.ts",
-          "line": 148,
+          "line": 149,
           "column": 1,
           "kind": "problem-class"
         }
@@ -9548,7 +9578,7 @@
       "sources": [
         {
           "file": "packages/auth-clerk/src/libs/problems/ClerkProblems.ts",
-          "line": 54,
+          "line": 55,
           "column": 1,
           "kind": "problem-class"
         }
@@ -9578,7 +9608,7 @@
       "sources": [
         {
           "file": "packages/auth-clerk/src/libs/problems/ClerkProblems.ts",
-          "line": 35,
+          "line": 36,
           "column": 1,
           "kind": "problem-class"
         }
@@ -9608,7 +9638,7 @@
       "sources": [
         {
           "file": "packages/auth-clerk/src/libs/problems/ClerkProblems.ts",
-          "line": 7,
+          "line": 8,
           "column": 1,
           "kind": "problem-class"
         }
