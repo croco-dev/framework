@@ -2642,6 +2642,19 @@ export function provesSmokeValidation(
   );
 }
 
+/** Whether a step may rely on the proving case, given whether the prepared manifests matched. */
+function isStepProvenByCase(
+  validation: SmokeValidation,
+  provingCase: SmokeCase | undefined,
+  manifestStepsProven: boolean,
+): boolean {
+  return (
+    provingCase !== undefined &&
+    (manifestStepsProven || !readsPreparedManifests(validation)) &&
+    isCommandProvenByCase(validation, provingCase)
+  );
+}
+
 function isCommandProvenByCase(validation: SmokeValidation, provingCase: SmokeCase): boolean {
   return provingCase.validations.some((candidate) => provesSmokeValidation(candidate, validation));
 }
@@ -2652,6 +2665,7 @@ export function getGeneratedSmokeProofReuseInputs(): readonly {
   readonly sameProjectAs?: string;
   readonly sameContractScriptsAs?: string;
   readonly runsBrowserContractDriftCanaries: boolean;
+  /** Steps skipped when the prepared manifests differ, as they do for goal cases. */
   readonly reusedCommandLabels: readonly string[];
   readonly ownCommandLabels: readonly string[];
 }[] {
@@ -2659,7 +2673,7 @@ export function getGeneratedSmokeProofReuseInputs(): readonly {
     const provingCase = smokeCases.find(({ name }) => name === smokeCase.sameProjectAs);
     const commands = smokeCase.validations.filter(({ args }) => args !== undefined);
     const isReused = (validation: SmokeValidation) =>
-      provingCase !== undefined && isCommandProvenByCase(validation, provingCase);
+      isStepProvenByCase(validation, provingCase, false);
     return {
       name: smokeCase.name,
       tier: smokeCase.tier,
@@ -3161,9 +3175,9 @@ function verifyPreparedSmokeCase(
       : undefined;
     const reusedCommandLabels: string[] = [];
     for (const validation of smokeCase.validations) {
-      const reusable =
-        proofReuse.manifestStepsProven === true || !readsPreparedManifests(validation);
-      if (commandsProvenBy && reusable && isCommandProvenByCase(validation, commandsProvenBy)) {
+      if (
+        isStepProvenByCase(validation, commandsProvenBy, proofReuse.manifestStepsProven === true)
+      ) {
         reusedCommandLabels.push(validation.label);
         continue;
       }

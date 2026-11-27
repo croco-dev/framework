@@ -1555,13 +1555,13 @@ describe("create-croco-app generated smoke matrix", () => {
         name: "goal-spa-backend-split",
         sameProjectAs: "production-app-starter",
         sameContractScriptsAs: undefined,
-        ownCommandLabels: ["codegen"],
+        ownCommandLabels: ["contract:snapshot", "codegen", "contract:verify"],
       },
       {
         name: "goal-internal-tool",
         sameProjectAs: "admin-console-starter",
         sameContractScriptsAs: undefined,
-        ownCommandLabels: [],
+        ownCommandLabels: ["contract:snapshot", "codegen", "contract:verify"],
       },
       {
         name: "lambda-api",
