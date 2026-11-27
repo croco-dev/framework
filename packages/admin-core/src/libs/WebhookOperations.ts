@@ -224,7 +224,9 @@ const SIGNED_HEADER_NAMES = String.raw`signedheaders\s*=\s*${HTTP_TOKEN.source}(
 const AUTHORIZATION_PARAMETER = String.raw`(?:${SIGNED_CREDENTIAL_SCOPE}|${SIGNED_HEADER_NAMES}|(?!signedheaders\s*=)${HTTP_TOKEN.source}\s*=\s*(?:${QUOTED_FIELD_LABEL}|${HTTP_TOKEN.source}))${SINGLE_TOKEN_END.source}`;
 const AUTHORIZATION_LIST_ELEMENT = String.raw`(?:,\s*)*${AUTHORIZATION_PARAMETER}`;
 const AUTHORIZATION_CREDENTIALS = String.raw`(?:${AUTHORIZATION_LIST_ELEMENT}(?:\s*,\s*${AUTHORIZATION_LIST_ELEMENT})*(?!\s*,\s*${AUTHORIZATION_LIST_ELEMENT})|${TOKEN68.source})${SINGLE_TOKEN_END.source}`;
-const AUTHORIZATION_BEFORE_PROSE = String.raw`(?:bearer|basic)[ \t]+${TOKEN68.source}(?=[ \t]+\S)`;
+const AUTHORIZATION_TOKEN_BEFORE_PROSE = String.raw`${TOKEN68.source}(?=[ \t]+\S)`;
+const FOLDED_AUTHORIZATION_BEFORE_PROSE = String.raw`(?:bearer|basic)[ \t]*\r?\n[ \t]*${AUTHORIZATION_TOKEN_BEFORE_PROSE}`;
+const AUTHORIZATION_BEFORE_PROSE = String.raw`(?:(?:bearer|basic)[ \t]+${AUTHORIZATION_TOKEN_BEFORE_PROSE}|${FOLDED_AUTHORIZATION_BEFORE_PROSE})`;
 const SIGNATURE_COMPONENT_NAME = /v\d+|t/;
 const SIGNATURE_COMPONENT = String.raw`(?:${SIGNATURE_COMPONENT_NAME.source})[ \t]*=[ \t]*${TOKEN68.source}`;
 const STANDARD_SIGNATURE_VERSION = /v\d+[a-z]*/;
@@ -248,10 +250,10 @@ const MAP_STRUCTURE_TOKEN = new RegExp(
   "g",
 );
 const MAP_TERMINATOR = /(?=$|[\s,;)}\]]|[.!?:]+(?=$|\s))/y;
-const DISTINCT_DIAGNOSTIC_FIELD = String.raw`(?:[a-z][\w.-]*[ \t]*:|"${DOUBLE_QUOTED_CONTENT.source}"[ \t]*[:=])`;
+const DISTINCT_DIAGNOSTIC_FIELD = String.raw`(?:(?:[a-z][\w.-]*|'${SINGLE_QUOTED_CONTENT.source}')[ \t]*:|"${DOUBLE_QUOTED_CONTENT.source}"[ \t]*[:=])`;
 const DISTINCT_MAP_FIELD = new RegExp(String.raw`\s*${DISTINCT_DIAGNOSTIC_FIELD}`, "iy");
 const NEXT_COOKIE_DIAGNOSTIC_FIELD = String.raw`,\s*${DIAGNOSTIC_FIELD}`;
-const NEXT_SET_COOKIE_DIAGNOSTIC_FIELD = String.raw`,\s*(?:${DISTINCT_DIAGNOSTIC_FIELD}|'${SINGLE_QUOTED_CONTENT.source}'[ \t]*:)`;
+const NEXT_SET_COOKIE_DIAGNOSTIC_FIELD = String.raw`,\s*${DISTINCT_DIAGNOSTIC_FIELD}`;
 const SENSITIVE_SCALAR_ASSIGNMENT = String.raw`["']?(?:${SENSITIVE_DIAGNOSTIC_FIELD.source})["']?${HEADER_ASSIGNMENT.source}`;
 const SCALAR_VALUE = String.raw`(?:${QUOTED_DIAGNOSTIC_VALUE}|[^,\s;]+)`;
 const ADJACENT_QUOTED_SENSITIVE_FIELD = String.raw`(?:[,;][ \t]*|[ \t](?=\S))(?:${SENSITIVE_SCALAR_ASSIGNMENT}|["']?${SENSITIVE_WEBHOOK_HEADER}["']?${HEADER_ASSIGNMENT.source})${QUOTED_DIAGNOSTIC_VALUE}`;
@@ -289,7 +291,7 @@ const SENSITIVE_MAP_FIELD = new RegExp(
 const SENSITIVE_WEBHOOK_TEXT = new RegExp(
   `${wrappedHeaderAssignment(NON_SIGNATURE_HEADER)}${QUOTED_DIAGNOSTIC_VALUE}|` +
     `${wrappedHeaderAssignment("webhook-signature")}${QUOTED_DIAGNOSTIC_VALUE}${QUOTED_SIGNATURE_END}|` +
-    String.raw`${LEGACY_COLON_BOUNDARY.source}${AUTHORIZATION_HEADER.source}${HEADER_COLON.source}${FOLDED_AUTHORIZATION_SCHEME}${AUTHORIZATION_CREDENTIALS}|` +
+    String.raw`${LEGACY_COLON_BOUNDARY.source}${AUTHORIZATION_HEADER.source}${HEADER_COLON.source}(?:${FOLDED_AUTHORIZATION_SCHEME}${AUTHORIZATION_CREDENTIALS}|${FOLDED_AUTHORIZATION_BEFORE_PROSE})|` +
     `${LEGACY_COLON_BOUNDARY.source}webhook-signature${HEADER_COLON.source}${BOUNDED_SIGNATURE_VALUE}|` +
     `${boundedHeaderAssignments(HEADER_EQUALS)}|` +
     `${boundedHeaderAssignments(HEADER_COLON, "quoted")}|` +

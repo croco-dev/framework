@@ -143,6 +143,16 @@ describe("outbound webhook operations contracts", () => {
       "Response headers: [redacted] upstream timed out",
     ],
     [
+      "folded Bearer credential followed by same-line error context",
+      "Response headers: Authorization=Bearer\n  fixture-credential upstream timed out",
+      "Response headers: [redacted] upstream timed out",
+    ],
+    [
+      "folded Basic credential followed by same-line error context in a colon header",
+      "Proxy-Authorization: Basic\r\n\tfixture-credential== upstream timed out",
+      "[redacted] upstream timed out",
+    ],
+    [
       "empty authorization before a distinct header in plain text",
       "Authorization=, Content-Type: text/plain",
       "[redacted], Content-Type: text/plain",
@@ -176,6 +186,11 @@ describe("outbound webhook operations contracts", () => {
       "opaque authorization followed by a distinct map field",
       "headers=[Authorization: Custom fixture opaque credential, Content-Type: text/plain] upstream timed out",
       "headers=[[redacted], Content-Type: text/plain] upstream timed out",
+    ],
+    [
+      "opaque authorization followed by a single-quoted map field",
+      "headers=[Authorization: Custom fixture opaque credential, 'Content-Type': text/plain]",
+      "headers=[[redacted], 'Content-Type': text/plain]",
     ],
     [
       "empty authorization followed by a distinct map field",
