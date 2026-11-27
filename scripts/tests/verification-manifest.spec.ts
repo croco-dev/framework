@@ -506,7 +506,7 @@ describe("verification manifest", () => {
     }
   });
 
-  it("materializes the core coverage runtime dependency closure before running coverage", () => {
+  it("materializes the core coverage runtime dependency closure before running cached coverage tasks", () => {
     const coreCoverage = createVerificationManifest("publish").find(
       ({ id }) => id === "core-coverage",
     );
@@ -525,15 +525,11 @@ describe("verification manifest", () => {
     ]);
     expect(CORE_COVERAGE_TEST_COMMAND).toEqual([
       "pnpm",
-      "--workspace-concurrency=2",
-      ...CORE_COVERAGE_PACKAGES.flatMap((packageName) => ["--filter", packageName]),
-      "exec",
-      "vitest",
+      "turbo",
       "run",
-      "--coverage",
-      "--maxWorkers=1",
-      "--config",
-      "../../vitest.config.ts",
+      "test:coverage",
+      "--concurrency=2",
+      ...CORE_COVERAGE_PACKAGES.flatMap((packageName) => ["--filter", packageName]),
     ]);
 
     const invocations: string[][] = [];
@@ -545,8 +541,15 @@ describe("verification manifest", () => {
     ).toBe(0);
     expect(invocations).toEqual([
       CORE_COVERAGE_BUILD_COMMAND,
-      [...CORE_COVERAGE_TEST_COMMAND, "--testNamePattern", "focused"],
+      [...CORE_COVERAGE_TEST_COMMAND, "--", "--testNamePattern", "focused"],
     ]);
+
+    const unfocusedInvocations: string[][] = [];
+    runCoreCoverage([], (executable, args) => {
+      unfocusedInvocations.push([executable, ...args]);
+      return 0;
+    });
+    expect(unfocusedInvocations).toEqual([CORE_COVERAGE_BUILD_COMMAND, CORE_COVERAGE_TEST_COMMAND]);
 
     const failedInvocations: string[][] = [];
     expect(

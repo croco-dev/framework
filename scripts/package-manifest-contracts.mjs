@@ -18,6 +18,10 @@ const CI_SCRIPT_COMMANDS = new Map([
     "test:evidence",
     "pnpm run test --maxWorkers=1 --reporter=json --outputFile=.turbo/croco-test-evidence.json",
   ],
+  [
+    "test:coverage",
+    "CORE_COVERAGE=true SKIP_ENV_VALIDATION=true vitest run --coverage --maxWorkers=1 --config ../../vitest.config.ts",
+  ],
 ]);
 
 export const BUNDLED_RUNTIME_DEPENDENCY_EXEMPTIONS = new Map([

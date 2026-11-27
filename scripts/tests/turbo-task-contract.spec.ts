@@ -14,6 +14,7 @@ import { resolve } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import { CORE_COVERAGE_PACKAGE_DIRECTORIES } from "../core-coverage-config.mts";
 import { readTestInventory } from "../test-inventory.mts";
 
 type TurboTask = {
@@ -86,6 +87,35 @@ describe("Turbo task contract", () => {
         .map(({ path }) => path.split("/").slice(0, 2).join("/")),
     );
     expect([...evidenceWorkspaces].sort()).toEqual([...fastWorkspaces].sort());
+  });
+
+  it("caches coverage for exactly the core coverage packages on the inputs their tests hash", () => {
+    const expectedScript =
+      "CORE_COVERAGE=true SKIP_ENV_VALIDATION=true vitest run --coverage --maxWorkers=1 --config ../../vitest.config.ts";
+    const coverageWorkspaces: string[] = [];
+    for (const parent of ["packages", "examples"]) {
+      for (const directory of readdirSync(resolve(repositoryRoot, parent), {
+        withFileTypes: true,
+      })) {
+        const manifestPath = resolve(repositoryRoot, parent, directory.name, "package.json");
+        if (!directory.isDirectory() || !existsSync(manifestPath)) continue;
+        const manifest = JSON.parse(readFileSync(manifestPath, "utf-8")) as {
+          scripts?: Record<string, string>;
+        };
+        const script = manifest.scripts?.["test:coverage"];
+        if (script === undefined) continue;
+        expect(script, `${parent}/${directory.name}`).toBe(expectedScript);
+        coverageWorkspaces.push(`${parent}/${directory.name}`);
+      }
+    }
+
+    expect(coverageWorkspaces.sort()).toEqual(
+      CORE_COVERAGE_PACKAGE_DIRECTORIES.map((directory) => `packages/${directory}`).sort(),
+    );
+    expect(turbo.tasks["test:coverage"]).toEqual({
+      ...turbo.tasks.test,
+      outputs: ["coverage/coverage-summary.json"],
+    });
   });
 
   it("forwards the explicit executable-evidence destination to test reporters", () => {

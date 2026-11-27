@@ -34,6 +34,7 @@
     "lint": "oxlint .",
     "test": "vitest run",
     "test:evidence": "pnpm run test --maxWorkers=1 --reporter=json --outputFile=.turbo/croco-test-evidence.json",
+    "test:coverage": "CORE_COVERAGE=true SKIP_ENV_VALIDATION=true vitest run --coverage --maxWorkers=1 --config ../../vitest.config.ts",
     "typecheck": "tsrs --noEmit",
     "docs:api:model": "node --experimental-strip-types ../docs/scripts/generate-package-api-model.mts"
   },

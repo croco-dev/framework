@@ -101,7 +101,8 @@ Selection candidates come from executable repository signals:
 - `CORE_COVERAGE_PACKAGES` in `scripts/core-coverage-config.mts`;
 - release-critical package names around framework contracts, retry/events/auth/telemetry/transport/health/problem surfaces.
 
-Add a package to core coverage by updating `CORE_COVERAGE_PACKAGES` in `scripts/core-coverage-config.mts`, running `pnpm test:coverage:core`, adding the measured row to `ci-reports/coverage/core-baseline.txt`, then rerunning `pnpm test:coverage:core:warning`.
+Add a package to core coverage by updating `CORE_COVERAGE_PACKAGES` in `scripts/core-coverage-config.mts`, copying the `test:coverage` script from another core package into its `package.json`, running `pnpm test:coverage:core`, adding the measured row to `ci-reports/coverage/core-baseline.txt`, then rerunning `pnpm test:coverage:core:warning`.
+`pnpm test:coverage:core` runs each package's `test:coverage` as a cached Turbo task, so a package whose sources, tests and dependencies are unchanged restores its `coverage/coverage-summary.json` instead of running again.
 If the package is intentionally deferred, record a temporary reason in `TEMPORARY_CORE_COVERAGE_SELECTION_EXCLUSIONS` in `scripts/core-coverage-warning-check.mts` so the report preserves the decision instead of silently dropping the candidate.
 
 Promote selection warnings to a blocking trunk gate only after:
