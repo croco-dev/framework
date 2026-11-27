@@ -170,6 +170,31 @@ describe("DrizzleHealthIndicator", () => {
       "failed sslpassword\n = \r\nsample host=db.example",
       "failed sslpassword\n = \r\n[redacted] host=db.example",
     ],
+    [
+      "an assignment-shaped suffix inside a prefixed credential",
+      "failed sslpassword=sample;tail=first,part=second&end=last sslmode=require",
+      "failed sslpassword=[redacted] sslmode=require",
+    ],
+    [
+      "an unterminated quoted credential",
+      "failed sslpassword='sample two words",
+      "failed sslpassword=[redacted]",
+    ],
+    [
+      "an embedded scheme and an abstract socket host",
+      "failed driver_postgres://user:sample@@socket-name/app?sslmode=require",
+      "failed driver_postgres://[redacted]@@socket-name/app?sslmode=require",
+    ],
+    [
+      "a database path with a comma before credential-like text",
+      "failed postgres://user@db.example/app,sslpassword=reporting?sslmode=require",
+      "failed postgres://[redacted]@db.example/app,sslpassword=reporting?sslmode=require",
+    ],
+    [
+      "prefixed credentials nested in diagnostic fields",
+      "failed reason=sslpassword=sample error='sslpassword=another host=db.example' dbname=app",
+      "failed reason=sslpassword=[redacted] error='sslpassword=[redacted] host=db.example' dbname=app",
+    ],
   ])("should redact connection failure details for %s", async (_case, message, redactedMessage) => {
     const db = {
       transaction: vi.fn().mockRejectedValue(new Error(message)),

@@ -17,20 +17,16 @@ export type DrizzleHealthIndicatorOptions = {
 
 const SENSITIVE_KEYS =
   /password|passwd|pwd|secret|token|api[_-]?key|apikey|access[_-]?key|connection[_-]?string|dsn/i;
-const NEXT_KEYWORD = /[\w-]+\s*=/;
-const UNQUOTED_VALUE_CHARACTER = String.raw`\\[\s\S]|[^\s\\,;&]|[,;&](?!${NEXT_KEYWORD.source})`;
-const UNQUOTED_VALUE = `(?:${UNQUOTED_VALUE_CHARACTER})+`;
-const SINGLE_QUOTED_VALUE = /'(?:\\[\s\S]|[^'\\])*'/;
-const DOUBLE_QUOTED_PREFIX = /"(?:\\[\s\S]|[^"\\])*"/;
-const KEYWORD_VALUE = [
-  SINGLE_QUOTED_VALUE.source,
-  `${DOUBLE_QUOTED_PREFIX.source}(?:${UNQUOTED_VALUE_CHARACTER})*`,
-  UNQUOTED_VALUE,
-].join("|");
+const BASELINE_SENSITIVE_KEY = new RegExp(`^(?:${SENSITIVE_KEYS.source})$`, "i");
+const DIAGNOSTIC_FIELDS = /^(?:detail|error|message|reason)$/i;
+const URI_SCHEME = /[a-z][a-z0-9+.-]*:\/\//;
 const URL_OR_KEYWORD = new RegExp(
-  String.raw`\b[a-z][a-z0-9+.-]*:\/\/${UNQUOTED_VALUE}|(?<![\w?&-])(([\w-]+)\s*=\s*)(?:${KEYWORD_VALUE})`,
+  String.raw`(?<=\()${URI_SCHEME.source}[^)\s]*|${URI_SCHEME.source}\S+|(?<![\w?&-])([\w-]+)\s*=\s*`,
   "gi",
 );
+const QUOTED_KEYWORD_VALUE = /'(?:\\[\s\S]|[^'\\])*'|"(?:\\[\s\S]|[^"\\])*"/y;
+const UNQUOTED_KEYWORD_VALUE = /(?:\\[\s\S]|[^\s\\])+/y;
+const DELIMITED_KEYWORD_VALUE = /(?:(?![,;&][\w-]+\s*=)(?:\\[\s\S]|[^\s\\]))+/y;
 const BARE_CREDENTIAL = new RegExp(String.raw`\b(${SENSITIVE_KEYS.source})=[^\s,;&]+`, "gi");
 
 export class DrizzleHealthIndicator implements HealthIndicator {
@@ -66,13 +62,73 @@ export class DrizzleHealthIndicator implements HealthIndicator {
 }
 
 function redactDrizzleHealthDetail(value: string): string {
-  return value
-    .replace(/\b([a-z][a-z0-9+.-]*:\/\/)(?:[^/?#\s]+@|[^/\s]+@)/gi, "$1[redacted]@")
-    .replace(URL_OR_KEYWORD, (match: string, prefix: string, key: string | undefined) =>
-      key !== undefined && SENSITIVE_KEYS.test(key) ? `${prefix}[redacted]` : match,
-    )
+  const withoutUserInfo = value.replace(
+    /([a-z][a-z0-9+.-]*:\/\/)(?:[^/?#\s]+(?<!@)@|[^/\s]+(?<!@)@)/gi,
+    "$1[redacted]@",
+  );
+  return redactKeywordValues(withoutUserInfo)
     .replace(/([?&])([^=\s&]+)=([^&\s]+)/g, (match: string, prefix: string, key: string) =>
       SENSITIVE_KEYS.test(key) ? `${prefix}${key}=[redacted]` : match,
     )
     .replace(BARE_CREDENTIAL, "$1=[redacted]");
+}
+
+function redactKeywordValues(detail: string, readDiagnosticFields = true): string {
+  const tokens = new RegExp(URL_OR_KEYWORD);
+  let result = "";
+  let copiedThrough = 0;
+
+  for (let token = tokens.exec(detail); token; token = tokens.exec(detail)) {
+    const key = token[1];
+    if (key === undefined) continue;
+    const valueStart = tokens.lastIndex;
+    const sensitive = SENSITIVE_KEYS.test(key);
+    const unquoted =
+      sensitive && !BASELINE_SENSITIVE_KEY.test(key)
+        ? UNQUOTED_KEYWORD_VALUE
+        : DELIMITED_KEYWORD_VALUE;
+    const valueEnd = keywordValueEnd(detail, valueStart, unquoted, sensitive);
+    tokens.lastIndex = valueEnd;
+    if (valueEnd === valueStart) continue;
+
+    let redactedValue: string;
+    if (sensitive) {
+      redactedValue = "[redacted]";
+    } else if (readDiagnosticFields && DIAGNOSTIC_FIELDS.test(key)) {
+      const field = detail.slice(valueStart, valueEnd);
+      const quote = field.charAt(0);
+      redactedValue =
+        (quote === "'" || quote === '"') && field.endsWith(quote)
+          ? quote + redactKeywordValues(field.slice(1, -1), false) + quote
+          : redactKeywordValues(field, false);
+    } else {
+      continue;
+    }
+
+    result += detail.slice(copiedThrough, valueStart) + redactedValue;
+    copiedThrough = valueEnd;
+  }
+
+  return result + detail.slice(copiedThrough);
+}
+
+function keywordValueEnd(
+  detail: string,
+  start: number,
+  unquoted: RegExp,
+  sensitive: boolean,
+): number {
+  const first = detail.charAt(start);
+  if (first === "'" || first === '"') {
+    QUOTED_KEYWORD_VALUE.lastIndex = start;
+    if (QUOTED_KEYWORD_VALUE.test(detail)) {
+      start = QUOTED_KEYWORD_VALUE.lastIndex;
+      if (first === "'") return start;
+    } else if (sensitive) {
+      return detail.length;
+    }
+  }
+
+  unquoted.lastIndex = start;
+  return unquoted.test(detail) ? unquoted.lastIndex : start;
 }
