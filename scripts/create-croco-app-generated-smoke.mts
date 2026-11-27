@@ -239,6 +239,8 @@ type SmokeCase = {
 
 export type SmokeProofReuse = {
   readonly commandsProvenBy?: string;
+  /** False when the prepared manifests differ, so steps that read them run in this case too. */
+  readonly manifestStepsProven?: boolean;
   readonly driftCanariesProvenBy?: string;
 };
 
@@ -2721,6 +2723,26 @@ export function readGeneratedContractScripts(projectDir: string, projectName: st
   ).replaceAll(projectName, "\0");
 }
 
+/** Package manifests of a prepared project, with its own name masked like the fingerprint. */
+export function readPreparedManifests(projectDir: string, projectName: string): string {
+  return JSON.stringify(
+    [...fingerprintGeneratedProject(projectDir, projectName)]
+      .filter(([path]) => basename(path) === "package.json")
+      .sort(([left], [right]) => compareStrings(left, right)),
+  );
+}
+
+/**
+ * Contract writers and read-only verifiers compare committed artifacts with the package manifests,
+ * which the goal cases rewrite during dependency preparation.
+ */
+export function readsPreparedManifests(validation: SmokeValidation): boolean {
+  return (
+    validation.readOnly === true ||
+    /^(?:codegen|contract:|project-map:)/.test(validation.args?.[0] ?? "")
+  );
+}
+
 type SmokeProofReuseCandidate = {
   readonly smokeCase: Pick<SmokeCase, "name" | "sameProjectAs" | "sameContractScriptsAs">;
   /** Captured right after generation, before the smoke links local packages into the project. */
@@ -2728,6 +2750,8 @@ type SmokeProofReuseCandidate = {
     readonly fingerprint: ReadonlyMap<string, string>;
     readonly contractScripts: string;
   };
+  /** Package manifests after dependency preparation, with the project name masked. */
+  readonly preparedManifests: string;
 };
 
 export type SmokeProofReuseResolution = {
@@ -2776,9 +2800,12 @@ export function resolveSmokeProofReuse(
     }
     const commandsProvenBy =
       sameProject && differingPaths.length === 0 ? sameProject.smokeCase.name : undefined;
+    const manifestStepsProven = commandsProvenBy
+      ? prepared.preparedManifests === sameProject?.preparedManifests
+      : undefined;
     const driftCanariesProvenBy = scriptsMatch ? sameScripts.smokeCase.name : undefined;
     if (commandsProvenBy || driftCanariesProvenBy) {
-      reuse.set(name, { commandsProvenBy, driftCanariesProvenBy });
+      reuse.set(name, { commandsProvenBy, manifestStepsProven, driftCanariesProvenBy });
     }
   }
   return { reuse, drifted };
@@ -2975,6 +3002,7 @@ type PreparedSmokeCase = {
   readonly installedRangeOverrides: Readonly<Record<string, string>>;
   readonly preparation: SmokeMatrixCaseTiming;
   readonly generated: SmokeProofReuseCandidate["generated"];
+  readonly preparedManifests: string;
 };
 
 type SmokeCaseVerification = {
@@ -3047,6 +3075,7 @@ function prepareSmokeCase(input: {
     installedRangeOverrides,
     preparation: finalizeSmokeCaseTiming(caseResult.steps, performance.now()),
     generated,
+    preparedManifests: readPreparedManifests(projectDir, smokeCase.name),
   };
 }
 
@@ -3132,7 +3161,9 @@ function verifyPreparedSmokeCase(
       : undefined;
     const reusedCommandLabels: string[] = [];
     for (const validation of smokeCase.validations) {
-      if (commandsProvenBy && isCommandProvenByCase(validation, commandsProvenBy)) {
+      const reusable =
+        proofReuse.manifestStepsProven === true || !readsPreparedManifests(validation);
+      if (commandsProvenBy && reusable && isCommandProvenByCase(validation, commandsProvenBy)) {
         reusedCommandLabels.push(validation.label);
         continue;
       }

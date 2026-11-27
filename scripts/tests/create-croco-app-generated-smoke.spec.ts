@@ -39,6 +39,7 @@ import {
   readCommandOutputSegment,
   readGeneratedContractScripts,
   readGeneratedSmokeAllowlistMetadata,
+  readsPreparedManifests,
   reconcileGeneratedTestPaths,
   requiresCommandShell,
   resolveSmokeProofReuse,
@@ -1626,17 +1627,31 @@ describe("create-croco-app generated smoke matrix", () => {
     ).toBe(false);
   });
 
+  it("keeps contract writers and read-only verifiers in a case whose prepared manifests differ", () => {
+    expect(readsPreparedManifests({ label: "codegen", args: ["codegen"] })).toBe(true);
+    expect(
+      readsPreparedManifests({ label: "Contract snapshot", args: ["contract:snapshot"] }),
+    ).toBe(true);
+    expect(readsPreparedManifests({ label: "verify", readOnly: true, args: ["verify"] })).toBe(
+      true,
+    );
+    expect(readsPreparedManifests({ label: "test", args: ["test"] })).toBe(false);
+    expect(readsPreparedManifests({ label: "build", args: ["build"] })).toBe(false);
+  });
+
   it("reuses proof only when the other case is in the run and its output still matches", () => {
     const candidate = (
       name: string,
       generated: { files: Record<string, string>; contractScripts: string },
       declaration: { sameProjectAs?: string; sameContractScriptsAs?: string } = {},
+      preparedManifests = "manifests",
     ) => ({
       smokeCase: { name, ...declaration },
       generated: {
         fingerprint: new Map(Object.entries(generated.files)),
         contractScripts: generated.contractScripts,
       },
+      preparedManifests,
     });
     const starterOutput = {
       files: { "package.json": "a", "src/index.ts": "b" },
@@ -1652,10 +1667,36 @@ describe("create-croco-app generated smoke matrix", () => {
 
     expect(resolveSmokeProofReuse([goal, deployment, starter])).toEqual({
       reuse: new Map([
-        ["goal", { commandsProvenBy: "starter", driftCanariesProvenBy: undefined }],
-        ["deployment", { commandsProvenBy: undefined, driftCanariesProvenBy: "starter" }],
+        [
+          "goal",
+          {
+            commandsProvenBy: "starter",
+            manifestStepsProven: true,
+            driftCanariesProvenBy: undefined,
+          },
+        ],
+        [
+          "deployment",
+          {
+            commandsProvenBy: undefined,
+            manifestStepsProven: undefined,
+            driftCanariesProvenBy: "starter",
+          },
+        ],
       ]),
       drifted: [],
+    });
+
+    const rewrittenGoal = candidate(
+      "goal",
+      starterOutput,
+      { sameProjectAs: "starter" },
+      "rewritten ranges",
+    );
+    expect(resolveSmokeProofReuse([rewrittenGoal, starter]).reuse.get("goal")).toEqual({
+      commandsProvenBy: "starter",
+      manifestStepsProven: false,
+      driftCanariesProvenBy: undefined,
     });
 
     const driftedGoal = candidate(
