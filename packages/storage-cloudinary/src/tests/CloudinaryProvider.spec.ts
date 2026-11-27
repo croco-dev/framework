@@ -996,7 +996,13 @@ describe("CloudinaryProvider", () => {
       await expect(provider.exists(key)).rejects.toThrow(InvalidKeyProblem);
       await expect(provider.put(key, Buffer.from("data"))).rejects.toThrow(InvalidKeyProblem);
       await expect(provider.getUploadIntent(key)).rejects.toThrow(InvalidKeyProblem);
+      await expect(provider.getSignedUrl(key, { expiresIn: 60 })).rejects.toThrow(
+        InvalidKeyProblem,
+      );
+      await expect(provider.getMetadata(key)).rejects.toThrow(InvalidKeyProblem);
+      await expect(provider.delete(key)).rejects.toThrow(InvalidKeyProblem);
       expect(() => provider.getPublicUrl(key)).toThrow(InvalidKeyProblem);
+      expect(() => provider.getTransformUrl(key, { width: 200 })).toThrow(InvalidKeyProblem);
 
       expect(global.fetch).not.toHaveBeenCalled();
       expect(cloudinary.url).not.toHaveBeenCalled();
