@@ -138,6 +138,7 @@ describe("Turbo task contract", () => {
         inputs: [
           "$TURBO_ROOT$/scripts/fixtures/protocol-codegen/**",
           "$TURBO_ROOT$/test-fixtures/**",
+          "$TURBO_ROOT$/packages/openapi-spec/src/tests/fixtures/**",
         ],
         dependsOn: ["@croco/frontend-problems#build"],
       }),
@@ -147,6 +148,8 @@ describe("Turbo task contract", () => {
           "@croco/rpc-codegen#build",
           "@croco/protocols-trpc#build",
           "@croco/frontend-problems#build",
+          "@croco/preset-node#build",
+          "@croco/preset-lambda#build",
         ],
       }),
       "@croco/framework-context#test:coverage": override({
@@ -163,19 +166,69 @@ describe("Turbo task contract", () => {
     });
   });
 
-  it("declares every path outside the package that a cached core coverage test reaches", () => {
-    const readManifest = (directory: string) =>
-      JSON.parse(
-        readFileSync(resolve(repositoryRoot, "packages", directory, "package.json"), "utf-8"),
-      ) as {
-        name: string;
-        dependencies?: Record<string, string>;
-        devDependencies?: Record<string, string>;
-        peerDependencies?: Record<string, string>;
-      };
-    const globalPrefixes = (turbo.globalDependencies ?? [])
-      .filter((pattern) => !pattern.startsWith("!"))
-      .map((pattern) => pattern.replace(/\*.*$/, ""));
+  it("declares every path and packed package outside the package that a cached core coverage test reaches", () => {
+    type Manifest = {
+      name: string;
+      dependencies?: Record<string, string>;
+      devDependencies?: Record<string, string>;
+      peerDependencies?: Record<string, string>;
+    };
+    const manifests = new Map(
+      readdirSync(resolve(repositoryRoot, "packages"))
+        .filter((directory) =>
+          existsSync(resolve(repositoryRoot, "packages", directory, "package.json")),
+        )
+        .map((directory) => {
+          const manifest = JSON.parse(
+            readFileSync(resolve(repositoryRoot, "packages", directory, "package.json"), "utf-8"),
+          ) as Manifest;
+          return [directory, manifest] as const;
+        }),
+    );
+    const byName = new Map([...manifests.values()].map((manifest) => [manifest.name, manifest]));
+    const directDependencies = (manifest: Manifest | undefined) =>
+      Object.keys({
+        ...manifest?.dependencies,
+        ...manifest?.devDependencies,
+        ...manifest?.peerDependencies,
+      });
+    const withDependencyClosure = (names: readonly string[]) => {
+      const closure = new Set<string>();
+      const pending = [...names];
+      for (let name = pending.pop(); name !== undefined; name = pending.pop()) {
+        if (closure.has(name) || !byName.has(name)) continue;
+        closure.add(name);
+        pending.push(...directDependencies(byName.get(name)));
+      }
+      return closure;
+    };
+    // A dependency's build hash does not cover the files its build inputs exclude, such as test fixtures.
+    const buildExclusions = (turbo.tasks.build?.inputs ?? [])
+      .filter((input) => input.startsWith("!"))
+      .map(
+        (input) =>
+          new RegExp(
+            `^${input
+              .slice(1)
+              .split(/(\*\*\/|\*\*|\*)/)
+              .map((part) =>
+                part === "**/"
+                  ? "(?:.*/)?"
+                  : part === "**"
+                    ? ".*"
+                    : part === "*"
+                      ? "[^/]*"
+                      : part.replace(/[.+?^${}()|[\]\\]/g, "\\$&"),
+              )
+              .join("")}$`,
+          ),
+      );
+    const prefixes = (patterns: readonly string[]) =>
+      patterns
+        .filter((pattern) => !pattern.startsWith("!"))
+        .map((pattern) => pattern.replace(/^\$TURBO_ROOT\$\//, "").replace(/\*.*$/, ""))
+        .filter((prefix) => prefix !== "");
+    const globalPrefixes = prefixes(turbo.globalDependencies ?? []);
     const testFiles = (directory: string): string[] =>
       readdirSync(directory, { withFileTypes: true, recursive: true })
         .filter((entry) => entry.isFile() && /\.(?:m?ts|tsx)$/.test(entry.name))
@@ -184,42 +237,38 @@ describe("Turbo task contract", () => {
     const undeclared: string[] = [];
 
     for (const directory of CORE_COVERAGE_PACKAGE_DIRECTORIES) {
-      const manifest = readManifest(directory);
-      const task = turbo.tasks[`${manifest.name}#test:coverage`] ?? turbo.tasks["test:coverage"];
-      if (task?.cache === false) continue;
-      const dependencies = new Set(
-        Object.keys({
-          ...manifest.dependencies,
-          ...manifest.devDependencies,
-          ...manifest.peerDependencies,
-        }),
-      );
-      const inputPrefixes = (task?.inputs ?? [])
-        .filter((input) => input.startsWith("$TURBO_ROOT$/"))
-        .map((input) => input.slice("$TURBO_ROOT$/".length).replace(/\*.*$/, ""));
-      const packageRoot = resolve(repositoryRoot, "packages", directory);
+      const manifest = manifests.get(directory);
+      const task = turbo.tasks[`${manifest?.name}#test:coverage`] ?? turbo.tasks["test:coverage"];
+      if (manifest === undefined || task?.cache === false) continue;
+      const builtSiblings = (task.dependsOn ?? [])
+        .filter((dependency) => dependency.endsWith("#build"))
+        .map((dependency) => dependency.slice(0, -"#build".length));
+      const hashedPackages = withDependencyClosure([manifest.name, ...builtSiblings]);
+      const inputPrefixes = [...prefixes(task.inputs ?? []), ...globalPrefixes];
 
-      for (const file of testFiles(resolve(packageRoot, "src"))) {
+      for (const file of testFiles(resolve(repositoryRoot, "packages", directory, "src"))) {
         const source = readFileSync(file, "utf-8");
+        const location = relative(repositoryRoot, file);
         for (const [, specifier = ""] of source.matchAll(/["'`]((?:\.\.\/){3,}[^"'`$]*)/g)) {
           const target = relative(repositoryRoot, resolve(dirname(file), specifier));
           if (target === `packages/${directory}` || target.startsWith(`packages/${directory}/`))
             continue;
-          const [top, sibling] = target.split("/");
-          const siblingName =
-            top === "packages" &&
-            sibling &&
-            existsSync(resolve(repositoryRoot, "packages", sibling, "package.json"))
-              ? readManifest(sibling).name
-              : undefined;
-          const declared =
-            (siblingName !== undefined &&
-              (dependencies.has(siblingName) ||
-                (task?.dependsOn ?? []).includes(`${siblingName}#build`))) ||
-            [...inputPrefixes, ...globalPrefixes].some(
-              (prefix) => prefix !== "" && `${target}/`.startsWith(prefix),
-            );
-          if (!declared) undeclared.push(`${relative(repositoryRoot, file)} -> ${target || "."}`);
+          const [top, sibling = "", ...rest] = target.split("/");
+          const siblingName = top === "packages" ? manifests.get(sibling)?.name : undefined;
+          const pathInSibling = rest.join("/");
+          const hashedBySibling =
+            siblingName !== undefined &&
+            hashedPackages.has(siblingName) &&
+            !buildExclusions.some((exclusion) => exclusion.test(pathInSibling));
+          const hashedByInput = inputPrefixes.some((prefix) => `${target}/`.startsWith(prefix));
+          if (!hashedBySibling && !hashedByInput)
+            undeclared.push(`${location} -> ${target || "."}`);
+        }
+        if (source.includes('"pack"') && source.includes('"--filter"')) {
+          for (const [, packed = ""] of source.matchAll(/["'`](@croco\/[a-z0-9-]+)["'`]/g)) {
+            if (byName.has(packed) && !hashedPackages.has(packed))
+              undeclared.push(`${location} packs ${packed}`);
+          }
         }
       }
     }

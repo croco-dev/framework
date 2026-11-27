@@ -171,7 +171,8 @@
         "$TURBO_ROOT$/scripts/core-coverage-config.mts",
         "$TURBO_ROOT$/test-support/**",
         "$TURBO_ROOT$/scripts/fixtures/protocol-codegen/**",
-        "$TURBO_ROOT$/test-fixtures/**"
+        "$TURBO_ROOT$/test-fixtures/**",
+        "$TURBO_ROOT$/packages/openapi-spec/src/tests/fixtures/**"
       ]
     },
     "@croco/transports-http#test:coverage": {
@@ -182,7 +183,9 @@
         "@croco/openapi-spec#build",
         "@croco/rpc-codegen#build",
         "@croco/protocols-trpc#build",
-        "@croco/frontend-problems#build"
+        "@croco/frontend-problems#build",
+        "@croco/preset-node#build",
+        "@croco/preset-lambda#build"
       ],
       "env": ["NODE_ENV", "VITEST_MAX_WORKERS"],
       "outputs": ["coverage/coverage-summary.json"],
