@@ -10,10 +10,11 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { resolve } from "node:path";
+import { dirname, relative, resolve, sep } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import { CORE_COVERAGE_PACKAGE_DIRECTORIES } from "../core-coverage-config.mts";
 import { readTestInventory } from "../test-inventory.mts";
 
 type TurboTask = {
@@ -25,6 +26,7 @@ type TurboTask = {
 };
 
 type TurboConfiguration = {
+  readonly globalDependencies?: readonly string[];
   readonly globalPassThroughEnv?: readonly string[];
   readonly tasks: Readonly<Record<string, TurboTask>>;
 };
@@ -86,6 +88,192 @@ describe("Turbo task contract", () => {
         .map(({ path }) => path.split("/").slice(0, 2).join("/")),
     );
     expect([...evidenceWorkspaces].sort()).toEqual([...fastWorkspaces].sort());
+  });
+
+  it("caches coverage for exactly the core coverage packages on the inputs their tests hash", () => {
+    const expectedScript =
+      "CORE_COVERAGE=true SKIP_ENV_VALIDATION=true vitest run --coverage --maxWorkers=1 --config ../../vitest.config.ts";
+    const coverageWorkspaces: string[] = [];
+    for (const parent of ["packages", "examples"]) {
+      for (const directory of readdirSync(resolve(repositoryRoot, parent), {
+        withFileTypes: true,
+      })) {
+        const manifestPath = resolve(repositoryRoot, parent, directory.name, "package.json");
+        if (!directory.isDirectory() || !existsSync(manifestPath)) continue;
+        const manifest = JSON.parse(readFileSync(manifestPath, "utf-8")) as {
+          scripts?: Record<string, string>;
+        };
+        const script = manifest.scripts?.["test:coverage"];
+        if (script === undefined) continue;
+        expect(script, `${parent}/${directory.name}`).toBe(expectedScript);
+        coverageWorkspaces.push(`${parent}/${directory.name}`);
+      }
+    }
+
+    expect(coverageWorkspaces.sort()).toEqual(
+      CORE_COVERAGE_PACKAGE_DIRECTORIES.map((directory) => `packages/${directory}`).sort(),
+    );
+    expect(turbo.tasks["test:coverage"]).toEqual({
+      ...turbo.tasks.test,
+      outputs: ["coverage/coverage-summary.json"],
+    });
+  });
+
+  it("hashes or reruns core coverage tests that read files outside their package", () => {
+    const coverage = turbo.tasks["test:coverage"];
+    const override = (extra: { inputs?: string[]; dependsOn?: string[] }) => ({
+      ...coverage,
+      dependsOn: [...(coverage?.dependsOn ?? []), ...(extra.dependsOn ?? [])],
+      inputs: [...(coverage?.inputs ?? []), ...(extra.inputs ?? [])],
+    });
+    const overrides = Object.fromEntries(
+      Object.entries(turbo.tasks).filter(([name]) => name.endsWith("#test:coverage")),
+    );
+
+    expect(overrides).toEqual({
+      "@croco/openapi-spec#test:coverage": override({
+        inputs: ["$TURBO_ROOT$/scripts/fixtures/protocol-codegen/**"],
+      }),
+      "@croco/rpc-codegen#test:coverage": override({
+        inputs: [
+          "$TURBO_ROOT$/scripts/fixtures/protocol-codegen/**",
+          "$TURBO_ROOT$/test-fixtures/**",
+          "$TURBO_ROOT$/packages/openapi-spec/src/tests/fixtures/**",
+        ],
+        dependsOn: ["@croco/frontend-problems#build"],
+      }),
+      "@croco/transports-http#test:coverage": override({
+        dependsOn: [
+          "@croco/openapi-spec#build",
+          "@croco/rpc-codegen#build",
+          "@croco/protocols-trpc#build",
+          "@croco/frontend-problems#build",
+          "@croco/preset-node#build",
+          "@croco/preset-lambda#build",
+        ],
+      }),
+      "@croco/framework-context#test:coverage": override({
+        dependsOn: [
+          "@croco/framework-config#build",
+          "@croco/framework-logger#build",
+          "@croco/health-core#build",
+        ],
+      }),
+      // Their tests scan or pack other packages and read root files, which no input list keeps complete.
+      "@croco/protocols-core#test:coverage": { ...coverage, cache: false },
+      "@croco/cli#test:coverage": { ...coverage, cache: false },
+      "create-croco-app#test:coverage": { ...coverage, cache: false },
+    });
+  });
+
+  it("declares every path and packed package outside the package that a cached core coverage test reaches", () => {
+    type Manifest = {
+      name: string;
+      dependencies?: Record<string, string>;
+      devDependencies?: Record<string, string>;
+      peerDependencies?: Record<string, string>;
+    };
+    const manifests = new Map(
+      readdirSync(resolve(repositoryRoot, "packages"))
+        .filter((directory) =>
+          existsSync(resolve(repositoryRoot, "packages", directory, "package.json")),
+        )
+        .map((directory) => {
+          const manifest = JSON.parse(
+            readFileSync(resolve(repositoryRoot, "packages", directory, "package.json"), "utf-8"),
+          ) as Manifest;
+          return [directory, manifest] as const;
+        }),
+    );
+    const byName = new Map([...manifests.values()].map((manifest) => [manifest.name, manifest]));
+    const directDependencies = (manifest: Manifest | undefined) =>
+      Object.keys({
+        ...manifest?.dependencies,
+        ...manifest?.devDependencies,
+        ...manifest?.peerDependencies,
+      });
+    const withDependencyClosure = (names: readonly string[]) => {
+      const closure = new Set<string>();
+      const pending = [...names];
+      for (let name = pending.pop(); name !== undefined; name = pending.pop()) {
+        if (closure.has(name) || !byName.has(name)) continue;
+        closure.add(name);
+        pending.push(...directDependencies(byName.get(name)));
+      }
+      return closure;
+    };
+    // A dependency's build hash does not cover the files its build inputs exclude, such as test fixtures.
+    const buildExclusions = (turbo.tasks.build?.inputs ?? [])
+      .filter((input) => input.startsWith("!"))
+      .map(
+        (input) =>
+          new RegExp(
+            `^${input
+              .slice(1)
+              .split(/(\*\*\/|\*\*|\*)/)
+              .map((part) =>
+                part === "**/"
+                  ? "(?:.*/)?"
+                  : part === "**"
+                    ? ".*"
+                    : part === "*"
+                      ? "[^/]*"
+                      : part.replace(/[.+?^${}()|[\]\\]/g, "\\$&"),
+              )
+              .join("")}$`,
+          ),
+      );
+    const prefixes = (patterns: readonly string[]) =>
+      patterns
+        .filter((pattern) => !pattern.startsWith("!"))
+        .map((pattern) => pattern.replace(/^\$TURBO_ROOT\$\//, "").replace(/\*.*$/, ""))
+        .filter((prefix) => prefix !== "");
+    const globalPrefixes = prefixes(turbo.globalDependencies ?? []);
+    const testFiles = (directory: string): string[] =>
+      readdirSync(directory, { withFileTypes: true, recursive: true })
+        .filter((entry) => entry.isFile() && /\.(?:m?ts|tsx)$/.test(entry.name))
+        .map((entry) => resolve(entry.parentPath, entry.name))
+        .filter((file) => file.includes(`${sep}tests${sep}`) || file.endsWith(".spec.ts"));
+    const undeclared: string[] = [];
+
+    for (const directory of CORE_COVERAGE_PACKAGE_DIRECTORIES) {
+      const manifest = manifests.get(directory);
+      const task = turbo.tasks[`${manifest?.name}#test:coverage`] ?? turbo.tasks["test:coverage"];
+      if (manifest === undefined || task?.cache === false) continue;
+      const builtSiblings = (task.dependsOn ?? [])
+        .filter((dependency) => dependency.endsWith("#build"))
+        .map((dependency) => dependency.slice(0, -"#build".length));
+      const hashedPackages = withDependencyClosure([manifest.name, ...builtSiblings]);
+      const inputPrefixes = [...prefixes(task.inputs ?? []), ...globalPrefixes];
+
+      for (const file of testFiles(resolve(repositoryRoot, "packages", directory, "src"))) {
+        const source = readFileSync(file, "utf-8");
+        const location = relative(repositoryRoot, file);
+        for (const [, specifier = ""] of source.matchAll(/["'`]((?:\.\.\/){3,}[^"'`$]*)/g)) {
+          const target = relative(repositoryRoot, resolve(dirname(file), specifier));
+          if (target === `packages/${directory}` || target.startsWith(`packages/${directory}/`))
+            continue;
+          const [top, sibling = "", ...rest] = target.split("/");
+          const siblingName = top === "packages" ? manifests.get(sibling)?.name : undefined;
+          const pathInSibling = rest.join("/");
+          const hashedBySibling =
+            siblingName !== undefined &&
+            hashedPackages.has(siblingName) &&
+            !buildExclusions.some((exclusion) => exclusion.test(pathInSibling));
+          const hashedByInput = inputPrefixes.some((prefix) => `${target}/`.startsWith(prefix));
+          if (!hashedBySibling && !hashedByInput)
+            undeclared.push(`${location} -> ${target || "."}`);
+        }
+        if (source.includes('"pack"') && source.includes('"--filter"')) {
+          for (const [, packed = ""] of source.matchAll(/["'`](@croco\/[a-z0-9-]+)["'`]/g)) {
+            if (byName.has(packed) && !hashedPackages.has(packed))
+              undeclared.push(`${location} packs ${packed}`);
+          }
+        }
+      }
+    }
+
+    expect(undeclared).toEqual([]);
   });
 
   it("forwards the explicit executable-evidence destination to test reporters", () => {

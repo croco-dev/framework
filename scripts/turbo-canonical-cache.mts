@@ -9,7 +9,12 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { hasFailedBuildTask, readTurboRunSummary } from "./test-lane-runner.mts";
 import { formatVerificationProblem, VerificationProblem } from "./verification-problem.mts";
 
-export const CANONICAL_TURBO_CACHE_TASKS = ["build", "typecheck", "test:evidence"] as const;
+export const CANONICAL_TURBO_CACHE_TASKS = [
+  "build",
+  "typecheck",
+  "test:evidence",
+  "test:coverage",
+] as const;
 
 export type TurboCacheOptions = {
   readonly rootDir: string;

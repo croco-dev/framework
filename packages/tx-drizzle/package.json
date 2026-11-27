@@ -61,6 +61,7 @@
     "lint": "oxlint .",
     "test": "vitest run --exclude src/tests/DrizzleTxAdapter.postgres.spec.ts --exclude src/tests/HyperdriveWorkers.postgres.spec.ts",
     "test:evidence": "pnpm run test --maxWorkers=1 --reporter=json --outputFile=.turbo/croco-test-evidence.json",
+    "test:coverage": "CORE_COVERAGE=true SKIP_ENV_VALIDATION=true vitest run --coverage --maxWorkers=1 --config ../../vitest.config.ts",
     "typecheck": "tsrs --noEmit",
     "docs:api:model": "node --experimental-strip-types ../docs/scripts/generate-package-api-model.mts",
     "test:workers": "pnpm test:live",

@@ -407,7 +407,7 @@ function getSelectionRecoveryAction(
     return `임시 제외 사유 확인 후 제거하거나 core set에 추가: ${exclusionReason}`;
   }
 
-  return `\`scripts/core-coverage-config.mts\`의 \`CORE_COVERAGE_PACKAGES\`에 \`${packageName}\`를 추가하고 \`pnpm test:coverage:core\`로 baseline row를 만든다. 아직 준비되지 않았다면 \`TEMPORARY_CORE_COVERAGE_SELECTION_EXCLUSIONS\`에 사유를 기록한다.`;
+  return `\`scripts/core-coverage-config.mts\`의 \`CORE_COVERAGE_PACKAGES\`에 \`${packageName}\`를 추가하고, 다른 core package의 \`test:coverage\` script를 그 package의 \`package.json\`에 복사한 뒤 \`pnpm test:coverage:core\`로 baseline row를 만든다. 아직 준비되지 않았다면 \`TEMPORARY_CORE_COVERAGE_SELECTION_EXCLUSIONS\`에 사유를 기록한다.`;
 }
 
 export function getCoreCoverageSelectionCandidates({
@@ -626,7 +626,7 @@ function writeReport(
     "",
     "## Enforce 전환 메모",
     "- 대상 유지: `CORE_COVERAGE_PACKAGES`에 포함된 패키지부터 threshold를 유지한다.",
-    "- 신규 1.0 spine package는 `test:coverage:core`, `CORE_COVERAGE_PACKAGES`, baseline row가 모두 준비되어야 한다.",
+    "- 신규 1.0 spine package는 `test:coverage:core`, `CORE_COVERAGE_PACKAGES`, package의 `test:coverage` script, baseline row가 모두 준비되어야 한다.",
     "- 비-spine core 후보는 selection warning, coverage summary, baseline row가 PR summary에 표시된 뒤 core set에 추가한다.",
     "- 비-spine selection warning을 blocking으로 전환하려면 누락 후보가 0이거나 각 후보에 만료 가능한 temporary exclusion 사유가 있어야 한다.",
     "- baseline을 의도적으로 갱신할 때는 `pnpm test:coverage:core`를 먼저 실행하고, 생성된 `coverage-summary.json`의 total percentages를 `ci-reports/coverage/core-baseline.txt`에 반영한 뒤 `pnpm test:coverage:core:warning`을 실행한다.",

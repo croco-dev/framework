@@ -136,6 +136,121 @@
         "$TURBO_ROOT$/test-support/**"
       ]
     },
+    "test:coverage": {
+      "cache": true,
+      "dependsOn": ["build", "^build"],
+      "env": ["NODE_ENV", "VITEST_MAX_WORKERS"],
+      "outputs": ["coverage/coverage-summary.json"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/vitest.config.ts",
+        "$TURBO_ROOT$/scripts/core-coverage-config.mts",
+        "$TURBO_ROOT$/test-support/**"
+      ]
+    },
+    "@croco/openapi-spec#test:coverage": {
+      "cache": true,
+      "dependsOn": ["build", "^build"],
+      "env": ["NODE_ENV", "VITEST_MAX_WORKERS"],
+      "outputs": ["coverage/coverage-summary.json"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/vitest.config.ts",
+        "$TURBO_ROOT$/scripts/core-coverage-config.mts",
+        "$TURBO_ROOT$/test-support/**",
+        "$TURBO_ROOT$/scripts/fixtures/protocol-codegen/**"
+      ]
+    },
+    "@croco/rpc-codegen#test:coverage": {
+      "cache": true,
+      "dependsOn": ["build", "^build", "@croco/frontend-problems#build"],
+      "env": ["NODE_ENV", "VITEST_MAX_WORKERS"],
+      "outputs": ["coverage/coverage-summary.json"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/vitest.config.ts",
+        "$TURBO_ROOT$/scripts/core-coverage-config.mts",
+        "$TURBO_ROOT$/test-support/**",
+        "$TURBO_ROOT$/scripts/fixtures/protocol-codegen/**",
+        "$TURBO_ROOT$/test-fixtures/**",
+        "$TURBO_ROOT$/packages/openapi-spec/src/tests/fixtures/**"
+      ]
+    },
+    "@croco/transports-http#test:coverage": {
+      "cache": true,
+      "dependsOn": [
+        "build",
+        "^build",
+        "@croco/openapi-spec#build",
+        "@croco/rpc-codegen#build",
+        "@croco/protocols-trpc#build",
+        "@croco/frontend-problems#build",
+        "@croco/preset-node#build",
+        "@croco/preset-lambda#build"
+      ],
+      "env": ["NODE_ENV", "VITEST_MAX_WORKERS"],
+      "outputs": ["coverage/coverage-summary.json"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/vitest.config.ts",
+        "$TURBO_ROOT$/scripts/core-coverage-config.mts",
+        "$TURBO_ROOT$/test-support/**"
+      ]
+    },
+    "@croco/framework-context#test:coverage": {
+      "cache": true,
+      "dependsOn": [
+        "build",
+        "^build",
+        "@croco/framework-config#build",
+        "@croco/framework-logger#build",
+        "@croco/health-core#build"
+      ],
+      "env": ["NODE_ENV", "VITEST_MAX_WORKERS"],
+      "outputs": ["coverage/coverage-summary.json"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/vitest.config.ts",
+        "$TURBO_ROOT$/scripts/core-coverage-config.mts",
+        "$TURBO_ROOT$/test-support/**"
+      ]
+    },
+    "@croco/protocols-core#test:coverage": {
+      "cache": false,
+      "dependsOn": ["build", "^build"],
+      "env": ["NODE_ENV", "VITEST_MAX_WORKERS"],
+      "outputs": ["coverage/coverage-summary.json"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/vitest.config.ts",
+        "$TURBO_ROOT$/scripts/core-coverage-config.mts",
+        "$TURBO_ROOT$/test-support/**"
+      ]
+    },
+    "@croco/cli#test:coverage": {
+      "cache": false,
+      "dependsOn": ["build", "^build"],
+      "env": ["NODE_ENV", "VITEST_MAX_WORKERS"],
+      "outputs": ["coverage/coverage-summary.json"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/vitest.config.ts",
+        "$TURBO_ROOT$/scripts/core-coverage-config.mts",
+        "$TURBO_ROOT$/test-support/**"
+      ]
+    },
+    "create-croco-app#test:coverage": {
+      "cache": false,
+      "dependsOn": ["build", "^build"],
+      "env": ["NODE_ENV", "VITEST_MAX_WORKERS"],
+      "outputs": ["coverage/coverage-summary.json"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/vitest.config.ts",
+        "$TURBO_ROOT$/scripts/core-coverage-config.mts",
+        "$TURBO_ROOT$/test-support/**"
+      ]
+    },
     "@croco/docs#test:evidence": {
       "cache": true,
       "dependsOn": ["^build"],

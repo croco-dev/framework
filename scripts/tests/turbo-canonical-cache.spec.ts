@@ -19,6 +19,7 @@ import {
   pruneTurboCache,
   warmTurboCache,
 } from "../turbo-canonical-cache.mts";
+import { CORE_COVERAGE_TEST_COMMAND } from "../core-coverage-runner.mts";
 import { createFastPackageTurboArguments } from "../test-lane-runner.mts";
 import { createVerificationManifest } from "../verification-manifest.mts";
 import type { TurboCacheOptions } from "../turbo-canonical-cache.mts";
@@ -209,7 +210,7 @@ describe("turbo canonical cache", () => {
   });
 
   describe("drift guard", () => {
-    it("covers exactly the turbo tasks run by the manifest build, typecheck, and fast test lane", () => {
+    it("covers exactly the turbo tasks run by the manifest build, typecheck, fast test lane, and core coverage", () => {
       const manifest = createVerificationManifest("publish");
       const commandFor = (id: string): readonly string[] => {
         const command = manifest.find((candidate) => candidate.id === id)?.command;
@@ -220,6 +221,7 @@ describe("turbo canonical cache", () => {
         ...turboTasks(commandFor("build")),
         ...turboTasks(commandFor("typecheck")),
         ...turboTasks(createFastPackageTurboArguments(ROOT_DIR, [])),
+        ...turboTasks(CORE_COVERAGE_TEST_COMMAND),
       ]);
 
       expect([...manifestTasks].sort()).toEqual([...CANONICAL_TURBO_CACHE_TASKS].sort());
