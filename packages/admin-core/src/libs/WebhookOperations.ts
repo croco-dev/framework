@@ -224,6 +224,7 @@ const SIGNED_HEADER_NAMES = String.raw`signedheaders\s*=\s*${HTTP_TOKEN.source}(
 const AUTHORIZATION_PARAMETER = String.raw`(?:${SIGNED_CREDENTIAL_SCOPE}|${SIGNED_HEADER_NAMES}|(?!signedheaders\s*=)${HTTP_TOKEN.source}\s*=\s*(?:${QUOTED_FIELD_LABEL}|${HTTP_TOKEN.source}))${SINGLE_TOKEN_END.source}`;
 const AUTHORIZATION_LIST_ELEMENT = String.raw`(?:,\s*)*${AUTHORIZATION_PARAMETER}`;
 const AUTHORIZATION_CREDENTIALS = String.raw`(?:${AUTHORIZATION_LIST_ELEMENT}(?:\s*,\s*${AUTHORIZATION_LIST_ELEMENT})*(?!\s*,\s*${AUTHORIZATION_LIST_ELEMENT})|${TOKEN68.source})${SINGLE_TOKEN_END.source}`;
+const AUTHORIZATION_BEFORE_PROSE = String.raw`(?:bearer|basic)[ \t]+${TOKEN68.source}(?=[ \t]+\S)`;
 const SIGNATURE_COMPONENT_NAME = /v\d+|t/;
 const SIGNATURE_COMPONENT = String.raw`(?:${SIGNATURE_COMPONENT_NAME.source})[ \t]*=[ \t]*${TOKEN68.source}`;
 const STANDARD_SIGNATURE_VERSION = /v\d+[a-z]*/;
@@ -254,14 +255,14 @@ const NEXT_SET_COOKIE_DIAGNOSTIC_FIELD = String.raw`,\s*(?:${DISTINCT_DIAGNOSTIC
 const SENSITIVE_SCALAR_ASSIGNMENT = String.raw`["']?(?:${SENSITIVE_DIAGNOSTIC_FIELD.source})["']?${HEADER_ASSIGNMENT.source}`;
 const SCALAR_VALUE = String.raw`(?:${QUOTED_DIAGNOSTIC_VALUE}|[^,\s;]+)`;
 const ADJACENT_QUOTED_SENSITIVE_FIELD = String.raw`(?:[,;][ \t]*|[ \t](?=\S))(?:${SENSITIVE_SCALAR_ASSIGNMENT}|["']?${SENSITIVE_WEBHOOK_HEADER}["']?${HEADER_ASSIGNMENT.source})${QUOTED_DIAGNOSTIC_VALUE}`;
-const WRAPPED_HEADER_VALUE = String.raw`(?:${ADJACENT_QUOTED_SENSITIVE_FIELD}|[^\r\n])*`;
+const WRAPPED_HEADER_VALUE = String.raw`(?:${ADJACENT_QUOTED_SENSITIVE_FIELD}|(?![,;][ \t]*${DISTINCT_DIAGNOSTIC_FIELD})[^\r\n])*`;
 
 function boundedHeaderAssignments(separator: RegExp, context?: "quoted" | "map"): string {
   const label = (header: string) =>
     context === "quoted" ? `(?:"${header}"|'${header}')` : `["']?${header}["']?`;
   const scalarEnd = context === "map" ? SINGLE_TOKEN_END.source : "";
   return (
-    String.raw`${label(AUTHORIZATION_HEADER.source)}${separator.source}(?:(?:${HTTP_TOKEN.source}[ \t]+|${FOLDED_AUTHORIZATION_SCHEME})${AUTHORIZATION_CREDENTIALS}|${TOKEN68.source}${SINGLE_TOKEN_END.source})|` +
+    String.raw`${label(AUTHORIZATION_HEADER.source)}${separator.source}(?:(?:${HTTP_TOKEN.source}[ \t]+|${FOLDED_AUTHORIZATION_SCHEME})${AUTHORIZATION_CREDENTIALS}|${AUTHORIZATION_BEFORE_PROSE}|${TOKEN68.source}${SINGLE_TOKEN_END.source})|` +
     `${label("webhook-signature")}${separator.source}${BOUNDED_SIGNATURE_VALUE}|` +
     `${label("x-api-key")}${separator.source}${SCALAR_VALUE}${scalarEnd}`
   );

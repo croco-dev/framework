@@ -133,6 +133,21 @@ describe("outbound webhook operations contracts", () => {
       "Response headers: [redacted] upstream timed out",
     ],
     [
+      "Bearer credential followed by same-line error context",
+      "Response headers: Authorization=Bearer fixture-credential upstream timed out",
+      "Response headers: [redacted] upstream timed out",
+    ],
+    [
+      "Basic credential followed by same-line error context",
+      "Response headers: Proxy-Authorization=Basic fixture-credential== upstream timed out",
+      "Response headers: [redacted] upstream timed out",
+    ],
+    [
+      "empty authorization before a distinct header in plain text",
+      "Authorization=, Content-Type: text/plain",
+      "[redacted], Content-Type: text/plain",
+    ],
+    [
       "Digest authorization followed by a distinct quoted header name",
       String.raw`headers=[Authorization=Digest realm="fixture-realm", response="fixture-response", "Content-Type"="text/plain; charset=\"utf-8\""]`,
       String.raw`headers=[[redacted], "Content-Type"="text/plain; charset=\"utf-8\""]`,
