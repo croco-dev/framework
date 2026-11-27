@@ -3,7 +3,7 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { dirname, relative, resolve } from "node:path";
-import { argv, exit, stdout } from "node:process";
+import { argv, env, exit, stdout } from "node:process";
 import { fileURLToPath } from "node:url";
 import { parse as parseToml } from "smol-toml";
 import {
@@ -22,9 +22,12 @@ type Options = {
   readonly workspacePath: string;
 };
 
+type SecurityPolicyEnforcement = "enforce" | "warn";
+
 type Violation = {
   readonly message: string;
   readonly recovery: string;
+  readonly staleReview?: true;
 };
 
 type AuditMetadataEntry = {
@@ -515,6 +518,7 @@ function validateReviewDateField(
     violations.push({
       message: `${pointer}.${field} is stale (${value} is before ${today})`,
       recovery: `Review the exception and update ${pointer}.${field}, or remove the allowlist entry.`,
+      staleReview: true,
     });
   }
 }
@@ -1358,6 +1362,25 @@ function validateGeneratedTemplateMetadata(
   }
 }
 
+function readSecurityPolicyEnforcement(): SecurityPolicyEnforcement {
+  const value = env.CROCO_SECURITY_POLICY_ENFORCEMENT;
+  if (value === undefined || value === "" || value === "enforce") {
+    return "enforce";
+  }
+  if (value === "warn") {
+    return "warn";
+  }
+  throw new Error(`CROCO_SECURITY_POLICY_ENFORCEMENT must be enforce or warn, received ${value}`);
+}
+
+function printDeferredStaleReviews(staleReviews: readonly Violation[]): void {
+  for (const review of staleReviews) {
+    log(
+      `::warning title=Security exception review overdue::${review.message}. The Release workflow fails until it is reviewed. ${review.recovery}`,
+    );
+  }
+}
+
 function printResult(
   violations: readonly Violation[],
   effectiveAuditIgnores: readonly string[],
@@ -1637,6 +1660,7 @@ function duplicateValues(values: readonly string[]): readonly string[] {
 
 function main(): void {
   const violations: Violation[] = [];
+  const enforcement = readSecurityPolicyEnforcement();
   const options = parseArgs(argv.slice(2));
   const metadata = readMetadata(options.metadataPath, options.today, violations);
   validateMetadataConfig(options, metadata, violations);
@@ -1648,14 +1672,18 @@ function main(): void {
   validateGitleaksMetadata(effectiveGitleaks, metadata.gitleaksAllowlists, violations);
   validateGeneratedTemplateMetadata(metadata.generatedTemplateAllowlists, violations);
   validateNoInlineGitleaksSuppressions(options, violations);
+  const deferred =
+    enforcement === "warn" ? violations.filter((violation) => violation.staleReview) : [];
+  const blocking = violations.filter((violation) => !deferred.includes(violation));
+  printDeferredStaleReviews(deferred);
   printResult(
-    violations,
+    blocking,
     effectiveAuditIgnores,
     effectiveGitleaks,
     metadata.generatedTemplateAllowlists,
   );
 
-  if (violations.length > 0) {
+  if (blocking.length > 0) {
     exit(1);
   }
 }

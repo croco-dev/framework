@@ -799,6 +799,43 @@ describe("security-allowlist-metadata-check.mts", () => {
     );
   });
 
+  it("reports stale review dates as warnings without failing under warn enforcement", () => {
+    const root = createTempRoot();
+    writeRepo(root, {
+      metadata: metadataFixture({ reviewBy: "2026-07-02" }),
+    });
+
+    const result = runScriptWithEnforcement(root, "warn");
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain(
+      "::warning title=Security exception review overdue::audit.ignoreGhsas[0].reviewBy is stale (2026-07-02 is before 2026-07-03)",
+    );
+    expect(result.stdout).toContain("security-allowlist-metadata: passed");
+  });
+
+  it("keeps missing review metadata blocking under warn enforcement", () => {
+    const root = createTempRoot();
+    writeRepo(root, {
+      metadata: metadataFixture({ reviewBy: "" }),
+    });
+
+    const result = runScriptWithEnforcement(root, "warn");
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("security-allowlist-metadata: failed.");
+  });
+
+  it("rejects an unknown enforcement mode", () => {
+    const root = createTempRoot();
+    writeRepo(root, { metadata: metadataFixture({}) });
+
+    const result = runScriptWithEnforcement(root, "advisory");
+
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain("CROCO_SECURITY_POLICY_ENFORCEMENT must be enforce or warn");
+  });
+
   it("fails stale expiresOn even when reviewBy is still current", () => {
     const root = createTempRoot();
     writeRepo(root, {
@@ -1151,11 +1188,20 @@ function metadataFixture(
 }
 
 function runScript(root: string, ...args: string[]): ScriptResult {
+  return runScriptWithEnforcement(root, "enforce", ...args);
+}
+
+function runScriptWithEnforcement(
+  root: string,
+  enforcement: string,
+  ...args: string[]
+): ScriptResult {
   const result = spawnSync(
     "node",
     ["--experimental-strip-types", scriptPath, "--root", root, "--today", "2026-07-03", ...args],
     {
       encoding: "utf-8",
+      env: { ...process.env, CROCO_SECURITY_POLICY_ENFORCEMENT: enforcement },
       timeout: 10_000,
     },
   );

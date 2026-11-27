@@ -37,7 +37,7 @@ pulled into a generated-app golden path or certified adapter path.
 
 Warning-only gates stay advisory until they have stable baselines and a clear owner:
 
-- Production dependency audit is advisory in CI and remains visible in the security report; the Release workflow runs the same `pnpm audit:prod` command as a blocking publish gate.
+- Production dependency audit is advisory in CI and remains visible in the security report. `pnpm security:audit-policy` and the security exception review dates warn in CI (`CROCO_SECURITY_POLICY_ENFORCEMENT=warn`) because new advisories and expired reviews arrive by date rather than by diff; the Release workflow enforces both before publish, and the daily Repository Policy Audit fails two weeks before a review date. Malformed exceptions still fail CI.
 - Core coverage selection and baseline warnings are posted to the job summary and artifact.
 - Bundle-size warnings stay advisory while `ci-reports/bundle-size/baseline.json` is missing, incomplete, or still being stabilized.
 
