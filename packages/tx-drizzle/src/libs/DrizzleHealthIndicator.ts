@@ -19,14 +19,42 @@ const SENSITIVE_KEYS =
   /password|passwd|pwd|secret|token|api[_-]?key|apikey|access[_-]?key|connection[_-]?string|dsn/i;
 const BASELINE_SENSITIVE_KEY = new RegExp(`^(?:${SENSITIVE_KEYS.source})$`, "i");
 const DIAGNOSTIC_FIELDS = /^(?:detail|error|message|reason)$/i;
+const ENVIRONMENT_KEY = /^[A-Z][A-Z0-9]*_[A-Z0-9_]+$/;
 const URI_SCHEME = /[a-z][a-z0-9+.-]*:\/\//;
+const KEYWORD_NAME = /[\w-]+/;
+const KEYWORD_PADDING = /[ \t\r\n\v\f]*/;
+const NEXT_KEYWORD = `${KEYWORD_NAME.source}${KEYWORD_PADDING.source}=`;
+const WRAPPED_FIELD_SEPARATOR = `[,;]${NEXT_KEYWORD}`;
+const WRAPPED_URI = (
+  [
+    [String.raw`\(`, String.raw`\)`],
+    [String.raw`\[`, String.raw`\]`],
+    ["<", ">"],
+    ["'", "'"],
+    ['"', '"'],
+  ] as const
+)
+  .map(
+    ([start, end]) =>
+      String.raw`(?<=${start})${URI_SCHEME.source}(?:(?!${end}${WRAPPED_FIELD_SEPARATOR})\S)*`,
+  )
+  .join("|");
+const URI_FIELD_BOUNDARY = String.raw`[)\]>'"]${WRAPPED_FIELD_SEPARATOR}`;
+const URI_USERINFO = new RegExp(
+  String.raw`(${URI_SCHEME.source})(?:(?:(?!${URI_FIELD_BOUNDARY})[^/?#\s])+(?<!@)@|(?:(?!${URI_FIELD_BOUNDARY})[^/\s])+(?<!@)@)`,
+  "gi",
+);
 const URL_OR_KEYWORD = new RegExp(
-  String.raw`(?<=\()${URI_SCHEME.source}[^)\s]*|${URI_SCHEME.source}\S+|(?<![\w?&-])([\w-]+)\s*=\s*`,
+  String.raw`${WRAPPED_URI}|${URI_SCHEME.source}\S+|(?<![\w?&-])(${KEYWORD_NAME.source})${KEYWORD_PADDING.source}=${KEYWORD_PADDING.source}`,
   "gi",
 );
 const QUOTED_KEYWORD_VALUE = /'(?:\\[\s\S]|[^'\\])*'|"(?:\\[\s\S]|[^"\\])*"/y;
-const UNQUOTED_KEYWORD_VALUE = /(?:\\[\s\S]|[^\s\\])+/y;
-const DELIMITED_KEYWORD_VALUE = /(?:(?![,;&][\w-]+\s*=)(?:\\[\s\S]|[^\s\\]))+/y;
+const UNQUOTED_KEYWORD_CHARACTER = /\\[\s\S]|[^ \t\r\n\v\f\\]/;
+const UNQUOTED_KEYWORD_VALUE = new RegExp(`(?:${UNQUOTED_KEYWORD_CHARACTER.source})+`, "y");
+const DELIMITED_KEYWORD_VALUE = new RegExp(
+  `(?:(?![,;&]${NEXT_KEYWORD})(?:${UNQUOTED_KEYWORD_CHARACTER.source}))+`,
+  "y",
+);
 const BARE_CREDENTIAL = new RegExp(String.raw`\b(${SENSITIVE_KEYS.source})=[^\s,;&]+`, "gi");
 
 export class DrizzleHealthIndicator implements HealthIndicator {
@@ -62,10 +90,7 @@ export class DrizzleHealthIndicator implements HealthIndicator {
 }
 
 function redactDrizzleHealthDetail(value: string): string {
-  const withoutUserInfo = value.replace(
-    /([a-z][a-z0-9+.-]*:\/\/)(?:[^/?#\s]+(?<!@)@|[^/\s]+(?<!@)@)/gi,
-    "$1[redacted]@",
-  );
+  const withoutUserInfo = value.replace(URI_USERINFO, "$1[redacted]@");
   return redactKeywordValues(withoutUserInfo)
     .replace(/([?&])([^=\s&]+)=([^&\s]+)/g, (match: string, prefix: string, key: string) =>
       SENSITIVE_KEYS.test(key) ? `${prefix}${key}=[redacted]` : match,
@@ -83,24 +108,31 @@ function redactKeywordValues(detail: string, readDiagnosticFields = true): strin
     if (key === undefined) continue;
     const valueStart = tokens.lastIndex;
     const sensitive = SENSITIVE_KEYS.test(key);
+    const diagnostic = readDiagnosticFields && DIAGNOSTIC_FIELDS.test(key);
+    const quote = detail.charAt(valueStart);
+    if (diagnostic && quote !== "'" && quote !== '"') continue;
     const unquoted =
       sensitive && !BASELINE_SENSITIVE_KEY.test(key)
         ? UNQUOTED_KEYWORD_VALUE
         : DELIMITED_KEYWORD_VALUE;
-    const valueEnd = keywordValueEnd(detail, valueStart, unquoted, sensitive);
+    const valueEnd = keywordValueEnd(
+      detail,
+      valueStart,
+      unquoted,
+      sensitive || diagnostic,
+      diagnostic || ENVIRONMENT_KEY.test(key),
+    );
     tokens.lastIndex = valueEnd;
     if (valueEnd === valueStart) continue;
 
     let redactedValue: string;
     if (sensitive) {
       redactedValue = "[redacted]";
-    } else if (readDiagnosticFields && DIAGNOSTIC_FIELDS.test(key)) {
+    } else if (diagnostic) {
       const field = detail.slice(valueStart, valueEnd);
-      const quote = field.charAt(0);
-      redactedValue =
-        (quote === "'" || quote === '"') && field.endsWith(quote)
-          ? quote + redactKeywordValues(field.slice(1, -1), false) + quote
-          : redactKeywordValues(field, false);
+      const closingQuote = field.length > 1 && field.endsWith(quote) ? quote : "";
+      const content = field.slice(1, closingQuote ? -1 : undefined);
+      redactedValue = quote + redactKeywordValues(content, false) + closingQuote;
     } else {
       continue;
     }
@@ -116,15 +148,16 @@ function keywordValueEnd(
   detail: string,
   start: number,
   unquoted: RegExp,
-  sensitive: boolean,
+  consumeUnclosed: boolean,
+  allowDoubleQuote: boolean,
 ): number {
   const first = detail.charAt(start);
-  if (first === "'" || first === '"') {
+  if (first === "'" || (allowDoubleQuote && first === '"')) {
     QUOTED_KEYWORD_VALUE.lastIndex = start;
     if (QUOTED_KEYWORD_VALUE.test(detail)) {
       start = QUOTED_KEYWORD_VALUE.lastIndex;
       if (first === "'") return start;
-    } else if (sensitive) {
+    } else if (consumeUnclosed) {
       return detail.length;
     }
   }

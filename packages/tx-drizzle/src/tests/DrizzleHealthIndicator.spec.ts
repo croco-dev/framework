@@ -195,6 +195,36 @@ describe("DrizzleHealthIndicator", () => {
       "failed reason=sslpassword=sample error='sslpassword=another host=db.example' dbname=app",
       "failed reason=sslpassword=[redacted] error='sslpassword=[redacted] host=db.example' dbname=app",
     ],
+    [
+      "quoted credentials inside unquoted diagnostic fields",
+      "failed reason=sslpassword='sample tail' error=POSTGRES_PASSWORD=\"another tail\" dbname=app",
+      "failed reason=sslpassword=[redacted] error=POSTGRES_PASSWORD=[redacted] dbname=app",
+    ],
+    [
+      "credentials adjacent to square, angle, and quote wrapped connection URIs",
+      'failed [postgres://[2001:db8::1]/app];sslpassword=first <postgres://db.example/app>;sslpassword=second "postgres://db.example/app";sslpassword=third',
+      'failed [postgres://[2001:db8::1]/app];sslpassword=[redacted] <postgres://db.example/app>;sslpassword=[redacted] "postgres://db.example/app";sslpassword=[redacted]',
+    ],
+    [
+      "an at-sign outside a wrapped URL",
+      "failed [postgres://user:sample@db.example];contact=ops@example.test sslmode=require",
+      "failed [postgres://[redacted]@db.example];contact=ops@example.test sslmode=require",
+    ],
+    [
+      "literal double quotes in separate connection fields",
+      'failed application_name="one sslpassword=sample dbname=app" sslmode=require',
+      'failed application_name="one sslpassword=[redacted] dbname=app" sslmode=require',
+    ],
+    [
+      "a leading literal double quote in a connection password",
+      'failed sslpassword="sample host=db.example dbname=app',
+      "failed sslpassword=[redacted] host=db.example dbname=app",
+    ],
+    [
+      "non-ASCII spacing inside an unquoted connection password",
+      "failed sslpassword=sample\u2003tail host=db.example",
+      "failed sslpassword=[redacted] host=db.example",
+    ],
   ])("should redact connection failure details for %s", async (_case, message, redactedMessage) => {
     const db = {
       transaction: vi.fn().mockRejectedValue(new Error(message)),
