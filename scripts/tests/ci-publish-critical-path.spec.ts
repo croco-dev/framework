@@ -14,7 +14,7 @@ describe("publish validate critical path", () => {
   it("keeps the optimized publish scheduler within the required wall-clock budget", () => {
     const manifest = createVerificationManifest("publish");
 
-    expect(calculateVerificationCriticalPath(manifest)).toBeLessThanOrEqual(45);
+    expect(calculateVerificationCriticalPath(manifest)).toBeLessThanOrEqual(50);
   });
 
   it("passes only when duplicate executions are removed and advisory coverage remains available", () => {
@@ -29,7 +29,7 @@ describe("publish validate critical path", () => {
   it("rejects a critical path that exceeds the budget below display precision", () => {
     const commands = createVerificationManifest("publish");
     const durationOverrides = Object.fromEntries(commands.map(({ id }) => [id, 0]));
-    durationOverrides["generated-app-smoke"] = 45.04;
+    durationOverrides["generated-app-smoke"] = 50.04;
 
     const evaluation = evaluatePublishCriticalPath({
       commands,
@@ -37,8 +37,8 @@ describe("publish validate critical path", () => {
       workflow: readFileSync(resolve(ROOT_DIR, ".github/workflows/ci.yml"), "utf8"),
     });
 
-    expect(evaluation.requiredMinutes).toBe(45.04);
-    expect(evaluation.diagnostics).toContain("modeled publish critical path 45.0m exceeds 45m");
+    expect(evaluation.requiredMinutes).toBe(50.04);
+    expect(evaluation.diagnostics).toContain("modeled publish critical path 50.0m exceeds 50m");
     expect(evaluation.status).toBe("failed");
   });
 

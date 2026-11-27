@@ -879,6 +879,7 @@ Runtime columns: Node는 장기 실행 서버/CLI, Lambda는 서버리스 함수
 pnpm install          # 의존성 설치
 pnpm build            # turbo build
 pnpm lint             # turbo lint
+pnpm lint:types       # 패키지 소스 type-aware lint (pnpm build 이후 실행)
 pnpm format           # oxfmt write
 pnpm check            # repository policy, docs/catalog/release drift, lint, format, static gates
 pnpm docs:catalog:check      # README package catalog and package docs drift

@@ -7,7 +7,7 @@ import { pathToFileURL } from "node:url";
 import { parse as parseYaml } from "yaml";
 
 export const TYPESCRIPT_BASELINE = "6.0.3";
-export const TYPECHECK_BASELINE = "0.18.0-ts7.1.0-dev.20260929";
+export const TYPECHECK_BASELINE = "7.1.0-beta.tsrs5";
 export const PROTOCOL_TYPESCRIPT_BASELINE = "6.0.2";
 export const GENERATED_TYPESCRIPT_RANGE = `^${TYPESCRIPT_BASELINE}`;
 export const TSUP_COMPATIBILITY_VERSION = "8.5.1";

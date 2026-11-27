@@ -9,7 +9,7 @@ import { createVerificationManifest } from "./verification-manifest.mts";
 import { PUBLISH_REQUIRED_GENERATED_SMOKE_CASES } from "./verification-manifest.mts";
 import type { EvidenceCommand } from "./release-spine-evidence.mts";
 
-const TARGET_MINUTES = 45;
+const TARGET_MINUTES = 50;
 const MAX_CONCURRENCY = 2;
 const MILLISECONDS_PER_MINUTE = 60_000;
 

@@ -150,6 +150,7 @@ const spineOnlyIds = [
   "packed-decorator-consumers",
   "alpha-release-smoke",
   "typecheck",
+  "type-aware-lint",
   "test",
   "integration-test-lane",
   "published-test-lane",
@@ -206,6 +207,7 @@ const expectedLaneIds = {
     "quick-start-lambda-smoke",
     "first-success",
     "typecheck",
+    "type-aware-lint",
     "test",
     "integration-test-lane",
     "cli-packed-e2e",
@@ -311,12 +313,12 @@ describe("verification manifest", () => {
     });
   });
 
-  it("owns all 56 commands exactly once across the closed verification lanes", () => {
+  it("owns all 57 commands exactly once across the closed verification lanes", () => {
     const publishIds = [...repoIds, ...spineOnlyIds, ...publishOnlyIds];
     const ownedIds = Object.values(expectedLaneIds).flat();
 
-    expect(publishIds).toHaveLength(56);
-    expect(new Set(ownedIds).size).toBe(56);
+    expect(publishIds).toHaveLength(57);
+    expect(new Set(ownedIds).size).toBe(57);
     expect([...ownedIds].sort()).toEqual([...publishIds].sort());
     expect(VERIFICATION_LANE_OWNERSHIP).toEqual(
       Object.fromEntries(
@@ -333,7 +335,7 @@ describe("verification manifest", () => {
     expect(
       createHash("sha256").update(JSON.stringify(manifests)).digest("hex"),
       "The pre-split monolithic manifest changed; update this digest only after intentionally verifying the new serialized commands.",
-    ).toBe("4d99fbd2ace169d79c8470d22f78a7f6adc1de13c4a8760fc7f55a91afdd8270");
+    ).toBe("c2cdc68cbd11611b12592ee5f9aae19d13bb578838bbbc457cf733a8c085588f");
   });
 
   it("classifies every dependency edge and every cross-lane edge for synthesis", () => {
@@ -1857,6 +1859,7 @@ describe("verification manifest", () => {
       ],
       "cli-packed-e2e": ["integration-test-lane"],
       typecheck: ["build"],
+      "type-aware-lint": ["build"],
       test: ["build", "typecheck"],
       "production-ready": ["build", "typecheck", "test"],
       "spine-promotion": [
@@ -1926,6 +1929,7 @@ describe("verification manifest", () => {
       "test-integration",
     ]);
     expect(byId.get("typecheck")?.concurrencyGroups).toEqual(["workspace-artifacts"]);
+    expect(byId.get("type-aware-lint")?.concurrencyGroups).toEqual(["workspace-artifacts"]);
     expect(byId.get("package-entrypoints-smoke")?.concurrencyGroups).toEqual([
       "package-entrypoints",
     ]);

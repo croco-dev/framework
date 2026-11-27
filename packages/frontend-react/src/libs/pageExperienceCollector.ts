@@ -125,6 +125,7 @@ export function createPageExperienceCollector(options: {
           break;
         }
       }
+      // oxlint-disable-next-line typescript/no-misused-promises -- finally() waits for the chained flush before pending settles
     })().finally(() => {
       pending = null;
       if (!failed && queue.length && batchGeneration === generation && enabled()) return flush();
