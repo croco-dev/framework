@@ -218,7 +218,12 @@ const HTTP_TOKEN = /[\w!#$%&'*+.^`|~-]+/;
 const DIAGNOSTIC_FIELD = String.raw`(?:[\w.-]+|${QUOTED_FIELD_LABEL})[ \t]*[:=]`;
 const SINGLE_TOKEN_END = /(?=[ \t]*(?:[,;\r\n]|$))/;
 const FOLDED_AUTHORIZATION_SCHEME = String.raw`(?:${HTTP_TOKEN.source}[ \t]*\r?\n[ \t]+|(?:bearer|basic|digest|apikey)[ \t]*\r?\n)`;
-const DIAGNOSTIC_MEDIA_TYPE = String.raw`content-type[ \t]*=[ \t]*(?:"${HTTP_TOKEN.source}/${HTTP_TOKEN.source}(?:;[^"\r\n]*)?"|'${HTTP_TOKEN.source}/${HTTP_TOKEN.source}(?:;[^'\r\n]*)?')${SINGLE_TOKEN_END.source}`;
+const SIGNED_CREDENTIAL_SCOPE = String.raw`credential\s*=\s*${HTTP_TOKEN.source}(?:/${HTTP_TOKEN.source})+`;
+const SIGNED_HEADER_NAMES = String.raw`signedheaders\s*=\s*${HTTP_TOKEN.source}(?:;${HTTP_TOKEN.source})*(?!;${HTTP_TOKEN.source})`;
+// Unquoted names can be authorization parameters, even when they resemble response headers.
+const AUTHORIZATION_PARAMETER = String.raw`(?:${SIGNED_CREDENTIAL_SCOPE}|${SIGNED_HEADER_NAMES}|(?!signedheaders\s*=)${HTTP_TOKEN.source}\s*=\s*(?:${QUOTED_FIELD_LABEL}|${HTTP_TOKEN.source}))${SINGLE_TOKEN_END.source}`;
+const AUTHORIZATION_LIST_ELEMENT = String.raw`(?:,\s*)*${AUTHORIZATION_PARAMETER}`;
+const AUTHORIZATION_CREDENTIALS = String.raw`(?:${AUTHORIZATION_LIST_ELEMENT}(?:\s*,\s*${AUTHORIZATION_LIST_ELEMENT})*(?!\s*,\s*${AUTHORIZATION_LIST_ELEMENT})|${TOKEN68.source})${SINGLE_TOKEN_END.source}`;
 const SIGNATURE_COMPONENT_NAME = /v\d+|t/;
 const SIGNATURE_COMPONENT = String.raw`(?:${SIGNATURE_COMPONENT_NAME.source})[ \t]*=[ \t]*${TOKEN68.source}`;
 const STANDARD_SIGNATURE_VERSION = /v\d+[a-z]*/;
@@ -248,22 +253,12 @@ const SCALAR_VALUE = String.raw`(?:${QUOTED_DIAGNOSTIC_VALUE}|[^,\s;]+)`;
 const ADJACENT_QUOTED_SENSITIVE_FIELD = String.raw`(?:[,;][ \t]*|[ \t](?=\S))(?:${SENSITIVE_SCALAR_ASSIGNMENT}|["']?${SENSITIVE_WEBHOOK_HEADER}["']?${HEADER_ASSIGNMENT.source})${QUOTED_DIAGNOSTIC_VALUE}`;
 const WRAPPED_HEADER_VALUE = String.raw`(?:${ADJACENT_QUOTED_SENSITIVE_FIELD}|[^\r\n])*`;
 
-function authorizationCredentials(nextHeader = ""): string {
-  const parameter = String.raw`${nextHeader}${HTTP_TOKEN.source}[ \t]*=[ \t]*(?:${QUOTED_FIELD_LABEL}|${HTTP_TOKEN.source})${SINGLE_TOKEN_END.source}`;
-  const listElement = String.raw`(?:,\s*)*${parameter}`;
-  return String.raw`(?:${listElement}(?:\s*,\s*${listElement})*(?!\s*,\s*${listElement})|${TOKEN68.source})${SINGLE_TOKEN_END.source}`;
-}
-
 function boundedHeaderAssignments(separator: RegExp, context?: "quoted" | "map"): string {
   const label = (header: string) =>
     context === "quoted" ? `(?:"${header}"|'${header}')` : `["']?${header}["']?`;
-  // A recognizable media type in a header map is diagnostic metadata. Other Digest parameters stay masked.
-  const credentials = authorizationCredentials(
-    context === "map" ? `(?!${DIAGNOSTIC_MEDIA_TYPE})` : "",
-  );
   const scalarEnd = context === "map" ? SINGLE_TOKEN_END.source : "";
   return (
-    String.raw`${label(AUTHORIZATION_HEADER.source)}${separator.source}(?:(?:${HTTP_TOKEN.source}[ \t]+|${FOLDED_AUTHORIZATION_SCHEME})${credentials}|${TOKEN68.source}${SINGLE_TOKEN_END.source})|` +
+    String.raw`${label(AUTHORIZATION_HEADER.source)}${separator.source}(?:(?:${HTTP_TOKEN.source}[ \t]+|${FOLDED_AUTHORIZATION_SCHEME})${AUTHORIZATION_CREDENTIALS}|${TOKEN68.source}${SINGLE_TOKEN_END.source})|` +
     String.raw`${label("webhook-signature")}${separator.source}${SIGNATURE_PART}(?:${SIGNATURE_SEPARATOR}${SIGNATURE_PART})*${SIGNATURE_END}|` +
     `${label("x-api-key")}${separator.source}${SCALAR_VALUE}${scalarEnd}`
   );
@@ -290,7 +285,7 @@ const SENSITIVE_MAP_FIELD = new RegExp(
 const SENSITIVE_WEBHOOK_TEXT = new RegExp(
   `${wrappedHeaderAssignment(NON_SIGNATURE_HEADER)}${QUOTED_DIAGNOSTIC_VALUE}|` +
     `${wrappedHeaderAssignment("webhook-signature")}${QUOTED_DIAGNOSTIC_VALUE}${QUOTED_SIGNATURE_END}|` +
-    String.raw`${LEGACY_COLON_BOUNDARY.source}${AUTHORIZATION_HEADER.source}${HEADER_COLON.source}${FOLDED_AUTHORIZATION_SCHEME}${authorizationCredentials()}|` +
+    String.raw`${LEGACY_COLON_BOUNDARY.source}${AUTHORIZATION_HEADER.source}${HEADER_COLON.source}${FOLDED_AUTHORIZATION_SCHEME}${AUTHORIZATION_CREDENTIALS}|` +
     `${boundedHeaderAssignments(HEADER_EQUALS)}|` +
     `${boundedHeaderAssignments(HEADER_COLON, "quoted")}|` +
     `${wrappedHeaderAssignment("cookie")}${COOKIE_HEADER_VALUE}(?=${NEXT_COOKIE_DIAGNOSTIC_FIELD})|` +
@@ -360,7 +355,9 @@ function structuredHeaderFieldEnds(value: string): Map<number, number> {
       }
 
       field.lastIndex = offset;
-      if (field.test(body)) mapFieldEnds.set(start, bodyStart + field.lastIndex);
+      // If the value cannot be delimited safely, retain only the container's closing delimiter.
+      const end = field.test(body) ? bodyStart + field.lastIndex : container.end - 1;
+      mapFieldEnds.set(start, end);
     }
   }
   return mapFieldEnds;

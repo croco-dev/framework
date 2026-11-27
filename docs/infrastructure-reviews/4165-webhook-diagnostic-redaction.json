@@ -6,7 +6,7 @@
       "classification": "pure-contract",
       "reason": "Mask complete credential and signature values when formatting webhook diagnostics for display.",
       "files": {
-        "packages/admin-core/src/libs/WebhookOperations.ts": "0eb8374160b3d8c8be020d633d4e904b7a4e2b9731f711c17236295d8716758a"
+        "packages/admin-core/src/libs/WebhookOperations.ts": "6ccc78135a01116148f2a9c9463bc5650d8f03b271e09fe3a00bf484604a76e4"
       },
       "catalogRuntimes": [],
       "profiles": {

@@ -133,9 +133,29 @@ describe("outbound webhook operations contracts", () => {
       "Response headers: [redacted] upstream timed out",
     ],
     [
-      "Digest authorization before a quoted content type inside a header map",
-      'headers=[Authorization=Digest realm="fixture-realm", extension="text/plain", response="fixture-response", Content-Type="text/plain"]',
-      'headers=[[redacted], Content-Type="text/plain"]',
+      "Digest authorization followed by a distinct quoted header name",
+      String.raw`headers=[Authorization=Digest realm="fixture-realm", response="fixture-response", "Content-Type"="text/plain; charset=\"utf-8\""]`,
+      String.raw`headers=[[redacted], "Content-Type"="text/plain; charset=\"utf-8\""]`,
+    ],
+    [
+      "Digest parameters with an ambiguous media type assignment",
+      'headers=[Authorization=Digest realm="fixture-realm", Content-Type="text/plain", response="fixture-response", Content-Type: "application/json"]',
+      'headers=[[redacted], Content-Type: "application/json"]',
+    ],
+    [
+      "folded Digest parameter value",
+      'Authorization=Digest realm=\r\n  "fixture-realm", response="fixture-response"; content-type=text/plain',
+      "[redacted]; content-type=text/plain",
+    ],
+    [
+      "signed authorization with a slash-separated credential scope",
+      "headers=[Authorization: AWS4-HMAC-SHA256 Credential=fixture-id/20260101/local/sqs/aws4_request, SignedHeaders=host;x-amz-date, Signature=fixture-signature, Content-Type: text/plain] upstream timed out",
+      "headers=[[redacted], Content-Type: text/plain] upstream timed out",
+    ],
+    [
+      "opaque authorization without a safe boundary inside a map",
+      "headers=[Authorization: Custom fixture opaque credential] upstream timed out",
+      "headers=[[redacted]] upstream timed out",
     ],
     [
       "escaped JSON secret",
