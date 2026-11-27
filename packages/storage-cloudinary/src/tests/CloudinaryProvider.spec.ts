@@ -974,6 +974,51 @@ describe("CloudinaryProvider", () => {
     });
   });
 
+  describe("keys that are not Cloudinary public IDs", () => {
+    it.each([
+      ["a percent-encoded dot segment", "tenant-a/%2e%2e/tenant-b/secret"],
+      ["a backslash separator", "tenant-a\\..\\tenant-b/secret"],
+      ["a query delimiter", "tenant-a/report?draft"],
+      ["a fragment delimiter", "tenant-a/report#draft"],
+      ["an ampersand", "tenant-a/report&draft"],
+      ["an angle bracket", "tenant-a/<report>"],
+      ["a tab inside a dot segment", "tenant-a/.\t./tenant-b/secret"],
+      ["a line break", "tenant-a/report\nsecret"],
+      ["the last C0 control character", "tenant-a/report\u001f"],
+      ["the DEL character", "tenant-a/report\u007f"],
+      ["a trailing space", "tenant-a/report "],
+      ["a leading space", " tenant-a/report"],
+      ["a lone high surrogate", "tenant-a/report\uD800"],
+      ["a lone low surrogate", "tenant-a/\uDC00report"],
+    ])("rejects a key with %s before building any URL", async (_reason, key) => {
+      await expect(provider.get(key)).rejects.toThrow(InvalidKeyProblem);
+      await expect(provider.getStream(key)).rejects.toThrow(InvalidKeyProblem);
+      await expect(provider.exists(key)).rejects.toThrow(InvalidKeyProblem);
+      await expect(provider.put(key, Buffer.from("data"))).rejects.toThrow(InvalidKeyProblem);
+      await expect(provider.getUploadIntent(key)).rejects.toThrow(InvalidKeyProblem);
+      expect(() => provider.getPublicUrl(key)).toThrow(InvalidKeyProblem);
+
+      expect(global.fetch).not.toHaveBeenCalled();
+      expect(cloudinary.url).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      ["tenant-a/summer photo", "image/upload/f_auto/tenant-a/summer photo"],
+      ["tenant-a/여름 사진", "image/upload/f_auto/tenant-a/여름 사진"],
+      ["tenant-a/a+b", "image/upload/f_auto/tenant-a/a+b"],
+      ["tenant-a/party 🎉", "image/upload/f_auto/tenant-a/party 🎉"],
+      ["tenant-a/café/menu.pdf", "raw/upload/tenant-a/café/menu.pdf"],
+    ])("keeps the delivery URL of the valid key %s unchanged", async (key, path) => {
+      vi.mocked(global.fetch).mockResolvedValue(new Response(new Uint8Array([1])));
+
+      await expect(provider.get(key)).resolves.toBeInstanceOf(Uint8Array);
+
+      expect(global.fetch).toHaveBeenCalledWith(`https://res.cloudinary.com/test-cloud/${path}`, {
+        signal: undefined,
+      });
+    });
+  });
+
   describe("delete()", () => {
     it.each([
       ["test-key", "image"],

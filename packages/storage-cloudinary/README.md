@@ -188,6 +188,9 @@ pnpm --filter @croco/storage-cloudinary test:live
   짧은 TTL일수록 시계 차이를 흡수할 여유가 줄어들며, 서버 시계가 Cloudinary보다 늦으면 업로드가 즉시 거부될 수 있습니다.
 - `getSignedUrl()`은 먼저 저장된 리소스의 실제 포맷을 조회한 뒤, 해당 포맷과 만료 시각을 서명한 인증 download API URL을 반환합니다. 일반 CDN `sign_url`은 만료 접근 제어로 사용하지 않습니다.
 - 이미지 직접 업로드 인텐트의 키는 기존처럼 확장자를 생략하며, raw 파일은 전체 키를 `public_id`로 사용합니다.
+- [Cloudinary `public_id` 규칙](https://cloudinary.com/documentation/upload_parameters)이 허용하지 않는
+  `?`, `&`, `#`, `\`, `%`, `<`, `>`와 앞뒤 공백, 그리고 제어 문자와 짝이 없는 surrogate가 든 키는 URL을 만들거나
+  요청하기 전에 `InvalidKeyProblem`으로 거부합니다. 이런 키는 URL 정규화 뒤 다른 `public_id`를 가리키기 때문입니다.
 - 영상·오디오 키는 `-`를 `--`로, `.`을 `-d`로 순서대로 이스케이프한 `public_id`를 사용합니다.
   예를 들어 `clip.mp4`는 `clip-dmp4`, `clip-d.mp4`는 `clip--d-dmp4`가 되어 서로 충돌하지 않습니다.
   업로드, 인텐트, URL, 메타데이터, 삭제가 모두 같은 ID를 사용합니다.
