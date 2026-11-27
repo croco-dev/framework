@@ -17,23 +17,21 @@ export type DrizzleHealthIndicatorOptions = {
 
 const SENSITIVE_KEYS =
   /password|passwd|pwd|secret|token|api[_-]?key|apikey|access[_-]?key|connection[_-]?string|dsn/i;
-const CONNECTION_URL = /\b[a-z][a-z0-9+.-]*:\/\/\S+/gi;
-const UNQUOTED_VALUE_CHARACTER = /\\[\s\S]|[^\s\\]/;
+const NEXT_KEYWORD = /[\w-]+\s*=/;
+const UNQUOTED_VALUE_CHARACTER = String.raw`\\[\s\S]|[^\s\\,;&]|[,;&](?!${NEXT_KEYWORD.source})`;
+const UNQUOTED_VALUE = `(?:${UNQUOTED_VALUE_CHARACTER})+`;
 const SINGLE_QUOTED_VALUE = /'(?:\\[\s\S]|[^'\\])*'/;
 const DOUBLE_QUOTED_PREFIX = /"(?:\\[\s\S]|[^"\\])*"/;
 const KEYWORD_VALUE = [
   SINGLE_QUOTED_VALUE.source,
-  `${DOUBLE_QUOTED_PREFIX.source}(?:${UNQUOTED_VALUE_CHARACTER.source})*`,
-  `(?:${UNQUOTED_VALUE_CHARACTER.source})+`,
+  `${DOUBLE_QUOTED_PREFIX.source}(?:${UNQUOTED_VALUE_CHARACTER})*`,
+  UNQUOTED_VALUE,
 ].join("|");
 const URL_OR_KEYWORD = new RegExp(
-  String.raw`${CONNECTION_URL.source}|(?<![\w?&-])(([\w-]+)[ \t]*=[ \t]*)(${KEYWORD_VALUE})`,
+  String.raw`\b[a-z][a-z0-9+.-]*:\/\/${UNQUOTED_VALUE}|(?<![\w?&-])(([\w-]+)\s*=\s*)(?:${KEYWORD_VALUE})`,
   "gi",
 );
-const EMBEDDED_URL_OR_BARE_KEYWORD = new RegExp(
-  String.raw`${CONNECTION_URL.source}|\b(${SENSITIVE_KEYS.source})=(?:${KEYWORD_VALUE})`,
-  "gi",
-);
+const BARE_CREDENTIAL = new RegExp(String.raw`\b(${SENSITIVE_KEYS.source})=[^\s,;&]+`, "gi");
 
 export class DrizzleHealthIndicator implements HealthIndicator {
   private readonly db: DrizzleDb;
@@ -69,25 +67,12 @@ export class DrizzleHealthIndicator implements HealthIndicator {
 
 function redactDrizzleHealthDetail(value: string): string {
   return value
-    .replace(
-      URL_OR_KEYWORD,
-      (match: string, prefix: string, key: string | undefined, fieldValue: string) => {
-        if (key === undefined) return redactUrlUserInfo(match);
-        const safeValue = SENSITIVE_KEYS.test(key)
-          ? "[redacted]"
-          : fieldValue.replace(
-              EMBEDDED_URL_OR_BARE_KEYWORD,
-              (embedded: string, bareKey: string | undefined) =>
-                bareKey === undefined ? redactUrlUserInfo(embedded) : `${bareKey}=[redacted]`,
-            );
-        return prefix + safeValue;
-      },
+    .replace(/\b([a-z][a-z0-9+.-]*:\/\/)(?:[^/?#\s]+@|[^/\s]+@)/gi, "$1[redacted]@")
+    .replace(URL_OR_KEYWORD, (match: string, prefix: string, key: string | undefined) =>
+      key !== undefined && SENSITIVE_KEYS.test(key) ? `${prefix}[redacted]` : match,
     )
     .replace(/([?&])([^=\s&]+)=([^&\s]+)/g, (match: string, prefix: string, key: string) =>
       SENSITIVE_KEYS.test(key) ? `${prefix}${key}=[redacted]` : match,
-    );
-}
-
-function redactUrlUserInfo(url: string): string {
-  return url.replace(/^([a-z][a-z0-9+.-]*:\/\/)(?:[^/?#\s]+@|[^/\s]+@)/i, "$1[redacted]@");
+    )
+    .replace(BARE_CREDENTIAL, "$1=[redacted]");
 }

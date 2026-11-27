@@ -150,6 +150,26 @@ describe("DrizzleHealthIndicator", () => {
       "failed reason=password=sample dbname=app",
       "failed reason=password=[redacted] dbname=app",
     ],
+    [
+      "a connection URI nested in a query field",
+      "failed postgres://db.example/app?application_name=postgres://user:sample@other.example/test&sslmode=require",
+      "failed postgres://db.example/app?application_name=postgres://[redacted]@other.example/test&sslmode=require",
+    ],
+    [
+      "credentials adjacent to a wrapped connection URI",
+      "failed (postgres://user:sample@db.example/app);password=basic-value,sslpassword=prefixed-value",
+      "failed (postgres://[redacted]@db.example/app);password=[redacted],sslpassword=[redacted]",
+    ],
+    [
+      "connection fields following punctuation-delimited credentials",
+      "failed password=sample;host=db.example;dbname=app;token=other,sslmode=require",
+      "failed password=[redacted];host=db.example;dbname=app;token=[redacted],sslmode=require",
+    ],
+    [
+      "a multiline keyword assignment",
+      "failed sslpassword\n = \r\nsample host=db.example",
+      "failed sslpassword\n = \r\n[redacted] host=db.example",
+    ],
   ])("should redact connection failure details for %s", async (_case, message, redactedMessage) => {
     const db = {
       transaction: vi.fn().mockRejectedValue(new Error(message)),
