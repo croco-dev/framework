@@ -1,4 +1,4 @@
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
@@ -1541,6 +1541,56 @@ describe("dependency-audit-policy.mts", () => {
 
     expect(result.exitCode).toBe(1);
   });
+
+  it.each([
+    ["warn", 0, true],
+    ["enforce", 1, false],
+  ] as const)(
+    "runs the CLI under %s enforcement and writes deferred findings to the job summary only when warning",
+    (enforcement, status, summarized) => {
+      const repo = createRepo();
+      writePackage(repo, "packages/runtime-core/package.json", {
+        name: "@croco/runtime-core",
+        version: "0.0.1",
+        dependencies: { "runtime-lib": "1.0.0" },
+      });
+      writeAudit(repo, [
+        advisory({
+          ghsa: "GHSA-3456-3456-3456",
+          path: "packages__runtime-core>runtime-lib>vulnerable",
+          severity: "high",
+        }),
+      ]);
+      const summary = join(repo, "step-summary.md");
+      writeFileSync(summary, "");
+
+      const result = spawnSync(
+        process.execPath,
+        [
+          "--experimental-strip-types",
+          join(repositoryRoot, "scripts", "dependency-audit-policy.mts"),
+          "--root",
+          repo,
+          "--audit-json",
+          "audit.json",
+          "--today",
+          "2026-07-03",
+        ],
+        {
+          encoding: "utf-8",
+          env: {
+            ...process.env,
+            CROCO_SECURITY_POLICY_ENFORCEMENT: enforcement,
+            GITHUB_STEP_SUMMARY: summary,
+          },
+          timeout: 30_000,
+        },
+      );
+
+      expect(result.status).toBe(status);
+      expect(readFileSync(summary, "utf-8").includes("GHSA-3456-3456-3456")).toBe(summarized);
+    },
+  );
 
   it("keeps deferred findings in the job summary because passing check output is discarded", () => {
     const summary = join(createRepo(), "summary.md");
