@@ -1,3 +1,4 @@
+import { redactDiagnosticCredentials } from "@croco/diagnostics-core";
 import { Problem, ProblemCategory } from "@croco/problems-core";
 
 import type { AdminProblemContract } from "./types";
@@ -209,6 +210,16 @@ const COOKIE_HEADER = /(?:set-)?cookie/;
 const NON_SIGNATURE_HEADER = `(?:${AUTHORIZATION_HEADER.source}|${COOKIE_HEADER.source}|x-api-key)`;
 const SENSITIVE_WEBHOOK_HEADER = `(?:${NON_SIGNATURE_HEADER}|webhook-signature)`;
 const SENSITIVE_DIAGNOSTIC_FIELD = /password|secret|token/;
+const SENSITIVE_CREDENTIAL_NAME_SOURCE = `${SENSITIVE_DIAGNOSTIC_FIELD.source}|(?:api|access|private|secret)[-_]?key`;
+// Anchored so quoted names such as "secretVersion" or "tokenCount" stay readable metadata.
+const SENSITIVE_CREDENTIAL_NAME = new RegExp(`(?:${SENSITIVE_CREDENTIAL_NAME_SOURCE})$`, "i");
+const SENSITIVE_URL_PARAMETER = new RegExp(
+  `(?:${SENSITIVE_CREDENTIAL_NAME_SOURCE}|(?:^|[-_.])(?:key|sig|signature|credential))$`,
+  "i",
+);
+const DIAGNOSTIC_URL = /\b[a-z][a-z\d+.-]*:\/\/[^\s"'<>]*[^\s"'<>.,;:!?)\]}]/gi;
+const URL_USER_INFO = /^([a-z][a-z\d+.-]*:\/\/)[^/?#]*@/i;
+const URL_QUERY = /^([^?#]*\?)([^#]*)/;
 const DOUBLE_QUOTED_CONTENT = /(?:\\[\s\S]|[^"\\])*/;
 const SINGLE_QUOTED_CONTENT = /(?:\\[\s\S]|[^'\\])*/;
 const QUOTED_FIELD_LABEL = `(?:"${DOUBLE_QUOTED_CONTENT.source}"|'${SINGLE_QUOTED_CONTENT.source}')`;
@@ -394,6 +405,29 @@ function structuredHeaderFieldEnds(
 }
 
 export function redactWebhookOperationsText(value: string): string {
+  const withoutUrlCredentials = value.replace(DIAGNOSTIC_URL, redactUrlCredentials);
+  return redactDiagnosticCredentials(
+    redactWebhookHeaderText(withoutUrlCredentials),
+    SENSITIVE_CREDENTIAL_NAME,
+  );
+}
+
+function redactUrlCredentials(url: string): string {
+  return url
+    .replace(URL_USER_INFO, "$1[redacted]@")
+    .replace(URL_QUERY, (_match, prefix: string, query: string) => {
+      const parameters = query.split("&").map((parameter) => {
+        const separator = parameter.indexOf("=");
+        const name = parameter.slice(0, separator);
+        return separator > 0 && SENSITIVE_URL_PARAMETER.test(name)
+          ? `${name}=[redacted]`
+          : parameter;
+      });
+      return prefix + parameters.join("&");
+    });
+}
+
+function redactWebhookHeaderText(value: string): string {
   const tokens = [...value.matchAll(MAP_STRUCTURE_TOKEN)];
   const mapFieldEnds = structuredHeaderFieldEnds(value, tokens);
   const quotedText = tokens.filter((token) => token[1] || token[2]);
