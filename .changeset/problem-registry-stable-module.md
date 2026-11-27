@@ -13,5 +13,8 @@ Before this change, moving a Problem declaration by one line in any package rewr
 compiled into `@croco/problems-core`, which invalidated the build and test cache of every package
 that depends on it.
 
-Migration: read source locations from `docs/problem-code-registry.json` instead of the packaged
-constant.
+The packaged constant no longer satisfies `ProblemCodeRegistry`, so passing it to
+`assertProblemCodeRegistryValid()` or `getProblemCodeRegistryValidationErrors()` fails to typecheck.
+
+Migration: read source locations from `docs/problem-code-registry.json` in the croco-dev/framework
+repository at the release tag. The file is not part of the npm package.

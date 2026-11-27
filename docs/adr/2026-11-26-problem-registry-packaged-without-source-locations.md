@@ -46,6 +46,9 @@
   typechecks and returns `undefined` at runtime. The changeset records it as a minor change with the JSON file
   as the replacement.
 - `assertProblemCodeRegistryValid()` no longer accepts the packaged constant, because it validates source
-  locations. The full registry is validated when it is generated and by `pnpm problem-registry:check`.
+  locations. `scripts/tests/problem-registry.spec.ts` runs that package validator over
+  `docs/problem-code-registry.json`, which keeps the locations, so status and title drift between the registry
+  and the runtime category mapper still fails a test. The test lives under `scripts/tests`, which Turbo does not
+  cache, because making the JSON a `problems-core` input would bring back the invalidation this change removes.
 - A file added under `tsconfig/` that is not a shared preset must be excluded from the global dependencies the
   same way, or it invalidates every task.

@@ -18,6 +18,7 @@ import {
   runProblemRegistryCheck,
 } from "../problem-registry.mts";
 import type { ProblemCodeRegistry } from "../problem-registry.mts";
+import { assertProblemCodeRegistryValid } from "../../packages/problems-core/src/libs/ProblemRegistry.ts";
 
 const tempRepos: string[] = [];
 // Bound each precision program's type work while still checking every registry entry.
@@ -425,6 +426,14 @@ new GenericProblem("alpha/known", ProblemCategory.NotFound);
       line: 3,
     });
     expect(runProblemRegistryCheck(repo, "check").status).toBe("pass");
+  });
+
+  it("accepts the committed registry, including source locations, through the package validator", () => {
+    expect(() =>
+      assertProblemCodeRegistryValid(
+        JSON.parse(readFileSync(resolve("docs/problem-code-registry.json"), "utf-8")),
+      ),
+    ).not.toThrow();
   });
 
   it("keeps the packaged registry module unchanged when declarations only move", () => {
