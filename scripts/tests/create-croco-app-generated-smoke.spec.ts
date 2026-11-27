@@ -23,8 +23,11 @@ import {
   assertGeneratedPresentationProfileMatchesCatalog,
   createSaasMonetizationCanarySource,
   finalizeSmokeCaseTiming,
+  findCasesWithFailedProofSource,
+  fingerprintGeneratedProject,
   getGeneratedGoalSmokeCaseInputs,
   getGeneratedSmokeDependencyCaseInputs,
+  getGeneratedSmokeProofReuseInputs,
   hasCompleteTapTestEvidence,
   isActiveDotenvAssignment,
   isDotenvFileName,
@@ -32,10 +35,14 @@ import {
   measureSmokeDurationMs,
   prepareGeneratedUnitEvidenceCapture,
   prepareGeneratedSmokeDependencyOverrides,
+  provesSmokeValidation,
   readCommandOutputSegment,
+  readGeneratedContractScripts,
   readGeneratedSmokeAllowlistMetadata,
+  readsPreparedManifests,
   reconcileGeneratedTestPaths,
   requiresCommandShell,
+  resolveSmokeProofReuse,
   RESOLVED_PLAYWRIGHT_BROWSERS_PATH,
   resolveTapSelectedGeneratedPaths,
   selectCompletedGeneratedTestEntries,
@@ -50,6 +57,7 @@ import {
 } from "../test-inventory.mts";
 import type { TestInventory, TestInventoryEntry } from "../test-inventory.mts";
 import { readCompletedPlaywrightPaths, readCompletedVitestPaths } from "../test-lane-runner.mts";
+import { PUBLISH_REQUIRED_GENERATED_SMOKE_CASES } from "../verification-manifest.mts";
 import {
   classifySmokeCommandFailure,
   classifySmokeFailure,
@@ -1508,7 +1516,7 @@ describe("create-croco-app generated smoke matrix", () => {
     );
   });
 
-  it("executes every supported goal manifest and declared quality gate", () => {
+  it("declares every supported goal manifest and quality gate, run directly or proven by an identical case in the same run", () => {
     const goalCases = new Map(
       getGeneratedGoalSmokeCaseInputs().map((smokeCase) => [smokeCase.goal, smokeCase]),
     );
@@ -1526,6 +1534,280 @@ describe("create-croco-app generated smoke matrix", () => {
         expect(smokeCase?.executedQualityGates, `${goal} ${qualityGate}`).toContain(qualityGate);
       }
     }
+  });
+
+  it("declares proof reuse only toward cases that run the same commands", () => {
+    const cases = getGeneratedSmokeProofReuseInputs();
+    const names = new Set(cases.map(({ name }) => name));
+    const declared = cases.filter(
+      ({ sameProjectAs, sameContractScriptsAs }) => sameProjectAs ?? sameContractScriptsAs,
+    );
+
+    expect(
+      declared.map(({ name, sameProjectAs, sameContractScriptsAs, ownCommandLabels }) => ({
+        name,
+        sameProjectAs,
+        sameContractScriptsAs,
+        ...(sameProjectAs ? { ownCommandLabels } : {}),
+      })),
+    ).toEqual([
+      {
+        name: "goal-spa-backend-split",
+        sameProjectAs: "production-app-starter",
+        sameContractScriptsAs: undefined,
+        ownCommandLabels: ["contract:snapshot", "codegen", "contract:verify"],
+      },
+      {
+        name: "goal-internal-tool",
+        sameProjectAs: "admin-console-starter",
+        sameContractScriptsAs: undefined,
+        ownCommandLabels: ["contract:snapshot", "codegen", "contract:verify"],
+      },
+      {
+        name: "lambda-api",
+        sameProjectAs: undefined,
+        sameContractScriptsAs: "production-app-starter",
+      },
+      {
+        name: "kubernetes-node-api",
+        sameProjectAs: undefined,
+        sameContractScriptsAs: "production-app-starter",
+      },
+    ]);
+    const byName = new Map(cases.map((smokeCase) => [smokeCase.name, smokeCase]));
+    for (const { name, tier, sameProjectAs, sameContractScriptsAs } of declared) {
+      for (const source of [sameProjectAs, sameContractScriptsAs]) {
+        if (source === undefined) continue;
+        expect(names.has(source), `${name} -> ${source}`).toBe(true);
+        expect(declared.map((candidate) => candidate.name)).not.toContain(source);
+        // A tier run only proves cases of its tier. The publish smoke runs every publish-required case
+        // in one run, where any failure already fails the run.
+        expect(
+          byName.get(source)?.tier === tier ||
+            (PUBLISH_REQUIRED_GENERATED_SMOKE_CASES as readonly string[]).includes(source),
+          `${name} -> ${source} runs in the same smoke run`,
+        ).toBe(true);
+      }
+      if (sameContractScriptsAs) {
+        expect(
+          byName.get(sameContractScriptsAs)?.runsBrowserContractDriftCanaries,
+          `${name} -> ${sameContractScriptsAs} runs the stale artifact canaries`,
+        ).toBe(true);
+      }
+    }
+    expect(
+      declared
+        .filter(({ sameProjectAs }) => sameProjectAs)
+        .every(({ reusedCommandLabels }) => reusedCommandLabels.includes("test")),
+    ).toBe(true);
+  });
+
+  it("treats a step as proven only by the same command with at least the same checks", () => {
+    const build = { label: "build", args: ["build"], paths: ["apps/api-server/dist/index.js"] };
+
+    expect(provesSmokeValidation({ label: "build", args: ["build"] }, build)).toBe(false);
+    expect(
+      provesSmokeValidation(
+        { ...build, label: "Build", paths: [...build.paths, "dist/extra.js"], artifacts: ["dist"] },
+        build,
+      ),
+    ).toBe(true);
+    expect(provesSmokeValidation({ ...build, args: ["build", "--prod"] }, build)).toBe(false);
+    expect(
+      provesSmokeValidation(
+        { label: "unit test", args: ["test"] },
+        { label: "test", args: ["test"] },
+      ),
+    ).toBe(false);
+    expect(
+      provesSmokeValidation(
+        { label: "json", args: ["manifest"], json: { path: "a.json", matches: { kind: "app" } } },
+        { label: "json", args: ["manifest"], json: { path: "a.json", matches: { kind: "api" } } },
+      ),
+    ).toBe(false);
+  });
+
+  it("keeps contract writers and read-only verifiers in a case whose prepared manifests differ", () => {
+    expect(readsPreparedManifests({ label: "codegen", args: ["codegen"] })).toBe(true);
+    expect(
+      readsPreparedManifests({ label: "Contract snapshot", args: ["contract:snapshot"] }),
+    ).toBe(true);
+    expect(readsPreparedManifests({ label: "verify", readOnly: true, args: ["verify"] })).toBe(
+      true,
+    );
+    expect(readsPreparedManifests({ label: "test", args: ["test"] })).toBe(false);
+    expect(readsPreparedManifests({ label: "build", args: ["build"] })).toBe(false);
+  });
+
+  it("reuses proof only when the other case is in the run and its output still matches", () => {
+    const candidate = (
+      name: string,
+      generated: { files: Record<string, string>; contractScripts: string },
+      declaration: { sameProjectAs?: string; sameContractScriptsAs?: string } = {},
+      preparedManifests = "manifests",
+    ) => ({
+      smokeCase: { name, ...declaration },
+      generated: {
+        fingerprint: new Map(Object.entries(generated.files)),
+        contractScripts: generated.contractScripts,
+      },
+      preparedManifests,
+    });
+    const starterOutput = {
+      files: { "package.json": "a", "src/index.ts": "b" },
+      contractScripts: "s",
+    };
+    const starter = candidate("starter", starterOutput);
+    const goal = candidate("goal", starterOutput, { sameProjectAs: "starter" });
+    const deployment = candidate(
+      "deployment",
+      { files: { "package.json": "c" }, contractScripts: "s" },
+      { sameContractScriptsAs: "starter" },
+    );
+
+    expect(resolveSmokeProofReuse([goal, deployment, starter])).toEqual({
+      reuse: new Map([
+        [
+          "goal",
+          {
+            commandsProvenBy: "starter",
+            manifestStepsProven: true,
+            driftCanariesProvenBy: undefined,
+          },
+        ],
+        [
+          "deployment",
+          {
+            commandsProvenBy: undefined,
+            manifestStepsProven: undefined,
+            driftCanariesProvenBy: "starter",
+          },
+        ],
+      ]),
+      drifted: [],
+    });
+
+    const rewrittenGoal = candidate(
+      "goal",
+      starterOutput,
+      { sameProjectAs: "starter" },
+      "rewritten ranges",
+    );
+    expect(resolveSmokeProofReuse([rewrittenGoal, starter]).reuse.get("goal")).toEqual({
+      commandsProvenBy: "starter",
+      manifestStepsProven: false,
+      driftCanariesProvenBy: undefined,
+    });
+
+    const driftedGoal = candidate(
+      "goal",
+      {
+        files: { "package.json": "a", "src/index.ts": "changed", "src/extra.ts": "new" },
+        contractScripts: "s",
+      },
+      { sameProjectAs: "starter" },
+    );
+    const driftedDeployment = candidate(
+      "deployment",
+      { files: {}, contractScripts: "rewritten" },
+      { sameContractScriptsAs: "starter" },
+    );
+    expect(resolveSmokeProofReuse([driftedGoal, driftedDeployment, starter])).toEqual({
+      reuse: new Map(),
+      drifted: [
+        { caseName: "goal", source: "starter", differingPaths: ["src/extra.ts", "src/index.ts"] },
+        { caseName: "deployment", source: "starter", differingPaths: ["package.json"] },
+      ],
+    });
+
+    expect(resolveSmokeProofReuse([goal, deployment])).toEqual({ reuse: new Map(), drifted: [] });
+  });
+
+  it("treats generated projects as the same when only the name and goal manifest differ", () => {
+    const root = mkdtempSync(join(tmpdir(), "croco-smoke-proof-reuse-"));
+    const write = (project: string, path: string, content: string) => {
+      mkdirSync(dirname(join(root, project, path)), { recursive: true });
+      writeFileSync(join(root, project, path), content);
+    };
+    try {
+      for (const project of ["goal-app", "starter-app", "other-app"]) {
+        write(
+          project,
+          "package.json",
+          JSON.stringify({
+            name: project,
+            scripts: {
+              build: `echo ${project}`,
+              "contract:openapi": `croco-openapi-spec --title "${project} API"`,
+              "contract:verify": "pnpm contract:diff",
+              "project-map:check": "croco project map --check",
+            },
+          }),
+        );
+        write(project, "apps/api/src/index.ts", `export const name = "${project}";\n`);
+        write(project, "node_modules/dependency/index.js", project);
+      }
+      write("goal-app", "croco.app.json", JSON.stringify({ goal: "internal-tool" }));
+      write("other-app", "apps/api/src/extra.ts", "export {};\n");
+
+      const fingerprint = (project: string) => [
+        ...fingerprintGeneratedProject(join(root, project), project),
+      ];
+      expect(
+        fingerprint("goal-app")
+          .map(([path]) => path)
+          .sort(),
+      ).toEqual(["apps/api/src/index.ts", "package.json"]);
+      expect(new Map(fingerprint("goal-app"))).toEqual(new Map(fingerprint("starter-app")));
+      expect(new Map(fingerprint("other-app"))).not.toEqual(new Map(fingerprint("starter-app")));
+      const contractScripts = readGeneratedContractScripts(join(root, "goal-app"), "goal-app");
+      for (const scriptName of ["contract:openapi", "contract:verify", "project-map:check"]) {
+        expect(contractScripts).toContain(JSON.stringify(scriptName));
+      }
+      expect(contractScripts).not.toContain(JSON.stringify("build"));
+      expect(contractScripts).not.toContain("goal-app");
+      expect(contractScripts).toBe(
+        readGeneratedContractScripts(join(root, "starter-app"), "starter-app"),
+      );
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("fails a case that relied on a case that did not pass", () => {
+    const reuse = new Map([
+      ["goal", { commandsProvenBy: "starter" }],
+      ["deployment", { driftCanariesProvenBy: "starter" }],
+      ["already-failed", { commandsProvenBy: "starter" }],
+    ]);
+    const statusOf = (statuses: Record<string, "passed" | "failed">) => (name: string) =>
+      statuses[name];
+
+    expect(
+      findCasesWithFailedProofSource(
+        reuse,
+        statusOf({
+          goal: "passed",
+          deployment: "passed",
+          "already-failed": "failed",
+          starter: "failed",
+        }),
+      ),
+    ).toEqual([
+      { caseName: "goal", failedSource: "starter" },
+      { caseName: "deployment", failedSource: "starter" },
+    ]);
+    expect(
+      findCasesWithFailedProofSource(
+        reuse,
+        statusOf({
+          goal: "passed",
+          deployment: "passed",
+          "already-failed": "failed",
+          starter: "passed",
+        }),
+      ),
+    ).toEqual([]);
   });
 
   it("installs Chromium before browser-backed goal tests", () => {

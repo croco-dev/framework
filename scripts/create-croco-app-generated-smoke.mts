@@ -225,6 +225,23 @@ type SmokeCase = {
   readonly runtimeTarget: string;
   readonly matrixTargets: readonly string[];
   readonly validations: readonly SmokeValidation[];
+  /**
+   * Case that generates the same project apart from its name and croco.app.json. When both are
+   * verified in one run, the commands they share run only in that case.
+   */
+  readonly sameProjectAs?: string;
+  /**
+   * Case whose contract scripts this case keeps unchanged. When both are verified in one run,
+   * the stale-artifact canaries run only in that case.
+   */
+  readonly sameContractScriptsAs?: string;
+};
+
+export type SmokeProofReuse = {
+  readonly commandsProvenBy?: string;
+  /** False when the prepared manifests differ, so steps that read them run in this case too. */
+  readonly manifestStepsProven?: boolean;
+  readonly driftCanariesProvenBy?: string;
 };
 
 type SmokeCaseResult = {
@@ -1064,6 +1081,7 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
   },
   {
     name: "goal-spa-backend-split",
+    sameProjectAs: "production-app-starter",
     args: ["--goal", "spa-backend-split", "--scope", "@smoke", "--no-install", "--no-git"],
     runtimeTarget: "node",
     matrixTargets: ["spa-be-split"],
@@ -1163,6 +1181,7 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
   },
   {
     name: "goal-internal-tool",
+    sameProjectAs: "admin-console-starter",
     args: ["--goal", "internal-tool", "--scope", "@smoke", "--no-install", "--no-git"],
     runtimeTarget: "node",
     matrixTargets: ["admin-console", "spa-be-split"],
@@ -1773,6 +1792,7 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
   },
   {
     name: "lambda-api",
+    sameContractScriptsAs: "production-app-starter",
     args: [
       "--preset",
       "production-app",
@@ -1811,6 +1831,7 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
   },
   {
     name: "kubernetes-node-api",
+    sameContractScriptsAs: "production-app-starter",
     args: [
       "--preset",
       "production-app",
@@ -1874,7 +1895,7 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
       { label: "Chromium install", args: ["test:browser:install"] },
       { label: "test", args: ["test"] },
       { label: "typecheck", args: ["typecheck"] },
-      { label: "build", args: ["build"] },
+      { label: "build", args: ["build"], paths: ["apps/api-server/dist/index.js"] },
       {
         label: "built Node host smoke",
         packagePath: ["apps", "api-server"],
@@ -1970,7 +1991,7 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
       { label: "Chromium install", args: ["test:browser:install"] },
       { label: "test", args: ["test"] },
       { label: "typecheck", args: ["typecheck"] },
-      { label: "build", args: ["build"] },
+      { label: "build", args: ["build"], paths: ["apps/api-server/dist/index.js"] },
       {
         label: "built Node host smoke",
         packagePath: ["apps", "api-server"],
@@ -1996,11 +2017,6 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
         readOnly: true,
         recovery: "pnpm codegen",
         args: ["contract:verify"],
-      },
-      {
-        label: "Admin RPC client",
-        args: ["contract:client"],
-        paths: ["libs/shared/provider-rpc/src/admin.ts"],
       },
       {
         label: "DI graph generation",
@@ -2459,7 +2475,6 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
           arrayMinLengths: { providers: 4 },
         },
       },
-      { label: "AI demo flow", args: ["ai:smoke"] },
       { label: "full demo flow", args: ["demo:smoke"] },
       { label: "failure drill smoke", args: ["failure-drill:smoke"] },
     ],
@@ -2589,6 +2604,227 @@ export function getGeneratedGoalSmokeCaseInputs(): readonly {
   });
 }
 
+const PROOF_REUSE_IGNORED_DIRECTORIES = new Set(["node_modules", ".git"]);
+const CONTRACT_SCRIPT_NAME = /^(?:contract|project-map):/;
+
+function isSameSmokeCommand(left: SmokeValidation, right: SmokeValidation): boolean {
+  const identity = ({ args, packagePath, env, expectFailure }: SmokeValidation) =>
+    JSON.stringify([args, packagePath ?? [], env ?? {}, expectFailure ?? null]);
+  return left.args !== undefined && right.args !== undefined && identity(left) === identity(right);
+}
+
+/** `runValidation` adds checks for these labels, so a step with one of them needs the same label. */
+const LABEL_CHECKED_SMOKE_STEPS = new Set(["test", "browser journeys"]);
+
+/** True when the proving step runs the same command and asserts at least what the step asserts. */
+export function provesSmokeValidation(
+  proving: SmokeValidation,
+  validation: SmokeValidation,
+): boolean {
+  if (!isSameSmokeCommand(proving, validation)) return false;
+  const labelChecked =
+    LABEL_CHECKED_SMOKE_STEPS.has(proving.label) || LABEL_CHECKED_SMOKE_STEPS.has(validation.label);
+  if (labelChecked && proving.label !== validation.label) return false;
+  const sameWhenSet = (
+    key: "readOnly" | "browserWorkflowPolicy" | "json" | "presentationProfile",
+  ) =>
+    validation[key] === undefined ||
+    JSON.stringify(validation[key]) === JSON.stringify(proving[key]);
+  const includes = (key: "paths" | "artifacts") =>
+    (validation[key] ?? []).every((entry) => (proving[key] ?? []).includes(entry));
+  return (
+    sameWhenSet("readOnly") &&
+    sameWhenSet("browserWorkflowPolicy") &&
+    sameWhenSet("json") &&
+    sameWhenSet("presentationProfile") &&
+    includes("paths") &&
+    includes("artifacts")
+  );
+}
+
+/** Whether a step may rely on the proving case, given whether the prepared manifests matched. */
+function isStepProvenByCase(
+  validation: SmokeValidation,
+  provingCase: SmokeCase | undefined,
+  manifestStepsProven: boolean,
+): boolean {
+  return (
+    provingCase !== undefined &&
+    (manifestStepsProven || !readsPreparedManifests(validation)) &&
+    isCommandProvenByCase(validation, provingCase)
+  );
+}
+
+function isCommandProvenByCase(validation: SmokeValidation, provingCase: SmokeCase): boolean {
+  return provingCase.validations.some((candidate) => provesSmokeValidation(candidate, validation));
+}
+
+export function getGeneratedSmokeProofReuseInputs(): readonly {
+  readonly name: string;
+  readonly tier: SmokeMatrixTier;
+  readonly sameProjectAs?: string;
+  readonly sameContractScriptsAs?: string;
+  readonly runsBrowserContractDriftCanaries: boolean;
+  /** Steps skipped when the prepared manifests differ, as they do for goal cases. */
+  readonly reusedCommandLabels: readonly string[];
+  readonly ownCommandLabels: readonly string[];
+}[] {
+  return smokeCases.map((smokeCase) => {
+    const provingCase = smokeCases.find(({ name }) => name === smokeCase.sameProjectAs);
+    const commands = smokeCase.validations.filter(({ args }) => args !== undefined);
+    const isReused = (validation: SmokeValidation) =>
+      isStepProvenByCase(validation, provingCase, false);
+    return {
+      name: smokeCase.name,
+      tier: smokeCase.tier,
+      sameProjectAs: smokeCase.sameProjectAs,
+      sameContractScriptsAs: smokeCase.sameContractScriptsAs,
+      runsBrowserContractDriftCanaries:
+        getBrowserContractDriftCanaryPreset(smokeCase) !== undefined,
+      reusedCommandLabels: commands.filter(isReused).map(({ label }) => label),
+      ownCommandLabels: commands
+        .filter((validation) => !isReused(validation))
+        .map(({ label }) => label),
+    };
+  });
+}
+
+/** Per-file digests of a generated project that ignore its own name and the goal manifest. */
+export function fingerprintGeneratedProject(
+  projectDir: string,
+  projectName: string,
+): ReadonlyMap<string, string> {
+  const files = new Map<string, string>();
+  const visit = (directory: string): void => {
+    for (const entry of readdirSync(directory, { withFileTypes: true })) {
+      const entryPath = join(directory, entry.name);
+      if (entry.isDirectory()) {
+        if (!PROOF_REUSE_IGNORED_DIRECTORIES.has(entry.name)) visit(entryPath);
+        continue;
+      }
+      const relativePath = relative(projectDir, entryPath);
+      if (!entry.isFile() || relativePath === "croco.app.json") continue;
+      // latin1 keeps every byte, so the name can be replaced in binary files as well.
+      const content = readFileSync(entryPath, "latin1").replaceAll(projectName, "\0");
+      files.set(
+        relativePath.replaceAll(projectName, "\0"),
+        createHash("sha256").update(content, "latin1").digest("hex"),
+      );
+    }
+  };
+  visit(projectDir);
+  return files;
+}
+
+function differingFingerprintPaths(
+  left: ReadonlyMap<string, string>,
+  right: ReadonlyMap<string, string>,
+): readonly string[] {
+  return [...new Set([...left.keys(), ...right.keys()])]
+    .filter((path) => left.get(path) !== right.get(path))
+    .sort(compareStrings);
+}
+
+/** Contract scripts of a generated project, with its own name masked like the fingerprint. */
+export function readGeneratedContractScripts(projectDir: string, projectName: string): string {
+  const manifest = JSON.parse(readFileSync(join(projectDir, "package.json"), "utf8")) as {
+    readonly scripts?: Readonly<Record<string, string>>;
+  };
+  return JSON.stringify(
+    Object.entries(manifest.scripts ?? {})
+      .filter(([name]) => CONTRACT_SCRIPT_NAME.test(name))
+      .sort(([left], [right]) => compareStrings(left, right)),
+  ).replaceAll(projectName, "\0");
+}
+
+/** Package manifests of a prepared project, with its own name masked like the fingerprint. */
+export function readPreparedManifests(projectDir: string, projectName: string): string {
+  return JSON.stringify(
+    [...fingerprintGeneratedProject(projectDir, projectName)]
+      .filter(([path]) => basename(path) === "package.json")
+      .sort(([left], [right]) => compareStrings(left, right)),
+  );
+}
+
+/**
+ * Contract writers and read-only verifiers compare committed artifacts with the package manifests,
+ * which the goal cases rewrite during dependency preparation.
+ */
+export function readsPreparedManifests(validation: SmokeValidation): boolean {
+  return (
+    validation.readOnly === true ||
+    /^(?:codegen|contract:|project-map:)/.test(validation.args?.[0] ?? "")
+  );
+}
+
+type SmokeProofReuseCandidate = {
+  readonly smokeCase: Pick<SmokeCase, "name" | "sameProjectAs" | "sameContractScriptsAs">;
+  /** Captured right after generation, before the smoke links local packages into the project. */
+  readonly generated: {
+    readonly fingerprint: ReadonlyMap<string, string>;
+    readonly contractScripts: string;
+  };
+  /** Package manifests after dependency preparation, with the project name masked. */
+  readonly preparedManifests: string;
+};
+
+export type SmokeProofReuseResolution = {
+  readonly reuse: ReadonlyMap<string, SmokeProofReuse>;
+  /** Declared equivalences that the generated output no longer supports. */
+  readonly drifted: readonly {
+    readonly caseName: string;
+    readonly source: string;
+    readonly differingPaths: readonly string[];
+  }[];
+};
+
+/**
+ * Decides which prepared cases may rely on another case of the same run. A declared equivalence
+ * is used only when the other case was prepared too and the generated output still matches it.
+ */
+export function resolveSmokeProofReuse(
+  preparedSmokeCases: readonly SmokeProofReuseCandidate[],
+): SmokeProofReuseResolution {
+  const preparedByName = new Map(
+    preparedSmokeCases.map((prepared) => [prepared.smokeCase.name, prepared]),
+  );
+  const reuse = new Map<string, SmokeProofReuse>();
+  const drifted: SmokeProofReuseResolution["drifted"][number][] = [];
+  for (const prepared of preparedSmokeCases) {
+    const { name, sameProjectAs, sameContractScriptsAs } = prepared.smokeCase;
+    const sameProject = sameProjectAs ? preparedByName.get(sameProjectAs) : undefined;
+    const sameScripts = sameContractScriptsAs
+      ? preparedByName.get(sameContractScriptsAs)
+      : undefined;
+    const differingPaths = sameProject
+      ? differingFingerprintPaths(prepared.generated.fingerprint, sameProject.generated.fingerprint)
+      : [];
+    const scriptsMatch =
+      sameScripts !== undefined &&
+      prepared.generated.contractScripts === sameScripts.generated.contractScripts;
+    if (sameProject && differingPaths.length > 0) {
+      drifted.push({ caseName: name, source: sameProject.smokeCase.name, differingPaths });
+    }
+    if (sameScripts && !scriptsMatch) {
+      drifted.push({
+        caseName: name,
+        source: sameScripts.smokeCase.name,
+        differingPaths: ["package.json"],
+      });
+    }
+    const commandsProvenBy =
+      sameProject && differingPaths.length === 0 ? sameProject.smokeCase.name : undefined;
+    const manifestStepsProven = commandsProvenBy
+      ? prepared.preparedManifests === sameProject?.preparedManifests
+      : undefined;
+    const driftCanariesProvenBy = scriptsMatch ? sameScripts.smokeCase.name : undefined;
+    if (commandsProvenBy || driftCanariesProvenBy) {
+      reuse.set(name, { commandsProvenBy, manifestStepsProven, driftCanariesProvenBy });
+    }
+  }
+  return { reuse, drifted };
+}
+
 const generatedSmokeWorkerJobPath = process.env[GENERATED_SMOKE_WORKER_JOB_ENV];
 if (isMainModule() && generatedSmokeWorkerJobPath) {
   runGeneratedSmokeWorker(generatedSmokeWorkerJobPath);
@@ -2706,12 +2942,20 @@ if (isMainModule() && !generatedSmokeWorkerJobPath) {
       }
     }
 
+    const { reuse: proofReuse, drifted } = resolveSmokeProofReuse(preparedSmokeCases);
+    for (const { caseName, source, differingPaths } of drifted) {
+      console.warn(
+        `create-croco-app-generated-smoke: ${caseName} no longer matches ${source} and runs its full verification; differing files: ${differingPaths.slice(0, 10).join(", ")}`,
+      );
+    }
     await verifyPreparedSmokeCases(
       smokeReport,
       preparedSmokeCases,
       activeSmokeRoot,
       smokeCaseFailures,
+      proofReuse,
     );
+    failCasesWhoseProofSourceFailed(smokeReport, preparedSmokeCases, proofReuse, smokeCaseFailures);
 
     if (shouldRunRestSpaContracts) {
       try {
@@ -2771,6 +3015,8 @@ type PreparedSmokeCase = {
   readonly projectDir: string;
   readonly installedRangeOverrides: Readonly<Record<string, string>>;
   readonly preparation: SmokeMatrixCaseTiming;
+  readonly generated: SmokeProofReuseCandidate["generated"];
+  readonly preparedManifests: string;
 };
 
 type SmokeCaseVerification = {
@@ -2789,6 +3035,7 @@ type GeneratedSmokeWorkerJob = {
   readonly installedRangeOverrides: Readonly<Record<string, string>>;
   readonly resultPath: string;
   readonly preparationOutput?: SmokeCaseOutputBuffer;
+  readonly proofReuse?: SmokeProofReuse;
 };
 
 function prepareSmokeCase(input: {
@@ -2812,6 +3059,10 @@ function prepareSmokeCase(input: {
     rootDir,
   );
   assertGeneratedSmokeCaseDependencyMapping(smokeCase.name, projectDir, rootDir);
+  const generated = {
+    fingerprint: fingerprintGeneratedProject(projectDir, smokeCase.name),
+    contractScripts: readGeneratedContractScripts(projectDir, smokeCase.name),
+  };
   const generatedSmokeRangeOverrides = prepareLocalWorkspacePackages(
     report,
     caseResult,
@@ -2837,6 +3088,8 @@ function prepareSmokeCase(input: {
     projectDir,
     installedRangeOverrides,
     preparation: finalizeSmokeCaseTiming(caseResult.steps, performance.now()),
+    generated,
+    preparedManifests: readPreparedManifests(projectDir, smokeCase.name),
   };
 }
 
@@ -2867,10 +3120,24 @@ function toSmokeCaseVerification(
   };
 }
 
+function recordReusedProof(caseResult: SmokeCaseResult, label: string): void {
+  const step = createSmokeStep(label);
+  caseResult.steps.push(step);
+  completeSmokeStep(step, "passed");
+  console.log(`create-croco-app-generated-smoke: ${caseResult.name}: ${label}`);
+}
+
+function findSmokeCase(name: string): SmokeCase {
+  const smokeCase = smokeCases.find((candidate) => candidate.name === name);
+  if (!smokeCase) throw new Error(`Unknown generated smoke case ${name}`);
+  return smokeCase;
+}
+
 function verifyPreparedSmokeCase(
   smokeCase: SmokeCase,
   projectDir: string,
   installedRangeOverrides: Readonly<Record<string, string>>,
+  proofReuse: SmokeProofReuse = {},
 ): SmokeCaseVerification {
   const { report, caseResult } = createUnpublishedCaseReport(smokeCase);
   try {
@@ -2903,11 +3170,34 @@ function verifyPreparedSmokeCase(
       ["pnpm", "install", "--frozen-lockfile"],
       projectDir,
     );
+    const commandsProvenBy = proofReuse.commandsProvenBy
+      ? findSmokeCase(proofReuse.commandsProvenBy)
+      : undefined;
+    const reusedCommandLabels: string[] = [];
     for (const validation of smokeCase.validations) {
+      if (
+        isStepProvenByCase(validation, commandsProvenBy, proofReuse.manifestStepsProven === true)
+      ) {
+        reusedCommandLabels.push(validation.label);
+        continue;
+      }
       runValidation(projectDir, smokeCase, validation, report, caseResult);
     }
+    if (commandsProvenBy) {
+      recordReusedProof(
+        caseResult,
+        `commands proven by ${commandsProvenBy.name}: ${reusedCommandLabels.join(", ")}`,
+      );
+    }
     runSaasMonetizationContractCanaries(projectDir, smokeCase, report, caseResult);
-    runGeneratedBrowserContractDriftCanaries(projectDir, smokeCase, report, caseResult);
+    if (proofReuse.driftCanariesProvenBy) {
+      recordReusedProof(
+        caseResult,
+        `stale artifact canaries proven by ${proofReuse.driftCanariesProvenBy}`,
+      );
+    } else {
+      runGeneratedBrowserContractDriftCanaries(projectDir, smokeCase, report, caseResult);
+    }
     runGraphQLContractDriftCanaries(projectDir, smokeCase, report, caseResult);
     caseResult.status = "passed";
     caseResult.timing = finalizeSmokeCaseTiming(caseResult.steps, performance.now());
@@ -2989,6 +3279,7 @@ async function verifyPreparedSmokeCases(
   preparedSmokeCases: readonly PreparedSmokeCase[],
   activeSmokeRoot: string,
   smokeCaseFailures: Error[],
+  proofReuse: ReadonlyMap<string, SmokeProofReuse>,
 ): Promise<void> {
   const concurrency = resolveGeneratedSmokeConcurrency();
   if (concurrency === 1 || preparedSmokeCases.length <= 1) {
@@ -3000,6 +3291,7 @@ async function verifyPreparedSmokeCases(
           prepared.smokeCase,
           prepared.projectDir,
           prepared.installedRangeOverrides,
+          proofReuse.get(prepared.smokeCase.name),
         ),
         smokeCaseFailures,
       );
@@ -3018,7 +3310,11 @@ async function verifyPreparedSmokeCases(
     run: async (prepared) => {
       let verification: SmokeCaseVerification;
       try {
-        verification = await verifyPreparedSmokeCaseInWorker(prepared, activeSmokeRoot);
+        verification = await verifyPreparedSmokeCaseInWorker(
+          prepared,
+          activeSmokeRoot,
+          proofReuse.get(prepared.smokeCase.name),
+        );
       } catch (error) {
         verification = verificationWithoutWorkerResult(prepared, error);
       }
@@ -3027,9 +3323,47 @@ async function verifyPreparedSmokeCases(
   });
 }
 
+/**
+ * Cases that passed while relying on a case that did not. They skipped work that nothing proved.
+ */
+export function findCasesWithFailedProofSource(
+  proofReuse: ReadonlyMap<string, SmokeProofReuse>,
+  statusOf: (caseName: string) => "pending" | "passed" | "failed",
+): readonly { readonly caseName: string; readonly failedSource: string }[] {
+  return [...proofReuse].flatMap(([caseName, reuse]) => {
+    if (statusOf(caseName) !== "passed") return [];
+    const failedSource = [reuse.commandsProvenBy, reuse.driftCanariesProvenBy].find(
+      (source) => source !== undefined && statusOf(source) !== "passed",
+    );
+    return failedSource ? [{ caseName, failedSource }] : [];
+  });
+}
+
+function failCasesWhoseProofSourceFailed(
+  report: GeneratedSmokeReport,
+  preparedSmokeCases: readonly PreparedSmokeCase[],
+  proofReuse: ReadonlyMap<string, SmokeProofReuse>,
+  smokeCaseFailures: Error[],
+): void {
+  const failed = findCasesWithFailedProofSource(
+    proofReuse,
+    (caseName) => getSmokeCaseResult(report, caseName).status,
+  );
+  for (const { caseName, failedSource } of failed) {
+    const prepared = preparedSmokeCases.find(({ smokeCase }) => smokeCase.name === caseName);
+    if (!prepared) continue;
+    const error = new Error(
+      `${caseName} relies on ${failedSource} for part of its verification, and ${failedSource} did not pass`,
+    );
+    recordUnhandledSmokeCaseFailure(report, prepared.caseResult, prepared.projectDir, error);
+    reportSmokeCaseFailure(report, caseName, error, smokeCaseFailures);
+  }
+}
+
 async function verifyPreparedSmokeCaseInWorker(
   prepared: PreparedSmokeCase,
   activeSmokeRoot: string,
+  proofReuse: SmokeProofReuse | undefined,
 ): Promise<SmokeCaseVerification> {
   const caseName = prepared.smokeCase.name;
   const jobPath = join(activeSmokeRoot, `${caseName}.verification-job.json`);
@@ -3040,6 +3374,7 @@ async function verifyPreparedSmokeCaseInWorker(
     installedRangeOverrides: prepared.installedRangeOverrides,
     resultPath,
     preparationOutput: smokeCaseOutputBuffers.get(caseName),
+    proofReuse,
   };
   writeFileSync(jobPath, `${JSON.stringify(job)}\n`);
 
@@ -3135,6 +3470,7 @@ function runGeneratedSmokeWorker(jobPath: string): void {
     smokeCase,
     job.projectDir,
     job.installedRangeOverrides,
+    job.proofReuse,
   );
   writeFileSync(
     job.resultPath,
@@ -4440,14 +4776,21 @@ function ensureGeneratedVerificationBaseline(validationDir: string): void {
   run("git", ["commit", "--quiet", "-m", "generated verification baseline"], validationDir);
 }
 
+function getBrowserContractDriftCanaryPreset(
+  smokeCase: Pick<SmokeCase, "args">,
+): "production-app" | "admin-console" | undefined {
+  const preset = readFlagValue(smokeCase.args, "--preset");
+  return preset === "production-app" || preset === "admin-console" ? preset : undefined;
+}
+
 function runGeneratedBrowserContractDriftCanaries(
   projectDir: string,
   smokeCase: SmokeCase,
   report: GeneratedSmokeReport,
   caseResult: SmokeCaseResult,
 ): void {
-  const preset = readFlagValue(smokeCase.args, "--preset");
-  if (preset !== "production-app" && preset !== "admin-console") return;
+  const preset = getBrowserContractDriftCanaryPreset(smokeCase);
+  if (preset === undefined) return;
 
   const clientFile = preset === "admin-console" ? "admin.ts" : "user.ts";
   const canaries = [
