@@ -24,6 +24,8 @@
   `dynamicCodeFactories` entry. `CrocoProblemRegistry` changes with it. Codes, categories, statuses, recovery
   metadata, lifecycle and cookbook paths stay. The JSON registry keeps every source location and remains the
   artifact that tools and people read for them.
+- The packaged `dynamicCodeFactories` are ordered by class name and reason, so swapping two declarations does not
+  rewrite the module either. The JSON registry keeps discovery order, so the two lists are not aligned by index.
 - The module is checked against `PackagedProblemCodeRegistry`, which `ProblemRegistry.ts` exports for the
   generated file only; it is not part of the package entrypoint. `ProblemCodeRegistry` keeps `sources` because
   it describes the full registry that `createProblemCodeRegistry()` builds and validates.
