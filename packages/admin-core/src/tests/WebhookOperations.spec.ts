@@ -158,6 +158,36 @@ describe("outbound webhook operations contracts", () => {
       "headers=[[redacted]] upstream timed out",
     ],
     [
+      "opaque authorization followed by a distinct map field",
+      "headers=[Authorization: Custom fixture opaque credential, Content-Type: text/plain] upstream timed out",
+      "headers=[[redacted], Content-Type: text/plain] upstream timed out",
+    ],
+    [
+      "empty authorization followed by a distinct map field",
+      "headers=[Authorization=, Content-Type: text/plain] upstream timed out",
+      "headers=[[redacted], Content-Type: text/plain] upstream timed out",
+    ],
+    [
+      "colon authorization in a truncated header map",
+      "headers=[Authorization: Bearer fixture-truncated",
+      "headers=[[redacted]",
+    ],
+    [
+      "colon signature with a folded continuation",
+      "Webhook-Signature: v1,fixture-first==\n  v2a,fixture-second==\nupstream timed out",
+      "[redacted]\nupstream timed out",
+    ],
+    [
+      "quoted signature with an escaped continuation",
+      String.raw`webhook-signature="fixture-first","fixture-\"second"; content-type=text/plain`,
+      "[redacted]; content-type=text/plain",
+    ],
+    [
+      "authorization at the end of a quoted diagnostic message",
+      '{"message":"upstream Authorization=Bearer fixture-message","status":503}',
+      '{"message":"upstream [redacted]","status":503}',
+    ],
+    [
       "escaped JSON secret",
       String.raw`upstream rejected {"secret":"fixture-\"e","content-type":"text/plain"}`,
       'upstream rejected {[redacted],"content-type":"text/plain"}',

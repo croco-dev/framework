@@ -228,26 +228,29 @@ const SIGNATURE_COMPONENT_NAME = /v\d+|t/;
 const SIGNATURE_COMPONENT = String.raw`(?:${SIGNATURE_COMPONENT_NAME.source})[ \t]*=[ \t]*${TOKEN68.source}`;
 const STANDARD_SIGNATURE_VERSION = /v\d+[a-z]*/;
 const SIGNATURE_WORD = `(?:${SIGNATURE_COMPONENT}|${TOKEN68.source})`;
-const SIGNATURE_PART = `(?:${SIGNATURE_WORD}|"${SIGNATURE_WORD}"|'${SIGNATURE_WORD}')`;
+const SIGNATURE_PART = `(?:${SIGNATURE_WORD}|${QUOTED_DIAGNOSTIC_VALUE})`;
 const STANDARD_SIGNATURE_SEPARATOR = String.raw`\s+(?=${STANDARD_SIGNATURE_VERSION.source}\s*,)`;
 const SIGNATURE_SEPARATOR = String.raw`(?:\s*,\s*|${STANDARD_SIGNATURE_SEPARATOR})`;
 const VERSIONED_SIGNATURE_CONTINUATION = String.raw`["']?(?:${SIGNATURE_COMPONENT_NAME.source})["']?[ \t]*=`;
 const SIGNATURE_CONTINUATION = `(?:${VERSIONED_SIGNATURE_CONTINUATION}|${SIGNATURE_PART}(?:${SINGLE_TOKEN_END.source}|(?=${STANDARD_SIGNATURE_SEPARATOR})))`;
 const QUOTED_SIGNATURE_END = String.raw`(?!(?:${SIGNATURE_SEPARATOR}${SIGNATURE_CONTINUATION}|\s*;\s*${VERSIONED_SIGNATURE_CONTINUATION}))`;
 const SIGNATURE_END = `${QUOTED_SIGNATURE_END}${SINGLE_TOKEN_END.source}`;
+const BOUNDED_SIGNATURE_VALUE = String.raw`${SIGNATURE_PART}(?:${SIGNATURE_SEPARATOR}${SIGNATURE_PART})*${SIGNATURE_END}`;
 const HEADER_EQUALS = /\s*=\s*/;
 const HEADER_COLON = /\s*:\s*/;
 const HEADER_ASSIGNMENT = /\s*[:=]\s*/;
-const LEGACY_COLON_BOUNDARY = /(?<![^\s,;])/;
+const LEGACY_COLON_BOUNDARY = /(?<![^\s,;[{])/;
 const QUOTED_MAP_FIELD = String.raw`(?:"${DOUBLE_QUOTED_CONTENT.source}"|(?<=[\s:=,\[{])'${SINGLE_QUOTED_CONTENT.source}')`;
 const MAP_APOSTROPHE = /(?<![\s:=,[{])'/;
 const MAP_STRUCTURE_TOKEN = new RegExp(
-  String.raw`"${DOUBLE_QUOTED_CONTENT.source}(?:"|\\?$)|(?<=[\s:=,\[{])'${SINGLE_QUOTED_CONTENT.source}(?:'|\\?$)|[\[\]{},]`,
+  String.raw`"${DOUBLE_QUOTED_CONTENT.source}(?:(")|\\?$)|(?<=[\s:=,\[{])'${SINGLE_QUOTED_CONTENT.source}(?:(')|\\?$)|[\[\]{},]`,
   "g",
 );
 const MAP_TERMINATOR = /(?=$|[\s,;)}\]]|[.!?:]+(?=$|\s))/y;
+const DISTINCT_DIAGNOSTIC_FIELD = String.raw`(?:[a-z][\w.-]*[ \t]*:|"${DOUBLE_QUOTED_CONTENT.source}"[ \t]*[:=])`;
+const DISTINCT_MAP_FIELD = new RegExp(String.raw`\s*${DISTINCT_DIAGNOSTIC_FIELD}`, "iy");
 const NEXT_COOKIE_DIAGNOSTIC_FIELD = String.raw`,\s*${DIAGNOSTIC_FIELD}`;
-const NEXT_SET_COOKIE_DIAGNOSTIC_FIELD = String.raw`,\s*(?:(?:[a-z][\w.-]*|'${SINGLE_QUOTED_CONTENT.source}')[ \t]*:|"${DOUBLE_QUOTED_CONTENT.source}"[ \t]*[:=])`;
+const NEXT_SET_COOKIE_DIAGNOSTIC_FIELD = String.raw`,\s*(?:${DISTINCT_DIAGNOSTIC_FIELD}|'${SINGLE_QUOTED_CONTENT.source}'[ \t]*:)`;
 const SENSITIVE_SCALAR_ASSIGNMENT = String.raw`["']?(?:${SENSITIVE_DIAGNOSTIC_FIELD.source})["']?${HEADER_ASSIGNMENT.source}`;
 const SCALAR_VALUE = String.raw`(?:${QUOTED_DIAGNOSTIC_VALUE}|[^,\s;]+)`;
 const ADJACENT_QUOTED_SENSITIVE_FIELD = String.raw`(?:[,;][ \t]*|[ \t](?=\S))(?:${SENSITIVE_SCALAR_ASSIGNMENT}|["']?${SENSITIVE_WEBHOOK_HEADER}["']?${HEADER_ASSIGNMENT.source})${QUOTED_DIAGNOSTIC_VALUE}`;
@@ -259,7 +262,7 @@ function boundedHeaderAssignments(separator: RegExp, context?: "quoted" | "map")
   const scalarEnd = context === "map" ? SINGLE_TOKEN_END.source : "";
   return (
     String.raw`${label(AUTHORIZATION_HEADER.source)}${separator.source}(?:(?:${HTTP_TOKEN.source}[ \t]+|${FOLDED_AUTHORIZATION_SCHEME})${AUTHORIZATION_CREDENTIALS}|${TOKEN68.source}${SINGLE_TOKEN_END.source})|` +
-    String.raw`${label("webhook-signature")}${separator.source}${SIGNATURE_PART}(?:${SIGNATURE_SEPARATOR}${SIGNATURE_PART})*${SIGNATURE_END}|` +
+    `${label("webhook-signature")}${separator.source}${BOUNDED_SIGNATURE_VALUE}|` +
     `${label("x-api-key")}${separator.source}${SCALAR_VALUE}${scalarEnd}`
   );
 }
@@ -286,6 +289,7 @@ const SENSITIVE_WEBHOOK_TEXT = new RegExp(
   `${wrappedHeaderAssignment(NON_SIGNATURE_HEADER)}${QUOTED_DIAGNOSTIC_VALUE}|` +
     `${wrappedHeaderAssignment("webhook-signature")}${QUOTED_DIAGNOSTIC_VALUE}${QUOTED_SIGNATURE_END}|` +
     String.raw`${LEGACY_COLON_BOUNDARY.source}${AUTHORIZATION_HEADER.source}${HEADER_COLON.source}${FOLDED_AUTHORIZATION_SCHEME}${AUTHORIZATION_CREDENTIALS}|` +
+    `${LEGACY_COLON_BOUNDARY.source}webhook-signature${HEADER_COLON.source}${BOUNDED_SIGNATURE_VALUE}|` +
     `${boundedHeaderAssignments(HEADER_EQUALS)}|` +
     `${boundedHeaderAssignments(HEADER_COLON, "quoted")}|` +
     `${wrappedHeaderAssignment("cookie")}${COOKIE_HEADER_VALUE}(?=${NEXT_COOKIE_DIAGNOSTIC_FIELD})|` +
@@ -302,11 +306,12 @@ type DiagnosticContainerStart = { start: number; fieldStarts: number[] };
 
 function* diagnosticContainers(
   value: string,
+  tokens: readonly RegExpExecArray[],
 ): Generator<DiagnosticContainerStart & { end: number }> {
   const openers: DiagnosticContainerStart[] = [];
   const terminator = new RegExp(MAP_TERMINATOR);
 
-  for (const token of value.matchAll(MAP_STRUCTURE_TOKEN)) {
+  for (const token of tokens) {
     const symbol = token[0];
     if (symbol === "[" || symbol === "{") {
       openers.push({ start: token.index, fieldStarts: [token.index + 1] });
@@ -331,17 +336,29 @@ function* diagnosticContainers(
   }
 }
 
-function structuredHeaderFieldEnds(value: string): Map<number, number> {
-  const containers = [...diagnosticContainers(value)];
+function structuredHeaderFieldEnds(
+  value: string,
+  tokens: readonly RegExpExecArray[],
+): Map<number, number> {
+  const containers = [...diagnosticContainers(value, tokens)];
   const containerEnds = new Map(containers.map(({ start, end }) => [start, end]));
   const mapFieldEnds = new Map<number, number>();
   const assignment = new RegExp(MAP_HEADER_ASSIGNMENT);
   const field = new RegExp(SENSITIVE_MAP_FIELD);
+  const distinctField = new RegExp(DISTINCT_MAP_FIELD);
 
   for (const container of containers) {
     const bodyStart = container.start + 1;
     const body = value.slice(bodyStart, container.end - 1);
+    const distinctStarts = container.fieldStarts.slice(1).filter((start) => {
+      distinctField.lastIndex = start - bodyStart;
+      return distinctField.test(body);
+    });
+    let distinctIndex = 0;
+    let coveredThrough = bodyStart;
     for (const fieldStart of container.fieldStarts) {
+      // Combined values can cover several comma positions, including other sensitive-looking labels.
+      if (fieldStart < coveredThrough) continue;
       const offset = fieldStart - bodyStart;
       assignment.lastIndex = offset;
       const header = assignment.exec(body);
@@ -351,26 +368,45 @@ function structuredHeaderFieldEnds(value: string): Map<number, number> {
       const nestedEnd = containerEnds.get(bodyStart + assignment.lastIndex);
       if (nestedEnd !== undefined && nestedEnd < container.end) {
         mapFieldEnds.set(start, nestedEnd);
+        coveredThrough = nestedEnd;
         continue;
       }
 
       field.lastIndex = offset;
-      // If the value cannot be delimited safely, retain only the container's closing delimiter.
-      const end = field.test(body) ? bodyStart + field.lastIndex : container.end - 1;
-      mapFieldEnds.set(start, end);
+      if (field.test(body)) {
+        coveredThrough = bodyStart + field.lastIndex;
+      } else {
+        let nextDistinct = distinctStarts[distinctIndex];
+        while (nextDistinct !== undefined && nextDistinct <= fieldStart) {
+          nextDistinct = distinctStarts[++distinctIndex];
+        }
+        // Only a structurally distinct assignment ends an opaque value before the closing delimiter.
+        coveredThrough = (nextDistinct ?? container.end) - 1;
+      }
+      mapFieldEnds.set(start, coveredThrough);
     }
   }
   return mapFieldEnds;
 }
 
 export function redactWebhookOperationsText(value: string): string {
-  const mapFieldEnds = structuredHeaderFieldEnds(value);
+  const tokens = [...value.matchAll(MAP_STRUCTURE_TOKEN)];
+  const mapFieldEnds = structuredHeaderFieldEnds(value, tokens);
+  const quotedText = tokens.filter((token) => token[1] || token[2]);
   const fields = new RegExp(SENSITIVE_WEBHOOK_TEXT);
   const redacted: string[] = [];
   let copiedThrough = 0;
+  let quoteIndex = 0;
   for (let match = fields.exec(value); match; match = fields.exec(value)) {
     redacted.push(value.slice(copiedThrough, match.index), "[redacted]");
     copiedThrough = mapFieldEnds.get(match.index) ?? fields.lastIndex;
+    let quote = quotedText[quoteIndex];
+    while (quote && quote.index + quote[0].length - 1 <= match.index) {
+      quote = quotedText[++quoteIndex];
+    }
+    if (quote && quote.index < match.index) {
+      copiedThrough = Math.min(copiedThrough, quote.index + quote[0].length - 1);
+    }
     fields.lastIndex = copiedThrough;
   }
   redacted.push(value.slice(copiedThrough));
