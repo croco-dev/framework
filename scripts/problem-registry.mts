@@ -5690,15 +5690,36 @@ function formatReadonlyRegistryType(value: unknown): string {
   throw new Error("Problem registry contains a non-JSON value");
 }
 
+export function createPackagedProblemRegistry(registry: ProblemCodeRegistry) {
+  const { dynamicCodeFactories, ...packaged } = registry;
+  return {
+    ...packaged,
+    problems: registry.problems.map(({ sources: _sources, ...problem }) => problem),
+    ...(dynamicCodeFactories
+      ? {
+          // Discovery follows declaration order; sorting keeps the module unchanged when declarations swap.
+          dynamicCodeFactories: dynamicCodeFactories
+            .map(({ className, reason }) => ({ className, reason }))
+            .sort(
+              (left, right) =>
+                compareStrings(left.className, right.className) ||
+                compareStrings(left.reason, right.reason),
+            ),
+        }
+      : {}),
+  };
+}
+
 function formatGeneratedProblemRegistrySource(registry: ProblemCodeRegistry): string {
+  const packaged = createPackagedProblemRegistry(registry);
   return `${[
     'import type { TypedProblemDetails } from "../libs/Problem";',
-    'import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";',
+    'import type { PackagedProblemCodeRegistry } from "../libs/ProblemRegistry";',
     "",
-    `export type CrocoProblemRegistry = ${formatReadonlyRegistryType(JSON.parse(JSON.stringify(registry)))};`,
+    `export type CrocoProblemRegistry = ${formatReadonlyRegistryType(JSON.parse(JSON.stringify(packaged)))};`,
     "",
     "export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = ",
-    `${JSON.stringify(registry, null, 2)} as const satisfies ProblemCodeRegistry;`,
+    `${JSON.stringify(packaged, null, 2)} as const satisfies PackagedProblemCodeRegistry;`,
     "",
     "export type CrocoProblemRegistryEntry = CrocoProblemRegistry['problems'][number];",
     "export type CrocoProblemCode = CrocoProblemRegistryEntry['code'];",

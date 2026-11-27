@@ -104,6 +104,21 @@ export type ProblemCodeRegistry = {
   }[];
 };
 
+/**
+ * 패키지에 컴파일되는 registry 형태입니다. 선언 위치는 `docs/problem-code-registry.json`에만
+ * 남겨, 소스 줄이 밀려도 배포되는 모듈이 바뀌지 않게 합니다.
+ */
+export type PackagedProblemCodeRegistry = Omit<
+  ProblemCodeRegistry,
+  "problems" | "dynamicCodeFactories"
+> & {
+  readonly problems: readonly Omit<ProblemCodeRegistryEntry, "sources">[];
+  readonly dynamicCodeFactories?: readonly {
+    readonly className: string;
+    readonly reason: string;
+  }[];
+};
+
 export type CreateProblemCodeRegistryOptions = {
   readonly cookbookBasePath?: string;
   readonly statusPolicies?: Readonly<Record<string, ProblemStatusPolicy>>;

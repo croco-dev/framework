@@ -3,6 +3,7 @@
   "globalDependencies": [
     "mise.toml",
     "tsconfig/**",
+    "!tsconfig/contract-strict.baseline.json",
     "pnpm-lock.yaml",
     "**/.env.*local",
     "tooling/compareStrings.*"

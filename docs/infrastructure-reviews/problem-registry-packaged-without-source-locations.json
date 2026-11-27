@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "problems-core",
+      "classification": "pure-contract",
+      "reason": "Stop compiling Problem declaration source locations into the packaged registry so that moving a declaration no longer rewrites the module every dependent package builds against.",
+      "files": {
+        "packages/problems-core/src/generated/problem-code-registry.ts": "d562ccf937b9e613f065be023544905d9ab74bc388889bdfa91f24aa6749439f",
+        "packages/problems-core/src/libs/ProblemRegistry.ts": "14f6faedddbc6af7b4882afa3f3de745a78ffc9aa9df0c475704c8235d6354ba"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The packaged Problem registry drops declaration file, line and column metadata. Codes, categories, statuses, recovery metadata and the redaction policy lookup are unchanged, so the change introduces no Node Host capability, external storage or lifecycle dependency.",
+          "providers": [],
+          "constraints": [
+            "Declaration source locations are available only from docs/problem-code-registry.json, not from the packaged constant."
+          ],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "packages/problems-core/src/libs/ProblemRegistry.ts",
+            "docs/problem-code-registry.json",
+            "scripts/problem-registry.mts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The packaged Problem registry drops declaration file, line and column metadata. Codes, categories, statuses, recovery metadata and the redaction policy lookup are unchanged, so the change introduces no Lambda Host capability, external storage or lifecycle dependency.",
+          "providers": [],
+          "constraints": [
+            "Declaration source locations are available only from docs/problem-code-registry.json, not from the packaged constant."
+          ],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "packages/problems-core/src/libs/ProblemRegistry.ts",
+            "docs/problem-code-registry.json",
+            "scripts/problem-registry.mts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The packaged Problem registry drops declaration file, line and column metadata. Codes, categories, statuses, recovery metadata and the redaction policy lookup are unchanged, so the change introduces no Workers Host or Node Container Host capability, external storage or lifecycle dependency.",
+          "providers": [],
+          "constraints": [
+            "Declaration source locations are available only from docs/problem-code-registry.json, not from the packaged constant."
+          ],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "packages/problems-core/src/libs/ProblemRegistry.ts",
+            "docs/problem-code-registry.json",
+            "scripts/problem-registry.mts"
+          ]
+        }
+      }
+    }
+  ]
+}

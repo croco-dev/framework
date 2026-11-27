@@ -210,8 +210,34 @@ describe("Problem code registry", () => {
     ).toThrow(ProblemRegistryValidationProblem);
   });
 
-  it("accepts the generated registry through the public validation contract", () => {
-    expect(() => assertProblemCodeRegistryValid(CROCO_PROBLEM_CODE_REGISTRY)).not.toThrow();
+  it("keeps the packaged registry consistent with the runtime category mapper", () => {
+    // The packaged registry omits declaration locations, which the validator also checks.
+    // A placeholder location lets every other rule run against the packaged values.
+    const placeholder = { file: "packaged-registry", column: 1, kind: "problem-class" } as const;
+    const registry = {
+      ...CROCO_PROBLEM_CODE_REGISTRY,
+      problems: CROCO_PROBLEM_CODE_REGISTRY.problems.map((problem) => ({
+        ...problem,
+        sources: [{ ...placeholder, line: 1 }],
+      })),
+      dynamicCodeFactories: (CROCO_PROBLEM_CODE_REGISTRY.dynamicCodeFactories ?? []).map(
+        (factory, index) => ({ ...factory, source: { ...placeholder, line: index + 1 } }),
+      ),
+    };
+
+    expect(() => assertProblemCodeRegistryValid(registry)).not.toThrow();
+  });
+
+  it("packages the generated registry without declaration source locations", () => {
+    expect(CROCO_PROBLEM_CODE_REGISTRY.problemCount).toBe(
+      CROCO_PROBLEM_CODE_REGISTRY.problems.length,
+    );
+    for (const problem of CROCO_PROBLEM_CODE_REGISTRY.problems) {
+      expect(problem).not.toHaveProperty("sources");
+    }
+    for (const factory of CROCO_PROBLEM_CODE_REGISTRY.dynamicCodeFactories ?? []) {
+      expect(factory).not.toHaveProperty("source");
+    }
   });
 
   it("defines package ProblemRegistry manifests with visibility and redaction metadata", () => {
