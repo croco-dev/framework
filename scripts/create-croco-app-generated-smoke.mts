@@ -1179,7 +1179,6 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
   },
   {
     name: "goal-internal-tool",
-    sameProjectAs: "admin-console-starter",
     args: ["--goal", "internal-tool", "--scope", "@smoke", "--no-install", "--no-git"],
     runtimeTarget: "node",
     matrixTargets: ["admin-console", "spa-be-split"],
@@ -1893,7 +1892,7 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
       { label: "Chromium install", args: ["test:browser:install"] },
       { label: "test", args: ["test"] },
       { label: "typecheck", args: ["typecheck"] },
-      { label: "build", args: ["build"] },
+      { label: "build", args: ["build"], paths: ["apps/api-server/dist/index.js"] },
       {
         label: "built Node host smoke",
         packagePath: ["apps", "api-server"],
@@ -2611,8 +2610,28 @@ function isSameSmokeCommand(left: SmokeValidation, right: SmokeValidation): bool
   return left.args !== undefined && right.args !== undefined && identity(left) === identity(right);
 }
 
+/** True when the proving step runs the same command and asserts at least what the step asserts. */
+export function provesSmokeValidation(proving: SmokeValidation, validation: SmokeValidation): boolean {
+  if (!isSameSmokeCommand(proving, validation)) return false;
+  const sameWhenSet = (
+    key: "readOnly" | "browserWorkflowPolicy" | "json" | "presentationProfile",
+  ) =>
+    validation[key] === undefined ||
+    JSON.stringify(validation[key]) === JSON.stringify(proving[key]);
+  const includes = (key: "paths" | "artifacts") =>
+    (validation[key] ?? []).every((entry) => (proving[key] ?? []).includes(entry));
+  return (
+    sameWhenSet("readOnly") &&
+    sameWhenSet("browserWorkflowPolicy") &&
+    sameWhenSet("json") &&
+    sameWhenSet("presentationProfile") &&
+    includes("paths") &&
+    includes("artifacts")
+  );
+}
+
 function isCommandProvenByCase(validation: SmokeValidation, provingCase: SmokeCase): boolean {
-  return provingCase.validations.some((candidate) => isSameSmokeCommand(candidate, validation));
+  return provingCase.validations.some((candidate) => provesSmokeValidation(candidate, validation));
 }
 
 export function getGeneratedSmokeProofReuseInputs(): readonly {
@@ -2620,6 +2639,7 @@ export function getGeneratedSmokeProofReuseInputs(): readonly {
   readonly tier: SmokeMatrixTier;
   readonly sameProjectAs?: string;
   readonly sameContractScriptsAs?: string;
+  readonly runsBrowserContractDriftCanaries: boolean;
   readonly reusedCommandLabels: readonly string[];
   readonly ownCommandLabels: readonly string[];
 }[] {
@@ -2633,6 +2653,8 @@ export function getGeneratedSmokeProofReuseInputs(): readonly {
       tier: smokeCase.tier,
       sameProjectAs: smokeCase.sameProjectAs,
       sameContractScriptsAs: smokeCase.sameContractScriptsAs,
+      runsBrowserContractDriftCanaries:
+        getBrowserContractDriftCanaryPreset(smokeCase) !== undefined,
       reusedCommandLabels: commands.filter(isReused).map(({ label }) => label),
       ownCommandLabels: commands
         .filter((validation) => !isReused(validation))
@@ -4699,14 +4721,21 @@ function ensureGeneratedVerificationBaseline(validationDir: string): void {
   run("git", ["commit", "--quiet", "-m", "generated verification baseline"], validationDir);
 }
 
+function getBrowserContractDriftCanaryPreset(
+  smokeCase: Pick<SmokeCase, "args">,
+): "production-app" | "admin-console" | undefined {
+  const preset = readFlagValue(smokeCase.args, "--preset");
+  return preset === "production-app" || preset === "admin-console" ? preset : undefined;
+}
+
 function runGeneratedBrowserContractDriftCanaries(
   projectDir: string,
   smokeCase: SmokeCase,
   report: GeneratedSmokeReport,
   caseResult: SmokeCaseResult,
 ): void {
-  const preset = readFlagValue(smokeCase.args, "--preset");
-  if (preset !== "production-app" && preset !== "admin-console") return;
+  const preset = getBrowserContractDriftCanaryPreset(smokeCase);
+  if (preset === undefined) return;
 
   const clientFile = preset === "admin-console" ? "admin.ts" : "user.ts";
   const canaries = [

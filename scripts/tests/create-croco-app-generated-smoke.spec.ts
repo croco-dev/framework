@@ -35,6 +35,7 @@ import {
   measureSmokeDurationMs,
   prepareGeneratedUnitEvidenceCapture,
   prepareGeneratedSmokeDependencyOverrides,
+  provesSmokeValidation,
   readCommandOutputSegment,
   readGeneratedContractScripts,
   readGeneratedSmokeAllowlistMetadata,
@@ -1513,7 +1514,7 @@ describe("create-croco-app generated smoke matrix", () => {
     );
   });
 
-  it("executes every supported goal manifest and declared quality gate", () => {
+  it("declares every supported goal manifest and quality gate, run directly or proven by an identical case in the same run", () => {
     const goalCases = new Map(
       getGeneratedGoalSmokeCaseInputs().map((smokeCase) => [smokeCase.goal, smokeCase]),
     );
@@ -1555,12 +1556,6 @@ describe("create-croco-app generated smoke matrix", () => {
         ownCommandLabels: ["codegen"],
       },
       {
-        name: "goal-internal-tool",
-        sameProjectAs: "admin-console-starter",
-        sameContractScriptsAs: undefined,
-        ownCommandLabels: [],
-      },
-      {
         name: "lambda-api",
         sameProjectAs: undefined,
         sameContractScriptsAs: "production-app-starter",
@@ -1571,11 +1566,20 @@ describe("create-croco-app generated smoke matrix", () => {
         sameContractScriptsAs: "production-app-starter",
       },
     ]);
-    for (const { name, sameProjectAs, sameContractScriptsAs } of declared) {
+    const byName = new Map(cases.map((smokeCase) => [smokeCase.name, smokeCase]));
+    for (const { name, tier, sameProjectAs, sameContractScriptsAs } of declared) {
       for (const source of [sameProjectAs, sameContractScriptsAs]) {
         if (source === undefined) continue;
         expect(names.has(source), `${name} -> ${source}`).toBe(true);
         expect(declared.map((candidate) => candidate.name)).not.toContain(source);
+        // CI runs each tier separately, and a blocking case must not fail because of an advisory one.
+        expect(byName.get(source)?.tier, `${name} -> ${source} tier`).toBe(tier);
+      }
+      if (sameContractScriptsAs) {
+        expect(
+          byName.get(sameContractScriptsAs)?.runsBrowserContractDriftCanaries,
+          `${name} -> ${sameContractScriptsAs} runs the stale artifact canaries`,
+        ).toBe(true);
       }
     }
     expect(
@@ -1583,6 +1587,25 @@ describe("create-croco-app generated smoke matrix", () => {
         .filter(({ sameProjectAs }) => sameProjectAs)
         .every(({ reusedCommandLabels }) => reusedCommandLabels.includes("test")),
     ).toBe(true);
+  });
+
+  it("treats a step as proven only by the same command with at least the same checks", () => {
+    const build = { label: "build", args: ["build"], paths: ["apps/api-server/dist/index.js"] };
+
+    expect(provesSmokeValidation({ label: "build", args: ["build"] }, build)).toBe(false);
+    expect(
+      provesSmokeValidation(
+        { ...build, label: "Build", paths: [...build.paths, "dist/extra.js"], artifacts: ["dist"] },
+        build,
+      ),
+    ).toBe(true);
+    expect(provesSmokeValidation({ ...build, args: ["build", "--prod"] }, build)).toBe(false);
+    expect(
+      provesSmokeValidation(
+        { label: "json", args: ["manifest"], json: { path: "a.json", matches: { kind: "app" } } },
+        { label: "json", args: ["manifest"], json: { path: "a.json", matches: { kind: "api" } } },
+      ),
+    ).toBe(false);
   });
 
   it("reuses proof only when the other case is in the run and its output still matches", () => {
