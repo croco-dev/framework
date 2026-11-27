@@ -1179,6 +1179,7 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
   },
   {
     name: "goal-internal-tool",
+    sameProjectAs: "admin-console-starter",
     args: ["--goal", "internal-tool", "--scope", "@smoke", "--no-install", "--no-git"],
     runtimeTarget: "node",
     matrixTargets: ["admin-console", "spa-be-split"],
@@ -1988,7 +1989,7 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
       { label: "Chromium install", args: ["test:browser:install"] },
       { label: "test", args: ["test"] },
       { label: "typecheck", args: ["typecheck"] },
-      { label: "build", args: ["build"] },
+      { label: "build", args: ["build"], paths: ["apps/api-server/dist/index.js"] },
       {
         label: "built Node host smoke",
         packagePath: ["apps", "api-server"],
@@ -2610,9 +2611,18 @@ function isSameSmokeCommand(left: SmokeValidation, right: SmokeValidation): bool
   return left.args !== undefined && right.args !== undefined && identity(left) === identity(right);
 }
 
+/** `runValidation` adds checks for these labels, so a step with one of them needs the same label. */
+const LABEL_CHECKED_SMOKE_STEPS = new Set(["test", "browser journeys"]);
+
 /** True when the proving step runs the same command and asserts at least what the step asserts. */
-export function provesSmokeValidation(proving: SmokeValidation, validation: SmokeValidation): boolean {
+export function provesSmokeValidation(
+  proving: SmokeValidation,
+  validation: SmokeValidation,
+): boolean {
   if (!isSameSmokeCommand(proving, validation)) return false;
+  const labelChecked =
+    LABEL_CHECKED_SMOKE_STEPS.has(proving.label) || LABEL_CHECKED_SMOKE_STEPS.has(validation.label);
+  if (labelChecked && proving.label !== validation.label) return false;
   const sameWhenSet = (
     key: "readOnly" | "browserWorkflowPolicy" | "json" | "presentationProfile",
   ) =>

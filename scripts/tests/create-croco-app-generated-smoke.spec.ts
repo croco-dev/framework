@@ -56,6 +56,7 @@ import {
 } from "../test-inventory.mts";
 import type { TestInventory, TestInventoryEntry } from "../test-inventory.mts";
 import { readCompletedPlaywrightPaths, readCompletedVitestPaths } from "../test-lane-runner.mts";
+import { PUBLISH_REQUIRED_GENERATED_SMOKE_CASES } from "../verification-manifest.mts";
 import {
   classifySmokeCommandFailure,
   classifySmokeFailure,
@@ -1556,6 +1557,12 @@ describe("create-croco-app generated smoke matrix", () => {
         ownCommandLabels: ["codegen"],
       },
       {
+        name: "goal-internal-tool",
+        sameProjectAs: "admin-console-starter",
+        sameContractScriptsAs: undefined,
+        ownCommandLabels: [],
+      },
+      {
         name: "lambda-api",
         sameProjectAs: undefined,
         sameContractScriptsAs: "production-app-starter",
@@ -1572,8 +1579,13 @@ describe("create-croco-app generated smoke matrix", () => {
         if (source === undefined) continue;
         expect(names.has(source), `${name} -> ${source}`).toBe(true);
         expect(declared.map((candidate) => candidate.name)).not.toContain(source);
-        // CI runs each tier separately, and a blocking case must not fail because of an advisory one.
-        expect(byName.get(source)?.tier, `${name} -> ${source} tier`).toBe(tier);
+        // A tier run only proves cases of its tier. The publish smoke runs every publish-required case
+        // in one run, where any failure already fails the run.
+        expect(
+          byName.get(source)?.tier === tier ||
+            (PUBLISH_REQUIRED_GENERATED_SMOKE_CASES as readonly string[]).includes(source),
+          `${name} -> ${source} runs in the same smoke run`,
+        ).toBe(true);
       }
       if (sameContractScriptsAs) {
         expect(
@@ -1600,6 +1612,12 @@ describe("create-croco-app generated smoke matrix", () => {
       ),
     ).toBe(true);
     expect(provesSmokeValidation({ ...build, args: ["build", "--prod"] }, build)).toBe(false);
+    expect(
+      provesSmokeValidation(
+        { label: "unit test", args: ["test"] },
+        { label: "test", args: ["test"] },
+      ),
+    ).toBe(false);
     expect(
       provesSmokeValidation(
         { label: "json", args: ["manifest"], json: { path: "a.json", matches: { kind: "app" } } },
