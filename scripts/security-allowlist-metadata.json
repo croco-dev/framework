@@ -1,15 +1,7 @@
 {
   "schemaVersion": 1,
   "audit": {
-    "ignoreGhsas": [
-      {
-        "id": "GHSA-fc5q-39xc-vjpf",
-        "owner": "kang-heewon",
-        "scope": "workspace",
-        "reason": "Frozen workspace installs apply the repeated wildcard extglob backports from micromatch/picomatch#264 and #265 with a tighter safeguard for ambiguous alternatives. The audit reports registry versions without local patches. Workspace tests exercise both installed parsers. Remove the exception and both patches when the workspace resolves an advisory-cleared release.",
-        "reviewBy": "2026-12-02"
-      }
-    ]
+    "ignoreGhsas": []
   },
   "secretScan": {
     "gitleaks": {
