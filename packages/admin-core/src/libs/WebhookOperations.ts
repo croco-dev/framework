@@ -217,16 +217,18 @@ const TOKEN68 = /[a-z\d._~+/-]+=*/;
 const HTTP_TOKEN = /[\w!#$%&'*+.^`|~-]+/;
 const DIAGNOSTIC_FIELD = String.raw`(?:[\w.-]+|${QUOTED_FIELD_LABEL})[ \t]*[:=]`;
 const SINGLE_TOKEN_END = /(?=[ \t]*(?:[,;\r\n]|$))/;
-const AUTHORIZATION_PARAMETER = String.raw`${HTTP_TOKEN.source}[ \t]*=[ \t]*(?:${QUOTED_FIELD_LABEL}|${HTTP_TOKEN.source})${SINGLE_TOKEN_END.source}`;
-const AUTHORIZATION_LIST_ELEMENT = String.raw`(?:,\s*)*${AUTHORIZATION_PARAMETER}`;
-const AUTHORIZATION_PARAMETERS = String.raw`${AUTHORIZATION_LIST_ELEMENT}(?:\s*,\s*${AUTHORIZATION_LIST_ELEMENT})*(?!\s*,\s*${AUTHORIZATION_LIST_ELEMENT})${SINGLE_TOKEN_END.source}`;
+const FOLDED_AUTHORIZATION_SCHEME = String.raw`(?:${HTTP_TOKEN.source}[ \t]*\r?\n[ \t]+|(?:bearer|basic|digest|apikey)[ \t]*\r?\n)`;
+const DIAGNOSTIC_MEDIA_TYPE = String.raw`content-type[ \t]*=[ \t]*(?:"${HTTP_TOKEN.source}/${HTTP_TOKEN.source}(?:;[^"\r\n]*)?"|'${HTTP_TOKEN.source}/${HTTP_TOKEN.source}(?:;[^'\r\n]*)?')${SINGLE_TOKEN_END.source}`;
 const SIGNATURE_COMPONENT_NAME = /v\d+|t/;
 const SIGNATURE_COMPONENT = String.raw`(?:${SIGNATURE_COMPONENT_NAME.source})[ \t]*=[ \t]*${TOKEN68.source}`;
+const STANDARD_SIGNATURE_VERSION = /v\d+[a-z]*/;
 const SIGNATURE_WORD = `(?:${SIGNATURE_COMPONENT}|${TOKEN68.source})`;
 const SIGNATURE_PART = `(?:${SIGNATURE_WORD}|"${SIGNATURE_WORD}"|'${SIGNATURE_WORD}')`;
+const STANDARD_SIGNATURE_SEPARATOR = String.raw`\s+(?=${STANDARD_SIGNATURE_VERSION.source}\s*,)`;
+const SIGNATURE_SEPARATOR = String.raw`(?:\s*,\s*|${STANDARD_SIGNATURE_SEPARATOR})`;
 const VERSIONED_SIGNATURE_CONTINUATION = String.raw`["']?(?:${SIGNATURE_COMPONENT_NAME.source})["']?[ \t]*=`;
-const SIGNATURE_CONTINUATION = `(?:${VERSIONED_SIGNATURE_CONTINUATION}|${SIGNATURE_PART}${SINGLE_TOKEN_END.source})`;
-const QUOTED_SIGNATURE_END = String.raw`(?!\s*(?:,\s*${SIGNATURE_CONTINUATION}|;\s*${VERSIONED_SIGNATURE_CONTINUATION}))`;
+const SIGNATURE_CONTINUATION = `(?:${VERSIONED_SIGNATURE_CONTINUATION}|${SIGNATURE_PART}(?:${SINGLE_TOKEN_END.source}|(?=${STANDARD_SIGNATURE_SEPARATOR})))`;
+const QUOTED_SIGNATURE_END = String.raw`(?!(?:${SIGNATURE_SEPARATOR}${SIGNATURE_CONTINUATION}|\s*;\s*${VERSIONED_SIGNATURE_CONTINUATION}))`;
 const SIGNATURE_END = `${QUOTED_SIGNATURE_END}${SINGLE_TOKEN_END.source}`;
 const HEADER_EQUALS = /\s*=\s*/;
 const HEADER_COLON = /\s*:\s*/;
@@ -246,13 +248,24 @@ const SCALAR_VALUE = String.raw`(?:${QUOTED_DIAGNOSTIC_VALUE}|[^,\s;]+)`;
 const ADJACENT_QUOTED_SENSITIVE_FIELD = String.raw`(?:[,;][ \t]*|[ \t](?=\S))(?:${SENSITIVE_SCALAR_ASSIGNMENT}|["']?${SENSITIVE_WEBHOOK_HEADER}["']?${HEADER_ASSIGNMENT.source})${QUOTED_DIAGNOSTIC_VALUE}`;
 const WRAPPED_HEADER_VALUE = String.raw`(?:${ADJACENT_QUOTED_SENSITIVE_FIELD}|[^\r\n])*`;
 
-function boundedHeaderAssignments(separator: RegExp, quotedOnly = false): string {
+function authorizationCredentials(nextHeader = ""): string {
+  const parameter = String.raw`${nextHeader}${HTTP_TOKEN.source}[ \t]*=[ \t]*(?:${QUOTED_FIELD_LABEL}|${HTTP_TOKEN.source})${SINGLE_TOKEN_END.source}`;
+  const listElement = String.raw`(?:,\s*)*${parameter}`;
+  return String.raw`(?:${listElement}(?:\s*,\s*${listElement})*(?!\s*,\s*${listElement})|${TOKEN68.source})${SINGLE_TOKEN_END.source}`;
+}
+
+function boundedHeaderAssignments(separator: RegExp, context?: "quoted" | "map"): string {
   const label = (header: string) =>
-    quotedOnly ? `(?:"${header}"|'${header}')` : `["']?${header}["']?`;
+    context === "quoted" ? `(?:"${header}"|'${header}')` : `["']?${header}["']?`;
+  // A recognizable media type in a header map is diagnostic metadata. Other Digest parameters stay masked.
+  const credentials = authorizationCredentials(
+    context === "map" ? `(?!${DIAGNOSTIC_MEDIA_TYPE})` : "",
+  );
+  const scalarEnd = context === "map" ? SINGLE_TOKEN_END.source : "";
   return (
-    String.raw`${label(AUTHORIZATION_HEADER.source)}${separator.source}(?:${HTTP_TOKEN.source}[ \t]+(?:${AUTHORIZATION_PARAMETERS}|${TOKEN68.source}${SINGLE_TOKEN_END.source})|${TOKEN68.source}${SINGLE_TOKEN_END.source})|` +
-    String.raw`${label("webhook-signature")}${separator.source}${SIGNATURE_PART}(?:\s*,\s*${SIGNATURE_PART})*${SIGNATURE_END}|` +
-    `${label("x-api-key")}${separator.source}${SCALAR_VALUE}${SINGLE_TOKEN_END.source}`
+    String.raw`${label(AUTHORIZATION_HEADER.source)}${separator.source}(?:(?:${HTTP_TOKEN.source}[ \t]+|${FOLDED_AUTHORIZATION_SCHEME})${credentials}|${TOKEN68.source}${SINGLE_TOKEN_END.source})|` +
+    String.raw`${label("webhook-signature")}${separator.source}${SIGNATURE_PART}(?:${SIGNATURE_SEPARATOR}${SIGNATURE_PART})*${SIGNATURE_END}|` +
+    `${label("x-api-key")}${separator.source}${SCALAR_VALUE}${scalarEnd}`
   );
 }
 
@@ -271,14 +284,15 @@ const MAP_HEADER_ASSIGNMENT = new RegExp(
   "iy",
 );
 const SENSITIVE_MAP_FIELD = new RegExp(
-  String.raw`\s*(?:["']?${NON_SIGNATURE_HEADER}["']?${HEADER_ASSIGNMENT.source}${QUOTED_DIAGNOSTIC_VALUE}${SINGLE_TOKEN_END.source}|["']?webhook-signature["']?${HEADER_ASSIGNMENT.source}${QUOTED_DIAGNOSTIC_VALUE}${SIGNATURE_END}|${boundedHeaderAssignments(HEADER_ASSIGNMENT)}|["']?cookie["']?${HEADER_ASSIGNMENT.source}${COOKIE_HEADER_VALUE}(?=$|${NEXT_COOKIE_DIAGNOSTIC_FIELD})|["']?set-cookie["']?${HEADER_ASSIGNMENT.source}${SET_COOKIE_HEADER_VALUE}(?=$|${NEXT_SET_COOKIE_DIAGNOSTIC_FIELD}))`,
+  String.raw`\s*(?:["']?${NON_SIGNATURE_HEADER}["']?${HEADER_ASSIGNMENT.source}${QUOTED_DIAGNOSTIC_VALUE}${SINGLE_TOKEN_END.source}|["']?webhook-signature["']?${HEADER_ASSIGNMENT.source}${QUOTED_DIAGNOSTIC_VALUE}${SIGNATURE_END}|${boundedHeaderAssignments(HEADER_ASSIGNMENT, "map")}|["']?cookie["']?${HEADER_ASSIGNMENT.source}${COOKIE_HEADER_VALUE}(?=$|${NEXT_COOKIE_DIAGNOSTIC_FIELD})|["']?set-cookie["']?${HEADER_ASSIGNMENT.source}${SET_COOKIE_HEADER_VALUE}(?=$|${NEXT_SET_COOKIE_DIAGNOSTIC_FIELD}))`,
   "iy",
 );
 const SENSITIVE_WEBHOOK_TEXT = new RegExp(
   `${wrappedHeaderAssignment(NON_SIGNATURE_HEADER)}${QUOTED_DIAGNOSTIC_VALUE}|` +
     `${wrappedHeaderAssignment("webhook-signature")}${QUOTED_DIAGNOSTIC_VALUE}${QUOTED_SIGNATURE_END}|` +
+    String.raw`${LEGACY_COLON_BOUNDARY.source}${AUTHORIZATION_HEADER.source}${HEADER_COLON.source}${FOLDED_AUTHORIZATION_SCHEME}${authorizationCredentials()}|` +
     `${boundedHeaderAssignments(HEADER_EQUALS)}|` +
-    `${boundedHeaderAssignments(HEADER_COLON, true)}|` +
+    `${boundedHeaderAssignments(HEADER_COLON, "quoted")}|` +
     `${wrappedHeaderAssignment("cookie")}${COOKIE_HEADER_VALUE}(?=${NEXT_COOKIE_DIAGNOSTIC_FIELD})|` +
     `${wrappedHeaderAssignment("set-cookie")}${SET_COOKIE_HEADER_VALUE}(?=${NEXT_SET_COOKIE_DIAGNOSTIC_FIELD})|` +
     `${wrappedHeaderAssignment(SENSITIVE_WEBHOOK_HEADER)}${WRAPPED_HEADER_VALUE}|` +

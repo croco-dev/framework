@@ -108,6 +108,36 @@ describe("outbound webhook operations contracts", () => {
       "upstream rejected [redacted], content-type: text/plain",
     ],
     [
+      "space-separated webhook signatures",
+      "webhook-signature=v1,fixture-one== v2a,fixture-two==; content-type=text/plain",
+      "[redacted]; content-type=text/plain",
+    ],
+    [
+      "space-separated webhook signatures inside a header map",
+      "headers=[webhook-signature=v1,fixture-one== v2a,fixture-two==, content-type=text/plain]",
+      "headers=[[redacted], content-type=text/plain]",
+    ],
+    [
+      "wrapped authorization value after an equals sign",
+      "Authorization=Bearer\n  fixture-credential; content-type=text/plain",
+      "[redacted]; content-type=text/plain",
+    ],
+    [
+      "wrapped authorization value after a colon",
+      "Proxy-Authorization: Basic\r\n\tfixture-credential\r\nupstream timed out",
+      "[redacted]\r\nupstream timed out",
+    ],
+    [
+      "unquoted API key followed by same-line error context",
+      "Response headers: x-api-key=fixture-key upstream timed out",
+      "Response headers: [redacted] upstream timed out",
+    ],
+    [
+      "Digest authorization before a quoted content type inside a header map",
+      'headers=[Authorization=Digest realm="fixture-realm", extension="text/plain", response="fixture-response", Content-Type="text/plain"]',
+      'headers=[[redacted], Content-Type="text/plain"]',
+    ],
+    [
       "escaped JSON secret",
       String.raw`upstream rejected {"secret":"fixture-\"e","content-type":"text/plain"}`,
       'upstream rejected {[redacted],"content-type":"text/plain"}',

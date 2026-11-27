@@ -158,7 +158,7 @@ describe("WebhookReliabilityConsole", () => {
           {
             ...attempt,
             redactedResponseExcerpt:
-              "Response headers: Authorization=Basic fixture-response; content-type=text/plain",
+              "Response headers: Authorization=Basic\n  fixture-response; webhook-signature=v1,fixture-signature-one== v2a,fixture-signature-two==; content-type=text/plain",
           },
         ],
       },
@@ -166,8 +166,9 @@ describe("WebhookReliabilityConsole", () => {
 
     expect(markup).toContain("Signature check failed {\n[redacted]");
     expect(markup).toContain("&quot;result&quot;:&quot;rejected&quot;");
-    expect(markup).toContain("Response headers: [redacted]; content-type=text/plain");
+    expect(markup).toContain("Response headers: [redacted]; [redacted]; content-type=text/plain");
     expect(markup).not.toContain("fixture-response");
+    expect(markup).not.toContain("fixture-signature-");
     expect(markup).not.toContain("fixture-detail");
   });
 
