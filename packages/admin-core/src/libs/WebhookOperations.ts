@@ -204,17 +204,166 @@ export function maskWebhookEndpointUrl(url: string): string {
   }
 }
 
+const AUTHORIZATION_HEADER = /(?:proxy-)?authorization/;
+const COOKIE_HEADER = /(?:set-)?cookie/;
+const NON_SIGNATURE_HEADER = `(?:${AUTHORIZATION_HEADER.source}|${COOKIE_HEADER.source}|x-api-key)`;
+const SENSITIVE_WEBHOOK_HEADER = `(?:${NON_SIGNATURE_HEADER}|webhook-signature)`;
+const SENSITIVE_DIAGNOSTIC_FIELD = /password|secret|token/;
+const DOUBLE_QUOTED_CONTENT = /(?:\\[\s\S]|[^"\\])*/;
+const SINGLE_QUOTED_CONTENT = /(?:\\[\s\S]|[^'\\])*/;
+const QUOTED_FIELD_LABEL = `(?:"${DOUBLE_QUOTED_CONTENT.source}"|'${SINGLE_QUOTED_CONTENT.source}')`;
+const QUOTED_DIAGNOSTIC_VALUE = String.raw`(?:"${DOUBLE_QUOTED_CONTENT.source}(?:"|\\?$)|'${SINGLE_QUOTED_CONTENT.source}(?:'|\\?$))`;
+const TOKEN68 = /[a-z\d._~+/-]+=*/;
+const HTTP_TOKEN = /[\w!#$%&'*+.^`|~-]+/;
+const DIAGNOSTIC_FIELD = String.raw`(?:[\w.-]+|${QUOTED_FIELD_LABEL})[ \t]*[:=]`;
+const SINGLE_TOKEN_END = /(?=[ \t]*(?:[,;\r\n]|$))/;
+const AUTHORIZATION_PARAMETER = String.raw`${HTTP_TOKEN.source}[ \t]*=[ \t]*(?:${QUOTED_FIELD_LABEL}|${HTTP_TOKEN.source})${SINGLE_TOKEN_END.source}`;
+const AUTHORIZATION_LIST_ELEMENT = String.raw`(?:,\s*)*${AUTHORIZATION_PARAMETER}`;
+const AUTHORIZATION_PARAMETERS = String.raw`${AUTHORIZATION_LIST_ELEMENT}(?:\s*,\s*${AUTHORIZATION_LIST_ELEMENT})*(?!\s*,\s*${AUTHORIZATION_LIST_ELEMENT})${SINGLE_TOKEN_END.source}`;
+const SIGNATURE_COMPONENT_NAME = /v\d+|t/;
+const SIGNATURE_COMPONENT = String.raw`(?:${SIGNATURE_COMPONENT_NAME.source})[ \t]*=[ \t]*${TOKEN68.source}`;
+const SIGNATURE_WORD = `(?:${SIGNATURE_COMPONENT}|${TOKEN68.source})`;
+const SIGNATURE_PART = `(?:${SIGNATURE_WORD}|"${SIGNATURE_WORD}"|'${SIGNATURE_WORD}')`;
+const VERSIONED_SIGNATURE_CONTINUATION = String.raw`["']?(?:${SIGNATURE_COMPONENT_NAME.source})["']?[ \t]*=`;
+const SIGNATURE_CONTINUATION = `(?:${VERSIONED_SIGNATURE_CONTINUATION}|${SIGNATURE_PART}${SINGLE_TOKEN_END.source})`;
+const QUOTED_SIGNATURE_END = String.raw`(?!\s*(?:,\s*${SIGNATURE_CONTINUATION}|;\s*${VERSIONED_SIGNATURE_CONTINUATION}))`;
+const SIGNATURE_END = `${QUOTED_SIGNATURE_END}${SINGLE_TOKEN_END.source}`;
+const HEADER_EQUALS = /\s*=\s*/;
+const HEADER_COLON = /\s*:\s*/;
+const HEADER_ASSIGNMENT = /\s*[:=]\s*/;
+const LEGACY_COLON_BOUNDARY = /(?<![^\s,;])/;
+const QUOTED_MAP_FIELD = String.raw`(?:"${DOUBLE_QUOTED_CONTENT.source}"|(?<=[\s:=,\[{])'${SINGLE_QUOTED_CONTENT.source}')`;
+const MAP_APOSTROPHE = /(?<![\s:=,[{])'/;
+const MAP_STRUCTURE_TOKEN = new RegExp(
+  String.raw`"${DOUBLE_QUOTED_CONTENT.source}(?:"|\\?$)|(?<=[\s:=,\[{])'${SINGLE_QUOTED_CONTENT.source}(?:'|\\?$)|[\[\]{},]`,
+  "g",
+);
+const MAP_TERMINATOR = /(?=$|[\s,;)}\]]|[.!?:]+(?=$|\s))/y;
+const NEXT_COOKIE_DIAGNOSTIC_FIELD = String.raw`,\s*${DIAGNOSTIC_FIELD}`;
+const NEXT_SET_COOKIE_DIAGNOSTIC_FIELD = String.raw`,\s*(?:(?:[a-z][\w.-]*|'${SINGLE_QUOTED_CONTENT.source}')[ \t]*:|"${DOUBLE_QUOTED_CONTENT.source}"[ \t]*[:=])`;
+const SENSITIVE_SCALAR_ASSIGNMENT = String.raw`["']?(?:${SENSITIVE_DIAGNOSTIC_FIELD.source})["']?${HEADER_ASSIGNMENT.source}`;
+const SCALAR_VALUE = String.raw`(?:${QUOTED_DIAGNOSTIC_VALUE}|[^,\s;]+)`;
+const ADJACENT_QUOTED_SENSITIVE_FIELD = String.raw`(?:[,;][ \t]*|[ \t](?=\S))(?:${SENSITIVE_SCALAR_ASSIGNMENT}|["']?${SENSITIVE_WEBHOOK_HEADER}["']?${HEADER_ASSIGNMENT.source})${QUOTED_DIAGNOSTIC_VALUE}`;
+const WRAPPED_HEADER_VALUE = String.raw`(?:${ADJACENT_QUOTED_SENSITIVE_FIELD}|[^\r\n])*`;
+
+function boundedHeaderAssignments(separator: RegExp, quotedOnly = false): string {
+  const label = (header: string) =>
+    quotedOnly ? `(?:"${header}"|'${header}')` : `["']?${header}["']?`;
+  return (
+    String.raw`${label(AUTHORIZATION_HEADER.source)}${separator.source}(?:${HTTP_TOKEN.source}[ \t]+(?:${AUTHORIZATION_PARAMETERS}|${TOKEN68.source}${SINGLE_TOKEN_END.source})|${TOKEN68.source}${SINGLE_TOKEN_END.source})|` +
+    String.raw`${label("webhook-signature")}${separator.source}${SIGNATURE_PART}(?:\s*,\s*${SIGNATURE_PART})*${SIGNATURE_END}|` +
+    `${label("x-api-key")}${separator.source}${SCALAR_VALUE}${SINGLE_TOKEN_END.source}`
+  );
+}
+
+function wrappedHeaderAssignment(header: string): string {
+  return String.raw`(?:(?:"${header}"|'${header}')\s*[:=]|${header}\s*=)\s*`;
+}
+
+function cookieHeaderValue(nextField: string): string {
+  return String.raw`(?:${QUOTED_MAP_FIELD}|${MAP_APOSTROPHE.source}|(?!${nextField})[^"'\r\n])+`;
+}
+
+const COOKIE_HEADER_VALUE = cookieHeaderValue(NEXT_COOKIE_DIAGNOSTIC_FIELD);
+const SET_COOKIE_HEADER_VALUE = cookieHeaderValue(NEXT_SET_COOKIE_DIAGNOSTIC_FIELD);
+const MAP_HEADER_ASSIGNMENT = new RegExp(
+  String.raw`(\s*)["']?${SENSITIVE_WEBHOOK_HEADER}["']?${HEADER_ASSIGNMENT.source}`,
+  "iy",
+);
+const SENSITIVE_MAP_FIELD = new RegExp(
+  String.raw`\s*(?:["']?${NON_SIGNATURE_HEADER}["']?${HEADER_ASSIGNMENT.source}${QUOTED_DIAGNOSTIC_VALUE}${SINGLE_TOKEN_END.source}|["']?webhook-signature["']?${HEADER_ASSIGNMENT.source}${QUOTED_DIAGNOSTIC_VALUE}${SIGNATURE_END}|${boundedHeaderAssignments(HEADER_ASSIGNMENT)}|["']?cookie["']?${HEADER_ASSIGNMENT.source}${COOKIE_HEADER_VALUE}(?=$|${NEXT_COOKIE_DIAGNOSTIC_FIELD})|["']?set-cookie["']?${HEADER_ASSIGNMENT.source}${SET_COOKIE_HEADER_VALUE}(?=$|${NEXT_SET_COOKIE_DIAGNOSTIC_FIELD}))`,
+  "iy",
+);
+const SENSITIVE_WEBHOOK_TEXT = new RegExp(
+  `${wrappedHeaderAssignment(NON_SIGNATURE_HEADER)}${QUOTED_DIAGNOSTIC_VALUE}|` +
+    `${wrappedHeaderAssignment("webhook-signature")}${QUOTED_DIAGNOSTIC_VALUE}${QUOTED_SIGNATURE_END}|` +
+    `${boundedHeaderAssignments(HEADER_EQUALS)}|` +
+    `${boundedHeaderAssignments(HEADER_COLON, true)}|` +
+    `${wrappedHeaderAssignment("cookie")}${COOKIE_HEADER_VALUE}(?=${NEXT_COOKIE_DIAGNOSTIC_FIELD})|` +
+    `${wrappedHeaderAssignment("set-cookie")}${SET_COOKIE_HEADER_VALUE}(?=${NEXT_SET_COOKIE_DIAGNOSTIC_FIELD})|` +
+    `${wrappedHeaderAssignment(SENSITIVE_WEBHOOK_HEADER)}${WRAPPED_HEADER_VALUE}|` +
+    String.raw`${LEGACY_COLON_BOUNDARY.source}${SENSITIVE_WEBHOOK_HEADER}\s*:[^\r\n]*|` +
+    String.raw`${SENSITIVE_WEBHOOK_HEADER}\s*:\s*${SCALAR_VALUE}|` +
+    `${SENSITIVE_SCALAR_ASSIGNMENT}${SCALAR_VALUE}|` +
+    String.raw`\b(?:bearer|basic|digest|apikey)\s+[^\s,;]+`,
+  "gi",
+);
+
+type DiagnosticContainerStart = { start: number; fieldStarts: number[] };
+
+function* diagnosticContainers(
+  value: string,
+): Generator<DiagnosticContainerStart & { end: number }> {
+  const openers: DiagnosticContainerStart[] = [];
+  const terminator = new RegExp(MAP_TERMINATOR);
+
+  for (const token of value.matchAll(MAP_STRUCTURE_TOKEN)) {
+    const symbol = token[0];
+    if (symbol === "[" || symbol === "{") {
+      openers.push({ start: token.index, fieldStarts: [token.index + 1] });
+      continue;
+    }
+    if (symbol === ",") {
+      openers.at(-1)?.fieldStarts.push(token.index + 1);
+      continue;
+    }
+    if (symbol !== "]" && symbol !== "}") continue;
+
+    const opener = openers.pop();
+    if (!opener) continue;
+    if (value[opener.start] !== (symbol === "]" ? "[" : "{")) {
+      openers.length = 0;
+      continue;
+    }
+
+    const end = token.index + 1;
+    terminator.lastIndex = end;
+    if (terminator.test(value)) yield { ...opener, end };
+  }
+}
+
+function structuredHeaderFieldEnds(value: string): Map<number, number> {
+  const containers = [...diagnosticContainers(value)];
+  const containerEnds = new Map(containers.map(({ start, end }) => [start, end]));
+  const mapFieldEnds = new Map<number, number>();
+  const assignment = new RegExp(MAP_HEADER_ASSIGNMENT);
+  const field = new RegExp(SENSITIVE_MAP_FIELD);
+
+  for (const container of containers) {
+    const bodyStart = container.start + 1;
+    const body = value.slice(bodyStart, container.end - 1);
+    for (const fieldStart of container.fieldStarts) {
+      const offset = fieldStart - bodyStart;
+      assignment.lastIndex = offset;
+      const header = assignment.exec(body);
+      if (!header) continue;
+
+      const start = fieldStart + (header[1]?.length ?? 0);
+      const nestedEnd = containerEnds.get(bodyStart + assignment.lastIndex);
+      if (nestedEnd !== undefined && nestedEnd < container.end) {
+        mapFieldEnds.set(start, nestedEnd);
+        continue;
+      }
+
+      field.lastIndex = offset;
+      if (field.test(body)) mapFieldEnds.set(start, bodyStart + field.lastIndex);
+    }
+  }
+  return mapFieldEnds;
+}
+
 export function redactWebhookOperationsText(value: string): string {
-  return value
-    .replace(
-      /(^|[\s,;])(?:authorization|proxy-authorization|cookie|set-cookie|webhook-signature|x-api-key)\s*:[^\r\n]*/gi,
-      "$1[redacted]",
-    )
-    .replace(
-      /(["']?(?:authorization|proxy-authorization|cookie|set-cookie|webhook-signature|x-api-key|password|secret|token)["']?\s*[=:]\s*)("[^"]*"|'[^']*'|[^,\s;]+)/gi,
-      "[redacted]",
-    )
-    .replace(/\b(?:bearer|basic|digest|apikey)\s+[^\s,;]+/gi, "[redacted]");
+  const mapFieldEnds = structuredHeaderFieldEnds(value);
+  const fields = new RegExp(SENSITIVE_WEBHOOK_TEXT);
+  const redacted: string[] = [];
+  let copiedThrough = 0;
+  for (let match = fields.exec(value); match; match = fields.exec(value)) {
+    redacted.push(value.slice(copiedThrough, match.index), "[redacted]");
+    copiedThrough = mapFieldEnds.get(match.index) ?? fields.lastIndex;
+    fields.lastIndex = copiedThrough;
+  }
+  redacted.push(value.slice(copiedThrough));
+  return redacted.join("");
 }
 
 export function createWebhookEndpointActions(

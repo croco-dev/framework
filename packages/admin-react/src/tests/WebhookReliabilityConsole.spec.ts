@@ -141,6 +141,36 @@ describe("WebhookReliabilityConsole", () => {
     expect(render(state)).toContain(`data-state="${kind}"`);
   });
 
+  it("masks sensitive response excerpts and Problem details before displaying them", () => {
+    const [attempt] = ready.attempts;
+    if (!attempt) throw new Error("Expected the ready fixture to include an attempt");
+
+    const markup = render({
+      kind: "problem",
+      tenantId: "tenant-1",
+      problem: {
+        code: "webhooks/store-unavailable",
+        detail: 'Signature check failed {\n"x-api-key":\n"fixture-detail",\n"result":"rejected"\n}',
+      },
+      partial: {
+        ...ready,
+        attempts: [
+          {
+            ...attempt,
+            redactedResponseExcerpt:
+              "Response headers: Authorization=Basic fixture-response; content-type=text/plain",
+          },
+        ],
+      },
+    });
+
+    expect(markup).toContain("Signature check failed {\n[redacted]");
+    expect(markup).toContain("&quot;result&quot;:&quot;rejected&quot;");
+    expect(markup).toContain("Response headers: [redacted]; content-type=text/plain");
+    expect(markup).not.toContain("fixture-response");
+    expect(markup).not.toContain("fixture-detail");
+  });
+
   it("renders one-time secret creation separately from endpoint tables", () => {
     const markup = render({
       kind: "secret-created",

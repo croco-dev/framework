@@ -91,6 +91,229 @@ describe("outbound webhook operations contracts", () => {
     expect(redacted).toContain("[redacted");
   });
 
+  it.each([
+    [
+      "Authorization assignment",
+      "upstream rejected Authorization=Bearer fixture-a; content-type=text/plain",
+      "upstream rejected [redacted]; content-type=text/plain",
+    ],
+    [
+      "Proxy-Authorization in a header map",
+      "headers=[Proxy-Authorization=Basic fixture-b, content-type=text/plain]",
+      "headers=[[redacted], content-type=text/plain]",
+    ],
+    [
+      "comma-separated signature",
+      "upstream rejected webhook-signature=v1=fixture-c,v2=fixture-d, content-type: text/plain",
+      "upstream rejected [redacted], content-type: text/plain",
+    ],
+    [
+      "escaped JSON secret",
+      String.raw`upstream rejected {"secret":"fixture-\"e","content-type":"text/plain"}`,
+      'upstream rejected {[redacted],"content-type":"text/plain"}',
+    ],
+    [
+      "quoted signature component followed by another component",
+      'headers=["webhook-signature"="v1=fixture-f",v2=fixture-g, content-type=text/plain]',
+      "headers=[[redacted], content-type=text/plain]",
+    ],
+    [
+      "quoted authorization parameter containing punctuation",
+      'Authorization: Digest realm="test, fixture: local", response="fixture-h"\ncontent-type: text/plain',
+      "[redacted]\ncontent-type: text/plain",
+    ],
+    [
+      "multiline JSON header assignment",
+      '{\n"x-api-key":\n"fixture-i",\n"error.message":"Retry rejected"\n}',
+      '{\n[redacted],\n"error.message":"Retry rejected"\n}',
+    ],
+    [
+      "wrapped colon header",
+      "upstream rejected x-api-key\n  : fixture-j\nRequest failed",
+      "upstream rejected [redacted]\nRequest failed",
+    ],
+    [
+      "multiline quoted token",
+      'failure token="fixture-k\nfixture-l"; status=failed',
+      "failure [redacted]; status=failed",
+    ],
+    [
+      "quoted header map fields",
+      'headers=["Authorization"="Basic fixture-m", "content-type"="text/plain"]',
+      'headers=[[redacted], "content-type"="text/plain"]',
+    ],
+    [
+      "mixed quoting in a header map",
+      'headers=["Authorization"="Basic fixture-s", content-type=text/plain] upstream timed out',
+      "headers=[[redacted], content-type=text/plain] upstream timed out",
+    ],
+    [
+      "signature ending a header map",
+      "(headers=[accept-language=[en-US,en],\nwebhook-signature=v1=fixture-n,v2=fixture-o]) upstream timed out",
+      "(headers=[accept-language=[en-US,en],\n[redacted]]) upstream timed out",
+    ],
+    [
+      "header map ending a sentence",
+      "headers=[Authorization=Bearer fixture-au]. Upstream timed out",
+      "headers=[[redacted]]. Upstream timed out",
+    ],
+    [
+      "signature next to a distinct diagnostic assignment",
+      "headers=[webhook-signature=v1=fixture-p\n  , v2=fixture-q, Server=example]; status=failed",
+      "headers=[[redacted], Server=example]; status=failed",
+    ],
+    [
+      "unquoted colon header with an apostrophe in its value",
+      "Cookie: fixture=team's-value\nupstream timed out",
+      "[redacted]\nupstream timed out",
+    ],
+    [
+      "API key next to a distinct diagnostic assignment",
+      "headers=[x-api-key=\n  fixture-r, retry.after=60]",
+      "headers=[[redacted], retry.after=60]",
+    ],
+    [
+      "cookie pairs inside a header map",
+      "headers=[Authorization=Basic fixture-t, Cookie=first=fixture-u; second=fixture-ab, content-type=text/plain] upstream timed out",
+      "headers=[[redacted], [redacted], content-type=text/plain] upstream timed out",
+    ],
+    [
+      "single-quoted cookie value",
+      "headers=[Cookie='first=fixture-ac, second=fixture-ad', content-type=text/plain]",
+      "headers=[[redacted], content-type=text/plain]",
+    ],
+    [
+      "Digest assignment followed by diagnostic metadata",
+      'Authorization=Digest realm="fixture-ae", response="fixture-af"; content-type=text/plain',
+      "[redacted]; content-type=text/plain",
+    ],
+    [
+      "Digest assignment in a header map",
+      'headers=[Authorization=Digest realm="fixture-ai", response="fixture-aj", content-type=text/plain]',
+      "headers=[[redacted], content-type=text/plain]",
+    ],
+    [
+      "Digest assignment containing an empty list element",
+      'headers=[accept=text/plain, Authorization: Digest realm="fixture-ao"\n  , , response="fixture-ap", content-type=text/plain]',
+      "headers=[accept=text/plain, [redacted], content-type=text/plain]",
+    ],
+    [
+      "quoted authorization next to diagnostic timing data",
+      '"Authorization"="Basic fixture-aq", t=60 upstream timed out',
+      "[redacted], t=60 upstream timed out",
+    ],
+    [
+      "array-valued authorization entry",
+      'headers={"Authorization":["Basic fixture-bb"],"content-type":"text/plain","response":{"transport":{"status":503}}} upstream timed out',
+      'headers={[redacted],"content-type":"text/plain","response":{"transport":{"status":503}}} upstream timed out',
+    ],
+    [
+      "multiline authorization entry inside a nested map",
+      '{"headers":{"Authorization":[\n"Basic fixture-bg",\n"Bearer fixture-bh"\n],"content-type":"text/plain"},"status":503} upstream timed out',
+      '{"headers":{[redacted],"content-type":"text/plain"},"status":503} upstream timed out',
+    ],
+    [
+      "quoted colon header followed by retry context",
+      '"x-api-key": fixture-bc; retrying in 60 seconds',
+      "[redacted]; retrying in 60 seconds",
+    ],
+    [
+      "colon assignment inside a header map",
+      "headers=[x-api-key: fixture-ak, content-type=text/plain]",
+      "headers=[[redacted], content-type=text/plain]",
+    ],
+    [
+      "closing punctuation inside an opaque API key",
+      "upstream rejected x-api-key=fixture-al]fixture-am; retrying in 60 seconds",
+      "upstream rejected [redacted]; retrying in 60 seconds",
+    ],
+    [
+      "apostrophe in an unquoted cookie map entry",
+      "headers=[Cookie=session=team's-fixture, content-type=text/plain]",
+      "headers=[[redacted], content-type=text/plain]",
+    ],
+    [
+      "cookie assignment followed by response metadata",
+      'upstream rejected "Cookie"=first=fixture-ar; second=fixture-as, content-type=text/plain',
+      "upstream rejected [redacted], content-type=text/plain",
+    ],
+    [
+      "Set-Cookie assignment followed by a distinct response header",
+      "Set-Cookie=session=fixture-at; HttpOnly, content-type: text/plain",
+      "[redacted], content-type: text/plain",
+    ],
+    [
+      "multiple Set-Cookie values inside a header map",
+      "headers=[accept: text/plain, Set-Cookie: first=fixture-bd, second=fixture-be, content-type: text/plain]",
+      "headers=[accept: text/plain, [redacted], content-type: text/plain]",
+    ],
+    [
+      "quoted cookie value before another JSON header",
+      '{"Set-Cookie":"session=fixture-bi","Content-Type":"text/plain"}',
+      '{[redacted],"Content-Type":"text/plain"}',
+    ],
+    [
+      "unquoted Set-Cookie before a quoted map field",
+      'headers=[Set-Cookie=session=fixture-bj; HttpOnly, "Content-Type"="text/plain"]',
+      'headers=[[redacted], "Content-Type"="text/plain"]',
+    ],
+    [
+      "unquoted Set-Cookie before compact header metadata",
+      "Set-Cookie=session=fixture-bk; HttpOnly, content-type:text/plain",
+      "[redacted], content-type:text/plain",
+    ],
+    [
+      "multiline quoted authorization followed by diagnostic prose",
+      '"Authorization"="fixture-ag\nfixture-ah" upstream timed out',
+      "[redacted] upstream timed out",
+    ],
+    [
+      "quoted authorization followed by a diagnostic sentence",
+      'upstream rejected "Authorization"="Basic fixture-v"; retrying in 60 seconds',
+      "upstream rejected [redacted]; retrying in 60 seconds",
+    ],
+    [
+      "complete versioned signature followed by a diagnostic sentence",
+      "webhook-signature=v1=fixture-w,v2=fixture-x, upstream timed out",
+      "[redacted], upstream timed out",
+    ],
+    [
+      "quoted signature followed by semicolon-delimited diagnostics",
+      'webhook-signature="v1=fixture-bf"; retrying; HTTP 503',
+      "[redacted]; retrying; HTTP 503",
+    ],
+    [
+      "unquoted authorization followed by a comma-separated diagnostic sentence",
+      "Authorization=Bearer fixture-an, upstream timed out",
+      "[redacted], upstream timed out",
+    ],
+    [
+      "single-token proxy authorization assignment",
+      "Proxy-Authorization=fixture-ay; content-type=text/plain",
+      "[redacted]; content-type=text/plain",
+    ],
+    [
+      "opaque signature components next to a distinct diagnostic field",
+      "webhook-signature=fixture-az,fixture-ba, content-type=text/plain",
+      "[redacted], content-type=text/plain",
+    ],
+    [
+      "header assignment next to a multiline quoted secret",
+      'upstream rejected Cookie=first=fixture-y; secret="fixture-z\nfixture-aa"',
+      "upstream rejected [redacted]",
+    ],
+    [
+      "header assignment next to a multiline quoted credential header",
+      'upstream rejected Cookie=first=fixture-av "x-api-key"="fixture-aw\nfixture-ax"',
+      "upstream rejected [redacted]",
+    ],
+  ])(
+    "redacts a complete %s and preserves surrounding diagnostic text",
+    (_label, input, expected) => {
+      expect(redactWebhookOperationsText(input)).toBe(expected);
+    },
+  );
+
   it("exposes endpoint actions with explicit pause and rotation semantics", () => {
     const actions = createWebhookEndpointActions(
       endpoint,

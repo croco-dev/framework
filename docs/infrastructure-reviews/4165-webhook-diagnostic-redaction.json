@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "admin-core",
+      "classification": "pure-contract",
+      "reason": "Mask complete credential and signature values when formatting webhook diagnostics for display.",
+      "files": {
+        "packages/admin-core/src/libs/WebhookOperations.ts": "ebe8ae4444f10b65bfdc558808e3ac1756151e2599f364fb8cd0d8ca616a0f00"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The formatter operates on a string and needs no Node Host APIs, storage, or lifecycle integration.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/admin-core/src/libs/WebhookOperations.ts",
+            "packages/admin-core/src/tests/WebhookOperations.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The formatter operates on a string and needs no Lambda Host APIs, storage, or invocation lifecycle integration.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/admin-core/src/libs/WebhookOperations.ts",
+            "packages/admin-core/src/tests/WebhookOperations.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The formatter operates on a string and needs no Workers bindings, storage, or lifecycle integration.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/admin-core/src/libs/WebhookOperations.ts",
+            "packages/admin-core/src/tests/WebhookOperations.spec.ts"
+          ]
+        }
+      }
+    }
+  ]
+}
