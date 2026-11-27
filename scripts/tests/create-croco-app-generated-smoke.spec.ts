@@ -23,8 +23,11 @@ import {
   assertGeneratedPresentationProfileMatchesCatalog,
   createSaasMonetizationCanarySource,
   finalizeSmokeCaseTiming,
+  findCasesWithFailedProofSource,
+  fingerprintGeneratedProject,
   getGeneratedGoalSmokeCaseInputs,
   getGeneratedSmokeDependencyCaseInputs,
+  getGeneratedSmokeProofReuseInputs,
   hasCompleteTapTestEvidence,
   isActiveDotenvAssignment,
   isDotenvFileName,
@@ -33,9 +36,11 @@ import {
   prepareGeneratedUnitEvidenceCapture,
   prepareGeneratedSmokeDependencyOverrides,
   readCommandOutputSegment,
+  readGeneratedContractScripts,
   readGeneratedSmokeAllowlistMetadata,
   reconcileGeneratedTestPaths,
   requiresCommandShell,
+  resolveSmokeProofReuse,
   RESOLVED_PLAYWRIGHT_BROWSERS_PATH,
   resolveTapSelectedGeneratedPaths,
   selectCompletedGeneratedTestEntries,
@@ -1526,6 +1531,201 @@ describe("create-croco-app generated smoke matrix", () => {
         expect(smokeCase?.executedQualityGates, `${goal} ${qualityGate}`).toContain(qualityGate);
       }
     }
+  });
+
+  it("declares proof reuse only toward cases that run the same commands", () => {
+    const cases = getGeneratedSmokeProofReuseInputs();
+    const names = new Set(cases.map(({ name }) => name));
+    const declared = cases.filter(
+      ({ sameProjectAs, sameContractScriptsAs }) => sameProjectAs ?? sameContractScriptsAs,
+    );
+
+    expect(
+      declared.map(({ name, sameProjectAs, sameContractScriptsAs, ownCommandLabels }) => ({
+        name,
+        sameProjectAs,
+        sameContractScriptsAs,
+        ...(sameProjectAs ? { ownCommandLabels } : {}),
+      })),
+    ).toEqual([
+      {
+        name: "goal-spa-backend-split",
+        sameProjectAs: "production-app-starter",
+        sameContractScriptsAs: undefined,
+        ownCommandLabels: ["codegen"],
+      },
+      {
+        name: "goal-internal-tool",
+        sameProjectAs: "admin-console-starter",
+        sameContractScriptsAs: undefined,
+        ownCommandLabels: [],
+      },
+      {
+        name: "lambda-api",
+        sameProjectAs: undefined,
+        sameContractScriptsAs: "production-app-starter",
+      },
+      {
+        name: "kubernetes-node-api",
+        sameProjectAs: undefined,
+        sameContractScriptsAs: "production-app-starter",
+      },
+    ]);
+    for (const { name, sameProjectAs, sameContractScriptsAs } of declared) {
+      for (const source of [sameProjectAs, sameContractScriptsAs]) {
+        if (source === undefined) continue;
+        expect(names.has(source), `${name} -> ${source}`).toBe(true);
+        expect(declared.map((candidate) => candidate.name)).not.toContain(source);
+      }
+    }
+    expect(
+      declared
+        .filter(({ sameProjectAs }) => sameProjectAs)
+        .every(({ reusedCommandLabels }) => reusedCommandLabels.includes("test")),
+    ).toBe(true);
+  });
+
+  it("reuses proof only when the other case is in the run and its output still matches", () => {
+    const candidate = (
+      name: string,
+      generated: { files: Record<string, string>; contractScripts: string },
+      declaration: { sameProjectAs?: string; sameContractScriptsAs?: string } = {},
+    ) => ({
+      smokeCase: { name, ...declaration },
+      generated: {
+        fingerprint: new Map(Object.entries(generated.files)),
+        contractScripts: generated.contractScripts,
+      },
+    });
+    const starterOutput = {
+      files: { "package.json": "a", "src/index.ts": "b" },
+      contractScripts: "s",
+    };
+    const starter = candidate("starter", starterOutput);
+    const goal = candidate("goal", starterOutput, { sameProjectAs: "starter" });
+    const deployment = candidate(
+      "deployment",
+      { files: { "package.json": "c" }, contractScripts: "s" },
+      { sameContractScriptsAs: "starter" },
+    );
+
+    expect(resolveSmokeProofReuse([goal, deployment, starter])).toEqual({
+      reuse: new Map([
+        ["goal", { commandsProvenBy: "starter", driftCanariesProvenBy: undefined }],
+        ["deployment", { commandsProvenBy: undefined, driftCanariesProvenBy: "starter" }],
+      ]),
+      drifted: [],
+    });
+
+    const driftedGoal = candidate(
+      "goal",
+      {
+        files: { "package.json": "a", "src/index.ts": "changed", "src/extra.ts": "new" },
+        contractScripts: "s",
+      },
+      { sameProjectAs: "starter" },
+    );
+    const driftedDeployment = candidate(
+      "deployment",
+      { files: {}, contractScripts: "rewritten" },
+      { sameContractScriptsAs: "starter" },
+    );
+    expect(resolveSmokeProofReuse([driftedGoal, driftedDeployment, starter])).toEqual({
+      reuse: new Map(),
+      drifted: [
+        { caseName: "goal", source: "starter", differingPaths: ["src/extra.ts", "src/index.ts"] },
+        { caseName: "deployment", source: "starter", differingPaths: ["package.json"] },
+      ],
+    });
+
+    expect(resolveSmokeProofReuse([goal, deployment])).toEqual({ reuse: new Map(), drifted: [] });
+  });
+
+  it("treats generated projects as the same when only the name and goal manifest differ", () => {
+    const root = mkdtempSync(join(tmpdir(), "croco-smoke-proof-reuse-"));
+    const write = (project: string, path: string, content: string) => {
+      mkdirSync(dirname(join(root, project, path)), { recursive: true });
+      writeFileSync(join(root, project, path), content);
+    };
+    try {
+      for (const project of ["goal-app", "starter-app", "other-app"]) {
+        write(
+          project,
+          "package.json",
+          JSON.stringify({
+            name: project,
+            scripts: {
+              build: `echo ${project}`,
+              "contract:openapi": `croco-openapi-spec --title "${project} API"`,
+              "contract:verify": "pnpm contract:diff",
+              "project-map:check": "croco project map --check",
+            },
+          }),
+        );
+        write(project, "apps/api/src/index.ts", `export const name = "${project}";\n`);
+        write(project, "node_modules/dependency/index.js", project);
+      }
+      write("goal-app", "croco.app.json", JSON.stringify({ goal: "internal-tool" }));
+      write("other-app", "apps/api/src/extra.ts", "export {};\n");
+
+      const fingerprint = (project: string) => [
+        ...fingerprintGeneratedProject(join(root, project), project),
+      ];
+      expect(
+        fingerprint("goal-app")
+          .map(([path]) => path)
+          .sort(),
+      ).toEqual(["apps/api/src/index.ts", "package.json"]);
+      expect(new Map(fingerprint("goal-app"))).toEqual(new Map(fingerprint("starter-app")));
+      expect(new Map(fingerprint("other-app"))).not.toEqual(new Map(fingerprint("starter-app")));
+      const contractScripts = readGeneratedContractScripts(join(root, "goal-app"), "goal-app");
+      for (const scriptName of ["contract:openapi", "contract:verify", "project-map:check"]) {
+        expect(contractScripts).toContain(JSON.stringify(scriptName));
+      }
+      expect(contractScripts).not.toContain(JSON.stringify("build"));
+      expect(contractScripts).not.toContain("goal-app");
+      expect(contractScripts).toBe(
+        readGeneratedContractScripts(join(root, "starter-app"), "starter-app"),
+      );
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("fails a case that relied on a case that did not pass", () => {
+    const reuse = new Map([
+      ["goal", { commandsProvenBy: "starter" }],
+      ["deployment", { driftCanariesProvenBy: "starter" }],
+      ["already-failed", { commandsProvenBy: "starter" }],
+    ]);
+    const statusOf = (statuses: Record<string, "passed" | "failed">) => (name: string) =>
+      statuses[name];
+
+    expect(
+      findCasesWithFailedProofSource(
+        reuse,
+        statusOf({
+          goal: "passed",
+          deployment: "passed",
+          "already-failed": "failed",
+          starter: "failed",
+        }),
+      ),
+    ).toEqual([
+      { caseName: "goal", failedSource: "starter" },
+      { caseName: "deployment", failedSource: "starter" },
+    ]);
+    expect(
+      findCasesWithFailedProofSource(
+        reuse,
+        statusOf({
+          goal: "passed",
+          deployment: "passed",
+          "already-failed": "failed",
+          starter: "passed",
+        }),
+      ),
+    ).toEqual([]);
   });
 
   it("installs Chromium before browser-backed goal tests", () => {
