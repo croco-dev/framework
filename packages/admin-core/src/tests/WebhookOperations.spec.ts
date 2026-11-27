@@ -218,6 +218,11 @@ describe("outbound webhook operations contracts", () => {
       'headers=[[redacted], "Content-Type"="text/plain"]',
     ],
     [
+      "folded signature assignment with a quoted version label",
+      'headers=[webhook-signature=v1=fixture-first, "v2"=\r\n  "fixture-second", "Content-Type"="text/plain"]',
+      'headers=[[redacted], "Content-Type"="text/plain"]',
+    ],
+    [
       "authorization at the end of a quoted diagnostic message",
       '{"message":"upstream Authorization=Bearer fixture-message","status":503}',
       '{"message":"upstream [redacted]","status":503}',
