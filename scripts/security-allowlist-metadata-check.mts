@@ -10,6 +10,14 @@ import {
   readGeneratedTemplateSecretAllowlistsFromMetadata,
   type GeneratedTemplateSecretAllowlistEntry,
 } from "../packages/create-croco-app/src/secret-placeholder-policy.ts";
+import {
+  findOverdueReviews,
+  GENERATED_TEMPLATE_ALLOWLISTS_POINTER,
+  NO_REVIEW_DEADLINE,
+  readGeneratedTemplateReviewDeadlines,
+  readSecurityPolicyEnforcement,
+  reportDeferredSecurityFindings,
+} from "./security-policy-enforcement.mts";
 
 type Options = {
   readonly explicitGitleaksConfigPath: boolean;
@@ -21,8 +29,6 @@ type Options = {
   readonly today: string;
   readonly workspacePath: string;
 };
-
-type SecurityPolicyEnforcement = "enforce" | "warn";
 
 type Violation = {
   readonly message: string;
@@ -268,9 +274,16 @@ function readMetadata(
   );
   const generatedTemplateAllowlists = readGeneratedTemplateSecretAllowlistsFromMetadata(
     root,
-    today,
+    NO_REVIEW_DEADLINE,
   );
   violations.push(...generatedTemplateAllowlists.violations);
+  violations.push(
+    ...findOverdueReviews(
+      readGeneratedTemplateReviewDeadlines(root),
+      GENERATED_TEMPLATE_ALLOWLISTS_POINTER,
+      today,
+    ).map((review) => ({ ...review, staleReview: true as const })),
+  );
 
   return {
     auditIgnores: [...auditIgnoreGhsas, ...auditIgnoreCves],
@@ -1362,25 +1375,6 @@ function validateGeneratedTemplateMetadata(
   }
 }
 
-function readSecurityPolicyEnforcement(): SecurityPolicyEnforcement {
-  const value = env.CROCO_SECURITY_POLICY_ENFORCEMENT;
-  if (value === undefined || value === "" || value === "enforce") {
-    return "enforce";
-  }
-  if (value === "warn") {
-    return "warn";
-  }
-  throw new Error(`CROCO_SECURITY_POLICY_ENFORCEMENT must be enforce or warn, received ${value}`);
-}
-
-function printDeferredStaleReviews(staleReviews: readonly Violation[]): void {
-  for (const review of staleReviews) {
-    log(
-      `::warning title=Security exception review overdue::${review.message}. The Release workflow fails until it is reviewed. ${review.recovery}`,
-    );
-  }
-}
-
 function printResult(
   violations: readonly Violation[],
   effectiveAuditIgnores: readonly string[],
@@ -1660,7 +1654,7 @@ function duplicateValues(values: readonly string[]): readonly string[] {
 
 function main(): void {
   const violations: Violation[] = [];
-  const enforcement = readSecurityPolicyEnforcement();
+  const enforcement = readSecurityPolicyEnforcement(env.CROCO_SECURITY_POLICY_ENFORCEMENT);
   const options = parseArgs(argv.slice(2));
   const metadata = readMetadata(options.metadataPath, options.today, violations);
   validateMetadataConfig(options, metadata, violations);
@@ -1675,7 +1669,10 @@ function main(): void {
   const deferred =
     enforcement === "warn" ? violations.filter((violation) => violation.staleReview) : [];
   const blocking = violations.filter((violation) => !deferred.includes(violation));
-  printDeferredStaleReviews(deferred);
+  reportDeferredSecurityFindings(
+    "Security exception reviews",
+    deferred.map((review) => `${review.message}. ${review.recovery}`),
+  );
   printResult(
     blocking,
     effectiveAuditIgnores,

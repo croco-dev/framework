@@ -125,6 +125,39 @@ describe("generated-secret-placeholder-policy.mts", () => {
     expect(result.stdout).toContain("1 generated template allowlists");
   });
 
+  it.each([
+    ["enforce", 1],
+    ["warn", 0],
+  ] as const)(
+    "applies %s enforcement to an overdue generated-template allowlist review",
+    (enforcement, status) => {
+      const root = createTempRoot();
+      writeRepo(root, {
+        metadata: metadataFixture({
+          generatedTemplateAllowlists: [
+            {
+              pathPattern: "^templates/fixture\\.env$",
+              matchPattern: "^POLAR_ACCESS_TOKEN=",
+              owner: "security",
+              reason: "Intentional scanner fixture for generated template allowlist tests.",
+              reviewBy: "2026-07-02",
+            },
+          ],
+        }),
+        templateFiles: {
+          "templates/fixture.env": "POLAR_ACCESS_TOKEN=polar_live_token_1234567890\n",
+        },
+      });
+
+      const result = runScript(root, ["templates"], enforcement);
+
+      expect(result.status).toBe(status);
+      expect(result.stdout).toContain(
+        "secretScan.generatedTemplates.allowlists[0].reviewBy is stale (2026-07-02 is before 2026-07-03)",
+      );
+    },
+  );
+
   it("reports malformed security allowlist metadata as a policy violation", () => {
     const root = createTempRoot();
     writeRepo(root, {
@@ -199,7 +232,11 @@ function metadataFixture(
   };
 }
 
-function runScript(root: string, scanPaths: readonly string[] = ["templates"]): ScriptResult {
+function runScript(
+  root: string,
+  scanPaths: readonly string[] = ["templates"],
+  enforcement = "enforce",
+): ScriptResult {
   const result = spawnSync(
     "node",
     [
@@ -213,6 +250,7 @@ function runScript(root: string, scanPaths: readonly string[] = ["templates"]): 
     ],
     {
       encoding: "utf-8",
+      env: { ...process.env, CROCO_SECURITY_POLICY_ENFORCEMENT: enforcement },
       timeout: 10_000,
     },
   );

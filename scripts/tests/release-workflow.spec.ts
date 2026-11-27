@@ -318,6 +318,11 @@ describe("Release PR authentication contract", () => {
     assertReleasePrAuthenticationContract(workflow);
   });
 
+  it("keeps the publish verification on the default enforcing security policy", () => {
+    // CI downgrades dated security findings to warnings; the Release workflow is where they block.
+    expect(workflow).not.toContain("CROCO_SECURITY_POLICY_ENFORCEMENT");
+  });
+
   it("rejects malformed and duplicate-key YAML", () => {
     const malformed = workflow.replace("\njobs:\n", "\njobs\n");
     const duplicate = `${workflow}\npermissions:\n  contents: write\n`;

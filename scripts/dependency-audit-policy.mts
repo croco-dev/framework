@@ -1,6 +1,11 @@
 #!/usr/bin/env node
 
 import { compareStrings } from "../tooling/compareStrings.mjs";
+import {
+  readSecurityPolicyEnforcement,
+  reportDeferredSecurityFindings,
+  type SecurityPolicyEnforcement,
+} from "./security-policy-enforcement.mts";
 
 import { spawnSync } from "node:child_process";
 import {
@@ -95,8 +100,6 @@ type MetadataEntry = {
   readonly valid: boolean;
   readonly errors: readonly string[];
 };
-
-export type SecurityPolicyEnforcement = "enforce" | "warn";
 
 type ConfiguredSuppression = {
   readonly id: string;
@@ -272,21 +275,6 @@ export function runDependencyAuditPolicy(options: RunOptions = {}): PolicyResult
     staleReviews,
     violations,
   };
-}
-
-export function readSecurityPolicyEnforcement(
-  value: string | undefined,
-): SecurityPolicyEnforcement {
-  if (value === undefined || value === "" || value === "enforce") {
-    return "enforce";
-  }
-  if (value === "warn") {
-    return "warn";
-  }
-  throw new DependencyAuditPolicyProblem(
-    `CROCO_SECURITY_POLICY_ENFORCEMENT must be enforce or warn, received ${value}`,
-    "BadRequest",
-  );
 }
 
 function parseArgs(args: readonly string[]): RunOptions {
@@ -1571,23 +1559,17 @@ function isValidDate(value: string): boolean {
 }
 
 function writeDeferredWarnings(result: PolicyResult): void {
-  const deferred = result.blockingFindings.length + result.staleReviews.length;
-  if (deferred === 0) {
-    stdout.write("dependency-audit-policy: passed\n");
-    return;
-  }
-  for (const finding of result.blockingFindings) {
-    stdout.write(
-      `::warning title=Dependency audit deferred to release::${displayAdvisoryId(finding.advisory)} ${finding.advisory.module_name ?? "unknown"} via ${finding.path} blocks the Release workflow until it is fixed or reviewed.\n`,
-    );
-  }
-  for (const review of result.staleReviews) {
-    stdout.write(
-      `::warning title=Audit exception review overdue::${review}; the Release workflow fails until the exception is reviewed or removed.\n`,
-    );
-  }
+  reportDeferredSecurityFindings("Dependency audit policy", [
+    ...result.blockingFindings.map(
+      (finding) =>
+        `${displayAdvisoryId(finding.advisory)} ${finding.advisory.module_name ?? "unknown"} via ${finding.path} is an unreviewed ${finding.advisory.severity ?? "unknown"} finding.`,
+    ),
+    ...result.staleReviews.map((review) => `${review}.`),
+  ]);
   stdout.write(
-    `dependency-audit-policy: passed with deferred release blockers blocking=${result.blockingFindings.length} stale=${result.staleReviews.length}\n`,
+    result.blockingFindings.length + result.staleReviews.length === 0
+      ? "dependency-audit-policy: passed\n"
+      : `dependency-audit-policy: passed with deferred release blockers blocking=${result.blockingFindings.length} stale=${result.staleReviews.length}\n`,
   );
 }
 

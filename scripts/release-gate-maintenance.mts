@@ -132,6 +132,7 @@ export const RELEASE_GATE_SUPPORT_PATHS = [
   "scripts/release-spine-evidence.mts",
   "scripts/release-workflow-only.mjs",
   "scripts/security-gitleaks-smoke.mts",
+  "scripts/security-policy-enforcement.mts",
   "scripts/test-clock-check.mts",
   "scripts/test-evidence-runtime.mts",
   "scripts/turbo-canonical-cache.mts",

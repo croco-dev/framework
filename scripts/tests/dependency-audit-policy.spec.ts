@@ -7,11 +7,11 @@ import { dirname, join, resolve } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { parse, parseAllDocuments } from "yaml";
 
+import { runDependencyAuditPolicy, runPnpmAudit } from "../dependency-audit-policy.mts";
 import {
   readSecurityPolicyEnforcement,
-  runDependencyAuditPolicy,
-  runPnpmAudit,
-} from "../dependency-audit-policy.mts";
+  reportDeferredSecurityFindings,
+} from "../security-policy-enforcement.mts";
 
 const tempRepos: string[] = [];
 let advisoryId = 0;
@@ -1540,6 +1540,21 @@ describe("dependency-audit-policy.mts", () => {
     });
 
     expect(result.exitCode).toBe(1);
+  });
+
+  it("keeps deferred findings in the job summary because passing check output is discarded", () => {
+    const summary = join(createRepo(), "summary.md");
+    writeFileSync(summary, "");
+    const stdoutWrite = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+
+    reportDeferredSecurityFindings("Dependency audit policy", ["GHSA-1 runtime-lib"], summary);
+    reportDeferredSecurityFindings("Dependency audit policy", [], summary);
+
+    expect(readFileSync(summary, "utf-8")).toContain(
+      "### Dependency audit policy: deferred to the Release workflow",
+    );
+    expect(readFileSync(summary, "utf-8")).toContain("- GHSA-1 runtime-lib");
+    expect(stdoutWrite).toHaveBeenCalledTimes(1);
   });
 
   it("reads the enforcement mode from the environment and rejects unknown values", () => {

@@ -809,9 +809,38 @@ describe("security-allowlist-metadata-check.mts", () => {
 
     expect(result.status).toBe(0);
     expect(result.stdout).toContain(
-      "::warning title=Security exception review overdue::audit.ignoreGhsas[0].reviewBy is stale (2026-07-02 is before 2026-07-03)",
+      "::warning title=Security exception reviews deferred to release::audit.ignoreGhsas[0].reviewBy is stale (2026-07-02 is before 2026-07-03)",
     );
     expect(result.stdout).toContain("security-allowlist-metadata: passed");
+  });
+
+  it("defers an overdue generated-template review and keeps its pointer under warn enforcement", () => {
+    const root = createTempRoot();
+    writeRepo(root, {
+      metadata: metadataFixture({
+        generatedTemplateAllowlists: [
+          { reviewBy: "2027-01-31" },
+          {
+            pathPattern: "^templates/fixture\\.env$",
+            matchPattern: "^POLAR_ACCESS_TOKEN=",
+            owner: "security",
+            reason: "Intentional scanner fixture.",
+            reviewBy: "2026-07-02",
+          },
+        ],
+      }),
+    });
+
+    const warn = runScriptWithEnforcement(root, "warn");
+    const enforce = runScript(root);
+
+    const stale =
+      "secretScan.generatedTemplates.allowlists[1].reviewBy is stale (2026-07-02 is before 2026-07-03)";
+    expect(warn.stdout).toContain(`deferred to release::${stale}`);
+    expect(warn.stdout).not.toContain(`- ${stale}`);
+    expect(enforce.stdout).toContain(`- ${stale}`);
+    expect(warn.status).toBe(1);
+    expect(warn.stdout).toContain("secretScan.generatedTemplates.allowlists[0]");
   });
 
   it("keeps missing review metadata blocking under warn enforcement", () => {

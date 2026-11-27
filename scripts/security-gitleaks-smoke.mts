@@ -320,7 +320,8 @@ function checkMetadata(name: string, repository: string): number | null {
   const metadata = spawnSync(
     process.execPath,
     ["--experimental-strip-types", metadataScript, "--root", repository],
-    { encoding: "utf-8" },
+    // The fixtures assert the blocking release behavior, including the stale-date failure.
+    { encoding: "utf-8", env: { ...process.env, CROCO_SECURITY_POLICY_ENFORCEMENT: "enforce" } },
   );
   writeFileSync(join(outputDir, `${name}-metadata.txt`), `${metadata.stdout}${metadata.stderr}`);
   return metadata.status;

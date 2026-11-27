@@ -29,8 +29,8 @@ env:
   # renovate: datasource=docker depName=ghcr.io/gitleaks/gitleaks
   GITLEAKS_IMAGE: ghcr.io/gitleaks/gitleaks:v8.23.0@sha256:b4b81841085b4060054a71155500a340e3d2e2a5995c186546649e3efd80b84e
   CROCO_CACHEABLE_FAILURE_CLASS: ${{ inputs.cacheable_failure_class || 'none' }}
-  # New advisories and overdue exception reviews arrive by date, not by diff. CI reports
-  # them as warnings; the Release workflow and the daily policy audit enforce them.
+  # New advisories and overdue exception reviews arrive by date, not by diff. CI lists them in
+  # the job summary; the Release workflow and the daily policy audit enforce them.
   CROCO_SECURITY_POLICY_ENFORCEMENT: warn
 
 # Required jobs run with always(), so a shared pull request group would hold a new push
