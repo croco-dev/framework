@@ -6,7 +6,7 @@
       "classification": "pure-contract",
       "reason": "Stop compiling Problem declaration source locations into the packaged registry so that moving a declaration no longer rewrites the module every dependent package builds against.",
       "files": {
-        "packages/problems-core/src/generated/problem-code-registry.ts": "fdff8ff32d41e4a157f6fd48ba86495de3c067fb4f46e2f13de579657063bf88",
+        "packages/problems-core/src/generated/problem-code-registry.ts": "d562ccf937b9e613f065be023544905d9ab74bc388889bdfa91f24aa6749439f",
         "packages/problems-core/src/libs/ProblemRegistry.ts": "14f6faedddbc6af7b4882afa3f3de745a78ffc9aa9df0c475704c8235d6354ba"
       },
       "catalogRuntimes": [],

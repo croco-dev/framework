@@ -5697,10 +5697,14 @@ export function createPackagedProblemRegistry(registry: ProblemCodeRegistry) {
     problems: registry.problems.map(({ sources: _sources, ...problem }) => problem),
     ...(dynamicCodeFactories
       ? {
-          dynamicCodeFactories: dynamicCodeFactories.map(({ className, reason }) => ({
-            className,
-            reason,
-          })),
+          // Discovery follows declaration order; sorting keeps the module unchanged when declarations swap.
+          dynamicCodeFactories: dynamicCodeFactories
+            .map(({ className, reason }) => ({ className, reason }))
+            .sort(
+              (left, right) =>
+                compareStrings(left.className, right.className) ||
+                compareStrings(left.reason, right.reason),
+            ),
         }
       : {}),
   };

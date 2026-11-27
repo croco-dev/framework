@@ -18,6 +18,7 @@ import {
   runProblemRegistryCheck,
 } from "../problem-registry.mts";
 import type { ProblemCodeRegistry } from "../problem-registry.mts";
+import { CROCO_PROBLEM_CODE_REGISTRY } from "../../packages/problems-core/src/generated/problem-code-registry.ts";
 import { assertProblemCodeRegistryValid } from "../../packages/problems-core/src/libs/ProblemRegistry.ts";
 
 const tempRepos: string[] = [];
@@ -438,12 +439,21 @@ new GenericProblem("alpha/known", ProblemCategory.NotFound);
 
   it("keeps the packaged registry module unchanged when declarations only move", () => {
     const repo = createTempRepo();
-    const declarations = `import { Problem, ProblemCategory } from "@croco/problems-core";
-class GenericProblem extends Problem {
+    const genericProblem = `class GenericProblem extends Problem {
   constructor(code: string, category: ProblemCategory) { super(code, category, "failed"); }
 }
-new GenericProblem("alpha/known", ProblemCategory.NotFound);
 `;
+    const otherProblem = `class OtherProblem extends Problem {
+  constructor(code: string, category: ProblemCategory) { super(code, category, "failed"); }
+}
+`;
+    const declare = (
+      classes: string,
+    ) => `import { Problem, ProblemCategory } from "@croco/problems-core";
+${classes}new GenericProblem("alpha/known", ProblemCategory.NotFound);
+new OtherProblem("alpha/other", ProblemCategory.NotFound);
+`;
+    const declarations = declare(`${genericProblem}${otherProblem}`);
     const packagedRegistryPath = join(
       repo,
       "packages/problems-core/src/generated/problem-code-registry.ts",
@@ -463,9 +473,49 @@ new GenericProblem("alpha/known", ProblemCategory.NotFound);
 
     expect(sourceLine()).toBe((originalLine ?? Number.NaN) + 2);
     expect(readFileSync(packagedRegistryPath, "utf-8")).toBe(packagedRegistry);
+
+    writeFile(repo, "packages/alpha/src/problems.ts", declare(`${otherProblem}${genericProblem}`));
+    expect(runProblemRegistryCheck(repo, "write").diagnostics).toEqual([]);
+
+    expect(readRegistry(repo).dynamicCodeFactories?.map(({ className }) => className)).toEqual([
+      "OtherProblem",
+      "GenericProblem",
+    ]);
+    expect(readFileSync(packagedRegistryPath, "utf-8")).toBe(packagedRegistry);
     expect(packagedRegistry).toContain('"alpha/known"');
     expect(packagedRegistry).toContain('"GenericProblem"');
+    expect(packagedRegistry).toContain('"OtherProblem"');
     expect(packagedRegistry).not.toContain("packages/alpha/src/problems.ts");
+  });
+
+  it("packages every committed registry field except declaration locations", () => {
+    const committed = readRegistry(resolve("."));
+    const { problems, dynamicCodeFactories, ...committedRoot } = committed;
+    const {
+      problems: packagedProblems,
+      dynamicCodeFactories: packagedFactories,
+      ...packagedRoot
+    } = CROCO_PROBLEM_CODE_REGISTRY;
+
+    expect(packagedRoot).toEqual(committedRoot);
+    expect(packagedProblems).toHaveLength(problems.length);
+    problems.forEach((problem, index) => {
+      const packaged: Record<string, unknown> = { ...packagedProblems[index] };
+      for (const [field, value] of Object.entries(problem)) {
+        if (field === "sources") expect(packaged).not.toHaveProperty(field);
+        else expect(packaged[field], `${problem.code}.${field}`).toEqual(value);
+      }
+      expect(Object.keys(packaged).sort()).toEqual(
+        Object.keys(problem)
+          .filter((field) => field !== "sources")
+          .sort(),
+      );
+    });
+    const identity = ({ className, reason }: { className: string; reason: string }) =>
+      `${className}\u0000${reason}`;
+    expect((packagedFactories ?? []).map(identity).sort()).toEqual(
+      (dynamicCodeFactories ?? []).map(identity).sort(),
+    );
   });
 
   it("checks aliased and transitively inherited concrete classes but permits abstract bases", () => {

@@ -24244,27 +24244,15 @@ export type CrocoProblemRegistry = {
   ];
   readonly dynamicCodeFactories: readonly [
     {
+      readonly className: "ContractTestingProblem";
+      readonly reason: "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.";
+    },
+    {
       readonly className: "CustomerExplorerProblem";
       readonly reason: "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.";
     },
     {
-      readonly className: "NetOutcomeProblem";
-      readonly reason: "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.";
-    },
-    {
-      readonly className: "SeoWorkbenchProblem";
-      readonly reason: "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.";
-    },
-    {
-      readonly className: "TargetingImpactProblem";
-      readonly reason: "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.";
-    },
-    {
       readonly className: "DataCommandProblem";
-      readonly reason: "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.";
-    },
-    {
-      readonly className: "TrialProblem";
       readonly reason: "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.";
     },
     {
@@ -24273,6 +24261,26 @@ export type CrocoProblemRegistry = {
     },
     {
       readonly className: "ExecutionProblem";
+      readonly reason: "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.";
+    },
+    {
+      readonly className: "GenericProblem";
+      readonly reason: "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.";
+    },
+    {
+      readonly className: "GraphQLAuthenticationProblem";
+      readonly reason: "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.";
+    },
+    {
+      readonly className: "GraphQLAuthorizationProblem";
+      readonly reason: "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.";
+    },
+    {
+      readonly className: "GraphQLInternalError";
+      readonly reason: "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.";
+    },
+    {
+      readonly className: "GraphQLValidationProblem";
       readonly reason: "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.";
     },
     {
@@ -24292,35 +24300,15 @@ export type CrocoProblemRegistry = {
       readonly reason: "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.";
     },
     {
+      readonly className: "NetOutcomeProblem";
+      readonly reason: "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.";
+    },
+    {
+      readonly className: "OutboundWebhookProblem";
+      readonly reason: "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.";
+    },
+    {
       readonly className: "RecordedEndpointFailureProblem";
-      readonly reason: "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.";
-    },
-    {
-      readonly className: "GenericProblem";
-      readonly reason: "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.";
-    },
-    {
-      readonly className: "GraphQLValidationProblem";
-      readonly reason: "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.";
-    },
-    {
-      readonly className: "GraphQLAuthorizationProblem";
-      readonly reason: "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.";
-    },
-    {
-      readonly className: "GraphQLAuthenticationProblem";
-      readonly reason: "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.";
-    },
-    {
-      readonly className: "GraphQLInternalError";
-      readonly reason: "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.";
-    },
-    {
-      readonly className: "TrpcFilterProblem";
-      readonly reason: "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.";
-    },
-    {
-      readonly className: "TenantIsolationProblem";
       readonly reason: "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.";
     },
     {
@@ -24328,15 +24316,27 @@ export type CrocoProblemRegistry = {
       readonly reason: "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.";
     },
     {
-      readonly className: "ContractTestingProblem";
+      readonly className: "SeoWorkbenchProblem";
+      readonly reason: "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.";
+    },
+    {
+      readonly className: "TargetingImpactProblem";
+      readonly reason: "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.";
+    },
+    {
+      readonly className: "TenantIsolationProblem";
+      readonly reason: "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.";
+    },
+    {
+      readonly className: "TrialProblem";
+      readonly reason: "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.";
+    },
+    {
+      readonly className: "TrpcFilterProblem";
       readonly reason: "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.";
     },
     {
       readonly className: "WarehouseContractError";
-      readonly reason: "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.";
-    },
-    {
-      readonly className: "OutboundWebhookProblem";
       readonly reason: "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.";
     },
     {
@@ -52630,32 +52630,17 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
   ],
   dynamicCodeFactories: [
     {
+      className: "ContractTestingProblem",
+      reason:
+        "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.",
+    },
+    {
       className: "CustomerExplorerProblem",
       reason:
         "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.",
     },
     {
-      className: "NetOutcomeProblem",
-      reason:
-        "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.",
-    },
-    {
-      className: "SeoWorkbenchProblem",
-      reason:
-        "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.",
-    },
-    {
-      className: "TargetingImpactProblem",
-      reason:
-        "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.",
-    },
-    {
       className: "DataCommandProblem",
-      reason:
-        "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.",
-    },
-    {
-      className: "TrialProblem",
       reason:
         "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.",
     },
@@ -52666,6 +52651,31 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
     },
     {
       className: "ExecutionProblem",
+      reason:
+        "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.",
+    },
+    {
+      className: "GenericProblem",
+      reason:
+        "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.",
+    },
+    {
+      className: "GraphQLAuthenticationProblem",
+      reason:
+        "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.",
+    },
+    {
+      className: "GraphQLAuthorizationProblem",
+      reason:
+        "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.",
+    },
+    {
+      className: "GraphQLInternalError",
+      reason:
+        "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.",
+    },
+    {
+      className: "GraphQLValidationProblem",
       reason:
         "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.",
     },
@@ -52690,42 +52700,17 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
         "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.",
     },
     {
+      className: "NetOutcomeProblem",
+      reason:
+        "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.",
+    },
+    {
+      className: "OutboundWebhookProblem",
+      reason:
+        "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.",
+    },
+    {
       className: "RecordedEndpointFailureProblem",
-      reason:
-        "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.",
-    },
-    {
-      className: "GenericProblem",
-      reason:
-        "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.",
-    },
-    {
-      className: "GraphQLValidationProblem",
-      reason:
-        "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.",
-    },
-    {
-      className: "GraphQLAuthorizationProblem",
-      reason:
-        "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.",
-    },
-    {
-      className: "GraphQLAuthenticationProblem",
-      reason:
-        "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.",
-    },
-    {
-      className: "GraphQLInternalError",
-      reason:
-        "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.",
-    },
-    {
-      className: "TrpcFilterProblem",
-      reason:
-        "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.",
-    },
-    {
-      className: "TenantIsolationProblem",
       reason:
         "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.",
     },
@@ -52735,17 +52720,32 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
         "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.",
     },
     {
-      className: "ContractTestingProblem",
+      className: "SeoWorkbenchProblem",
+      reason:
+        "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.",
+    },
+    {
+      className: "TargetingImpactProblem",
+      reason:
+        "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.",
+    },
+    {
+      className: "TenantIsolationProblem",
+      reason:
+        "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.",
+    },
+    {
+      className: "TrialProblem",
+      reason:
+        "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.",
+    },
+    {
+      className: "TrpcFilterProblem",
       reason:
         "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.",
     },
     {
       className: "WarehouseContractError",
-      reason:
-        "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.",
-    },
-    {
-      className: "OutboundWebhookProblem",
       reason:
         "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.",
     },
