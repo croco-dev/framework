@@ -118,6 +118,30 @@ describe("Turbo task contract", () => {
     });
   });
 
+  it("hashes or reruns core coverage tests that read files outside their package", () => {
+    const coverage = turbo.tasks["test:coverage"];
+    const withInputs = (...inputs: string[]) => ({
+      ...coverage,
+      inputs: [...(coverage?.inputs ?? []), ...inputs],
+    });
+    const overrides = Object.fromEntries(
+      Object.entries(turbo.tasks).filter(([name]) => name.endsWith("#test:coverage")),
+    );
+
+    expect(overrides).toEqual({
+      "@croco/openapi-spec#test:coverage": withInputs(
+        "$TURBO_ROOT$/scripts/fixtures/protocol-codegen/**",
+      ),
+      "@croco/rpc-codegen#test:coverage": withInputs(
+        "$TURBO_ROOT$/scripts/fixtures/protocol-codegen/**",
+        "$TURBO_ROOT$/test-fixtures/**",
+      ),
+      // Their tests read other packages' sources and manifests, which no input list keeps complete.
+      "@croco/protocols-core#test:coverage": { ...coverage, cache: false },
+      "@croco/cli#test:coverage": { ...coverage, cache: false },
+    });
+  });
+
   it("forwards the explicit executable-evidence destination to test reporters", () => {
     expect(turbo.globalPassThroughEnv).toContain("CROCO_TEST_EVIDENCE_DIR");
     expect(turbo.globalPassThroughEnv).toContain("CROCO_TEST_EVIDENCE_RUN_ID");

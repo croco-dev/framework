@@ -103,6 +103,7 @@ Selection candidates come from executable repository signals:
 
 Add a package to core coverage by updating `CORE_COVERAGE_PACKAGES` in `scripts/core-coverage-config.mts`, copying the `test:coverage` script from another core package into its `package.json`, running `pnpm test:coverage:core`, adding the measured row to `ci-reports/coverage/core-baseline.txt`, then rerunning `pnpm test:coverage:core:warning`.
 `pnpm test:coverage:core` runs each package's `test:coverage` as a cached Turbo task, so a package whose sources, tests and dependencies are unchanged restores its `coverage/coverage-summary.json` instead of running again.
+A core package whose tests read files outside the package must declare them: `turbo.json` adds the shared protocol fixtures to the `openapi-spec` and `rpc-codegen` coverage inputs, and never caches `cli` and `protocols-core` coverage, whose tests read other packages' sources and manifests.
 A cache hit restores only that summary, not the HTML or `coverage-final.json` report; run `pnpm --filter <package> test:coverage` to regenerate the full report for one package.
 If the package is intentionally deferred, record a temporary reason in `TEMPORARY_CORE_COVERAGE_SELECTION_EXCLUSIONS` in `scripts/core-coverage-warning-check.mts` so the report preserves the decision instead of silently dropping the candidate.
 
