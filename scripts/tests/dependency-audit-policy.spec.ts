@@ -1379,6 +1379,42 @@ describe("dependency-audit-policy.mts", () => {
     expect(readFileSync(result.reportPath, "utf-8")).toContain("- Enforcement: warn");
   });
 
+  it("keeps findings covered by malformed review metadata blocking under warn enforcement", () => {
+    const repo = createRepo();
+    writePackage(repo, "packages/runtime-core/package.json", {
+      name: "@croco/runtime-core",
+      version: "0.0.1",
+      dependencies: { "runtime-lib": "1.0.0" },
+    });
+    writeMetadata(repo, {
+      audit: {
+        ignoreGhsas: [
+          { id: "GHSA-2345-2345-2345", reason: "Owner is missing.", reviewDate: "2027-01-31" },
+        ],
+      },
+      schemaVersion: 1,
+    });
+    writeAudit(repo, [
+      advisory({
+        ghsa: "GHSA-2345-2345-2345",
+        path: "packages__runtime-core>runtime-lib>vulnerable",
+        severity: "high",
+      }),
+    ]);
+
+    const result = runDependencyAuditPolicy({
+      auditJsonPath: "audit.json",
+      enforcement: "warn",
+      rootDir: repo,
+      today: "2026-07-03",
+    });
+
+    expect(result.exitCode).toBe(1);
+    expect(result.blockingFindings).toEqual([
+      expect.objectContaining({ metadataStatus: "invalid" }),
+    ]);
+  });
+
   it("keeps malformed suppressions blocking under warn enforcement", () => {
     const repo = createRepo();
     writePackage(repo, "package.json", {
@@ -1448,6 +1484,7 @@ describe("dependency-audit-policy.mts", () => {
       );
 
       expect(result.status).toBe(status);
+      expect(result.stdout).toContain("GHSA-3456-3456-3456 vulnerable via");
       expect(readFileSync(summary, "utf-8").includes("GHSA-3456-3456-3456")).toBe(summarized);
     },
   );
@@ -1473,7 +1510,12 @@ describe("dependency-audit-policy.mts", () => {
     expect(readSecurityPolicyEnforcement("enforce")).toBe("enforce");
     expect(readSecurityPolicyEnforcement("warn")).toBe("warn");
     expect(() => readSecurityPolicyEnforcement("advisory")).toThrow(
-      "CROCO_SECURITY_POLICY_ENFORCEMENT must be enforce or warn",
+      expect.objectContaining({
+        code: "SECURITY_POLICY_ENFORCEMENT_INVALID",
+        message: expect.stringContaining(
+          "CROCO_SECURITY_POLICY_ENFORCEMENT must be enforce or warn",
+        ),
+      }),
     );
   });
 });

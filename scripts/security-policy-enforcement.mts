@@ -1,6 +1,8 @@
 import { appendFileSync } from "node:fs";
 import { env, stdout } from "node:process";
 
+import { VerificationProblem } from "./verification-problem.mts";
+
 export type SecurityPolicyEnforcement = "enforce" | "warn";
 
 export type ReviewDeadlineEntry = {
@@ -25,7 +27,11 @@ export function readSecurityPolicyEnforcement(
   if (value === "warn") {
     return "warn";
   }
-  throw new Error(`CROCO_SECURITY_POLICY_ENFORCEMENT must be enforce or warn, received ${value}`);
+  throw new VerificationProblem(
+    "SECURITY_POLICY_ENFORCEMENT_INVALID",
+    "configuration",
+    `CROCO_SECURITY_POLICY_ENFORCEMENT must be enforce or warn, received ${value}`,
+  );
 }
 
 export const GENERATED_TEMPLATE_ALLOWLISTS_POINTER = "secretScan.generatedTemplates.allowlists";

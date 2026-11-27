@@ -264,7 +264,12 @@ export function runDependencyAuditPolicy(options: RunOptions = {}): PolicyResult
     violations,
   });
 
-  const enforcedFindings = enforcement === "enforce" ? blockingFindings.length : 0;
+  // Warn mode only defers findings that arrive by date. Exception metadata that is malformed
+  // (stale dates are valid in warn mode) still fails, like any other suppression mistake.
+  const enforcedFindings =
+    enforcement === "enforce"
+      ? blockingFindings.length
+      : blockingFindings.filter((finding) => finding.metadataStatus === "invalid").length;
   return {
     advisoryFindings: findings,
     blockingFindings,
@@ -1558,14 +1563,19 @@ function isValidDate(value: string): boolean {
   return /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(Date.parse(`${value}T00:00:00Z`));
 }
 
-function writeDeferredWarnings(result: PolicyResult): void {
-  reportDeferredSecurityFindings("Dependency audit policy", [
+function describeReleaseBlockers(result: PolicyResult): readonly string[] {
+  return [
+    ...result.violations,
     ...result.blockingFindings.map(
       (finding) =>
-        `${displayAdvisoryId(finding.advisory)} ${finding.advisory.module_name ?? "unknown"} via ${finding.path} is an unreviewed ${finding.advisory.severity ?? "unknown"} finding.`,
+        `${displayAdvisoryId(finding.advisory)} ${finding.advisory.module_name ?? "unknown"} via ${finding.path} is a ${finding.advisory.severity ?? "unknown"} finding with ${finding.metadataStatus} review metadata.`,
     ),
     ...result.staleReviews.map((review) => `${review}.`),
-  ]);
+  ];
+}
+
+function writeDeferredWarnings(result: PolicyResult): void {
+  reportDeferredSecurityFindings("Dependency audit policy", describeReleaseBlockers(result));
   stdout.write(
     result.blockingFindings.length + result.staleReviews.length === 0
       ? "dependency-audit-policy: passed\n"
@@ -1582,6 +1592,9 @@ function main(): void {
     } else if (result.exitCode === 0) {
       stdout.write("dependency-audit-policy: passed\n");
     } else {
+      for (const line of describeReleaseBlockers(result)) {
+        stdout.write(`- ${line}\n`);
+      }
       stdout.write(
         `dependency-audit-policy: failed blocking=${result.blockingFindings.length} violations=${result.violations.length}\n`,
       );

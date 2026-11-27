@@ -144,7 +144,7 @@ describe("generated-secret-placeholder-policy.mts", () => {
         metadata: metadataFixture({
           generatedTemplateAllowlists: [
             {
-              pathPattern: "^templates/fixture\\.env$",
+              pathPattern: "^templates/\\.env$",
               matchPattern: "^POLAR_ACCESS_TOKEN=",
               owner: "security",
               reason: "Intentional scanner fixture for generated template allowlist tests.",
@@ -153,7 +153,7 @@ describe("generated-secret-placeholder-policy.mts", () => {
           ],
         }),
         templateFiles: {
-          "templates/fixture.env": "POLAR_ACCESS_TOKEN=polar_live_token_1234567890\n",
+          "templates/.env": "POLAR_ACCESS_TOKEN=polar_live_token_1234567890\n",
         },
       });
 
