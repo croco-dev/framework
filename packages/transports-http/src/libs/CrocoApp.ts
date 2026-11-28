@@ -26,7 +26,8 @@ import type { Http2Bindings, HttpBindings } from "@hono/node-server";
 import { type Context, type Handler, Hono } from "hono";
 import { getMimeType } from "hono/utils/mime";
 import { CrocoLambdaAdapter, type LambdaHandlerOptions } from "./CrocoLambdaAdapter";
-import { CrocoRouteRegistrar } from "./CrocoRouteRegistrar";
+import { CrocoRouteRegistrar, runMiddlewaresAroundResponse } from "./CrocoRouteRegistrar";
+import { HttpContext } from "./HttpContext";
 import { isGracefulShutdownActive } from "./middleware/GracefulShutdownMiddleware.js";
 import {
   DEV_INSPECTOR_ENDPOINT_PATH,
@@ -765,17 +766,28 @@ export class CrocoApp {
     const staticDir = resolve(options.staticDir);
     const spaFallback = options.spaFallback ?? false;
     const servingOptions = this.resolveStaticFileServingOptions(options);
+    // Controller routes run every global middleware; static documents only take the configured
+    // security headers so the same anti-framing and nosniff policy covers the app shell.
+    const securityHeaderMiddlewares = (this.config.middlewares ?? []).filter((middleware) =>
+      hasSecurityMiddlewareCapability(middleware, "security-headers"),
+    );
+    const withSecurityHeaders = (c: Context, respond: () => Promise<Response>) =>
+      securityHeaderMiddlewares.length === 0
+        ? respond()
+        : runMiddlewaresAroundResponse(new HttpContext(c), securityHeaderMiddlewares, respond);
 
     this.hono.get("*", async (c, next) => {
       const requestPath = this.normalizeRequestPath(c.req.path);
       const filePath = await this.resolveStaticFilePath(staticDir, requestPath);
 
       if (filePath) {
-        return this.respondWithStaticFile(
-          filePath,
-          c.req.raw,
-          servingOptions.cacheControl,
-          servingOptions.streamThresholdBytes,
+        return withSecurityHeaders(c, () =>
+          this.respondWithStaticFile(
+            filePath,
+            c.req.raw,
+            servingOptions.cacheControl,
+            servingOptions.streamThresholdBytes,
+          ),
         );
       }
 
@@ -789,11 +801,13 @@ export class CrocoApp {
         return next();
       }
 
-      return this.respondWithStaticFile(
-        indexPath,
-        c.req.raw,
-        servingOptions.spaFallbackCacheControl,
-        servingOptions.streamThresholdBytes,
+      return withSecurityHeaders(c, () =>
+        this.respondWithStaticFile(
+          indexPath,
+          c.req.raw,
+          servingOptions.spaFallbackCacheControl,
+          servingOptions.streamThresholdBytes,
+        ),
       );
     });
 

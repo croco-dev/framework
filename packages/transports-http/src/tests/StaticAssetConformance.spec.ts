@@ -11,6 +11,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createApp as createCrocoApp } from "../libs/CrocoApp";
 import { ErrorHandler } from "../libs/ErrorHandler";
 import { HealthCheckRegistry } from "../libs/HealthCheckRegistry";
+import { securityHeadersMiddleware } from "../libs/middleware/SecurityHeadersMiddleware";
+import { declareSecurityMiddlewareCapabilities } from "../libs/middleware/SecurityMiddlewareMarker";
+import type { ListenOptions, MiddlewareFunction } from "../libs/types";
 
 vi.mock("@hono/node-server", () => ({
   createAdaptorServer: vi.fn((_options: unknown) => {
@@ -74,14 +77,42 @@ async function createStaticFixture(files: Record<string, string>): Promise<Stati
   };
 }
 
-async function createStaticApp(files: Record<string, string>, spaFallback = true) {
-  const app = createApp({ controllers: [] });
+type StaticAppOptions = {
+  readonly middlewares?: MiddlewareFunction[];
+  readonly listen?: Omit<ListenOptions, "staticDir" | "spaFallback">;
+};
+
+async function createStaticApp(
+  files: Record<string, string>,
+  spaFallback = true,
+  options: StaticAppOptions = {},
+) {
+  const app = createApp({
+    controllers: [],
+    ...(options.middlewares ? { middlewares: options.middlewares } : {}),
+  });
   const fixture = await createStaticFixture(files);
 
-  await app.listen(3000, { staticDir: fixture.directory, spaFallback });
+  await app.listen(3000, { ...options.listen, staticDir: fixture.directory, spaFallback });
 
   return { app, fixture };
 }
+
+function readSecurityHeaders(response: Response) {
+  return {
+    frameOptions: response.headers.get("x-frame-options"),
+    contentTypeOptions: response.headers.get("x-content-type-options"),
+    strictTransportSecurity: response.headers.get("strict-transport-security"),
+    contentSecurityPolicy: response.headers.get("content-security-policy"),
+  };
+}
+
+const CONFIGURED_SECURITY_HEADERS = {
+  frameOptions: "DENY",
+  contentTypeOptions: "nosniff",
+  strictTransportSecurity: "max-age=31536000; includeSubDomains",
+  contentSecurityPolicy: "default-src 'self'",
+};
 
 async function readStaticResponseContract(
   path: string,
@@ -588,4 +619,120 @@ describe("Static asset and SPA fallback conformance", () => {
       }
     },
   );
+
+  it("applies configured security headers to static files and the SPA shell without changing static headers", async () => {
+    const files = {
+      "index.html": SPA_SHELL,
+      "assets/app.js": 'console.log("asset app");',
+    };
+    const secured = await createStaticApp(files, true, {
+      middlewares: [securityHeadersMiddleware({ contentSecurityPolicy: true })],
+    });
+    const plain = await createStaticApp(files);
+    const requests = [
+      ["/", "text/html"],
+      ["/index.html", "text/html"],
+      ["/assets/app.js", "*/*"],
+      ["/settings/billing", "text/html,application/xhtml+xml"],
+    ] as const;
+
+    try {
+      for (const [path, accept] of requests) {
+        const request = () =>
+          new Request(`http://localhost${path}`, { headers: { Accept: accept } });
+        const securedResponse = await secured.app.fetch(request());
+        const plainResponse = await plain.app.fetch(request());
+
+        expect({ path, ...readSecurityHeaders(securedResponse) }).toEqual({
+          path,
+          ...CONFIGURED_SECURITY_HEADERS,
+        });
+        expect({ path, ...readSecurityHeaders(plainResponse) }).toEqual({
+          path,
+          frameOptions: null,
+          contentTypeOptions: null,
+          strictTransportSecurity: null,
+          contentSecurityPolicy: null,
+        });
+        expect(await readStaticResponseContract(path, securedResponse)).toEqual(
+          await readStaticResponseContract(path, plainResponse),
+        );
+      }
+    } finally {
+      await Promise.all([secured.fixture.cleanup(), plain.fixture.cleanup()]);
+    }
+  });
+
+  it("applies configured security headers to conditional, HEAD and streamed static responses", async () => {
+    const { app, fixture } = await createStaticApp(
+      { "index.html": SPA_SHELL, "assets/app.js": 'console.log("asset app");' },
+      true,
+      {
+        middlewares: [securityHeadersMiddleware({ contentSecurityPolicy: true })],
+        listen: { staticStreamThresholdBytes: 0 },
+      },
+    );
+
+    try {
+      const streamed = await app.fetch(new Request("http://localhost/assets/app.js"));
+      const etag = streamed.headers.get("etag") ?? "*";
+      const notModified = await app.fetch(
+        new Request("http://localhost/dashboard", {
+          headers: { Accept: "text/html", "if-none-match": "*" },
+        }),
+      );
+      const head = await app.fetch(
+        new Request("http://localhost/assets/app.js", { method: "HEAD" }),
+      );
+      const conditionalAsset = await app.fetch(
+        new Request("http://localhost/assets/app.js", { headers: { "if-none-match": etag } }),
+      );
+
+      expect(await streamed.text()).toBe('console.log("asset app");');
+      expect(streamed.headers.get("content-length")).toBe("25");
+      expect(notModified.status).toBe(304);
+      expect(head.status).toBe(200);
+      expect(head.headers.get("content-length")).toBe("25");
+      expect(await head.text()).toBe("");
+      expect(conditionalAsset.status).toBe(304);
+      expect(conditionalAsset.headers.get("etag")).toBe(etag);
+
+      for (const response of [streamed, notModified, head, conditionalAsset]) {
+        expect(readSecurityHeaders(response)).toEqual(CONFIGURED_SECURITY_HEADERS);
+      }
+    } finally {
+      await fixture.cleanup();
+    }
+  });
+
+  it("applies headers from wrapped security header middleware but not other global middleware", async () => {
+    const securityHeaders = securityHeadersMiddleware({ frameOptions: "SAMEORIGIN" });
+    const wrappedSecurityHeaders = declareSecurityMiddlewareCapabilities(
+      async (ctx, next) => {
+        ctx.res.headers["Cross-Origin-Opener-Policy"] = "same-origin";
+        return securityHeaders(ctx, next);
+      },
+      ["security-headers"],
+    );
+    const unrelated: MiddlewareFunction = async (ctx, next) => {
+      ctx.res.headers["X-Unrelated-Middleware"] = "applied";
+      await next();
+    };
+    const { app, fixture } = await createStaticApp({ "index.html": SPA_SHELL }, true, {
+      middlewares: [unrelated, wrappedSecurityHeaders],
+    });
+
+    try {
+      const response = await app.fetch(
+        new Request("http://localhost/settings/billing", { headers: { Accept: "text/html" } }),
+      );
+
+      expect(response.status).toBe(200);
+      expect(response.headers.get("x-frame-options")).toBe("SAMEORIGIN");
+      expect(response.headers.get("cross-origin-opener-policy")).toBe("same-origin");
+      expect(response.headers.get("x-unrelated-middleware")).toBeNull();
+    } finally {
+      await fixture.cleanup();
+    }
+  });
 });

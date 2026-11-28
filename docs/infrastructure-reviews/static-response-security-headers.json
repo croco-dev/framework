@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "transports-http",
+      "classification": "runtime-adapter",
+      "reason": "Node listen static serving runs the configured middleware that declares the security-headers capability around static file and SPA fallback responses, so the headers it sets reach HTML documents and assets. Other global middleware, missing-path fall-through and operational routes are unchanged; the middleware chain and header merge used by controller routes moved to module functions and are reused unchanged. No option, export or host lifecycle changes.",
+      "files": {
+        "packages/transports-http/src/libs/CrocoApp.ts": "1a137734dedc43efc00312883cfcfefd4e455c85a064d39ee8e34523964606f3",
+        "packages/transports-http/src/libs/CrocoRouteRegistrar.ts": "01e704c773009b2fec829cf8e597b3993eea42b67dd5042c733e83ca0c19aa75"
+      },
+      "catalogRuntimes": ["node", "lambda"],
+      "profiles": {
+        "kubernetes": {
+          "result": "supported",
+          "reason": "Static files are served only by the Node listen path, which registers the staticDir route; a real local socket test requests a static asset, the HTML document and an SPA fallback path with securityHeadersMiddleware configured.",
+          "providers": ["@hono/node-server", "@croco/transports-http", "@croco/preset-node"],
+          "constraints": [
+            "Local Node host-runtime evidence only; no live Kubernetes deployment or provider certification."
+          ],
+          "references": [
+            "packages/transports-http/src/libs/CrocoApp.ts",
+            "packages/transports-http/src/tests/NodeAdapterSmoke.spec.ts",
+            "packages/transports-http/src/tests/StaticAssetConformance.spec.ts",
+            "packages/presentation-preset/runtime-profiles.json"
+          ],
+          "evidence": {
+            "kind": "host-runtime",
+            "runtime": "node",
+            "path": "packages/transports-http/src/tests/NodeAdapterSmoke.spec.ts",
+            "testName": "NodeAdapter real server smoke sends configured security headers with static files and the SPA shell over a real Node socket",
+            "sha256": "9e1fad6bfb41f28e7388a5a4eb807645c54da1176238eda069e203a08442a2c8"
+          }
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The Lambda adapter dispatches through the fetch handler without calling listen, so the staticDir route is never registered there; controller routes keep the same middleware chain.",
+          "providers": ["@croco/transports-http", "@croco/preset-lambda"],
+          "constraints": [],
+          "references": [
+            "packages/transports-http/src/libs/CrocoLambdaAdapter.ts",
+            "packages/presentation-preset/runtime-profiles.json"
+          ]
+        },
+        "cloudflare": {
+          "result": "unsupported",
+          "host": "workers",
+          "reason": "staticDir serving reads the local filesystem through node:fs behind the Node TCP listener; Worker isolates use their separate fetch transport.",
+          "providers": ["@croco/transports-cloudflare-workers"],
+          "constraints": [
+            "No Node static file serving is claimed for Workers; no Node Container profile is introduced."
+          ],
+          "references": [
+            "packages/transports-http/src/libs/CrocoApp.ts",
+            "packages/transports-cloudflare-workers/src/index.ts",
+            "packages/presentation-preset/runtime-profiles.json"
+          ]
+        }
+      }
+    }
+  ]
+}
