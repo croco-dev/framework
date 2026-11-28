@@ -134,7 +134,7 @@ export class CrocoRouteRegistrar {
                 count: middlewares.length,
               },
             });
-            let response = await this.executeMiddlewares(
+            let response = await executeMiddlewares(
               ctx,
               middlewares,
               async () => {
@@ -165,9 +165,9 @@ export class CrocoRouteRegistrar {
 
                 return handlerResponse;
               },
-              inspector,
+              (record) => this.recordMiddlewareShortCircuit(inspector, record),
             );
-            response = this.withContextResponseHeaders(ctx, response);
+            response = withContextResponseHeaders(ctx, response);
             const responseOutcome = response.status >= 400 ? "failed" : "succeeded";
             this.recordInspectionEvent(inspector, {
               kind: "middleware.end",
@@ -183,7 +183,7 @@ export class CrocoRouteRegistrar {
             return response;
           } catch (error) {
             if (error instanceof Response) {
-              const response = this.withContextResponseHeaders(ctx, error);
+              const response = withContextResponseHeaders(ctx, error);
               const outcome = response.status >= 400 ? "failed" : "succeeded";
               this.recordInspectionEvent(inspector, {
                 kind: "middleware.end",
@@ -202,7 +202,7 @@ export class CrocoRouteRegistrar {
             }
 
             this.recordRouteError(inspector, error);
-            const response = this.withContextResponseHeaders(
+            const response = withContextResponseHeaders(
               ctx,
               this.errorHandler.handleError(error, ctx),
             );
@@ -262,133 +262,6 @@ export class CrocoRouteRegistrar {
     }
   }
 
-  private async executeMiddlewares(
-    ctx: HttpContext,
-    middlewares: MiddlewareFunction[],
-    terminal: () => Promise<Response>,
-    inspector: RuntimeInspector | undefined,
-  ): Promise<Response> {
-    let index = -1;
-    let response: Response | undefined;
-
-    const dispatch = async (nextIndex: number): Promise<Response> => {
-      if (nextIndex <= index) {
-        const middlewareIndex = Math.max(0, nextIndex - 1);
-        const middleware = middlewares[middlewareIndex];
-        this.recordMiddlewareShortCircuit(inspector, {
-          middleware,
-          middlewareIndex,
-          outcome: "failed",
-          reason: "next-called-multiple-times",
-          diagnosticCode: HTTP_MIDDLEWARE_MULTIPLE_NEXT_CODE,
-        });
-        throw ProblemFactory.internalServerError(
-          HTTP_MIDDLEWARE_MULTIPLE_NEXT_CODE,
-          "Middleware called next() multiple times",
-          {
-            extensions: {
-              legacyCode: LEGACY_MIDDLEWARE_MULTIPLE_NEXT_PROBLEM.code,
-            },
-          },
-        );
-      }
-
-      index = nextIndex;
-
-      const middleware = middlewares[nextIndex];
-      if (!middleware) {
-        response = await terminal();
-        return response;
-      }
-
-      let nextCalled = false;
-      let downstreamResponse: Response | undefined;
-      const middlewareResponse = await middleware(ctx, async () => {
-        nextCalled = true;
-        downstreamResponse = preserveBufferedResponse(await dispatch(nextIndex + 1));
-        return downstreamResponse;
-      });
-      if (middlewareResponse instanceof Response) {
-        if (!nextCalled) {
-          this.recordMiddlewareShortCircuit(inspector, {
-            middleware,
-            middlewareIndex: nextIndex,
-            outcome: "succeeded",
-            reason: "response-returned",
-            responseStatus: middlewareResponse.status,
-          });
-        }
-
-        if (downstreamResponse && middlewareResponse !== downstreamResponse) {
-          ctx.clearBufferedResponseBody();
-        }
-        ctx.res.status = middlewareResponse.status;
-        response = middlewareResponse;
-        return middlewareResponse;
-      }
-
-      if (isMiddlewareShortCircuit(middlewareResponse)) {
-        if (nextCalled) {
-          this.recordMiddlewareShortCircuit(inspector, {
-            middleware,
-            middlewareIndex: nextIndex,
-            outcome: "failed",
-            reason: "short-circuit-after-next",
-            diagnosticCode: HTTP_MIDDLEWARE_MISSING_CONTINUATION_CODE,
-          });
-          throw this.createInvalidMiddlewareResultProblem(middleware, nextIndex);
-        }
-
-        response = this.toShortCircuitResponse(ctx);
-        this.recordMiddlewareShortCircuit(inspector, {
-          middleware,
-          middlewareIndex: nextIndex,
-          outcome: "succeeded",
-          reason: middlewareResponse.reason,
-          responseStatus: response.status,
-        });
-        return response;
-      }
-
-      if (nextCalled) {
-        if (downstreamResponse) {
-          return downstreamResponse;
-        }
-
-        if (response) {
-          return response;
-        }
-      }
-
-      this.recordMiddlewareShortCircuit(inspector, {
-        middleware,
-        middlewareIndex: nextIndex,
-        outcome: "failed",
-        reason: middlewareResponse === undefined ? "missing-next" : "invalid-return",
-        diagnosticCode: HTTP_MIDDLEWARE_MISSING_CONTINUATION_CODE,
-      });
-      throw this.createInvalidMiddlewareResultProblem(middleware, nextIndex);
-    };
-
-    return dispatch(0);
-  }
-
-  private createInvalidMiddlewareResultProblem(
-    middleware: MiddlewareFunction,
-    middlewareIndex: number,
-  ): Problem {
-    return ProblemFactory.internalServerError(
-      HTTP_MIDDLEWARE_MISSING_CONTINUATION_CODE,
-      "Middleware must return a Response, return shortCircuit(reason), or call next() exactly once.",
-      {
-        extensions: {
-          middleware: this.describeMiddleware(middleware, middlewareIndex),
-          middlewareIndex,
-        },
-      },
-    );
-  }
-
   private toResponse(ctx: HttpContext, result: unknown, route: CompiledRoute): Response {
     if (result instanceof Response) {
       ctx.res.status = result.status;
@@ -398,47 +271,20 @@ export class CrocoRouteRegistrar {
 
     if (result === undefined || (result === null && !route.hasResponseBody)) {
       ctx.res.status = route.successStatus ?? 204;
-      return this.toEmptyResponse(ctx, ctx.res.status);
+      return toEmptyResponse(ctx, ctx.res.status);
     }
     const successStatus = route.successStatus ?? 200;
-    return ctx.jsonResponse(result, this.isNullBodyStatus(successStatus) ? 200 : successStatus);
-  }
-
-  private toShortCircuitResponse(ctx: HttpContext): Response {
-    if (this.isNullBodyStatus(ctx.res.status)) {
-      return this.toEmptyResponse(ctx, ctx.res.status);
-    }
-
-    return ctx.text("", ctx.res.status);
-  }
-
-  private toEmptyResponse(ctx: HttpContext, status = 204): Response {
-    return new Response(null, {
-      status,
-      headers: ctx.raw.res.headers,
-    });
-  }
-
-  private isNullBodyStatus(status: number): boolean {
-    // Fetch Response can preserve final null-body statuses in the 2xx-5xx constructor range.
-    return status === 204 || status === 205 || status === 304;
+    return ctx.jsonResponse(result, isNullBodyStatus(successStatus) ? 200 : successStatus);
   }
 
   private recordMiddlewareShortCircuit(
     inspector: RuntimeInspector | undefined,
-    input: {
-      readonly middleware: MiddlewareFunction | undefined;
-      readonly middlewareIndex: number;
-      readonly outcome: "succeeded" | "failed";
-      readonly reason: string;
-      readonly responseStatus?: number;
-      readonly diagnosticCode?: string;
-    },
+    input: MiddlewareShortCircuitRecord,
   ): void {
     const middlewareName =
       input.middleware === undefined
         ? `middleware[${input.middlewareIndex}]`
-        : this.describeMiddleware(input.middleware, input.middlewareIndex);
+        : describeMiddleware(input.middleware, input.middlewareIndex);
 
     this.recordInspectionEvent(inspector, {
       kind: "middleware.short-circuit",
@@ -451,71 +297,6 @@ export class CrocoRouteRegistrar {
         ...(input.responseStatus !== undefined ? { responseStatus: input.responseStatus } : {}),
         ...(input.diagnosticCode !== undefined ? { diagnosticCode: input.diagnosticCode } : {}),
       },
-    });
-  }
-
-  private describeMiddleware(middleware: MiddlewareFunction, fallbackIndex: number): string {
-    const securityExportName = getSecurityMiddlewareExportName(middleware);
-    if (securityExportName) {
-      return securityExportName;
-    }
-
-    if (middleware.name.length > 0) {
-      return middleware.name;
-    }
-
-    return `middleware[${fallbackIndex}]`;
-  }
-
-  private withContextResponseHeaders(ctx: HttpContext, response: Response): Response {
-    const headers = new Headers(response.headers);
-    const cookies = new Set(headers.getSetCookie());
-    let hasContextHeaders = false;
-
-    const appendCookie = (value: string) => {
-      if (!cookies.has(value)) {
-        headers.append("set-cookie", value);
-        cookies.add(value);
-      }
-    };
-
-    ctx.raw.res.headers.forEach((value, key) => {
-      if (key === "vary") {
-        mergeVaryHeader(headers, value);
-      } else if (key !== "set-cookie") {
-        headers.set(key, value);
-      }
-      hasContextHeaders = true;
-    });
-
-    for (const cookie of ctx.raw.res.headers.getSetCookie()) {
-      appendCookie(cookie);
-    }
-
-    for (const [key, value] of Object.entries(ctx.res.headers)) {
-      if (key.toLowerCase() === "vary") {
-        mergeVaryHeader(headers, value);
-      } else if (key.toLowerCase() === "set-cookie") {
-        appendCookie(value);
-      } else {
-        headers.set(key, value);
-      }
-      hasContextHeaders = true;
-    }
-
-    if (!hasContextHeaders) {
-      return response;
-    }
-
-    const vary = headers.get("Vary");
-    if (vary) {
-      ctx.raw.header("Vary", vary);
-    }
-
-    return new Response(response.body, {
-      status: response.status,
-      statusText: response.statusText,
-      headers,
     });
   }
 
@@ -806,4 +587,239 @@ export class CrocoRouteRegistrar {
 
 function getErrorName(error: unknown): string {
   return error instanceof Error ? error.name : "NonErrorThrown";
+}
+
+type MiddlewareShortCircuitRecord = {
+  readonly middleware: MiddlewareFunction | undefined;
+  readonly middlewareIndex: number;
+  readonly outcome: "succeeded" | "failed";
+  readonly reason: string;
+  readonly responseStatus?: number;
+  readonly diagnosticCode?: string;
+};
+
+/**
+ * Runs middlewares around a response produced outside a compiled route, such as a static file, and
+ * applies the headers they set on the context to that response.
+ */
+export async function runMiddlewaresAroundResponse(
+  ctx: HttpContext,
+  middlewares: readonly MiddlewareFunction[],
+  respond: () => Promise<Response>,
+): Promise<Response> {
+  const response = await executeMiddlewares(ctx, middlewares, respond, () => undefined);
+
+  return withContextResponseHeaders(ctx, response);
+}
+
+async function executeMiddlewares(
+  ctx: HttpContext,
+  middlewares: readonly MiddlewareFunction[],
+  terminal: () => Promise<Response>,
+  recordShortCircuit: (record: MiddlewareShortCircuitRecord) => void,
+): Promise<Response> {
+  let index = -1;
+  let response: Response | undefined;
+
+  const dispatch = async (nextIndex: number): Promise<Response> => {
+    if (nextIndex <= index) {
+      const middlewareIndex = Math.max(0, nextIndex - 1);
+      const middleware = middlewares[middlewareIndex];
+      recordShortCircuit({
+        middleware,
+        middlewareIndex,
+        outcome: "failed",
+        reason: "next-called-multiple-times",
+        diagnosticCode: HTTP_MIDDLEWARE_MULTIPLE_NEXT_CODE,
+      });
+      throw ProblemFactory.internalServerError(
+        HTTP_MIDDLEWARE_MULTIPLE_NEXT_CODE,
+        "Middleware called next() multiple times",
+        {
+          extensions: {
+            legacyCode: LEGACY_MIDDLEWARE_MULTIPLE_NEXT_PROBLEM.code,
+          },
+        },
+      );
+    }
+
+    index = nextIndex;
+
+    const middleware = middlewares[nextIndex];
+    if (!middleware) {
+      response = await terminal();
+      return response;
+    }
+
+    let nextCalled = false;
+    let downstreamResponse: Response | undefined;
+    const middlewareResponse = await middleware(ctx, async () => {
+      nextCalled = true;
+      downstreamResponse = preserveBufferedResponse(await dispatch(nextIndex + 1));
+      return downstreamResponse;
+    });
+    if (middlewareResponse instanceof Response) {
+      if (!nextCalled) {
+        recordShortCircuit({
+          middleware,
+          middlewareIndex: nextIndex,
+          outcome: "succeeded",
+          reason: "response-returned",
+          responseStatus: middlewareResponse.status,
+        });
+      }
+
+      if (downstreamResponse && middlewareResponse !== downstreamResponse) {
+        ctx.clearBufferedResponseBody();
+      }
+      ctx.res.status = middlewareResponse.status;
+      response = middlewareResponse;
+      return middlewareResponse;
+    }
+
+    if (isMiddlewareShortCircuit(middlewareResponse)) {
+      if (nextCalled) {
+        recordShortCircuit({
+          middleware,
+          middlewareIndex: nextIndex,
+          outcome: "failed",
+          reason: "short-circuit-after-next",
+          diagnosticCode: HTTP_MIDDLEWARE_MISSING_CONTINUATION_CODE,
+        });
+        throw createInvalidMiddlewareResultProblem(middleware, nextIndex);
+      }
+
+      response = toShortCircuitResponse(ctx);
+      recordShortCircuit({
+        middleware,
+        middlewareIndex: nextIndex,
+        outcome: "succeeded",
+        reason: middlewareResponse.reason,
+        responseStatus: response.status,
+      });
+      return response;
+    }
+
+    if (nextCalled) {
+      if (downstreamResponse) {
+        return downstreamResponse;
+      }
+
+      if (response) {
+        return response;
+      }
+    }
+
+    recordShortCircuit({
+      middleware,
+      middlewareIndex: nextIndex,
+      outcome: "failed",
+      reason: middlewareResponse === undefined ? "missing-next" : "invalid-return",
+      diagnosticCode: HTTP_MIDDLEWARE_MISSING_CONTINUATION_CODE,
+    });
+    throw createInvalidMiddlewareResultProblem(middleware, nextIndex);
+  };
+
+  return dispatch(0);
+}
+
+function createInvalidMiddlewareResultProblem(
+  middleware: MiddlewareFunction,
+  middlewareIndex: number,
+): Problem {
+  return ProblemFactory.internalServerError(
+    HTTP_MIDDLEWARE_MISSING_CONTINUATION_CODE,
+    "Middleware must return a Response, return shortCircuit(reason), or call next() exactly once.",
+    {
+      extensions: {
+        middleware: describeMiddleware(middleware, middlewareIndex),
+        middlewareIndex,
+      },
+    },
+  );
+}
+
+function toShortCircuitResponse(ctx: HttpContext): Response {
+  if (isNullBodyStatus(ctx.res.status)) {
+    return toEmptyResponse(ctx, ctx.res.status);
+  }
+
+  return ctx.text("", ctx.res.status);
+}
+
+function toEmptyResponse(ctx: HttpContext, status = 204): Response {
+  return new Response(null, {
+    status,
+    headers: ctx.raw.res.headers,
+  });
+}
+
+function isNullBodyStatus(status: number): boolean {
+  // Fetch Response can preserve final null-body statuses in the 2xx-5xx constructor range.
+  return status === 204 || status === 205 || status === 304;
+}
+
+function describeMiddleware(middleware: MiddlewareFunction, fallbackIndex: number): string {
+  const securityExportName = getSecurityMiddlewareExportName(middleware);
+  if (securityExportName) {
+    return securityExportName;
+  }
+
+  if (middleware.name.length > 0) {
+    return middleware.name;
+  }
+
+  return `middleware[${fallbackIndex}]`;
+}
+
+function withContextResponseHeaders(ctx: HttpContext, response: Response): Response {
+  const headers = new Headers(response.headers);
+  const cookies = new Set(headers.getSetCookie());
+  let hasContextHeaders = false;
+
+  const appendCookie = (value: string) => {
+    if (!cookies.has(value)) {
+      headers.append("set-cookie", value);
+      cookies.add(value);
+    }
+  };
+
+  ctx.raw.res.headers.forEach((value, key) => {
+    if (key === "vary") {
+      mergeVaryHeader(headers, value);
+    } else if (key !== "set-cookie") {
+      headers.set(key, value);
+    }
+    hasContextHeaders = true;
+  });
+
+  for (const cookie of ctx.raw.res.headers.getSetCookie()) {
+    appendCookie(cookie);
+  }
+
+  for (const [key, value] of Object.entries(ctx.res.headers)) {
+    if (key.toLowerCase() === "vary") {
+      mergeVaryHeader(headers, value);
+    } else if (key.toLowerCase() === "set-cookie") {
+      appendCookie(value);
+    } else {
+      headers.set(key, value);
+    }
+    hasContextHeaders = true;
+  }
+
+  if (!hasContextHeaders) {
+    return response;
+  }
+
+  const vary = headers.get("Vary");
+  if (vary) {
+    ctx.raw.header("Vary", vary);
+  }
+
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
 }

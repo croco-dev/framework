@@ -1196,8 +1196,8 @@
       "sources": [
         {
           "file": "packages/transports-http/src/libs/CrocoRouteRegistrar.ts",
-          "line": 380,
-          "column": 12,
+          "line": 730,
+          "column": 10,
           "kind": "problem-factory"
         }
       ]
@@ -1226,8 +1226,8 @@
       "sources": [
         {
           "file": "packages/transports-http/src/libs/CrocoRouteRegistrar.ts",
-          "line": 285,
-          "column": 15,
+          "line": 635,
+          "column": 13,
           "kind": "problem-factory"
         }
       ]
@@ -1256,7 +1256,7 @@
       "sources": [
         {
           "file": "packages/transports-http/src/libs/CrocoApp.ts",
-          "line": 336,
+          "line": 337,
           "column": 11,
           "kind": "problem-factory"
         }
@@ -33353,7 +33353,7 @@
       "sources": [
         {
           "file": "packages/transports-http/src/libs/CrocoApp.ts",
-          "line": 378,
+          "line": 379,
           "column": 11,
           "kind": "problem-factory"
         }
@@ -33593,7 +33593,7 @@
       "sources": [
         {
           "file": "packages/transports-http/src/libs/CrocoApp.ts",
-          "line": 697,
+          "line": 698,
           "column": 13,
           "kind": "problem-factory"
         }
@@ -33868,7 +33868,7 @@
       "sources": [
         {
           "file": "packages/transports-http/src/libs/CrocoApp.ts",
-          "line": 103,
+          "line": 104,
           "column": 55,
           "kind": "problem-metadata"
         }

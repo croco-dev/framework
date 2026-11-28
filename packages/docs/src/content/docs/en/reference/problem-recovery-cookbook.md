@@ -1932,7 +1932,7 @@ Sources:
 
 Sources:
 
-- `packages/transports-http/src/libs/CrocoRouteRegistrar.ts:380:12` (problem-factory)
+- `packages/transports-http/src/libs/CrocoRouteRegistrar.ts:730:10` (problem-factory)
 
 <a id="croco-http-middleware-002"></a>
 
@@ -1950,7 +1950,7 @@ Sources:
 
 Sources:
 
-- `packages/transports-http/src/libs/CrocoRouteRegistrar.ts:285:15` (problem-factory)
+- `packages/transports-http/src/libs/CrocoRouteRegistrar.ts:635:13` (problem-factory)
 
 <a id="croco-http-security-001"></a>
 
@@ -1968,7 +1968,7 @@ Sources:
 
 Sources:
 
-- `packages/transports-http/src/libs/CrocoApp.ts:336:11` (problem-factory)
+- `packages/transports-http/src/libs/CrocoApp.ts:337:11` (problem-factory)
 
 <a id="croco-http-security-002"></a>
 
@@ -21438,7 +21438,7 @@ Sources:
 
 Sources:
 
-- `packages/transports-http/src/libs/CrocoApp.ts:378:11` (problem-factory)
+- `packages/transports-http/src/libs/CrocoApp.ts:379:11` (problem-factory)
 
 <a id="transports-http-diagnostics-invalid-configuration"></a>
 
@@ -21582,7 +21582,7 @@ Sources:
 
 Sources:
 
-- `packages/transports-http/src/libs/CrocoApp.ts:697:13` (problem-factory)
+- `packages/transports-http/src/libs/CrocoApp.ts:698:13` (problem-factory)
 
 <a id="transports-http-middleware-next-called-multiple-times"></a>
 
@@ -21744,7 +21744,7 @@ Sources:
 
 Sources:
 
-- `packages/transports-http/src/libs/CrocoApp.ts:103:55` (problem-metadata)
+- `packages/transports-http/src/libs/CrocoApp.ts:104:55` (problem-metadata)
 
 <a id="transports-http-unsupported-media-type"></a>
 

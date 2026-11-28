@@ -27,6 +27,7 @@ import {
   createGracefulShutdownController,
   resetShutdownState,
 } from "../libs/middleware/GracefulShutdownMiddleware";
+import { securityHeadersMiddleware } from "../libs/middleware/SecurityHeadersMiddleware";
 import type { MiddlewareFunction, NodeServerHandle } from "../libs/types";
 
 const LIFECYCLE_TIMEOUT_MS = 2_500;
@@ -341,6 +342,49 @@ describe("NodeAdapter real server smoke", () => {
 
     expect(wellKnown.status).toBe(200);
     expect(await wellKnown.text()).toBe("Contact: mailto:security@example.com");
+  });
+
+  it("sends configured security headers with static files and the SPA shell over a real Node socket", async () => {
+    staticDir = await mkdtemp(join(tmpdir(), "croco-node-smoke-"));
+    await mkdir(join(staticDir, "assets"), { recursive: true });
+    await writeFile(join(staticDir, "index.html"), "<main>node smoke shell</main>");
+    await writeFile(join(staticDir, "assets", "app.js"), "globalThis.__crocoNodeSmoke = true;\n");
+
+    const app = createApp({
+      controllers: [NodeSmokeController],
+      middlewares: [securityHeadersMiddleware()],
+      securityValidation: "off",
+      diValidation: "off",
+    });
+    const server = await withTimeout(
+      app.listen(0, { staticDir, spaFallback: true }),
+      "app.listen(0, { staticDir, spaFallback }) did not return a server handle",
+    );
+    servers.push(server);
+
+    await waitForListening(server, "app.listen(0, { staticDir, spaFallback })");
+    const baseUrl = getBaseUrl(server, "app.listen(0, { staticDir, spaFallback })");
+
+    for (const path of ["/index.html", "/settings/billing", "/assets/app.js"]) {
+      const response = await fetchWithTimeout(`${baseUrl}${path}`, `GET ${path}`, {
+        headers: { Accept: "text/html" },
+      });
+
+      expect({
+        path,
+        status: response.status,
+        frameOptions: response.headers.get("x-frame-options"),
+        contentTypeOptions: response.headers.get("x-content-type-options"),
+        strictTransportSecurity: response.headers.get("strict-transport-security"),
+      }).toEqual({
+        path,
+        status: 200,
+        frameOptions: "DENY",
+        contentTypeOptions: "nosniff",
+        strictTransportSecurity: "max-age=31536000; includeSubDomains",
+      });
+      await response.arrayBuffer();
+    }
   });
 
   it("enforces chunked request bytes and preserves the accepted body over a real Node socket", async () => {
