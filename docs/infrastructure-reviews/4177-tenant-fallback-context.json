@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "tenant-core",
+      "classification": "pure-contract",
+      "reason": "Tenant-scoped operations apply the configured fallback ID policy to the active tenant supplied by the existing context provider.",
+      "files": {
+        "packages/tenant-core/src/libs/TenantIsolationEnforcer.ts": "c5b0adc8ebd8aebcba1a2068d40516d87a5f80c2acb4d3d89258492772edaaa5"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The fallback check compares tenant IDs through the existing policy and needs no Node Host capability, storage or lifecycle hook.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/tenant-core/src/libs/TenantIsolationEnforcer.ts"]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The fallback check needs no Lambda invocation state, storage or lifecycle hook.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/tenant-core/src/libs/TenantIsolationEnforcer.ts"]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The fallback check needs no Workers binding, storage or lifecycle hook.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/tenant-core/src/libs/TenantIsolationEnforcer.ts"]
+        }
+      }
+    }
+  ]
+}

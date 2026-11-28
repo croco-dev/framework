@@ -94,5 +94,6 @@ await enforcer.enforce(
 - resolver는 HTTP 헤더, JWT claim, 서브도메인 같은 환경별 식별 규칙을 교체할 수 있습니다.
 - `suspend()`를 사용하면 관리 작업처럼 현재 테넌트 컨텍스트 없이 코드를 실행할 수 있습니다.
 - `TenantIsolationEnforcer`는 tenant context 누락, `default` tenant fallback, cross-tenant query, admin/system bypass reason 누락을 deterministic Problem으로 실패시킵니다.
+- 활성 tenant ID가 `defaultTenantIds`에 있으면 tenant-scoped 작업을 거절합니다. 기본 목록은 `["default"]`이며, `default`가 실제 tenant ID인 앱은 `defaultTenantIds: []`로 fallback ID 검사를 끌 수 있습니다.
 - Drizzle/RLS 같은 adapter는 `TenantRlsEvidence`를 전달해 RLS 설정이 활성 tenant와 일치하는지 검증할 수 있습니다.
 - `createCrossTenantLeakFixture()`는 repository adapter별 cross-tenant leak 테스트 데이터를 재사용할 수 있게 합니다.
