@@ -217,7 +217,7 @@ const SENSITIVE_URL_PARAMETER = new RegExp(
   `(?:${SENSITIVE_CREDENTIAL_NAME_SOURCE}|(?:^|[-_.])(?:key|sig|signature|credential))$`,
   "i",
 );
-const DIAGNOSTIC_URL = /\b[a-z][a-z\d+.-]*:\/\/[^\s"'<>]*[^\s"'<>.,;:!?)\]}]/gi;
+const DIAGNOSTIC_URL = /\b[a-z][a-z\d+.-]{0,31}:\/\/[^\s"'<>]*[^\s"'<>.,;:!?)\]}]/gi;
 const URL_USER_INFO = /^([a-z][a-z\d+.-]*:\/\/)[^/?#]*@/i;
 const URL_QUERY = /^([^?#]*\?)([^#]*)/;
 const DOUBLE_QUOTED_CONTENT = /(?:\\[\s\S]|[^"\\])*/;
