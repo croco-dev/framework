@@ -26,9 +26,11 @@ const URI_HOST_PORT = String.raw`${URI_HOST.source}(?::\d*)?`;
 const URI_HOSTS = `${URI_HOST_PORT}(?:,(?:${URI_HOST_PORT})?)*`;
 const URI_CHARACTER = /[^/ \t\r\n\v\f]/;
 const URI_USERINFO_WITH_PASSWORD = String.raw`[^/?# \t\r\n\v\f:]*:${URI_CHARACTER.source}+?@`;
+const AUTHORITY_BEFORE_PATH_OR_QUERY = /[^@/?# \t\r\n\v\f]*[/?#]/;
 const KEYWORD_NAME = /[\w-]+/;
 const KEYWORD_PADDING = /[ \t\r\n\v\f]*/;
 const NEXT_KEYWORD = `${KEYWORD_NAME.source}${KEYWORD_PADDING.source}=`;
+const KEYWORD_AT_VALUE_START = new RegExp(NEXT_KEYWORD, "y");
 const WRAPPED_FIELD_SEPARATOR = `[,;]${NEXT_KEYWORD}`;
 const WRAPPED_URI = (
   [
@@ -41,12 +43,12 @@ const WRAPPED_URI = (
   ] as const
 )
   .map(([start, end]) => {
-    const boundary = String.raw`${end}(?:${WRAPPED_FIELD_SEPARATOR}|(?=\s|$))`;
-    const userinfo = `${URI_USERINFO_WITH_PASSWORD}(?=(?:${URI_HOSTS})?(?:[/?#]|${boundary}))`;
+    const boundary = String.raw`${end}[)\]>'"\x60]*(?:${WRAPPED_FIELD_SEPARATOR}|(?=\s|$))`;
+    const userinfo = `${URI_USERINFO_WITH_PASSWORD}(?=${AUTHORITY_BEFORE_PATH_OR_QUERY.source}|(?:${URI_HOSTS})?(?:[/?#]|${boundary}))`;
     return String.raw`(?<=${start})${URI_SCHEME.source}(?:${userinfo})?\S*?(?=${boundary})`;
   })
   .join("|");
-const URI_AUTHORITY_END = String.raw`(?=(?:${URI_HOSTS})?(?:[/?#]|[,;]${NEXT_KEYWORD}|[ \t\r\n\v\f]|$))`;
+const URI_AUTHORITY_END = String.raw`(?=${AUTHORITY_BEFORE_PATH_OR_QUERY.source}|(?:${URI_HOSTS})?(?:[/?#]|[,;]${NEXT_KEYWORD}|[ \t\r\n\v\f]|$))`;
 const SPACED_PASSWORD = String.raw`:(?=[^/?#\r\n\t]* )(?:(?![ ]+${NEXT_KEYWORD})[^/?#\r\n\t])+@${URI_AUTHORITY_END}`;
 const URI_USERINFO = String.raw`(${URI_SCHEME.source})(?:${SPACED_PASSWORD}|[^/?# \t\r\n\v\f]+?@${URI_AUTHORITY_END}|${URI_CHARACTER.source}+?@${URI_AUTHORITY_END}|${URI_CHARACTER.source}+?(?<!@)@)`;
 const WRAPPED_URI_OR_USERINFO = new RegExp(`${WRAPPED_URI}|${URI_USERINFO}`, "giu");
@@ -130,6 +132,14 @@ function redactKeywordValues(detail: string, depth = 0): string {
     const diagnostic = DIAGNOSTIC_FIELDS.test(key);
     const quote = detail.charAt(valueStart);
     if (diagnostic && quote !== "'" && quote !== '"') continue;
+    KEYWORD_AT_VALUE_START.lastIndex = valueStart;
+    if (
+      !sensitive &&
+      detail.charAt(valueStart - 1) !== "=" &&
+      KEYWORD_AT_VALUE_START.test(detail)
+    ) {
+      continue;
+    }
     DELIMITED_HOST.lastIndex = valueStart;
     const compact = /[,;&]/.test(detail.charAt(token.index - 1));
     let unquoted = UNQUOTED_KEYWORD_VALUE;

@@ -316,6 +316,21 @@ describe("DrizzleHealthIndicator", () => {
       "failed (postgres://[redacted]@db.example) host=db.example",
     ],
     [
+      "a pathless URI inside nested wrappers",
+      "failed ((postgres://user:sample);sslmode=require@db.example)) host=db.example",
+      "failed ((postgres://[redacted]@db.example)) host=db.example",
+    ],
+    [
+      "an empty first host and a percent-encoded port",
+      "failed postgres://user:sample@,db.example:%35%34%33%32?sslmode=require&application_name=ops@example.test",
+      "failed postgres://[redacted]@,db.example:%35%34%33%32?sslmode=require&application_name=ops@example.test",
+    ],
+    [
+      "a prefixed credential after an empty ordinary field",
+      "failed host= sslpassword=sample dbname=app",
+      "failed host= sslpassword=[redacted] dbname=app",
+    ],
+    [
       "a zoned IPv6 host followed by a query containing an at-sign",
       "failed postgres://user:sample@[fe80::1%25eth-test]?sslmode=require&application_name=ops@example.test",
       "failed postgres://[redacted]@[fe80::1%25eth-test]?sslmode=require&application_name=ops@example.test",
