@@ -318,6 +318,17 @@ describe("SubscriptionQuantityReconciler", () => {
 
   it("persists retryable provider failure and converges it through a bounded repair scan", async () => {
     const { gateway, reconciler, store } = await createFixture();
+    const pending = await reconciler.createIntent({
+      tenantId: "tenant-1",
+      subscriptionId: "subscription-1",
+      externalSubscriptionId: "external-subscription-1",
+      planVersionRef: PLAN_VERSION_REF,
+      reason: "membership.changed",
+    });
+    await expect(reconciler.getDiagnostics()).resolves.toMatchObject({
+      pending: 1,
+      oldestPendingAt: pending.createdAt,
+    });
     gateway.failWith = new Error("provider unavailable");
 
     const failed = await reconcile(reconciler);
@@ -330,8 +341,17 @@ describe("SubscriptionQuantityReconciler", () => {
         status: 500,
       },
     });
-    await expect(reconciler.getDiagnostics()).resolves.toMatchObject({
+    const diagnostics = await reconciler.getDiagnostics();
+    expect(diagnostics).toMatchObject({
+      pending: 0,
+      retrying: 1,
+      terminalFailed: 0,
       retryExhausted: 0,
+      oldestPendingAt: failed.createdAt,
+    });
+    diagnostics.oldestPendingAt?.setTime(0);
+    await expect(reconciler.getDiagnostics()).resolves.toMatchObject({
+      oldestPendingAt: failed.createdAt,
     });
 
     gateway.failWith = null;
@@ -346,6 +366,12 @@ describe("SubscriptionQuantityReconciler", () => {
       providerQuantity: 3,
       lastFailure: undefined,
     });
+    await expect(reconciler.getDiagnostics()).resolves.toMatchObject({
+      pending: 0,
+      retrying: 0,
+      terminalFailed: 0,
+      oldestPendingAt: null,
+    });
   });
 
   it("excludes an explicitly terminal provider failure from repair", async () => {
@@ -359,6 +385,12 @@ describe("SubscriptionQuantityReconciler", () => {
     await expect(store.findCurrent("tenant-1", "external-subscription-1")).resolves.toMatchObject({
       state: "terminal_failed",
       lastFailure: { retryable: false },
+    });
+    await expect(reconciler.getDiagnostics()).resolves.toMatchObject({
+      retrying: 0,
+      terminalFailed: 1,
+      retryExhausted: 0,
+      oldestPendingAt: null,
     });
     await expect(reconciler.repair(1)).resolves.toMatchObject({ requested: 0 });
     expect(gateway.setCalls).toHaveLength(1);
@@ -691,7 +723,12 @@ describe("SubscriptionQuantityReconciler", () => {
       attemptCount: 2,
       lastFailure: { retryable: true },
     });
-    await expect(reconciler.getDiagnostics()).resolves.toMatchObject({ retryExhausted: 1 });
+    await expect(reconciler.getDiagnostics()).resolves.toMatchObject({
+      retrying: 0,
+      terminalFailed: 0,
+      retryExhausted: 1,
+      oldestPendingAt: null,
+    });
     await expect(reconciler.repair(1)).resolves.toMatchObject({ requested: 0 });
   });
 

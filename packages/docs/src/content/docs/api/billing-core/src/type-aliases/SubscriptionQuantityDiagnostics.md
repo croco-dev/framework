@@ -39,9 +39,21 @@ title: "SubscriptionQuantityDiagnostics"
 
 ---
 
+### retrying?
+
+> `readonly` `optional` **retrying?**: `number`
+
+---
+
 ### sourceMismatches
 
 > `readonly` **sourceMismatches**: `number`
+
+---
+
+### terminalFailed?
+
+> `readonly` `optional` **terminalFailed?**: `number`
 
 ---
 

@@ -116,9 +116,11 @@ export type SubscriptionQuantitySnapshot = {
 export type SubscriptionQuantityDiagnostics = {
   readonly drifted: number;
   readonly pending: number;
+  readonly retrying?: number;
   readonly sourceMismatches: number;
   readonly providerMismatches: number;
   readonly retryExhausted: number;
+  readonly terminalFailed?: number;
   readonly unsupported: number;
   readonly oldestPendingAt: Date | null;
   readonly truncated: boolean;
@@ -152,6 +154,18 @@ export interface SubscriptionQuantityReconciliationStore {
   ): Promise<SubscriptionQuantitySnapshot | null>;
   listRepairable(limit: number): Promise<SubscriptionQuantitySnapshot[]>;
   listRecent(limit: number): Promise<SubscriptionQuantitySnapshot[]>;
+  /**
+   * Count current intents by state: `pending`, `drifted`, `retryable_failed` (`retrying`), and
+   * `unsupported`. Use the earliest creation time among the first three states for
+   * `oldestPendingAt`, or null when none exist.
+   *
+   * Count `terminal_failed` intents with non-retryable failure evidence as `terminalFailed`.
+   * Count terminal intents with retryable evidence and at least `maxAttempts` attempts as
+   * `retryExhausted`. The mismatch counts use their existing failure codes and can overlap state counts.
+   *
+   * Stores that have not implemented the new counters may omit `retrying` and `terminalFailed`.
+   * An omitted counter means its value is unavailable.
+   */
   getDiagnostics(options: {
     readonly maxAttempts: number;
     readonly sampleLimit: number;
@@ -248,10 +262,7 @@ export class InMemorySubscriptionQuantityReconciliationStore implements Subscrip
       .map((id) => this.snapshots.get(id))
       .filter(
         (snapshot): snapshot is SubscriptionQuantitySnapshot =>
-          snapshot !== undefined &&
-          (snapshot.state === "pending" ||
-            snapshot.state === "drifted" ||
-            snapshot.state === "retryable_failed"),
+          snapshot !== undefined && isRepairableState(snapshot.state),
       )
       .sort((left, right) => left.updatedAt.getTime() - right.updatedAt.getTime())
       .slice(0, limit)
@@ -876,14 +887,22 @@ function ensureRepairLimit(limit: number): void {
   }
 }
 
+function isRepairableState(state: SubscriptionQuantityReconciliationState): boolean {
+  return state === "pending" || state === "drifted" || state === "retryable_failed";
+}
+
 function aggregateDiagnostics(
   snapshots: readonly SubscriptionQuantitySnapshot[],
   maxAttempts: number,
   truncated: boolean,
 ): SubscriptionQuantityDiagnostics {
+  const oldestRepairable = snapshots
+    .filter(({ state }) => isRepairableState(state))
+    .sort((left, right) => left.createdAt.getTime() - right.createdAt.getTime())[0];
   return {
     drifted: snapshots.filter(({ state }) => state === "drifted").length,
     pending: snapshots.filter(({ state }) => state === "pending").length,
+    retrying: snapshots.filter(({ state }) => state === "retryable_failed").length,
     sourceMismatches: snapshots.filter(
       ({ lastFailure }) => lastFailure?.code === "billing/subscription-quantity-source-mismatch",
     ).length,
@@ -898,12 +917,11 @@ function aggregateDiagnostics(
         lastFailure?.retryable === true &&
         attemptCount >= maxAttempts,
     ).length,
+    terminalFailed: snapshots.filter(
+      ({ state, lastFailure }) => state === "terminal_failed" && lastFailure?.retryable === false,
+    ).length,
     unsupported: snapshots.filter(({ state }) => state === "unsupported").length,
-    oldestPendingAt:
-      snapshots
-        .filter(({ state }) => state === "pending" || state === "drifted")
-        .sort((left, right) => left.createdAt.getTime() - right.createdAt.getTime())[0]
-        ?.createdAt ?? null,
+    oldestPendingAt: oldestRepairable ? new Date(oldestRepairable.createdAt) : null,
     truncated,
   };
 }

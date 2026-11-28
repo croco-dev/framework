@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "billing-core",
+      "classification": "pure-contract",
+      "reason": "Count retrying and non-retryable terminal subscription quantity intents from current snapshots. The diagnostics contract allows existing custom stores to omit the new counters until they implement them.",
+      "files": {
+        "packages/billing-core/src/libs/SubscriptionQuantity.ts": "9e3924b6da0912c59d0f0970dc7932ebdf97f5ef427d4070c54fe34fa47368b7"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Aggregating the current in-memory snapshots requires no Node Host APIs, external storage, or lifecycle integration.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/billing-core/src/libs/SubscriptionQuantity.ts"]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Aggregating the current in-memory snapshots requires no Lambda APIs, external storage, or invocation lifecycle integration.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/billing-core/src/libs/SubscriptionQuantity.ts"]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Aggregating the current in-memory snapshots requires no Workers bindings, external storage, or lifecycle integration.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/billing-core/src/libs/SubscriptionQuantity.ts"]
+        }
+      }
+    }
+  ]
+}
