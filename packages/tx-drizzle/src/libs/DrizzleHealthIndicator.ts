@@ -40,7 +40,7 @@ const WRAPPED_URI = (
       String.raw`(?<=${start})${URI_SCHEME.source}\S*(?=${end}(?:${WRAPPED_FIELD_SEPARATOR}|(?=\s|$)))`,
   )
   .join("|");
-const SPACED_PASSWORD = /:(?=[^/?#@\r\n\t]*(?: |@ ))(?:[^/?#@\r\n\t]|@(?= ))+@(?=[\w/\[])/;
+const SPACED_PASSWORD = /:(?=[^/?#@\r\n\t]*(?: |@ ))(?:[^/?#@\r\n\t]|@(?= ))+@(?=[\w/[])/;
 const URI_USERINFO = String.raw`(${URI_SCHEME.source})(?:${SPACED_PASSWORD.source}|[^/?#\s]+(?<!@)@|[^/\s]+(?<!@)@)`;
 const WRAPPED_URI_OR_USERINFO = new RegExp(`${WRAPPED_URI}|${URI_USERINFO}`, "gi");
 const URL_OR_KEYWORD = new RegExp(
