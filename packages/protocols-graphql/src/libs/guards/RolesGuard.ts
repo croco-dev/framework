@@ -32,9 +32,12 @@ export class GraphQLRolesGuard implements Guard<GraphQLGuardContext> {
       return true;
     }
 
-    const ctx = context.context as { user?: UserWithRoles };
-    const userRoles = ctx.user?.roles ?? [];
+    const ctx = context.context as { user?: { roles?: unknown } };
+    const userRoles = ctx.user?.roles;
 
-    return requiredRoles.some((role) => userRoles.includes(role));
+    return (
+      Array.isArray(userRoles) &&
+      requiredRoles.some((role) => Array.prototype.includes.call(userRoles, role))
+    );
   }
 }

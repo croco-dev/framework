@@ -1,0 +1,69 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "protocols-graphql",
+      "classification": "pure-contract",
+      "reason": "The GraphQL guard checks that the supplied role claim is an array before matching exact role names.",
+      "files": {
+        "packages/protocols-graphql/src/libs/guards/RolesGuard.ts": "ffef4f525a99e6aafdaa5535331f531f228ff5775ea6c86554390066523af92b"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Role comparison requires no Node Host capability, storage, or Kubernetes lifecycle integration.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/protocols-graphql/src/libs/guards/RolesGuard.ts"]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Role comparison requires no Lambda capability, storage, or invocation lifecycle integration.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/protocols-graphql/src/libs/guards/RolesGuard.ts"]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Role comparison requires no Worker or Node Container capability, storage binding, or lifecycle integration.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/protocols-graphql/src/libs/guards/RolesGuard.ts"]
+        }
+      }
+    },
+    {
+      "package": "protocols-rest",
+      "classification": "pure-contract",
+      "reason": "The REST guard checks that the supplied role claim is an array before matching exact role names.",
+      "files": {
+        "packages/protocols-rest/src/libs/guards/RolesGuard.ts": "061fe253c9414367790ed74bec176050da3404ab414ce330868336e7ef12e361"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Role comparison requires no Node Host capability, storage, or Kubernetes lifecycle integration.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/protocols-rest/src/libs/guards/RolesGuard.ts"]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Role comparison requires no Lambda capability, storage, or invocation lifecycle integration.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/protocols-rest/src/libs/guards/RolesGuard.ts"]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Role comparison requires no Worker or Node Container capability, storage binding, or lifecycle integration.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/protocols-rest/src/libs/guards/RolesGuard.ts"]
+        }
+      }
+    }
+  ]
+}

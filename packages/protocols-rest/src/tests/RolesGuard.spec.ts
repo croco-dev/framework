@@ -45,6 +45,22 @@ describe("RolesGuard", () => {
     expect(result).toBe(false);
   });
 
+  it("should ignore string claims without comparing them as role lists", () => {
+    const roles = "reader";
+    const context = createMockContext({ roles }, ["editor"]);
+    const stringIncludes = vi.spyOn(String.prototype, "includes");
+
+    try {
+      const allowed = guard.canActivate(context);
+      const comparedClaim = stringIncludes.mock.contexts.some((receiver) => receiver === roles);
+
+      expect(allowed).toBe(false);
+      expect(comparedClaim).toBe(false);
+    } finally {
+      stringIncludes.mockRestore();
+    }
+  });
+
   it("should allow access when no roles are required", () => {
     const context = createMockContext({ roles: ["user"] }, []);
 
