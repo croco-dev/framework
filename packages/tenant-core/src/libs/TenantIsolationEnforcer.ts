@@ -231,6 +231,12 @@ export class TenantIsolationEnforcer {
 
     if (!currentTenantId) {
       await this.deny(operation, new TenantIsolationContextMissingProblem(operation.name), null);
+    } else if (this.defaultTenantIds.has(currentTenantId)) {
+      await this.deny(
+        operation,
+        new TenantDefaultFallbackProblem(operation.name, currentTenantId),
+        currentTenantId,
+      );
     }
 
     const mismatchedTenantId = [operation.tenantId, operation.requestedTenantId].find(

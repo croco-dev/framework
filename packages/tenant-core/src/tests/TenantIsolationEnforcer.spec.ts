@@ -24,11 +24,12 @@ describe("TenantIsolationEnforcer", () => {
     vi.restoreAllMocks();
   });
 
-  const createEnforcer = () =>
+  const createEnforcer = (defaultTenantIds?: readonly string[]) =>
     createTenantIsolationEnforcer({
       contextProvider: {
         getTenantId: () => activeTenantId,
       },
+      defaultTenantIds,
       auditSink: {
         recordTenantIsolation: (event) => {
           auditEvents.push(event);
@@ -150,6 +151,69 @@ describe("TenantIsolationEnforcer", () => {
       TenantDefaultFallbackProblem,
     );
   });
+
+  it.each(["enforce", "read", "write", "query"] as const)(
+    "%s records a denial when the active tenant is a fallback",
+    async (entryPoint) => {
+      activeTenantId = "default";
+      const enforcer = createEnforcer();
+      const repository = enforcer.createRepositoryBoundary();
+      const operation = markTenantScopedOperation({
+        name: "orders.scoped",
+        kind: "repository-read",
+      });
+      const work = vi.fn();
+      const run = {
+        enforce: () => enforcer.enforce(operation, work),
+        read: () => repository.read(operation, work),
+        write: () => repository.write({ ...operation, kind: "repository-write" }, work),
+        query: () => enforcer.enforceQuery({ operation: { ...operation, kind: "query" } }, work),
+      }[entryPoint];
+      const result = run();
+
+      await expect(result).rejects.toBeInstanceOf(TenantDefaultFallbackProblem);
+      expect(work).not.toHaveBeenCalled();
+      expect(auditEvents).toEqual([
+        expect.objectContaining({
+          type: "tenant-isolation.denied",
+          operation: operation.name,
+          tenantId: "default",
+          problemCode: "tenant-core/default-tenant-fallback",
+          decisionId: expect.stringMatching(/^pdt_[a-z0-9]+$/),
+          policyDecisionTrace: expect.objectContaining({ result: "deny" }),
+        }),
+      ]);
+      await expect(result).rejects.toMatchObject({
+        extensions: {
+          tenantId: "default",
+          decisionId: auditEvents[0]?.policyDecisionTrace?.decisionId,
+        },
+      });
+    },
+  );
+
+  it("reports the configured fallback ID when it is the active tenant", async () => {
+    activeTenantId = "unresolved";
+    const operation = markTenantScopedOperation({ name: "orders.list", kind: "repository-read" });
+
+    await expect(createEnforcer(["unresolved"]).requireOperation(operation)).rejects.toMatchObject({
+      code: "tenant-core/default-tenant-fallback",
+      extensions: { tenantId: "unresolved" },
+    });
+  });
+
+  it.each([{ ids: [] }, { ids: ["unresolved"] }])(
+    "permits an active tenant named default with fallback IDs $ids",
+    async ({ ids }) => {
+      activeTenantId = "default";
+      const operation = markTenantScopedOperation({ name: "orders.list", kind: "repository-read" });
+
+      await expect(createEnforcer(ids).requireOperation(operation)).resolves.toMatchObject({
+        status: "tenant-scoped",
+        tenantId: "default",
+      });
+    },
+  );
 
   it("rejects cross-tenant operation hints without an admin bypass", async () => {
     const operation = markTenantScopedOperation({
@@ -290,11 +354,12 @@ describe("TenantIsolationEnforcer", () => {
     ]);
   });
 
-  it("requires an explicit reason for admin and system bypasses", async () => {
+  it.each(["admin-bypass", "system"] as const)("requires a reason for %s", async (isolation) => {
+    activeTenantId = "default";
     const operation = markTenantScopedOperation({
       name: "admin.tenants.reindex",
       kind: "command",
-      isolation: "admin-bypass",
+      isolation,
     });
 
     await expect(createEnforcer().enforce(operation, () => "unreachable")).rejects.toThrow(
@@ -302,12 +367,13 @@ describe("TenantIsolationEnforcer", () => {
     );
   });
 
-  it("records telemetry and audit evidence for allowed bypasses", async () => {
+  it.each(["admin-bypass", "system"] as const)("records allowed %s bypasses", async (isolation) => {
+    activeTenantId = "default";
     const recordEventSpy = vi.spyOn(telemetry, "recordEvent").mockImplementation(() => {});
     const operation = markTenantScopedOperation({
       name: "admin.tenants.reindex",
       kind: "command",
-      isolation: "admin-bypass",
+      isolation,
       bypass: {
         reason: "support ticket T-100",
         actorId: "admin-1",
