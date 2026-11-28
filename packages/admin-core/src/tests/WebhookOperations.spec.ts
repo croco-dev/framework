@@ -427,12 +427,67 @@ describe("outbound webhook operations contracts", () => {
       'upstream rejected Cookie=first=fixture-av "x-api-key"="fixture-aw\nfixture-ax"',
       "upstream rejected [redacted]",
     ],
+    [
+      "snake_case secret access key",
+      "upstream rejected aws_secret_access_key=fixture-ca, region=local",
+      "upstream rejected aws_secret_access_key=[redacted], region=local",
+    ],
+    [
+      "camelCase API key in an echoed JSON body",
+      'upstream echoed {"apiKey":"fixture-cb","status":401}',
+      'upstream echoed {"apiKey":"[redacted]","status":401}',
+    ],
+    [
+      "camelCase API key followed by retry context",
+      "apiKey: fixture-cc; retrying in 60 seconds",
+      "apiKey: [redacted]; retrying in 60 seconds",
+    ],
+    [
+      "hyphenated API key label",
+      "api-key: fixture-cd upstream timed out",
+      "api-key: [redacted] upstream timed out",
+    ],
+    [
+      "camelCase secret key in an echoed JSON body",
+      'upstream echoed {"secretKey":"fixture-ce","retryable":false}',
+      'upstream echoed {"secretKey":"[redacted]","retryable":false}',
+    ],
+    [
+      "camelCase secret key",
+      "secretKey: fixture-cf upstream timed out",
+      "secretKey: [redacted] upstream timed out",
+    ],
+    [
+      "endpoint URL with user information",
+      "POST https://hook-user:fixture-cg@hooks.example.com/orders failed with HTTP 500",
+      "POST https://[redacted]@hooks.example.com/orders failed with HTTP 500",
+    ],
+    [
+      "endpoint URL with a key query parameter",
+      "POST https://hooks.example.com/orders?key=fixture-ch&page=2 failed with HTTP 500",
+      "POST https://hooks.example.com/orders?key=[redacted]&page=2 failed with HTTP 500",
+    ],
+    [
+      "presigned URL signature parameters",
+      "GET https://files.example.com/a.json?X-Amz-Signature=fixture-ci&sig=fixture-cj&expires=60.",
+      "GET https://files.example.com/a.json?X-Amz-Signature=[redacted]&sig=[redacted]&expires=60.",
+    ],
   ])(
     "redacts a complete %s and preserves surrounding diagnostic text",
     (_label, input, expected) => {
       expect(redactWebhookOperationsText(input)).toBe(expected);
     },
   );
+
+  it.each([
+    "POST https://hooks.example.com/orders failed with HTTP 500",
+    "POST https://hooks.example.com:8443/orders?page=2&sort=asc failed; see https://status.example.com/incidents/42.",
+    "token rotation finished and the secret version changed; retry later",
+    "upstream rejected keyId=fixture-key-id, region=local",
+    'upstream echoed {"secretVersion":"secret-v2","tokenCount":3}',
+  ])("keeps diagnostic text without credentials unchanged: %s", (text) => {
+    expect(redactWebhookOperationsText(text)).toBe(text);
+  });
 
   it("exposes endpoint actions with explicit pause and rotation semantics", () => {
     const actions = createWebhookEndpointActions(

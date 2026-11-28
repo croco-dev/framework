@@ -2337,6 +2337,9 @@ importers:
       '@croco/cohort-core':
         specifier: workspace:*
         version: link:../cohort-core
+      '@croco/diagnostics-core':
+        specifier: workspace:*
+        version: link:../diagnostics-core
       '@croco/engagement-core':
         specifier: workspace:*
         version: link:../engagement-core

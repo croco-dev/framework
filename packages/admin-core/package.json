@@ -126,6 +126,7 @@
     "@croco/analytics-core": "workspace:*",
     "@croco/billing-core": "workspace:*",
     "@croco/cohort-core": "workspace:*",
+    "@croco/diagnostics-core": "workspace:*",
     "@croco/engagement-core": "workspace:*",
     "@croco/experience-core": "workspace:*",
     "@croco/features-core": "workspace:*",
