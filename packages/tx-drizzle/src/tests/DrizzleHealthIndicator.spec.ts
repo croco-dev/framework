@@ -271,6 +271,26 @@ describe("DrizzleHealthIndicator", () => {
       "failed postgres://[redacted]@db.example/app",
     ],
     [
+      "a password-only URL combining an embedded at-sign and a later space",
+      "failed postgres://:sample@part tail@db.example/app?sslmode=require",
+      "failed postgres://[redacted]@db.example/app?sslmode=require",
+    ],
+    [
+      "same-quote URI and credential wrappers",
+      "failed 'postgres://db.example/app';sslpassword='sample' sslmode=require",
+      "failed 'postgres://db.example/app';sslpassword=[redacted] sslmode=require",
+    ],
+    [
+      "compact fields after an IPv6 host",
+      "failed HOST=[2001:db8::1];sslpassword=sample;sslmode=require",
+      "failed HOST=[2001:db8::1];sslpassword=[redacted];sslmode=require",
+    ],
+    [
+      "an at-sign after separate URI and contact fields",
+      "failed postgres://user@db.example;contact=ops@example.test sslmode=require",
+      "failed postgres://[redacted]@db.example;contact=ops@example.test sslmode=require",
+    ],
+    [
       "a quoted environment credential followed by separate fields",
       'failed DBPASSWORD="sample tail";host=db.example;sslmode=require',
       "failed DBPASSWORD=[redacted];host=db.example;sslmode=require",

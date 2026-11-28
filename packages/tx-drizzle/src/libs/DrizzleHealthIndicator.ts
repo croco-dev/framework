@@ -21,6 +21,8 @@ const LEGACY_SENSITIVE_KEY = new RegExp(String.raw`\b(?:${SENSITIVE_KEYS.source}
 const DIAGNOSTIC_FIELDS = /^(?:detail|error|message|reason)$/i;
 const ENVIRONMENT_KEY = /^[A-Z_][A-Z0-9_]*$/;
 const URI_SCHEME = /[a-z][a-z0-9+.-]*:\/\//;
+const URI_HOST = /(?:[\w.-]+|\[[\w:%.]+\])/;
+const USERINFO_WITH_PATH = String.raw`[^/?#\s:]*:[^/\s]+@(?=(?:${URI_HOST.source}(?::\d+)?)?/)`;
 const KEYWORD_NAME = /[\w-]+/;
 const KEYWORD_PADDING = /[ \t\r\n\v\f]*/;
 const NEXT_KEYWORD = `${KEYWORD_NAME.source}${KEYWORD_PADDING.source}=`;
@@ -37,11 +39,12 @@ const WRAPPED_URI = (
 )
   .map(
     ([start, end]) =>
-      String.raw`(?<=${start})${URI_SCHEME.source}\S*(?=${end}(?:${WRAPPED_FIELD_SEPARATOR}|(?=\s|$)))`,
+      String.raw`(?<=${start})${URI_SCHEME.source}(?:${USERINFO_WITH_PATH})?\S*?(?=${end}(?:${WRAPPED_FIELD_SEPARATOR}|(?=\s|$)))`,
   )
   .join("|");
 const SPACED_PASSWORD = /:(?=[^/?#@\r\n\t]*(?: |@ ))(?:[^/?#@\r\n\t]|@(?= ))+@(?=[\w/[])/;
-const URI_USERINFO = String.raw`(${URI_SCHEME.source})(?:${SPACED_PASSWORD.source}|[^/?#\s]+(?<!@)@|[^/\s]+(?<!@)@)`;
+const SPACED_PASSWORD_WITH_HOST = String.raw`:(?=[^/?#\r\n\t]* )[^/?#\r\n\t]+@(?=${URI_HOST.source}(?::\d+)?[/?#])`;
+const URI_USERINFO = String.raw`(${URI_SCHEME.source})(?:${SPACED_PASSWORD_WITH_HOST}|${SPACED_PASSWORD.source}|[^/?#;\s]+(?<!@)@|[^/\s]+(?<!@)@)`;
 const WRAPPED_URI_OR_USERINFO = new RegExp(`${WRAPPED_URI}|${URI_USERINFO}`, "gi");
 const URL_OR_KEYWORD = new RegExp(
   String.raw`${WRAPPED_URI}|${URI_SCHEME.source}\S+|(?<![\w?&-])(${KEYWORD_NAME.source})${KEYWORD_PADDING.source}=${KEYWORD_PADDING.source}`,
@@ -55,7 +58,7 @@ const DELIMITED_KEYWORD_VALUE = new RegExp(
   "y",
 );
 const DELIMITED_FIELD = new RegExp(`[,;&]${NEXT_KEYWORD}`, "y");
-const DELIMITED_HOST = new RegExp(`[A-Za-z0-9.-]+[,;]${NEXT_KEYWORD}`, "y");
+const DELIMITED_HOST = new RegExp(`${URI_HOST.source}[,;]${NEXT_KEYWORD}`, "y");
 const MAX_DIAGNOSTIC_DEPTH = 12;
 const BARE_CREDENTIAL = new RegExp(String.raw`\b(${SENSITIVE_KEYS.source})=[^\s,;&]+`, "gi");
 
@@ -123,7 +126,7 @@ function redactKeywordValues(detail: string, depth = 0): string {
     const delimited =
       LEGACY_SENSITIVE_KEY.test(key) ||
       /[,;&]/.test(detail.charAt(token.index - 1)) ||
-      (key === "host" && DELIMITED_HOST.test(detail));
+      (key.toLowerCase() === "host" && DELIMITED_HOST.test(detail));
     const unquoted = delimited ? DELIMITED_KEYWORD_VALUE : UNQUOTED_KEYWORD_VALUE;
     const valueEnd = keywordValueEnd(
       detail,
