@@ -108,6 +108,8 @@ const documentedOperationalEnvironmentVariableExclusions = {
   TRACE_SAMPLE_RATE: "Application-defined deployment recipe input, not a Croco runtime variable.",
   CROCO_STRICT_CONTRACT_RC:
     "Repository verification input for strict contract checks, not an application runtime variable.",
+  CROCO_SECURITY_POLICY_ENFORCEMENT:
+    "Repository verification input that defers dated security findings in CI, not an application runtime variable.",
 } as const satisfies Record<string, string>;
 const nonEnvironmentCrocoDocumentationTokens = {
   CROCO_DI_: "Documented diagnostic-code namespace prefix.",
