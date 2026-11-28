@@ -245,6 +245,31 @@ describe("DrizzleHealthIndicator", () => {
       "failed host=db.example dbname=app,sslpassword=reporting sslmode=require",
       "failed host=db.example dbname=app,sslpassword=reporting sslmode=require",
     ],
+    [
+      "quoted uppercase environment credentials without an underscore",
+      'failed DBPASSWORD="sample tail" host=db.example',
+      "failed DBPASSWORD=[redacted] host=db.example",
+    ],
+    [
+      "wrapper-like punctuation inside an enclosed URL",
+      "failed (postgres://user:sample);host=tail@db.example/app);sslpassword=another",
+      "failed (postgres://[redacted]@db.example/app);sslpassword=[redacted]",
+    ],
+    [
+      "a raw space inside a password-only URL",
+      "failed postgres://:sample tail@db.example/app?sslmode=require",
+      "failed postgres://[redacted]@db.example/app?sslmode=require",
+    ],
+    [
+      "legacy hyphenated keys in delimited diagnostics",
+      "failed access-token=sample;host=db.example;dbname=app;sslmode=require",
+      "failed access-token=[redacted];host=db.example;dbname=app;sslmode=require",
+    ],
+    [
+      "credentials adjacent to a backtick-wrapped connection URI",
+      "failed `postgres://db.example/app`;sslpassword=sample",
+      "failed `postgres://db.example/app`;sslpassword=[redacted]",
+    ],
   ])("should redact connection failure details for %s", async (_case, message, redactedMessage) => {
     const db = {
       transaction: vi.fn().mockRejectedValue(new Error(message)),

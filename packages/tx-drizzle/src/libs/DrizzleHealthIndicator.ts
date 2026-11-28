@@ -17,9 +17,9 @@ export type DrizzleHealthIndicatorOptions = {
 
 const SENSITIVE_KEYS =
   /password|passwd|pwd|secret|token|api[_-]?key|apikey|access[_-]?key|connection[_-]?string|dsn/i;
-const BASELINE_SENSITIVE_KEY = new RegExp(`^(?:${SENSITIVE_KEYS.source})$`, "i");
+const LEGACY_SENSITIVE_KEY = new RegExp(String.raw`\b(?:${SENSITIVE_KEYS.source})$`, "i");
 const DIAGNOSTIC_FIELDS = /^(?:detail|error|message|reason)$/i;
-const ENVIRONMENT_KEY = /^(?:PGPASSWORD|[A-Z][A-Z0-9]*_[A-Z0-9_]+)$/;
+const ENVIRONMENT_KEY = /^[A-Z_][A-Z0-9_]*$/;
 const URI_SCHEME = /[a-z][a-z0-9+.-]*:\/\//;
 const KEYWORD_NAME = /[\w-]+/;
 const KEYWORD_PADDING = /[ \t\r\n\v\f]*/;
@@ -32,14 +32,15 @@ const WRAPPED_URI = (
     ["<", ">"],
     ["'", "'"],
     ['"', '"'],
+    ["`", "`"],
   ] as const
 )
   .map(
     ([start, end]) =>
-      String.raw`(?<=${start})${URI_SCHEME.source}(?:(?!${end}${WRAPPED_FIELD_SEPARATOR})\S)*(?=${end}${WRAPPED_FIELD_SEPARATOR})`,
+      String.raw`(?<=${start})${URI_SCHEME.source}\S*(?=${end}(?:${WRAPPED_FIELD_SEPARATOR}|(?=\s|$)))`,
   )
   .join("|");
-const URI_USERINFO = String.raw`(${URI_SCHEME.source})(?:[^/?#\s]+(?<!@)@|[^/\s]+(?<!@)@)`;
+const URI_USERINFO = String.raw`(${URI_SCHEME.source})(?:[^/?#\s]+(?<!@)@|[^/\s]+(?<!@)@|:[^/?#\r\n\t]+\x20[^/?#\r\n\t]*?@(?=[\w\[]))`;
 const WRAPPED_URI_OR_USERINFO = new RegExp(`${WRAPPED_URI}|${URI_USERINFO}`, "gi");
 const URL_OR_KEYWORD = new RegExp(
   String.raw`${WRAPPED_URI}|${URI_SCHEME.source}\S+|(?<![\w?&-])(${KEYWORD_NAME.source})${KEYWORD_PADDING.source}=${KEYWORD_PADDING.source}`,
@@ -115,7 +116,7 @@ function redactKeywordValues(detail: string, readDiagnosticFields = true): strin
     const quote = detail.charAt(valueStart);
     if (diagnostic && quote !== "'" && quote !== '"') continue;
     const delimited =
-      BASELINE_SENSITIVE_KEY.test(key) || /[,;&]/.test(detail.charAt(token.index - 1));
+      LEGACY_SENSITIVE_KEY.test(key) || /[,;&]/.test(detail.charAt(token.index - 1));
     const unquoted = delimited ? DELIMITED_KEYWORD_VALUE : UNQUOTED_KEYWORD_VALUE;
     const valueEnd = keywordValueEnd(
       detail,
