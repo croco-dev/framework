@@ -204,6 +204,9 @@ meet `--miss-threshold`; the defaults require 20 observed runs with a zero miss 
 required evidence: overflow or unknown duration is reported with `incomplete: true` while replay commands stay
 in the plan.
 
+Place options after `test plan`. Value options accept both `--out plan.json` and `--out=plan.json`.
+Use `--enforce` as a standalone flag. Unknown options and malformed values fail before Git or artifact access.
+
 ### doctor — Workspace Diagnostics
 
 - `croco doctor --json` finds the nearest `pnpm-workspace.yaml`, discovers workspace packages, and prints a machine-readable report for CI.

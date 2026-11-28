@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "cli",
+      "classification": "pure-contract",
+      "reason": "Validate test plan command arguments before reading Git or local artifacts. The change is confined to CLI dispatch and option parsing.",
+      "files": {
+        "packages/cli/src/commands/root.ts": "97201e96fb46a80fd1e3e468acd18559c58d85df8518999223aa6e7d40d15dbe",
+        "packages/cli/src/commands/testPlan.ts": "c68712e45708985aa0855b7cca4895f8817a1c36de62f1a644c3f1adfc1f93f9"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The Node CLI validates its own command line outside the application Host. Parsing requires no Kubernetes capabilities, storage, or lifecycle hooks.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/cli/src/bin/croco.ts", "packages/cli/src/commands/testPlan.ts"]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "CLI argument validation does not run on the Lambda invocation path or interact with Lambda bindings, storage, or lifecycle hooks.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/cli/src/bin/croco.ts", "packages/cli/src/commands/testPlan.ts"]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "CLI argument validation does not run in a Workers or Container Host and uses no Cloudflare bindings, storage, or lifecycle hooks.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/cli/src/bin/croco.ts", "packages/cli/src/commands/testPlan.ts"]
+        }
+      }
+    }
+  ]
+}
