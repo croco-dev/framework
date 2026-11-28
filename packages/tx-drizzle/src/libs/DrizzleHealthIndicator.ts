@@ -19,7 +19,7 @@ const SENSITIVE_KEYS =
   /password|passwd|pwd|secret|token|api[_-]?key|apikey|access[_-]?key|connection[_-]?string|dsn/i;
 const BASELINE_SENSITIVE_KEY = new RegExp(`^(?:${SENSITIVE_KEYS.source})$`, "i");
 const DIAGNOSTIC_FIELDS = /^(?:detail|error|message|reason)$/i;
-const ENVIRONMENT_KEY = /^[A-Z][A-Z0-9]*_[A-Z0-9_]+$/;
+const ENVIRONMENT_KEY = /^(?:PGPASSWORD|[A-Z][A-Z0-9]*_[A-Z0-9_]+)$/;
 const URI_SCHEME = /[a-z][a-z0-9+.-]*:\/\//;
 const KEYWORD_NAME = /[\w-]+/;
 const KEYWORD_PADDING = /[ \t\r\n\v\f]*/;
@@ -36,14 +36,11 @@ const WRAPPED_URI = (
 )
   .map(
     ([start, end]) =>
-      String.raw`(?<=${start})${URI_SCHEME.source}(?:(?!${end}${WRAPPED_FIELD_SEPARATOR})\S)*`,
+      String.raw`(?<=${start})${URI_SCHEME.source}(?:(?!${end}${WRAPPED_FIELD_SEPARATOR})\S)*(?=${end}${WRAPPED_FIELD_SEPARATOR})`,
   )
   .join("|");
-const URI_FIELD_BOUNDARY = String.raw`[)\]>'"]${WRAPPED_FIELD_SEPARATOR}`;
-const URI_USERINFO = new RegExp(
-  String.raw`(${URI_SCHEME.source})(?:(?:(?!${URI_FIELD_BOUNDARY})[^/?#\s])+(?<!@)@|(?:(?!${URI_FIELD_BOUNDARY})[^/\s])+(?<!@)@)`,
-  "gi",
-);
+const URI_USERINFO = String.raw`(${URI_SCHEME.source})(?:[^/?#\s]+(?<!@)@|[^/\s]+(?<!@)@)`;
+const WRAPPED_URI_OR_USERINFO = new RegExp(`${WRAPPED_URI}|${URI_USERINFO}`, "gi");
 const URL_OR_KEYWORD = new RegExp(
   String.raw`${WRAPPED_URI}|${URI_SCHEME.source}\S+|(?<![\w?&-])(${KEYWORD_NAME.source})${KEYWORD_PADDING.source}=${KEYWORD_PADDING.source}`,
   "gi",
@@ -90,7 +87,13 @@ export class DrizzleHealthIndicator implements HealthIndicator {
 }
 
 function redactDrizzleHealthDetail(value: string): string {
-  const withoutUserInfo = value.replace(URI_USERINFO, "$1[redacted]@");
+  const withoutUserInfo = value.replace(
+    WRAPPED_URI_OR_USERINFO,
+    (match: string, scheme: string | undefined) =>
+      scheme === undefined
+        ? match.replace(new RegExp(URI_USERINFO, "gi"), "$1[redacted]@")
+        : `${scheme}[redacted]@`,
+  );
   return redactKeywordValues(withoutUserInfo)
     .replace(/([?&])([^=\s&]+)=([^&\s]+)/g, (match: string, prefix: string, key: string) =>
       SENSITIVE_KEYS.test(key) ? `${prefix}${key}=[redacted]` : match,
@@ -111,10 +114,9 @@ function redactKeywordValues(detail: string, readDiagnosticFields = true): strin
     const diagnostic = readDiagnosticFields && DIAGNOSTIC_FIELDS.test(key);
     const quote = detail.charAt(valueStart);
     if (diagnostic && quote !== "'" && quote !== '"') continue;
-    const unquoted =
-      sensitive && !BASELINE_SENSITIVE_KEY.test(key)
-        ? UNQUOTED_KEYWORD_VALUE
-        : DELIMITED_KEYWORD_VALUE;
+    const delimited =
+      BASELINE_SENSITIVE_KEY.test(key) || /[,;&]/.test(detail.charAt(token.index - 1));
+    const unquoted = delimited ? DELIMITED_KEYWORD_VALUE : UNQUOTED_KEYWORD_VALUE;
     const valueEnd = keywordValueEnd(
       detail,
       valueStart,
@@ -132,7 +134,15 @@ function redactKeywordValues(detail: string, readDiagnosticFields = true): strin
       const field = detail.slice(valueStart, valueEnd);
       const closingQuote = field.length > 1 && field.endsWith(quote) ? quote : "";
       const content = field.slice(1, closingQuote ? -1 : undefined);
-      redactedValue = quote + redactKeywordValues(content, false) + closingQuote;
+      const decoded = content.replace(/\\([\\'"])/g, (match: string, escaped: string) =>
+        escaped === quote || escaped === "\\" ? escaped : match,
+      );
+      const redacted = redactKeywordValues(decoded, false);
+      if (redacted === decoded) continue;
+      const encoded = redacted.replace(/[\\'"]/g, (character) =>
+        character === quote || character === "\\" ? "\\" + character : character,
+      );
+      redactedValue = quote + encoded + closingQuote;
     } else {
       continue;
     }

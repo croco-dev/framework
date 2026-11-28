@@ -225,6 +225,26 @@ describe("DrizzleHealthIndicator", () => {
       "failed sslpassword=sample\u2003tail host=db.example",
       "failed sslpassword=[redacted] host=db.example",
     ],
+    [
+      "quoted PGPASSWORD without an underscore",
+      'failed PGPASSWORD="sample tail" host=db.example',
+      "failed PGPASSWORD=[redacted] host=db.example",
+    ],
+    [
+      "credential quotes escaped by a diagnostic field",
+      "failed error='sslpassword=\\'sample tail\\' host=db.example' dbname=app",
+      "failed error='sslpassword=[redacted] host=db.example' dbname=app",
+    ],
+    [
+      "wrapper-like punctuation inside a bare URL password",
+      "failed postgres://user:sample);host=tail@db.example/app postgres://:sample);host=tail@db.example/app",
+      "failed postgres://[redacted]@db.example/app postgres://[redacted]@db.example/app",
+    ],
+    [
+      "a comma followed by credential-like text in an unquoted database name",
+      "failed host=db.example dbname=app,sslpassword=reporting sslmode=require",
+      "failed host=db.example dbname=app,sslpassword=reporting sslmode=require",
+    ],
   ])("should redact connection failure details for %s", async (_case, message, redactedMessage) => {
     const db = {
       transaction: vi.fn().mockRejectedValue(new Error(message)),
