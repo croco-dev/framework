@@ -111,14 +111,20 @@ function createBoundCrocoCommand(runtime: CrocoCommandRuntime): CommandDef<typeo
     setup({ rawArgs }) {
       // Match Citty's dispatch before it discards arguments preceding the command names.
       const dispatchIndex = rawArgs.findIndex((arg) => !arg.startsWith("-"));
-      if (rawArgs[dispatchIndex] === "contracts") {
+      const dispatchName = rawArgs[dispatchIndex];
+      if (dispatchName === "contracts" || dispatchName === "test") {
         const childIndex = rawArgs.findIndex(
           (arg, index) => index > dispatchIndex && !arg.startsWith("-"),
         );
-        if (childIndex > 1 && rawArgs[childIndex] === "check") {
+        const childName = rawArgs[childIndex];
+        if (
+          childIndex > 1 &&
+          ((dispatchName === "contracts" && childName === "check") ||
+            (dispatchName === "test" && childName === "plan"))
+        ) {
           throw createCliError(
-            "Pass all arguments after 'contracts check'.",
-            "E_CONTRACTS_CHECK_ARGUMENTS",
+            `Pass all arguments after '${dispatchName} ${childName}'.`,
+            dispatchName === "contracts" ? "E_CONTRACTS_CHECK_ARGUMENTS" : "E_TEST_PLAN_ARGUMENTS",
           );
         }
       }

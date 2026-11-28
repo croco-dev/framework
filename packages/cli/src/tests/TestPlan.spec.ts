@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   ChangedTestPlanProblem,
@@ -10,9 +10,63 @@ import {
 } from "@croco/testing/executable-assurance";
 
 import { parseTestPlanArgs, runTestPlan } from "../commands/testPlan.js";
+import { runCroco } from "../commands/root.js";
 
 describe("test plan", () => {
-  it("derives a machine-readable changed test plan from Git base/head artifacts", () => {
+  it.each([
+    { command: ["test", "plan", "--enforce=true"], message: "--enforce" },
+    { command: ["test", "plan", "--enforced"], message: "--enforced" },
+    { command: ["test", "--enforce=true", "plan"], message: "after 'test plan'" },
+    { command: ["--enforced", "test", "plan"], message: "after 'test plan'" },
+  ])("reports invalid CLI arguments for $command", async ({ command, message }) => {
+    const stdout = vi.fn();
+    const stderr = vi.fn();
+
+    const result = await runCroco([...command, "--changed", "HEAD"], { stdout, stderr });
+
+    expect(result).toEqual({ exitCode: 1 });
+    expect(stderr).toHaveBeenCalledWith(expect.stringContaining(message));
+    expect(stdout).not.toHaveBeenCalledWith(expect.stringContaining('"mode": "shadow"'));
+  });
+
+  it.each([
+    { args: ["--out"], message: "--out" },
+    { args: ["--out", "--enforce"], message: "--out" },
+    { args: ["--baseline-out="], message: "--baseline-out" },
+    { args: ["--budget-ms=invalid"], message: "--budget-ms" },
+    { args: ["--budget-ms", "15", "--budget-ms=invalid"], message: "--budget-ms" },
+    { args: ["--budget-ms=15", "--budget-ms= "], message: "--budget-ms" },
+    {
+      args: ["--observation-window=2", "--observation-window", "0"],
+      message: "--observation-window",
+    },
+    { args: ["--miss-threshold=0.1", "--miss-threshold=2"], message: "--miss-threshold" },
+    { args: ["unexpected"], message: "unexpected" },
+  ])("rejects $args before reading artifacts or invoking Git", ({ args, message }) => {
+    const git = vi.fn(() => "");
+    const exists = vi.fn(() => false);
+    const writeFile = vi.fn();
+    const stderr = vi.fn();
+
+    const exitCode = runTestPlan(["--changed", "HEAD", ...args], {
+      stdout: vi.fn(),
+      stderr,
+      git,
+      exists,
+      writeFile,
+    });
+
+    expect(exitCode).toBe(1);
+    expect(stderr).toHaveBeenCalledWith(expect.stringContaining(message));
+    expect(git).not.toHaveBeenCalled();
+    expect(exists).not.toHaveBeenCalled();
+    expect(writeFile).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { options: ["--out", "ci-reports/changed-test-plan/plan.json", "--budget-ms", "15"] },
+    { options: ["--out=ci-reports/changed-test-plan/plan.json", "--budget-ms=15"] },
+  ])("writes a budgeted plan with $options", ({ options }) => {
     const writes = new Map<string, string>();
     const stdout: string[] = [];
     const baseGraph = serializeExecutableAssurance(graph("GET /users"));
@@ -25,23 +79,20 @@ describe("test plan", () => {
       ["/workspace/ci-reports/test-evidence/bundle.json", evidence],
     ]);
 
-    const exitCode = runTestPlan(
-      ["--changed", "origin/trunk", "--out", "ci-reports/changed-test-plan/plan.json"],
-      {
-        cwd: "/workspace",
-        exists: (path) => files.has(path),
-        readFile: (path) => files.get(path) ?? "",
-        mkdir: () => {},
-        writeFile: (path, content) => writes.set(path, content),
-        stdout: (message) => stdout.push(message),
-        git: (args) => {
-          if (args[0] === "show") return baseGraph;
-          if (args[0] === "diff") return "packages/users/src/UsersController.ts\n";
-          if (args[0] === "rev-parse") return "abc123\n";
-          throw new Error(`Unexpected git command: ${args.join(" ")}`);
-        },
+    const exitCode = runTestPlan(["--changed", "origin/trunk", ...options], {
+      cwd: "/workspace",
+      exists: (path) => files.has(path),
+      readFile: (path) => files.get(path) ?? "",
+      mkdir: () => {},
+      writeFile: (path, content) => writes.set(path, content),
+      stdout: (message) => stdout.push(message),
+      git: (args) => {
+        if (args[0] === "show") return baseGraph;
+        if (args[0] === "diff") return "packages/users/src/UsersController.ts\n";
+        if (args[0] === "rev-parse") return "abc123\n";
+        throw new Error(`Unexpected git command: ${args.join(" ")}`);
       },
-    );
+    });
 
     expect(exitCode).toBe(0);
     expect(stdout).toEqual([
@@ -55,6 +106,7 @@ describe("test plan", () => {
       changedContracts: ["route:UsersController.create"],
       selectedTests: ["users.create.success"],
       fallbacks: [{ profile: "full" }],
+      budget: { limitMs: 15 },
     });
   });
 
@@ -269,8 +321,7 @@ describe("test plan", () => {
           "origin/trunk",
           "--full-evidence",
           "full.json",
-          "--baseline-out",
-          "baseline.json",
+          "--baseline-out=baseline.json",
           "--observation-window",
           "1",
           "--enforce",
@@ -320,6 +371,21 @@ describe("test plan", () => {
       kind: "invalid",
       message: "Missing base revision. Pass --changed <base>.",
     });
+  });
+
+  it("preserves single-hyphen values and the first supplied value", () => {
+    expect(
+      parseTestPlanArgs([
+        "--changed",
+        "HEAD",
+        "--out",
+        "-plan.json",
+        "--out=other.json",
+        "--budget-ms",
+        "-0",
+        "--budget-ms=2",
+      ]),
+    ).toMatchObject({ kind: "run", options: { out: "-plan.json", budgetMs: -0 } });
   });
 });
 

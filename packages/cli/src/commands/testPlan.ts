@@ -1,6 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
+import { parseArgs } from "node:util";
 import { defineCommand } from "citty";
 import {
   assertChangedTestPlanEnforceable,
@@ -12,7 +13,6 @@ import {
   serializeChangedTestPlan,
   updateChangedTestSelectionBaseline,
 } from "@croco/testing/executable-assurance";
-import { GLOBAL_OPTIONS } from "./options.js";
 import { getCrocoCommandRuntime } from "../libs/cliRuntime.js";
 
 import type {
@@ -24,6 +24,29 @@ import type {
 const DEFAULT_GRAPH = "executable-assurance.graph.json";
 const DEFAULT_EVIDENCE = "ci-reports/test-evidence/bundle.json";
 const DEFAULT_BASELINE = "ci-reports/changed-test-plan/baseline.json";
+
+const TEST_PLAN_OPTIONS = {
+  changed: { type: "string", description: "Git base revision to compare with HEAD" },
+  graph: { type: "string", description: `Head assurance graph (default: ${DEFAULT_GRAPH})` },
+  evidence: {
+    type: "string",
+    description: `Head test evidence bundle (default: ${DEFAULT_EVIDENCE})`,
+  },
+  "full-evidence": {
+    type: "string",
+    description: "Full-suite evidence used to record shadow-mode selection misses",
+  },
+  out: { type: "string", description: "Write the machine-readable plan to this path" },
+  baseline: {
+    type: "string",
+    description: `Existing durable selection baseline (default: ${DEFAULT_BASELINE})`,
+  },
+  "baseline-out": { type: "string", description: "Write the updated selection baseline" },
+  "observation-window": { type: "string", description: "Runs required before enforcement" },
+  "miss-threshold": { type: "string", description: "Maximum miss rate before enforcement" },
+  "budget-ms": { type: "string", description: "Advisory execution budget in milliseconds" },
+  enforce: { type: "boolean", description: "Require the documented observation gate" },
+} as const;
 
 export type TestPlanIo = {
   readonly cwd: string;
@@ -75,29 +98,7 @@ export const testPlan = defineCommand({
     name: "plan",
     description: "Derive an explainable conservative test plan from base/head assurance artifacts",
   },
-  args: {
-    ...GLOBAL_OPTIONS,
-    changed: { type: "string", description: "Git base revision to compare with HEAD" },
-    graph: { type: "string", description: `Head assurance graph (default: ${DEFAULT_GRAPH})` },
-    evidence: {
-      type: "string",
-      description: `Head test evidence bundle (default: ${DEFAULT_EVIDENCE})`,
-    },
-    "full-evidence": {
-      type: "string",
-      description: "Full-suite evidence used to record shadow-mode selection misses",
-    },
-    out: { type: "string", description: "Write the machine-readable plan to this path" },
-    baseline: {
-      type: "string",
-      description: `Existing durable selection baseline (default: ${DEFAULT_BASELINE})`,
-    },
-    "baseline-out": { type: "string", description: "Write the updated selection baseline" },
-    "observation-window": { type: "string", description: "Runs required before enforcement" },
-    "miss-threshold": { type: "string", description: "Maximum miss rate before enforcement" },
-    "budget-ms": { type: "string", description: "Advisory execution budget in milliseconds" },
-    enforce: { type: "boolean", description: "Require the documented observation gate" },
-  },
+  args: TEST_PLAN_OPTIONS,
   async run({ rawArgs }) {
     getCrocoCommandRuntime().setExitCode(runTestPlan(rawArgs));
   },
@@ -162,39 +163,87 @@ export function runTestPlan(
 
 export function parseTestPlanArgs(args: readonly string[]): ParseResult {
   if (args.includes("--help") || args.includes("-h")) return { kind: "help" };
-  const changed = flag(args, "--changed");
+
+  try {
+    const { tokens, values } = parseArgs({
+      args: normalizeSeparateValues(args),
+      options: TEST_PLAN_OPTIONS,
+      strict: true,
+      tokens: true,
+    });
+    const supplied = new Map<string, string[]>();
+    for (const token of tokens) {
+      if (token.kind !== "option" || token.value === undefined) continue;
+      if (token.value === "") {
+        return { kind: "invalid", message: `Option ${token.rawName} requires a nonempty value.` };
+      }
+      const occurrences = supplied.get(token.name);
+      if (occurrences) occurrences.push(token.value);
+      else supplied.set(token.name, [token.value]);
+    }
+    return resolveTestPlanOptions(supplied, values.enforce === true);
+  } catch (error) {
+    return {
+      kind: "invalid",
+      message: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
+
+function normalizeSeparateValues(args: readonly string[]): string[] {
+  const normalized = [...args];
+  const options = Object.entries(TEST_PLAN_OPTIONS);
+  for (let index = 0; index < normalized.length; index += 1) {
+    const flag = normalized[index];
+    if (flag === "--") break;
+    const value = normalized[index + 1];
+    if (
+      value?.startsWith("-") &&
+      !value.startsWith("--") &&
+      options.some(([name, option]) => option.type === "string" && flag === `--${name}`)
+    ) {
+      normalized.splice(index, 2, `${flag}=${value}`);
+    }
+  }
+  return normalized;
+}
+
+function resolveTestPlanOptions(
+  supplied: ReadonlyMap<string, readonly string[]>,
+  enforce: boolean,
+): ParseResult {
+  const first = (name: string) => supplied.get(name)?.[0];
+  const numericValues = (name: string) =>
+    supplied.get(name)?.map((value) => (value.trim() === "" ? Number.NaN : Number(value))) ?? [];
+  const changed = first("changed");
   if (!changed)
     return { kind: "invalid", message: "Missing base revision. Pass --changed <base>." };
-  const observationWindow = numberFlag(args, "--observation-window", 20);
-  const missThreshold = numberFlag(args, "--miss-threshold", 0);
-  const budgetMs = optionalNumberFlag(args, "--budget-ms");
-  if (
-    observationWindow === null ||
-    !Number.isInteger(observationWindow) ||
-    observationWindow <= 0
-  ) {
+  const observationWindows = numericValues("observation-window");
+  const missThresholds = numericValues("miss-threshold");
+  const budgets = numericValues("budget-ms");
+  if (observationWindows.some((value) => !Number.isInteger(value) || value <= 0)) {
     return { kind: "invalid", message: "--observation-window must be a positive integer." };
   }
-  if (missThreshold === null || missThreshold < 0 || missThreshold > 1) {
+  if (missThresholds.some((value) => !Number.isFinite(value) || value < 0 || value > 1)) {
     return { kind: "invalid", message: "--miss-threshold must be a number from 0 through 1." };
   }
-  if (budgetMs === null || (budgetMs !== undefined && budgetMs < 0)) {
+  if (budgets.some((value) => !Number.isFinite(value) || value < 0)) {
     return { kind: "invalid", message: "--budget-ms must be a non-negative number." };
   }
   return {
     kind: "run",
     options: {
       changed,
-      graph: flag(args, "--graph") ?? DEFAULT_GRAPH,
-      evidence: flag(args, "--evidence") ?? DEFAULT_EVIDENCE,
-      fullEvidence: flag(args, "--full-evidence"),
-      out: flag(args, "--out"),
-      baseline: flag(args, "--baseline") ?? DEFAULT_BASELINE,
-      baselineOut: flag(args, "--baseline-out"),
-      observationWindow,
-      missThreshold,
-      budgetMs,
-      enforce: args.includes("--enforce"),
+      graph: first("graph") ?? DEFAULT_GRAPH,
+      evidence: first("evidence") ?? DEFAULT_EVIDENCE,
+      fullEvidence: first("full-evidence") ?? null,
+      out: first("out") ?? null,
+      baseline: first("baseline") ?? DEFAULT_BASELINE,
+      baselineOut: first("baseline-out") ?? null,
+      observationWindow: observationWindows[0] ?? 20,
+      missThreshold: missThresholds[0] ?? 0,
+      budgetMs: budgets[0],
+      enforce,
     },
   };
 }
@@ -333,28 +382,6 @@ function lines(value: string): readonly string[] {
     .split("\n")
     .map((line) => line.trim())
     .filter(Boolean);
-}
-
-function flag(args: readonly string[], name: string): string | null {
-  const index = args.indexOf(name);
-  return index === -1 ? null : (args[index + 1] ?? null);
-}
-
-function numberFlag(args: readonly string[], name: string, fallback: number): number | null {
-  const value = flag(args, name);
-  return value === null ? fallback : parseFiniteNumber(value);
-}
-
-function optionalNumberFlag(args: readonly string[], name: string): number | null | undefined {
-  const index = args.indexOf(name);
-  if (index === -1) return undefined;
-  const value = args[index + 1];
-  return value === undefined ? null : parseFiniteNumber(value);
-}
-
-function parseFiniteNumber(value: string): number | null {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : null;
 }
 
 function printHelp(io: TestPlanIo): void {
