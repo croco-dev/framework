@@ -5,6 +5,7 @@ import {
   type PolicyDecisionTraceSink,
 } from "@croco/access-core";
 import { Component, Inject, InjectOptional } from "@croco/framework-context";
+import { recordEvent } from "@croco/telemetry-api";
 import type { PlanVersionRef } from "@croco/billing-core";
 import { featureKey, getLegacyPlanId, legacyPlanVersionRef } from "./EntitlementDefinition";
 import type { FeatureReference } from "./EntitlementDefinition";
@@ -345,11 +346,20 @@ export class EntitlementManager {
         ...checkOptions.inputs,
       },
     });
-    await recordPolicyDecisionTrace(trace, { auditSink: this.options.traceSink });
-
-    return {
-      ...result,
-      trace,
-    };
+    await recordPolicyDecisionTrace(trace);
+    const completedDecision = { ...result, trace };
+    try {
+      await this.options.traceSink?.recordPolicyDecisionTrace(trace);
+    } catch {
+      try {
+        recordEvent("entitlement.trace.delivery_failed", {
+          "policy.decision_id": trace.decisionId,
+          "policy.result": trace.result,
+        });
+      } catch {
+        return completedDecision;
+      }
+    }
+    return completedDecision;
   }
 }
