@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "entitlements-core",
+      "classification": "pure-contract",
+      "reason": "The entitlement manager preserves a completed decision when the trace sink fails. It reports the failed delivery with the decision ID and result using the existing telemetry API.",
+      "files": {
+        "packages/entitlements-core/src/libs/EntitlementManager.ts": "c8872ac056c9c20efb922bd75954642a8bdd679b69f1cfd06cc4863c48150e02"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Separating the existing trace sink failure from the decision uses no Node Host capabilities, storage or lifecycle hooks.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/entitlements-core/src/libs/EntitlementManager.ts",
+            "packages/entitlements-core/src/tests/EntitlementManager.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Separating the existing trace sink failure from the decision uses no Lambda Host capabilities, storage or invocation lifecycle hooks.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/entitlements-core/src/libs/EntitlementManager.ts",
+            "packages/entitlements-core/src/tests/EntitlementManager.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Separating the existing trace sink failure from the decision uses no Worker bindings, storage or lifecycle hooks.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/entitlements-core/src/libs/EntitlementManager.ts",
+            "packages/entitlements-core/src/tests/EntitlementManager.spec.ts"
+          ]
+        }
+      }
+    }
+  ]
+}

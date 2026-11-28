@@ -1,7 +1,10 @@
 import { Container } from "@croco/framework-context";
 import type { PolicyDecisionTrace } from "@croco/access-core";
 import { planVersionRef } from "@croco/billing-core";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import * as telemetry from "@croco/telemetry-api";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { RequireEntitlement } from "../libs/decorators/RequireEntitlement";
+import { EntitlementGuard } from "../libs/EntitlementGuard";
 import { EntitlementManager } from "../libs/EntitlementManager";
 import { EntitlementOverageAllowedEvent, EntitlementQuotaExceededEvent } from "../libs/events";
 import { InMemoryPlanEntitlementRegistry } from "../libs/InMemoryPlanEntitlementRegistry";
@@ -103,6 +106,10 @@ describe("EntitlementManager", () => {
       {},
       eventPublisher,
     );
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it("should grant boolean entitlement", async () => {
@@ -458,6 +465,121 @@ describe("EntitlementManager", () => {
     expect(result.trace?.inputs.diagnostic).toBe("proxy-authorization=[Redacted]");
     expect(traces).toEqual([result.trace]);
   });
+
+  it.each([
+    {
+      feature: "support",
+      decision: "allow",
+      expected: { granted: true, status: "allowed", type: "boolean" },
+    },
+    {
+      feature: "seats",
+      decision: "allow",
+      expected: { granted: true, status: "allowed", type: "static", value: 5 },
+    },
+    {
+      feature: "reports",
+      decision: "deny",
+      expected: {
+        granted: false,
+        status: "denied",
+        type: "metered",
+        reason: "quota_exceeded",
+        usage: 4,
+        quota: 3,
+      },
+    },
+    {
+      feature: "audit_logs",
+      decision: "deny",
+      expected: { granted: false, status: "denied", type: "boolean", reason: "not_entitled" },
+    },
+  ])(
+    "preserves the result for $feature when trace delivery fails",
+    async ({ feature, decision, expected }) => {
+      const recordEvent = vi.spyOn(telemetry, "recordEvent").mockImplementation(() => {});
+      const failure = Object.assign(new Error("private sink connection details"), {
+        name: "StorageTransportError",
+        code: "BACKEND123456789",
+      });
+      const recordPolicyDecisionTrace = vi.fn().mockRejectedValue(failure);
+      registry.register("pro", [
+        { featureKey: "support", type: "boolean" },
+        { featureKey: "seats", type: "static", value: 5 },
+        { featureKey: "reports", type: "metered", quota: 3 },
+      ]);
+      quotaChecker.setQuotaStatus({ usage: 4, quota: 3, remaining: -1, exceeded: true });
+      manager = new EntitlementManager(
+        registry,
+        new StaticSubscriptionProvider("pro"),
+        quotaChecker,
+        meterLookup,
+        { traceSink: { recordPolicyDecisionTrace } },
+        eventPublisher,
+      );
+
+      const result = await manager.check("tenant-1", feature);
+
+      expect(result).toMatchObject({ ...expected, featureKey: feature });
+      expect(result.trace).toMatchObject({ policyKind: "entitlement", result: decision });
+      expect(recordPolicyDecisionTrace).toHaveBeenCalledExactlyOnceWith(result.trace);
+      expect(recordEvent).toHaveBeenCalledWith("entitlement.trace.delivery_failed", {
+        "policy.decision_id": result.trace?.decisionId,
+        "policy.result": decision,
+      });
+      expect(JSON.stringify(recordEvent.mock.calls)).not.toContain(
+        "private sink connection details",
+      );
+      expect(JSON.stringify(recordEvent.mock.calls)).not.toContain("BACKEND123456789");
+    },
+  );
+
+  it.each([true, false])(
+    "preserves the guard decision (%s) when trace delivery fails",
+    async (granted) => {
+      const recordEvent = vi.spyOn(telemetry, "recordEvent").mockImplementation((name) => {
+        if (name === "entitlement.trace.delivery_failed") {
+          throw new Error("span unavailable");
+        }
+      });
+      class ReportsController {
+        @RequireEntitlement({ feature: "reports" })
+        list() {}
+      }
+
+      registry.register("pro", granted ? [{ featureKey: "reports", type: "boolean" }] : []);
+      manager = new EntitlementManager(
+        registry,
+        new StaticSubscriptionProvider("pro"),
+        quotaChecker,
+        meterLookup,
+        {
+          traceSink: {
+            recordPolicyDecisionTrace: vi.fn().mockRejectedValue(new Error("sink unavailable")),
+          },
+        },
+      );
+      const guard = new EntitlementGuard(manager);
+      const result = guard.canActivate({
+        getClass: () => ReportsController,
+        getHandler: () => "list",
+        getRequest: () =>
+          Object.assign(new Request("https://example.test/reports"), {
+            user: { id: "user-1", roles: [], permissions: [], tenantId: "tenant-1" },
+          }),
+      });
+
+      if (granted) {
+        await expect(result).resolves.toBe(true);
+      } else {
+        await expect(result).rejects.toMatchObject({ code: "ENTITLEMENT_DENIED" });
+      }
+      expect(recordEvent).toHaveBeenCalledWith(
+        "entitlement.trace.delivery_failed",
+        expect.any(Object),
+      );
+    },
+  );
 
   it("should allow requests that exceed quota with WARN policy", async () => {
     registry.register("pro", [
