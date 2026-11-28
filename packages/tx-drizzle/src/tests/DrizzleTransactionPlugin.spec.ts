@@ -134,10 +134,16 @@ describe("drizzleTransaction", () => {
   });
 
   it("maps a failed and redacted Drizzle health check to unhealthy diagnostics", async () => {
+    const redactedMessage =
+      "postgres://[redacted]@db/app?token=[redacted] sslpassword=[redacted] sslmode=require";
     const db = {
       transaction: vi
         .fn()
-        .mockRejectedValue(new Error("postgres://admin:secret@db/app?token=private")),
+        .mockRejectedValue(
+          new Error(
+            "postgres://:uri-value@db/app?token=query-value sslpassword=key-value sslmode=require",
+          ),
+        ),
     } as unknown as DrizzleDb;
     const runtime = createRuntime(db);
 
@@ -149,8 +155,8 @@ describe("drizzleTransaction", () => {
     await expect(contribution.value.getHealth()).resolves.toMatchObject({
       status: "unhealthy",
       component: "primary-db",
-      message: "postgres://[redacted]@db/app?token=[redacted]",
-      details: { error: "postgres://[redacted]@db/app?token=[redacted]" },
+      message: redactedMessage,
+      details: { error: redactedMessage },
     });
   });
 
