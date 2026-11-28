@@ -115,7 +115,10 @@ Release 실행은 하나의 보존형 큐로 직렬화합니다. 대기 중 최�
 전에 종료하고, 현재 실행은 push diff뿐 아니라 남아 있는 raw changeset과 npm의 정확한 workspace
 package version 공개 상태를 함께 검사합니다. 이전 Version Packages 실행이 밀려도 미공개 버전이
 발견되면 현재 SHA에서 publish verification을 다시 실행한 뒤 Changesets를 호출합니다. raw
-changeset이 남아 있으면 publish 대신 Version Packages PR 재조정 경로를 유지합니다. Changesets
+changeset이 남아 있으면 publish 대신 Version Packages PR 재조정 경로를 유지합니다. 이 push는
+npm에 publish될 수 없으므로 release metadata 검사는 pending changeset이 덮는 `0.0.0` version과 빠진
+`CHANGELOG.md`를 허용합니다. raw changeset이 없는 push(보통 Version Packages PR merge), 수동 dispatch,
+`.changeset/pre.json`이 있는 pre mode에서는 이를 허용하지 않습니다. Changesets
 직전에는 `trunk` SHA를 다시 확인하여 검증 이후 새 push가 생긴 실행의 변경 작업도 건너뜁니다.
 
 ### Version Packages GitHub App runbook

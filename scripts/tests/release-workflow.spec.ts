@@ -600,7 +600,14 @@ describe("Release verification profile contract", () => {
     expect(releaseExecutionStep.run).toContain(
       '--classified-changesets-action "$CLASSIFIED_CHANGESETS_ACTION"',
     );
+    expect(releaseExecutionStep.run).toContain('--event "$GITHUB_EVENT_NAME"');
+    expect(releaseExecutionStep.run).toContain(
+      '--classified-allow-pending-release-metadata "$CLASSIFIED_ALLOW_PENDING_RELEASE_METADATA"',
+    );
     expect(releaseExecutionStep.run).not.toContain("${{");
+    expect(releaseExecutionStep.env?.CLASSIFIED_ALLOW_PENDING_RELEASE_METADATA).toBe(
+      "${{ steps.release_work.outputs.allow_pending_release_metadata }}",
+    );
     expect(releaseExecutionStep.env?.CLASSIFIED_VERIFICATION).toBe(
       "${{ steps.release_work.outputs.should_run_verification }}",
     );
@@ -615,7 +622,7 @@ describe("Release verification profile contract", () => {
     );
     expect(verificationStep.run).not.toContain("${{");
     expect(verificationStep.env?.ALLOW_PENDING_RELEASE_METADATA).toBe(
-      "${{ steps.release_work.outputs.allow_pending_release_metadata }}",
+      "${{ steps.release_execution.outputs.allow_pending_release_metadata }}",
     );
     expect(verificationStep.env?.RELEASE_BASE).toBe("${{ steps.release_work.outputs.base }}");
     expect(setupNodeIndex).toBeGreaterThan(-1);

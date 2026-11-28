@@ -3,7 +3,7 @@
 import { compareStrings } from "../tooling/compareStrings.mjs";
 
 import { execFileSync } from "node:child_process";
-import { appendFileSync, readFileSync, readdirSync } from "node:fs";
+import { appendFileSync, existsSync, readFileSync, readdirSync } from "node:fs";
 import { isAbsolute, relative, resolve } from "node:path";
 import { argv } from "node:process";
 import { pathToFileURL } from "node:url";
@@ -21,9 +21,20 @@ export type ReleaseReconciliationState = {
   readonly unpublishedPackages: readonly string[];
 };
 
+export type ReleaseEvent = "push" | "workflow_dispatch";
+
+export type ReleaseMetadataStrictnessInput = {
+  readonly classifiedAllowPending: boolean;
+  readonly event: ReleaseEvent;
+  readonly pendingChangesets: boolean;
+  readonly preReleaseState: boolean;
+};
+
 type CliOptions = {
+  readonly classifiedAllowPendingReleaseMetadata: boolean;
   readonly classifiedChangesetsAction: boolean;
   readonly classifiedVerification: boolean;
+  readonly event: ReleaseEvent;
   readonly githubOutput?: string;
 };
 
@@ -44,12 +55,24 @@ function parseBoolean(value: string | undefined, flag: string): boolean {
 }
 
 function parseArgs(args: readonly string[]): CliOptions {
+  let classifiedAllowPendingReleaseMetadata: boolean | undefined;
   let classifiedChangesetsAction: boolean | undefined;
   let classifiedVerification: boolean | undefined;
+  let event: ReleaseEvent | undefined;
   let githubOutput: string | undefined;
   for (let index = 0; index < args.length; index++) {
     const flag = args[index];
     const value = args[index + 1];
+    if (flag === "--event" && (value === "push" || value === "workflow_dispatch")) {
+      event = value;
+      index++;
+      continue;
+    }
+    if (flag === "--classified-allow-pending-release-metadata" && value !== undefined) {
+      classifiedAllowPendingReleaseMetadata = parseBoolean(value, flag);
+      index++;
+      continue;
+    }
     if (flag === "--classified-verification" && value !== undefined) {
       classifiedVerification = parseBoolean(value, flag);
       index++;
@@ -73,7 +96,19 @@ function parseArgs(args: readonly string[]): CliOptions {
   if (classifiedChangesetsAction === undefined) {
     throw new Error("--classified-changesets-action is required.");
   }
-  return { classifiedChangesetsAction, classifiedVerification, githubOutput };
+  if (classifiedAllowPendingReleaseMetadata === undefined) {
+    throw new Error("--classified-allow-pending-release-metadata is required.");
+  }
+  if (event === undefined) {
+    throw new Error("--event must be push or workflow_dispatch.");
+  }
+  return {
+    classifiedAllowPendingReleaseMetadata,
+    classifiedChangesetsAction,
+    classifiedVerification,
+    event,
+    githubOutput,
+  };
 }
 
 function packageRegistry(packageJson: Record<string, unknown>): string {
@@ -178,6 +213,18 @@ export function hasPendingChangesets(rootDir: string): boolean {
   );
 }
 
+export function hasPreReleaseState(rootDir: string): boolean {
+  return existsSync(resolve(rootDir, ".changeset", "pre.json"));
+}
+
+// changesets/action publishes only when no changeset is left to version. In pre mode it ignores
+// changesets already listed in pre.json, so leftover files no longer prove that a push cannot publish.
+export function allowsPendingReleaseMetadata(input: ReleaseMetadataStrictnessInput): boolean {
+  if (input.preReleaseState) return false;
+  if (input.classifiedAllowPending) return true;
+  return input.event === "push" && input.pendingChangesets;
+}
+
 export async function resolveReleaseReconciliationState(
   classifiedVerification: boolean,
   classifiedChangesetsAction: boolean,
@@ -210,22 +257,29 @@ async function main(): Promise<void> {
     options.classifiedVerification && options.classifiedChangesetsAction
       ? []
       : readPublishableWorkspacePackages(process.cwd());
+  const pendingChangesets = hasPendingChangesets(process.cwd());
   const state = await resolveReleaseReconciliationState(
     options.classifiedVerification,
     options.classifiedChangesetsAction,
-    hasPendingChangesets(process.cwd()),
+    pendingChangesets,
     packages,
   );
-  const unpublishedPackages = JSON.stringify(state.unpublishedPackages);
-  console.log(`has_pending_changesets=${state.hasPendingChangesets}`);
-  console.log(`should_run_changesets_action=${state.shouldRunChangesetsAction}`);
-  console.log(`should_run_verification=${state.shouldRunVerification}`);
-  console.log(`unpublished_packages=${unpublishedPackages}`);
+  const allowPendingReleaseMetadata = allowsPendingReleaseMetadata({
+    classifiedAllowPending: options.classifiedAllowPendingReleaseMetadata,
+    event: options.event,
+    pendingChangesets,
+    preReleaseState: hasPreReleaseState(process.cwd()),
+  });
+  const outputs = [
+    `allow_pending_release_metadata=${allowPendingReleaseMetadata}`,
+    `has_pending_changesets=${state.hasPendingChangesets}`,
+    `should_run_changesets_action=${state.shouldRunChangesetsAction}`,
+    `should_run_verification=${state.shouldRunVerification}`,
+    `unpublished_packages=${JSON.stringify(state.unpublishedPackages)}`,
+  ].join("\n");
+  console.log(outputs);
   if (options.githubOutput) {
-    appendFileSync(
-      options.githubOutput,
-      `has_pending_changesets=${state.hasPendingChangesets}\nshould_run_changesets_action=${state.shouldRunChangesetsAction}\nshould_run_verification=${state.shouldRunVerification}\nunpublished_packages=${unpublishedPackages}\n`,
-    );
+    appendFileSync(options.githubOutput, `${outputs}\n`);
   }
 }
 

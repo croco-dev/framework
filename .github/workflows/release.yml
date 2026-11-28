@@ -116,12 +116,15 @@ jobs:
         if: steps.release_state.outputs.is_current == 'true'
         shell: bash
         env:
+          CLASSIFIED_ALLOW_PENDING_RELEASE_METADATA: ${{ steps.release_work.outputs.allow_pending_release_metadata }}
           CLASSIFIED_CHANGESETS_ACTION: ${{ steps.release_work.outputs.should_run_changesets_action }}
           CLASSIFIED_VERIFICATION: ${{ steps.release_work.outputs.should_run_verification }}
         run: |
           node --experimental-strip-types scripts/release-reconciliation-state.mts \
+            --event "$GITHUB_EVENT_NAME" \
             --classified-verification "$CLASSIFIED_VERIFICATION" \
             --classified-changesets-action "$CLASSIFIED_CHANGESETS_ACTION" \
+            --classified-allow-pending-release-metadata "$CLASSIFIED_ALLOW_PENDING_RELEASE_METADATA" \
             --github-output "$GITHUB_OUTPUT"
 
       - name: Verify release PR automation credentials
@@ -168,7 +171,7 @@ jobs:
         if: steps.release_execution.outputs.should_run_verification == 'true'
         shell: bash
         env:
-          ALLOW_PENDING_RELEASE_METADATA: ${{ steps.release_work.outputs.allow_pending_release_metadata }}
+          ALLOW_PENDING_RELEASE_METADATA: ${{ steps.release_execution.outputs.allow_pending_release_metadata }}
           RELEASE_BASE: ${{ steps.release_work.outputs.base }}
         run: |
           args=(--output-dir ci-reports/release)

@@ -1,7 +1,11 @@
-import { resolve } from "node:path";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 
 import {
+  allowsPendingReleaseMetadata,
+  hasPreReleaseState,
   readPublishableWorkspacePackages,
   resolveReleaseReconciliationState,
 } from "../release-reconciliation-state.mts";
@@ -112,6 +116,89 @@ describe("release reconciliation state", () => {
       unpublishedPackages: [],
     });
     expect(registryFetch).not.toHaveBeenCalled();
+  });
+
+  describe("pending release metadata", () => {
+    const publishCandidatePush = classifyVerificationChanges("push", [
+      "packages/retry-core/package.json",
+    ]);
+
+    it("allows pending recoveries on a publish-candidate push that still has changesets to version", () => {
+      expect(publishCandidatePush.allowPendingReleaseMetadata).toBe(false);
+      expect(
+        allowsPendingReleaseMetadata({
+          classifiedAllowPending: publishCandidatePush.allowPendingReleaseMetadata,
+          event: "push",
+          pendingChangesets: true,
+          preReleaseState: false,
+        }),
+      ).toBe(true);
+    });
+
+    it("stays strict on a push with no changeset left, where Changesets publishes", () => {
+      expect(
+        allowsPendingReleaseMetadata({
+          classifiedAllowPending: publishCandidatePush.allowPendingReleaseMetadata,
+          event: "push",
+          pendingChangesets: false,
+          preReleaseState: false,
+        }),
+      ).toBe(false);
+    });
+
+    it("stays strict on manual release dispatch even with pending changesets", () => {
+      const dispatch = classifyVerificationChanges("workflow_dispatch", []);
+
+      expect(
+        allowsPendingReleaseMetadata({
+          classifiedAllowPending: dispatch.allowPendingReleaseMetadata,
+          event: "workflow_dispatch",
+          pendingChangesets: true,
+          preReleaseState: false,
+        }),
+      ).toBe(false);
+    });
+
+    it("stays strict in pre mode, where leftover changesets do not prevent publishing", () => {
+      for (const classifiedAllowPending of [false, true]) {
+        expect(
+          allowsPendingReleaseMetadata({
+            classifiedAllowPending,
+            event: "push",
+            pendingChangesets: true,
+            preReleaseState: true,
+          }),
+        ).toBe(false);
+      }
+    });
+
+    it("keeps the classifier allowance for release-gate maintenance pushes", () => {
+      const maintenancePush = classifyVerificationChanges("push", [
+        "scripts/release-metadata-check.mts",
+      ]);
+
+      expect(maintenancePush.allowPendingReleaseMetadata).toBe(true);
+      expect(
+        allowsPendingReleaseMetadata({
+          classifiedAllowPending: maintenancePush.allowPendingReleaseMetadata,
+          event: "push",
+          pendingChangesets: false,
+          preReleaseState: false,
+        }),
+      ).toBe(true);
+    });
+
+    it("detects pre mode from .changeset/pre.json", () => {
+      const workspace = mkdtempSync(join(tmpdir(), "croco-release-pre-"));
+      try {
+        mkdirSync(join(workspace, ".changeset"));
+        expect(hasPreReleaseState(workspace)).toBe(false);
+        writeFileSync(join(workspace, ".changeset", "pre.json"), '{"mode":"pre"}\n');
+        expect(hasPreReleaseState(workspace)).toBe(true);
+      } finally {
+        rmSync(workspace, { force: true, recursive: true });
+      }
+    });
   });
 
   it("fails closed when the registry cannot prove publication state", async () => {
