@@ -19,9 +19,9 @@ const SENSITIVE_KEYS =
   /password|passwd|pwd|secret|token|api[_-]?key|apikey|access[_-]?key|connection[_-]?string|dsn/i;
 const LEGACY_SENSITIVE_KEY = new RegExp(String.raw`\b(?:${SENSITIVE_KEYS.source})$`, "i");
 const DIAGNOSTIC_FIELDS = /^(?:detail|error|message|reason)$/i;
-const ENVIRONMENT_KEY = /^[A-Z_][A-Z0-9_]*$/;
+const ENVIRONMENT_KEY = /^(?!(?:password|sslpassword)$)[A-Za-z_][A-Za-z0-9_]*$/;
 const URI_SCHEME = /[a-z][a-z0-9+.-]*:\/\//;
-const URI_HOST = /(?:@?[\w.-]+|\[[\w:%.]+\])/;
+const URI_HOST = /(?:@?[\w.%\p{L}\p{N}-]+|\[[\w:%.]+\])/u;
 const URI_HOST_PORT = String.raw`${URI_HOST.source}(?::\d+)?`;
 const URI_HOSTS = `${URI_HOST_PORT}(?:,${URI_HOST_PORT})*`;
 const URI_CHARACTER = /[^/ \t\r\n\v\f]/;
@@ -48,10 +48,12 @@ const WRAPPED_URI = (
 const URI_AUTHORITY_END = String.raw`(?=(?:${URI_HOSTS})?(?:[/?#]|[,;]${NEXT_KEYWORD}|[ \t\r\n\v\f]|$))`;
 const SPACED_PASSWORD = String.raw`:(?=[^/?#\r\n\t]* )(?:(?![ ]+${NEXT_KEYWORD})[^/?#\r\n\t])+@${URI_AUTHORITY_END}`;
 const URI_USERINFO = String.raw`(${URI_SCHEME.source})(?:${SPACED_PASSWORD}|${URI_CHARACTER.source}+?@${URI_AUTHORITY_END}|${URI_CHARACTER.source}+?(?<!@)@)`;
-const WRAPPED_URI_OR_USERINFO = new RegExp(`${WRAPPED_URI}|${URI_USERINFO}`, "gi");
+const WRAPPED_URI_OR_USERINFO = new RegExp(`${WRAPPED_URI}|${URI_USERINFO}`, "giu");
+const USERINFO = new RegExp(URI_USERINFO, "giu");
+const URI_BEFORE_COMPACT_FIELD = String.raw`${URI_SCHEME.source}(?:[^/;, \t\r\n]+?@)?${URI_HOST.source}:\d+(?=${WRAPPED_FIELD_SEPARATOR})`;
 const URL_OR_KEYWORD = new RegExp(
-  String.raw`${WRAPPED_URI}|${URI_SCHEME.source}\S+|(?<![\w?&-])(${KEYWORD_NAME.source})${KEYWORD_PADDING.source}=${KEYWORD_PADDING.source}`,
-  "gi",
+  String.raw`${WRAPPED_URI}|${URI_BEFORE_COMPACT_FIELD}|${URI_SCHEME.source}\S+|(?<![\w?&-])(${KEYWORD_NAME.source})${KEYWORD_PADDING.source}=${KEYWORD_PADDING.source}`,
+  "giu",
 );
 const QUOTED_KEYWORD_VALUE = /'(?:\\[\s\S]|[^'\\])*'|"(?:\\[\s\S]|[^"\\])*"/y;
 const UNQUOTED_KEYWORD_CHARACTER = /\\[\s\S]|[^ \t\r\n\v\f\\]/;
@@ -65,7 +67,7 @@ const COMPACT_CREDENTIAL_VALUE = new RegExp(
   "iy",
 );
 const DELIMITED_FIELD = new RegExp(`[,;&]${KEYWORD_PADDING.source}${NEXT_KEYWORD}`, "y");
-const DELIMITED_HOST = new RegExp(`${URI_HOST.source}[,;]${NEXT_KEYWORD}`, "y");
+const DELIMITED_HOST = new RegExp(`${URI_HOSTS}[,;]${NEXT_KEYWORD}`, "uy");
 const MAX_DIAGNOSTIC_DEPTH = 12;
 const BARE_CREDENTIAL = new RegExp(String.raw`\b(${SENSITIVE_KEYS.source})=[^\s,;&]+`, "gi");
 
@@ -105,9 +107,7 @@ function redactDrizzleHealthDetail(value: string): string {
   const withoutUserInfo = value.replace(
     WRAPPED_URI_OR_USERINFO,
     (match: string, scheme: string | undefined) =>
-      scheme === undefined
-        ? match.replace(new RegExp(URI_USERINFO, "gi"), "$1[redacted]@")
-        : `${scheme}[redacted]@`,
+      scheme === undefined ? match.replace(USERINFO, "$1[redacted]@") : `${scheme}[redacted]@`,
   );
   return redactKeywordValues(withoutUserInfo)
     .replace(/([?&])([^=\s&]+)=([^&\s]+)/g, (match: string, prefix: string, key: string) =>
@@ -145,7 +145,7 @@ function redactKeywordValues(detail: string, depth = 0): string {
       valueStart,
       unquoted,
       sensitive || diagnostic,
-      diagnostic || ENVIRONMENT_KEY.test(key),
+      diagnostic || (sensitive && ENVIRONMENT_KEY.test(key)),
       diagnostic,
     );
     tokens.lastIndex = valueEnd;
