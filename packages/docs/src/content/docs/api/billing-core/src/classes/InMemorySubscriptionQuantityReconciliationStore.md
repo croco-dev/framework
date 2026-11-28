@@ -77,6 +77,17 @@ In-memory reconciliation intent store for tests and local composition.
 
 > **getDiagnostics**(`options`): `Promise`\<[`SubscriptionQuantityDiagnostics`](/api/billing-core/src/type-aliases/subscriptionquantitydiagnostics/)\>
 
+Count current intents by state: `pending`, `drifted`, `retryable_failed` (`retrying`), and
+`unsupported`. Use the earliest creation time among the first three states for
+`oldestPendingAt`, or null when none exist.
+
+Count `terminal_failed` intents with non-retryable failure evidence as `terminalFailed`.
+Count terminal intents with retryable evidence and at least `maxAttempts` attempts as
+`retryExhausted`. The mismatch counts use their existing failure codes and can overlap state counts.
+
+Stores that have not implemented the new counters may omit `retrying` and `terminalFailed`.
+An omitted counter means its value is unavailable.
+
 #### Parameters
 
 ##### options
