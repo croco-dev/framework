@@ -331,6 +331,26 @@ describe("DrizzleHealthIndicator", () => {
       "failed host= sslpassword=[redacted] dbname=app",
     ],
     [
+      "a wrapped pathless URI before an unrelated email address",
+      "failed (postgres://user:sample@db.example),ops@example.test sslmode=require",
+      "failed (postgres://[redacted]@db.example),ops@example.test sslmode=require",
+    ],
+    [
+      "a password-only wrapped pathless URI containing a space",
+      "failed (postgres://:sample tail@db.example) sslmode=require",
+      "failed (postgres://[redacted]@db.example) sslmode=require",
+    ],
+    [
+      "an assignment-shaped fragment before the first userinfo delimiter",
+      "failed postgres://:sample label=tail@db.example/app",
+      "failed postgres://[redacted]@db.example/app",
+    ],
+    [
+      "a balanced double-quoted sslpassword in a diagnostic",
+      'failed sslpassword="sample tail" host=db.example sslmode=require',
+      "failed sslpassword=[redacted] host=db.example sslmode=require",
+    ],
+    [
       "a zoned IPv6 host followed by a query containing an at-sign",
       "failed postgres://user:sample@[fe80::1%25eth-test]?sslmode=require&application_name=ops@example.test",
       "failed postgres://[redacted]@[fe80::1%25eth-test]?sslmode=require&application_name=ops@example.test",

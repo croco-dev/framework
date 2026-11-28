@@ -32,6 +32,7 @@ const KEYWORD_PADDING = /[ \t\r\n\v\f]*/;
 const NEXT_KEYWORD = `${KEYWORD_NAME.source}${KEYWORD_PADDING.source}=`;
 const KEYWORD_AT_VALUE_START = new RegExp(NEXT_KEYWORD, "y");
 const WRAPPED_FIELD_SEPARATOR = `[,;]${NEXT_KEYWORD}`;
+const SPACED_PASSWORD = String.raw`:(?=[^/?#\r\n\t]* )[^@/?#\r\n\t]*(?:@(?:(?![ ]+${NEXT_KEYWORD})[^@/?#\r\n\t])*)*@`;
 const WRAPPED_URI = (
   [
     [String.raw`\(`, String.raw`\)`],
@@ -43,14 +44,13 @@ const WRAPPED_URI = (
   ] as const
 )
   .map(([start, end]) => {
-    const boundary = String.raw`${end}[)\]>'"\x60]*(?:${WRAPPED_FIELD_SEPARATOR}|(?=\s|$))`;
-    const userinfo = `${URI_USERINFO_WITH_PASSWORD}(?=${AUTHORITY_BEFORE_PATH_OR_QUERY.source}|(?:${URI_HOSTS})?(?:[/?#]|${boundary}))`;
+    const boundary = String.raw`${end}[)\]>'"\x60]*(?=[,;]|\s|$)`;
+    const userinfo = `(?:${URI_USERINFO_WITH_PASSWORD}|${SPACED_PASSWORD})(?=${AUTHORITY_BEFORE_PATH_OR_QUERY.source}|(?:${URI_HOSTS})?(?:[/?#]|${boundary}))`;
     return String.raw`(?<=${start})${URI_SCHEME.source}(?:${userinfo})?\S*?(?=${boundary})`;
   })
   .join("|");
 const URI_AUTHORITY_END = String.raw`(?=${AUTHORITY_BEFORE_PATH_OR_QUERY.source}|(?:${URI_HOSTS})?(?:[/?#]|[,;]${NEXT_KEYWORD}|[ \t\r\n\v\f]|$))`;
-const SPACED_PASSWORD = String.raw`:(?=[^/?#\r\n\t]* )(?:(?![ ]+${NEXT_KEYWORD})[^/?#\r\n\t])+@${URI_AUTHORITY_END}`;
-const URI_USERINFO = String.raw`(${URI_SCHEME.source})(?:${SPACED_PASSWORD}|[^/?# \t\r\n\v\f]+?@${URI_AUTHORITY_END}|${URI_CHARACTER.source}+?@${URI_AUTHORITY_END}|${URI_CHARACTER.source}+?(?<!@)@)`;
+const URI_USERINFO = String.raw`(${URI_SCHEME.source})(?:${SPACED_PASSWORD}${URI_AUTHORITY_END}|[^/?# \t\r\n\v\f]+?@${URI_AUTHORITY_END}|${URI_CHARACTER.source}+?@${URI_AUTHORITY_END}|${URI_CHARACTER.source}+?(?<!@)@)`;
 const WRAPPED_URI_OR_USERINFO = new RegExp(`${WRAPPED_URI}|${URI_USERINFO}`, "giu");
 const USERINFO = new RegExp(URI_USERINFO, "giu");
 const URI_BEFORE_COMPACT_FIELD = String.raw`${URI_SCHEME.source}(?:[^/;, \t\r\n]+?@)?${URI_HOST.source}:\d+(?=${WRAPPED_FIELD_SEPARATOR})`;
@@ -151,14 +151,14 @@ function redactKeywordValues(detail: string, depth = 0): string {
     } else if (compact) {
       unquoted = sensitive ? COMPACT_CREDENTIAL_VALUE : DELIMITED_KEYWORD_VALUE;
     }
-    const valueEnd = keywordValueEnd(
-      detail,
-      valueStart,
-      unquoted,
-      sensitive || diagnostic,
-      diagnostic || (sensitive && ENVIRONMENT_KEY.test(key)),
-      diagnostic,
-    );
+    const quoteMode = diagnostic
+      ? "diagnostic"
+      : sensitive
+        ? ENVIRONMENT_KEY.test(key)
+          ? "environment"
+          : "connection"
+        : "literal";
+    const valueEnd = keywordValueEnd(detail, valueStart, unquoted, quoteMode);
     tokens.lastIndex = valueEnd;
     if (valueEnd === valueStart) continue;
 
@@ -194,18 +194,16 @@ function keywordValueEnd(
   detail: string,
   start: number,
   unquoted: RegExp,
-  consumeUnclosed: boolean,
-  allowDoubleQuote: boolean,
-  diagnostic: boolean,
+  quoteMode: "diagnostic" | "environment" | "connection" | "literal",
 ): number {
   const first = detail.charAt(start);
-  if (first === "'" || (allowDoubleQuote && first === '"')) {
+  if (first === "'" || (quoteMode !== "literal" && first === '"')) {
     QUOTED_KEYWORD_VALUE.lastIndex = start;
     if (QUOTED_KEYWORD_VALUE.test(detail)) {
       start = QUOTED_KEYWORD_VALUE.lastIndex;
       DELIMITED_FIELD.lastIndex = start;
-      if (diagnostic || first === "'" || DELIMITED_FIELD.test(detail)) return start;
-    } else if (consumeUnclosed) {
+      if (quoteMode === "diagnostic" || first === "'" || DELIMITED_FIELD.test(detail)) return start;
+    } else if (quoteMode !== "literal" && (first === "'" || quoteMode !== "connection")) {
       return detail.length;
     }
   }
