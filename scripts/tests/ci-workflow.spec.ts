@@ -1554,6 +1554,9 @@ exit "$CI_INSTALL_EXIT"
     expect(WORKFLOW).toContain("- 'packages/*/README.md'");
     expect(WORKFLOW).toContain("run: pnpm docs:api:check");
     expect(WORKFLOW).toContain("--exclude-path '(^|/)packages/docs/README\\.md$'");
+    expect(WORKFLOW).toContain(
+      "--remap '^https://github\\.com/croco-dev/framework/(blob|tree)/trunk/([^#?]*)([#?].*)?$ file://${{ github.workspace }}/$2'",
+    );
     expect((DOCS_SYNC_JOB as Readonly<Record<string, unknown>>).if).toBe("${{ always() }}");
     expect(DOCS_SYNC_JOB_SOURCE).not.toContain("TURBO_TOKEN");
     expect(DOCS_BUILD_JOB).not.toContain("TURBO_TOKEN");

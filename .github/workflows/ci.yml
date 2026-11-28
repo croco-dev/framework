@@ -1755,10 +1755,14 @@ jobs:
           # return transient 503s from Wayback, diataxis.fr rate-limits automated
           # docs link checks, and packages/docs is a private docs app
           # rather than a public package README.
+          # Same-repository trunk blob/tree links are checked against this
+          # checkout instead of github.com, whose HTML pages intermittently
+          # answer automated runner requests with 503.
           args: >-
             --verbose
             --no-progress
             --root-dir '${{ github.workspace }}/packages/docs/dist'
+            --remap '^https://github\.com/croco-dev/framework/(blob|tree)/trunk/([^#?]*)([#?].*)?$ file://${{ github.workspace }}/$2'
             --exclude '^https://github\.com/croco-dev/framework(#readme)?$'
             --exclude '^https://github\.com/croco-dev/framework/(blob|tree)/[0-9a-f]{40}/'
             --exclude '^https://github\.com/your-org/croco(#readme)?$'
