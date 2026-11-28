@@ -24,6 +24,9 @@ vi.mock("@hono/node-server", () => ({
 }));
 
 const OUTSIDE_ROOT_SENTINEL = "outside-root-secret";
+const HIDDEN_FILE_SENTINEL = "HIDDEN_FILE_PLACEHOLDER=1";
+const SPA_SHELL = "<html><body><main>spa shell</main></body></html>";
+const STATIC_ACCEPT_HEADERS = ["text/html,application/xhtml+xml", "application/json"] as const;
 
 type StaticFixture = {
   readonly directory: string;
@@ -105,7 +108,35 @@ function normalizePathForSnapshot(path: string): string {
   );
 }
 
+async function expectAnsweredLikeMissingPaths(
+  app: ReturnType<typeof createApp>,
+  pathPairs: ReadonlyArray<readonly [requestedPath: string, missingPath: string]>,
+): Promise<void> {
+  for (const accept of STATIC_ACCEPT_HEADERS) {
+    for (const [requestedPath, missingPath] of pathPairs) {
+      const [requested, missing] = await Promise.all(
+        [requestedPath, missingPath].map(async (path) => {
+          const response = await app.fetch(
+            new Request(`http://localhost${path}`, { headers: { Accept: accept } }),
+          );
+          const { path: _path, ...contract } = await readStaticResponseContract(path, response);
+          return contract;
+        }),
+      );
+
+      expect({ accept, requestedPath, ...requested }).toEqual({
+        accept,
+        requestedPath,
+        ...missing,
+      });
+    }
+  }
+}
+
 function classifyBody(body: string): string {
+  if (body.includes(HIDDEN_FILE_SENTINEL)) {
+    return "leaked:hidden-file";
+  }
   if (body.includes('console.log("asset app")')) {
     return "asset:app-js";
   }
@@ -485,4 +516,76 @@ describe("Static asset and SPA fallback conformance", () => {
       await fixture.cleanup();
     }
   });
+
+  it.each([false, true])(
+    "answers dotfiles and dot directories exactly like missing paths (spaFallback: %s)",
+    async (spaFallback) => {
+      const { app, fixture } = await createStaticApp(
+        {
+          "index.html": SPA_SHELL,
+          ".env": HIDDEN_FILE_SENTINEL,
+          ".git/config": HIDDEN_FILE_SENTINEL,
+          "assets/.hidden.js": HIDDEN_FILE_SENTINEL,
+          ".well-known/.hidden": HIDDEN_FILE_SENTINEL,
+        },
+        spaFallback,
+      );
+
+      try {
+        await expectAnsweredLikeMissingPaths(app, [
+          ["/.env", "/missing"],
+          ["/%2eenv", "/missing"],
+          ["/.git/config", "/missing/config"],
+          ["/%2Egit/config", "/missing/config"],
+          ["/assets/.hidden.js", "/assets/missing.js"],
+          ["/.well-known/.hidden", "/.well-known/missing"],
+        ]);
+
+        if (!spaFallback) {
+          expect((await app.fetch(new Request("http://localhost/.env"))).status).toBe(404);
+        }
+      } finally {
+        await fixture.cleanup();
+      }
+    },
+  );
+
+  it("keeps serving files under /.well-known/", async () => {
+    const { app, fixture } = await createStaticApp({
+      "index.html": SPA_SHELL,
+      ".well-known/security.txt": "Contact: mailto:security@example.com",
+    });
+
+    try {
+      const response = await app.fetch(new Request("http://localhost/.well-known/security.txt"));
+
+      expect(response.status).toBe(200);
+      expect(await response.text()).toBe("Contact: mailto:security@example.com");
+    } finally {
+      await fixture.cleanup();
+    }
+  });
+
+  it.each([false, true])(
+    "answers paths that cannot name a file like missing paths instead of failing (spaFallback: %s)",
+    async (spaFallback) => {
+      const { app, fixture } = await createStaticApp({ "index.html": SPA_SHELL }, spaFallback);
+      const overLongSegment = `/${"a".repeat(300)}`;
+
+      try {
+        await expectAnsweredLikeMissingPaths(app, [
+          ["/index.html/anything", "/missing/anything"],
+          [overLongSegment, "/missing"],
+        ]);
+
+        if (!spaFallback) {
+          expect((await app.fetch(new Request(`http://localhost${overLongSegment}`))).status).toBe(
+            404,
+          );
+        }
+      } finally {
+        await fixture.cleanup();
+      }
+    },
+  );
 });

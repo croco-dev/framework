@@ -815,7 +815,10 @@ export class CrocoApp {
     const normalizedRelativePath = normalize(requestPath).replace(/^([/\\])+/, "");
     const filePath = resolve(join(staticDir, normalizedRelativePath));
 
-    if (!this.isPathInsideDirectory(staticDir, filePath)) {
+    if (
+      !this.isPathInsideDirectory(staticDir, filePath) ||
+      this.isHiddenStaticPath(normalizedRelativePath)
+    ) {
       return null;
     }
 
@@ -824,13 +827,24 @@ export class CrocoApp {
         return null;
       }
     } catch (error) {
-      if ((error as NodeJS.ErrnoException)?.code === "ENOENT") {
+      const code = (error as NodeJS.ErrnoException)?.code;
+      if (code === "ENOENT" || code === "ENOTDIR" || code === "ENAMETOOLONG") {
         return null;
       }
       throw error;
     }
 
     return filePath;
+  }
+
+  // Dot segments usually hold deployment metadata (.env, .git) rather than assets, so they are
+  // answered like missing paths. RFC 8615 places only the root `.well-known` segment in URL space.
+  private isHiddenStaticPath(relativePath: string): boolean {
+    return relativePath
+      .split(/[/\\]/)
+      .some(
+        (segment, index) => segment.startsWith(".") && !(index === 0 && segment === ".well-known"),
+      );
   }
 
   private isPathInsideDirectory(baseDir: string, targetPath: string): boolean {

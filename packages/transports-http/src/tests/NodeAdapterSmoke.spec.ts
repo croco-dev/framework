@@ -307,6 +307,42 @@ describe("NodeAdapter real server smoke", () => {
     expect(await assetResponse.text()).toContain("node adapter static smoke");
   });
 
+  it("answers hidden and unreachable static paths as missing over a real Node socket", async () => {
+    staticDir = await mkdtemp(join(tmpdir(), "croco-node-smoke-"));
+    await mkdir(join(staticDir, ".well-known"), { recursive: true });
+    await writeFile(join(staticDir, "index.html"), "<main>node smoke shell</main>");
+    await writeFile(join(staticDir, ".env"), "HIDDEN_FILE_PLACEHOLDER=1");
+    await writeFile(
+      join(staticDir, ".well-known", "security.txt"),
+      "Contact: mailto:security@example.com",
+    );
+
+    const app = createNodeSmokeApp();
+    const server = await withTimeout(
+      app.listen(0, { staticDir }),
+      "app.listen(0, { staticDir }) did not return a server handle",
+    );
+    servers.push(server);
+
+    await waitForListening(server, "app.listen(0, { staticDir })");
+    const baseUrl = getBaseUrl(server, "app.listen(0, { staticDir })");
+
+    for (const path of ["/.env", "/index.html/anything", `/${"a".repeat(300)}`]) {
+      const response = await fetchWithTimeout(`${baseUrl}${path}`, `GET ${path.slice(0, 32)}`);
+
+      expect({ path, status: response.status }).toEqual({ path, status: 404 });
+      expect(await response.text()).not.toContain("HIDDEN_FILE_PLACEHOLDER");
+    }
+
+    const wellKnown = await fetchWithTimeout(
+      `${baseUrl}/.well-known/security.txt`,
+      "GET /.well-known/security.txt",
+    );
+
+    expect(wellKnown.status).toBe(200);
+    expect(await wellKnown.text()).toBe("Contact: mailto:security@example.com");
+  });
+
   it("enforces chunked request bytes and preserves the accepted body over a real Node socket", async () => {
     const app = createNodeSmokeApp();
     const server = await withTimeout(

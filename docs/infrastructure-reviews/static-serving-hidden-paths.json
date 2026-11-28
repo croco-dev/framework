@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "transports-http",
+      "classification": "runtime-adapter",
+      "reason": "Node listen static serving answers dot-prefixed segments other than the root .well-known, and ENOTDIR/ENAMETOOLONG lookups, through the existing not-found and SPA fallback flow instead of serving the file or failing with 500. Other filesystem errors still propagate. No option, export or host lifecycle changes.",
+      "files": {
+        "packages/transports-http/src/libs/CrocoApp.ts": "26d99f0ef20c7c9d981b45188031a67c548ccf25d148f26200b53f277f2c3688"
+      },
+      "catalogRuntimes": ["node", "lambda"],
+      "profiles": {
+        "kubernetes": {
+          "result": "supported",
+          "reason": "Static files are served only by the Node listen path, which registers the staticDir route; a real local socket test requests hidden, unreachable and .well-known paths.",
+          "providers": ["@hono/node-server", "@croco/transports-http", "@croco/preset-node"],
+          "constraints": [
+            "Local Node host-runtime evidence only; no live Kubernetes deployment or provider certification."
+          ],
+          "references": [
+            "packages/transports-http/src/libs/CrocoApp.ts",
+            "packages/transports-http/src/tests/NodeAdapterSmoke.spec.ts",
+            "packages/transports-http/src/tests/StaticAssetConformance.spec.ts",
+            "packages/presentation-preset/runtime-profiles.json"
+          ],
+          "evidence": {
+            "kind": "host-runtime",
+            "runtime": "node",
+            "path": "packages/transports-http/src/tests/NodeAdapterSmoke.spec.ts",
+            "testName": "NodeAdapter real server smoke answers hidden and unreachable static paths as missing over a real Node socket",
+            "sha256": "b4d7718cca12344cd4f6ad08a95cc7f1c3f4e10efb18d530640e667db1e94b01"
+          }
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The Lambda adapter dispatches through the fetch handler without calling listen, so the staticDir route is never registered there.",
+          "providers": ["@croco/transports-http", "@croco/preset-lambda"],
+          "constraints": [],
+          "references": [
+            "packages/transports-http/src/libs/CrocoLambdaAdapter.ts",
+            "packages/presentation-preset/runtime-profiles.json"
+          ]
+        },
+        "cloudflare": {
+          "result": "unsupported",
+          "host": "workers",
+          "reason": "staticDir serving reads the local filesystem through node:fs behind the Node TCP listener; Worker isolates use their separate fetch transport.",
+          "providers": ["@croco/transports-cloudflare-workers"],
+          "constraints": [
+            "No Node static file serving is claimed for Workers; no Node Container profile is introduced."
+          ],
+          "references": [
+            "packages/transports-http/src/libs/CrocoApp.ts",
+            "packages/transports-cloudflare-workers/src/index.ts",
+            "packages/presentation-preset/runtime-profiles.json"
+          ]
+        }
+      }
+    }
+  ]
+}
