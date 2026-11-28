@@ -21,8 +21,11 @@ const LEGACY_SENSITIVE_KEY = new RegExp(String.raw`\b(?:${SENSITIVE_KEYS.source}
 const DIAGNOSTIC_FIELDS = /^(?:detail|error|message|reason)$/i;
 const ENVIRONMENT_KEY = /^[A-Z_][A-Z0-9_]*$/;
 const URI_SCHEME = /[a-z][a-z0-9+.-]*:\/\//;
-const URI_HOST = /(?:[\w.-]+|\[[\w:%.]+\])/;
-const USERINFO_WITH_PATH = String.raw`[^/?#\s:]*:[^/\s]+@(?=(?:${URI_HOST.source}(?::\d+)?)?/)`;
+const URI_HOST = /(?:@?[\w.-]+|\[[\w:%.]+\])/;
+const URI_HOST_PORT = String.raw`${URI_HOST.source}(?::\d+)?`;
+const URI_HOSTS = `${URI_HOST_PORT}(?:,${URI_HOST_PORT})*`;
+const URI_CHARACTER = /[^/ \t\r\n\v\f]/;
+const USERINFO_WITH_PATH = String.raw`[^/?# \t\r\n\v\f:]*:${URI_CHARACTER.source}+@(?=(?:${URI_HOSTS})?/)`;
 const KEYWORD_NAME = /[\w-]+/;
 const KEYWORD_PADDING = /[ \t\r\n\v\f]*/;
 const NEXT_KEYWORD = `${KEYWORD_NAME.source}${KEYWORD_PADDING.source}=`;
@@ -42,9 +45,9 @@ const WRAPPED_URI = (
       String.raw`(?<=${start})${URI_SCHEME.source}(?:${USERINFO_WITH_PATH})?\S*?(?=${end}(?:${WRAPPED_FIELD_SEPARATOR}|(?=\s|$)))`,
   )
   .join("|");
-const SPACED_PASSWORD = /:(?=[^/?#@\r\n\t]*(?: |@ ))(?:[^/?#@\r\n\t]|@(?= ))+@(?=[\w/[])/;
-const SPACED_PASSWORD_WITH_HOST = String.raw`:(?=[^/?#\r\n\t]* )[^/?#\r\n\t]+@(?=${URI_HOST.source}(?::\d+)?[/?#])`;
-const URI_USERINFO = String.raw`(${URI_SCHEME.source})(?:${SPACED_PASSWORD_WITH_HOST}|${SPACED_PASSWORD.source}|[^/?#;\s]+(?<!@)@|[^/\s]+(?<!@)@)`;
+const URI_AUTHORITY_END = String.raw`(?=(?:${URI_HOSTS})?(?:[/?#]|[,;]${NEXT_KEYWORD}|[ \t\r\n\v\f]|$))`;
+const SPACED_PASSWORD = String.raw`:(?=[^/?#\r\n\t]* )(?:(?![ ]+${NEXT_KEYWORD})[^/?#\r\n\t])+@${URI_AUTHORITY_END}`;
+const URI_USERINFO = String.raw`(${URI_SCHEME.source})(?:${SPACED_PASSWORD}|${URI_CHARACTER.source}+?@${URI_AUTHORITY_END}|${URI_CHARACTER.source}+?(?<!@)@)`;
 const WRAPPED_URI_OR_USERINFO = new RegExp(`${WRAPPED_URI}|${URI_USERINFO}`, "gi");
 const URL_OR_KEYWORD = new RegExp(
   String.raw`${WRAPPED_URI}|${URI_SCHEME.source}\S+|(?<![\w?&-])(${KEYWORD_NAME.source})${KEYWORD_PADDING.source}=${KEYWORD_PADDING.source}`,
@@ -57,7 +60,11 @@ const DELIMITED_KEYWORD_VALUE = new RegExp(
   `(?:(?![,;&]${NEXT_KEYWORD})(?:${UNQUOTED_KEYWORD_CHARACTER.source}))+`,
   "y",
 );
-const DELIMITED_FIELD = new RegExp(`[,;&]${NEXT_KEYWORD}`, "y");
+const COMPACT_CREDENTIAL_VALUE = new RegExp(
+  `(?:(?![,;](?:host|dbname|sslmode)${KEYWORD_PADDING.source}=)(?:${UNQUOTED_KEYWORD_CHARACTER.source}))+`,
+  "iy",
+);
+const DELIMITED_FIELD = new RegExp(`[,;&]${KEYWORD_PADDING.source}${NEXT_KEYWORD}`, "y");
 const DELIMITED_HOST = new RegExp(`${URI_HOST.source}[,;]${NEXT_KEYWORD}`, "y");
 const MAX_DIAGNOSTIC_DEPTH = 12;
 const BARE_CREDENTIAL = new RegExp(String.raw`\b(${SENSITIVE_KEYS.source})=[^\s,;&]+`, "gi");
@@ -123,17 +130,23 @@ function redactKeywordValues(detail: string, depth = 0): string {
     const quote = detail.charAt(valueStart);
     if (diagnostic && quote !== "'" && quote !== '"') continue;
     DELIMITED_HOST.lastIndex = valueStart;
-    const delimited =
+    const compact = /[,;&]/.test(detail.charAt(token.index - 1));
+    let unquoted = UNQUOTED_KEYWORD_VALUE;
+    if (
       LEGACY_SENSITIVE_KEY.test(key) ||
-      /[,;&]/.test(detail.charAt(token.index - 1)) ||
-      (key.toLowerCase() === "host" && DELIMITED_HOST.test(detail));
-    const unquoted = delimited ? DELIMITED_KEYWORD_VALUE : UNQUOTED_KEYWORD_VALUE;
+      (key.toLowerCase() === "host" && DELIMITED_HOST.test(detail))
+    ) {
+      unquoted = DELIMITED_KEYWORD_VALUE;
+    } else if (compact) {
+      unquoted = sensitive ? COMPACT_CREDENTIAL_VALUE : DELIMITED_KEYWORD_VALUE;
+    }
     const valueEnd = keywordValueEnd(
       detail,
       valueStart,
       unquoted,
       sensitive || diagnostic,
       diagnostic || ENVIRONMENT_KEY.test(key),
+      diagnostic,
     );
     tokens.lastIndex = valueEnd;
     if (valueEnd === valueStart) continue;
@@ -172,6 +185,7 @@ function keywordValueEnd(
   unquoted: RegExp,
   consumeUnclosed: boolean,
   allowDoubleQuote: boolean,
+  diagnostic: boolean,
 ): number {
   const first = detail.charAt(start);
   if (first === "'" || (allowDoubleQuote && first === '"')) {
@@ -179,7 +193,7 @@ function keywordValueEnd(
     if (QUOTED_KEYWORD_VALUE.test(detail)) {
       start = QUOTED_KEYWORD_VALUE.lastIndex;
       DELIMITED_FIELD.lastIndex = start;
-      if (first === "'" || DELIMITED_FIELD.test(detail)) return start;
+      if (diagnostic || first === "'" || DELIMITED_FIELD.test(detail)) return start;
     } else if (consumeUnclosed) {
       return detail.length;
     }

@@ -291,6 +291,36 @@ describe("DrizzleHealthIndicator", () => {
       "failed postgres://[redacted]@db.example;contact=ops@example.test sslmode=require",
     ],
     [
+      "semicolon in URL userinfo and an at-sign in the query",
+      "failed postgres://user:sample;tail@db.example?application_name=ops@example.test",
+      "failed postgres://[redacted]@db.example?application_name=ops@example.test",
+    ],
+    [
+      "a separate credential after a pathless URL",
+      "failed postgres://:sample@db.example sslpassword=tail@other.example/path sslmode=require",
+      "failed postgres://[redacted]@db.example sslpassword=[redacted] sslmode=require",
+    ],
+    [
+      "a password-only URL without a path",
+      "failed postgres://:sample@part tail@db.example:5432",
+      "failed postgres://[redacted]@db.example:5432",
+    ],
+    [
+      "Unicode spacing inside a password-only URL",
+      "failed postgres://:sample\u2003tail@db.example/app?sslmode=require",
+      "failed postgres://[redacted]@db.example/app?sslmode=require",
+    ],
+    [
+      "a comma after a quoted diagnostic field",
+      'failed error="password=sample host=db.example", dbname=app',
+      'failed error="password=[redacted] host=db.example", dbname=app',
+    ],
+    [
+      "assignment-shaped credential suffixes after a compact host field",
+      "failed host=db.example;sslpassword=sample;tail=first,part=second&end=last sslmode=require",
+      "failed host=db.example;sslpassword=[redacted] sslmode=require",
+    ],
+    [
       "a quoted environment credential followed by separate fields",
       'failed DBPASSWORD="sample tail";host=db.example;sslmode=require',
       "failed DBPASSWORD=[redacted];host=db.example;sslmode=require",
