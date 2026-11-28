@@ -21,11 +21,11 @@ const LEGACY_SENSITIVE_KEY = new RegExp(String.raw`\b(?:${SENSITIVE_KEYS.source}
 const DIAGNOSTIC_FIELDS = /^(?:detail|error|message|reason)$/i;
 const ENVIRONMENT_KEY = /^(?!(?:password|sslpassword)$)[A-Za-z_][A-Za-z0-9_]*$/;
 const URI_SCHEME = /[a-z][a-z0-9+.-]*:\/\//;
-const URI_HOST = /(?:@?[\w.%\p{L}\p{N}-]+|\[[\w:%.]+\])/u;
-const URI_HOST_PORT = String.raw`${URI_HOST.source}(?::\d+)?`;
-const URI_HOSTS = `${URI_HOST_PORT}(?:,${URI_HOST_PORT})*`;
+const URI_HOST = /(?:@?[\w.%\p{L}\p{M}\p{N}-]+|\[[\w:%.~-]+\])/u;
+const URI_HOST_PORT = String.raw`${URI_HOST.source}(?::\d*)?`;
+const URI_HOSTS = `${URI_HOST_PORT}(?:,(?:${URI_HOST_PORT})?)*`;
 const URI_CHARACTER = /[^/ \t\r\n\v\f]/;
-const USERINFO_WITH_PATH = String.raw`[^/?# \t\r\n\v\f:]*:${URI_CHARACTER.source}+@(?=(?:${URI_HOSTS})?/)`;
+const URI_USERINFO_WITH_PASSWORD = String.raw`[^/?# \t\r\n\v\f:]*:${URI_CHARACTER.source}+?@`;
 const KEYWORD_NAME = /[\w-]+/;
 const KEYWORD_PADDING = /[ \t\r\n\v\f]*/;
 const NEXT_KEYWORD = `${KEYWORD_NAME.source}${KEYWORD_PADDING.source}=`;
@@ -40,14 +40,15 @@ const WRAPPED_URI = (
     ["`", "`"],
   ] as const
 )
-  .map(
-    ([start, end]) =>
-      String.raw`(?<=${start})${URI_SCHEME.source}(?:${USERINFO_WITH_PATH})?\S*?(?=${end}(?:${WRAPPED_FIELD_SEPARATOR}|(?=\s|$)))`,
-  )
+  .map(([start, end]) => {
+    const boundary = String.raw`${end}(?:${WRAPPED_FIELD_SEPARATOR}|(?=\s|$))`;
+    const userinfo = `${URI_USERINFO_WITH_PASSWORD}(?=(?:${URI_HOSTS})?(?:[/?#]|${boundary}))`;
+    return String.raw`(?<=${start})${URI_SCHEME.source}(?:${userinfo})?\S*?(?=${boundary})`;
+  })
   .join("|");
 const URI_AUTHORITY_END = String.raw`(?=(?:${URI_HOSTS})?(?:[/?#]|[,;]${NEXT_KEYWORD}|[ \t\r\n\v\f]|$))`;
 const SPACED_PASSWORD = String.raw`:(?=[^/?#\r\n\t]* )(?:(?![ ]+${NEXT_KEYWORD})[^/?#\r\n\t])+@${URI_AUTHORITY_END}`;
-const URI_USERINFO = String.raw`(${URI_SCHEME.source})(?:${SPACED_PASSWORD}|${URI_CHARACTER.source}+?@${URI_AUTHORITY_END}|${URI_CHARACTER.source}+?(?<!@)@)`;
+const URI_USERINFO = String.raw`(${URI_SCHEME.source})(?:${SPACED_PASSWORD}|[^/?# \t\r\n\v\f]+?@${URI_AUTHORITY_END}|${URI_CHARACTER.source}+?@${URI_AUTHORITY_END}|${URI_CHARACTER.source}+?(?<!@)@)`;
 const WRAPPED_URI_OR_USERINFO = new RegExp(`${WRAPPED_URI}|${URI_USERINFO}`, "giu");
 const USERINFO = new RegExp(URI_USERINFO, "giu");
 const URI_BEFORE_COMPACT_FIELD = String.raw`${URI_SCHEME.source}(?:[^/;, \t\r\n]+?@)?${URI_HOST.source}:\d+(?=${WRAPPED_FIELD_SEPARATOR})`;

@@ -306,6 +306,21 @@ describe("DrizzleHealthIndicator", () => {
       "failed postgres://[redacted]@데이터베이스.example?sslmode=require&application_name=ops@example.test",
     ],
     [
+      "a decomposed internationalized hostname with an empty port",
+      "failed postgres://user:sample@cafe\u0301.example:?sslmode=require&application_name=ops@example.test",
+      "failed postgres://[redacted]@cafe\u0301.example:?sslmode=require&application_name=ops@example.test",
+    ],
+    [
+      "a wrapped pathless URI with delimiter-like text in its password",
+      "failed (postgres://:sample);sslmode=require@db.example) host=db.example",
+      "failed (postgres://[redacted]@db.example) host=db.example",
+    ],
+    [
+      "a zoned IPv6 host followed by a query containing an at-sign",
+      "failed postgres://user:sample@[fe80::1%25eth-test]?sslmode=require&application_name=ops@example.test",
+      "failed postgres://[redacted]@[fe80::1%25eth-test]?sslmode=require&application_name=ops@example.test",
+    ],
+    [
       "a quoted credential under a mixed-case environment key",
       'failed export app_PASSWORD="sample tail" host=db.example sslmode=require',
       "failed export app_PASSWORD=[redacted] host=db.example sslmode=require",
