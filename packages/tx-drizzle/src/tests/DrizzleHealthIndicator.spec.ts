@@ -341,6 +341,16 @@ describe("DrizzleHealthIndicator", () => {
       "failed (postgres://[redacted]@db.example) sslmode=require",
     ],
     [
+      "a raw tab inside bare and wrapped password-only URLs",
+      "failed postgres://:sample\ttail@db.example/app (postgres://:sample\ttail@db.example) sslmode=require",
+      "failed postgres://[redacted]@db.example/app (postgres://[redacted]@db.example) sslmode=require",
+    ],
+    [
+      "adjacent quoted segments in an environment credential",
+      "failed export POSTGRES_PASSWORD='sample''tail value' host=db.example",
+      "failed export POSTGRES_PASSWORD=[redacted] host=db.example",
+    ],
+    [
       "an assignment-shaped fragment before the first userinfo delimiter",
       "failed postgres://:sample label=tail@db.example/app",
       "failed postgres://[redacted]@db.example/app",

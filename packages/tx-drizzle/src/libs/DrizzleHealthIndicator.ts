@@ -32,7 +32,7 @@ const KEYWORD_PADDING = /[ \t\r\n\v\f]*/;
 const NEXT_KEYWORD = `${KEYWORD_NAME.source}${KEYWORD_PADDING.source}=`;
 const KEYWORD_AT_VALUE_START = new RegExp(NEXT_KEYWORD, "y");
 const WRAPPED_FIELD_SEPARATOR = `[,;]${NEXT_KEYWORD}`;
-const SPACED_PASSWORD = String.raw`:(?=[^/?#\r\n\t]* )[^@/?#\r\n\t]*(?:@(?:(?![ ]+${NEXT_KEYWORD})[^@/?#\r\n\t])*)*@`;
+const SPACED_PASSWORD = String.raw`:(?=[^/?#\r\n]*[ \t])[^@/?#\r\n]*(?:@(?:(?![ \t]+${NEXT_KEYWORD})[^@/?#\r\n])*)*@`;
 const WRAPPED_URI = (
   [
     [String.raw`\(`, String.raw`\)`],
@@ -201,8 +201,19 @@ function keywordValueEnd(
     QUOTED_KEYWORD_VALUE.lastIndex = start;
     if (QUOTED_KEYWORD_VALUE.test(detail)) {
       start = QUOTED_KEYWORD_VALUE.lastIndex;
+      if (quoteMode === "environment") {
+        while (QUOTED_KEYWORD_VALUE.test(detail)) {
+          start = QUOTED_KEYWORD_VALUE.lastIndex;
+        }
+      }
       DELIMITED_FIELD.lastIndex = start;
-      if (quoteMode === "diagnostic" || first === "'" || DELIMITED_FIELD.test(detail)) return start;
+      if (
+        quoteMode === "diagnostic" ||
+        (first === "'" && quoteMode !== "environment") ||
+        DELIMITED_FIELD.test(detail)
+      ) {
+        return start;
+      }
     } else if (quoteMode !== "literal" && (first === "'" || quoteMode !== "connection")) {
       return detail.length;
     }
