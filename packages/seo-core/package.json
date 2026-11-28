@@ -1,6 +1,6 @@
 {
   "name": "@croco/seo-core",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Public page source contracts and registered initial HTML inspection",
   "license": "Apache-2.0",
   "repository": {
