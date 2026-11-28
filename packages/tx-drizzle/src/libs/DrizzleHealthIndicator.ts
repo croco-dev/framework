@@ -40,7 +40,8 @@ const WRAPPED_URI = (
       String.raw`(?<=${start})${URI_SCHEME.source}\S*(?=${end}(?:${WRAPPED_FIELD_SEPARATOR}|(?=\s|$)))`,
   )
   .join("|");
-const URI_USERINFO = String.raw`(${URI_SCHEME.source})(?:[^/?#\s]+(?<!@)@|[^/\s]+(?<!@)@|:[^/?#\r\n\t]+\x20[^/?#\r\n\t]*?@(?=[\w\[]))`;
+const SPACED_PASSWORD = /:(?=[^/?#@\r\n\t]*(?: |@ ))(?:[^/?#@\r\n\t]|@(?= ))+@(?=[\w/\[])/;
+const URI_USERINFO = String.raw`(${URI_SCHEME.source})(?:${SPACED_PASSWORD.source}|[^/?#\s]+(?<!@)@|[^/\s]+(?<!@)@)`;
 const WRAPPED_URI_OR_USERINFO = new RegExp(`${WRAPPED_URI}|${URI_USERINFO}`, "gi");
 const URL_OR_KEYWORD = new RegExp(
   String.raw`${WRAPPED_URI}|${URI_SCHEME.source}\S+|(?<![\w?&-])(${KEYWORD_NAME.source})${KEYWORD_PADDING.source}=${KEYWORD_PADDING.source}`,
@@ -53,6 +54,9 @@ const DELIMITED_KEYWORD_VALUE = new RegExp(
   `(?:(?![,;&]${NEXT_KEYWORD})(?:${UNQUOTED_KEYWORD_CHARACTER.source}))+`,
   "y",
 );
+const DELIMITED_FIELD = new RegExp(`[,;&]${NEXT_KEYWORD}`, "y");
+const DELIMITED_HOST = new RegExp(`[A-Za-z0-9.-]+[,;]${NEXT_KEYWORD}`, "y");
+const MAX_DIAGNOSTIC_DEPTH = 12;
 const BARE_CREDENTIAL = new RegExp(String.raw`\b(${SENSITIVE_KEYS.source})=[^\s,;&]+`, "gi");
 
 export class DrizzleHealthIndicator implements HealthIndicator {
@@ -102,7 +106,7 @@ function redactDrizzleHealthDetail(value: string): string {
     .replace(BARE_CREDENTIAL, "$1=[redacted]");
 }
 
-function redactKeywordValues(detail: string, readDiagnosticFields = true): string {
+function redactKeywordValues(detail: string, depth = 0): string {
   const tokens = new RegExp(URL_OR_KEYWORD);
   let result = "";
   let copiedThrough = 0;
@@ -112,11 +116,14 @@ function redactKeywordValues(detail: string, readDiagnosticFields = true): strin
     if (key === undefined) continue;
     const valueStart = tokens.lastIndex;
     const sensitive = SENSITIVE_KEYS.test(key);
-    const diagnostic = readDiagnosticFields && DIAGNOSTIC_FIELDS.test(key);
+    const diagnostic = DIAGNOSTIC_FIELDS.test(key);
     const quote = detail.charAt(valueStart);
     if (diagnostic && quote !== "'" && quote !== '"') continue;
+    DELIMITED_HOST.lastIndex = valueStart;
     const delimited =
-      LEGACY_SENSITIVE_KEY.test(key) || /[,;&]/.test(detail.charAt(token.index - 1));
+      LEGACY_SENSITIVE_KEY.test(key) ||
+      /[,;&]/.test(detail.charAt(token.index - 1)) ||
+      (key === "host" && DELIMITED_HOST.test(detail));
     const unquoted = delimited ? DELIMITED_KEYWORD_VALUE : UNQUOTED_KEYWORD_VALUE;
     const valueEnd = keywordValueEnd(
       detail,
@@ -138,7 +145,8 @@ function redactKeywordValues(detail: string, readDiagnosticFields = true): strin
       const decoded = content.replace(/\\([\\'"])/g, (match: string, escaped: string) =>
         escaped === quote || escaped === "\\" ? escaped : match,
       );
-      const redacted = redactKeywordValues(decoded, false);
+      const redacted =
+        depth === MAX_DIAGNOSTIC_DEPTH ? "[redacted]" : redactKeywordValues(decoded, depth + 1);
       if (redacted === decoded) continue;
       const encoded = redacted.replace(/[\\'"]/g, (character) =>
         character === quote || character === "\\" ? "\\" + character : character,
@@ -167,7 +175,8 @@ function keywordValueEnd(
     QUOTED_KEYWORD_VALUE.lastIndex = start;
     if (QUOTED_KEYWORD_VALUE.test(detail)) {
       start = QUOTED_KEYWORD_VALUE.lastIndex;
-      if (first === "'") return start;
+      DELIMITED_FIELD.lastIndex = start;
+      if (first === "'" || DELIMITED_FIELD.test(detail)) return start;
     } else if (consumeUnclosed) {
       return detail.length;
     }

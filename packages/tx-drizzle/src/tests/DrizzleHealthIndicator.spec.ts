@@ -261,6 +261,31 @@ describe("DrizzleHealthIndicator", () => {
       "failed postgres://[redacted]@db.example/app?sslmode=require",
     ],
     [
+      "a leading space in a password-only URL with a query-provided host",
+      "failed postgres://: sample@/app?host=db.example&sslmode=require",
+      "failed postgres://[redacted]@/app?host=db.example&sslmode=require",
+    ],
+    [
+      "an at-sign followed by a space in a password-only URL",
+      "failed postgres://:sample@ tail@db.example/app",
+      "failed postgres://[redacted]@db.example/app",
+    ],
+    [
+      "a quoted environment credential followed by separate fields",
+      'failed DBPASSWORD="sample tail";host=db.example;sslmode=require',
+      "failed DBPASSWORD=[redacted];host=db.example;sslmode=require",
+    ],
+    [
+      "a prefixed credential after a compact host field",
+      "failed host=db.example;sslpassword=sample;sslmode=require",
+      "failed host=db.example;sslpassword=[redacted];sslmode=require",
+    ],
+    [
+      "a prefixed credential inside nested diagnostic fields",
+      "failed error=\"reason='sslpassword=sample host=db.example'\" sslmode=require",
+      "failed error=\"reason='sslpassword=[redacted] host=db.example'\" sslmode=require",
+    ],
+    [
       "legacy hyphenated keys in delimited diagnostics",
       "failed access-token=sample;host=db.example;dbname=app;sslmode=require",
       "failed access-token=[redacted];host=db.example;dbname=app;sslmode=require",
