@@ -29,6 +29,9 @@ env:
   # renovate: datasource=docker depName=ghcr.io/gitleaks/gitleaks
   GITLEAKS_IMAGE: ghcr.io/gitleaks/gitleaks:v8.23.0@sha256:b4b81841085b4060054a71155500a340e3d2e2a5995c186546649e3efd80b84e
   CROCO_CACHEABLE_FAILURE_CLASS: ${{ inputs.cacheable_failure_class || 'none' }}
+  # New advisories and overdue exception reviews arrive by date, not by diff. CI lists them in
+  # the job summary; the Release workflow and the daily policy audit enforce them.
+  CROCO_SECURITY_POLICY_ENFORCEMENT: warn
 
 # Required jobs run with always(), so a shared pull request group would hold a new push
 # until the superseded validate finishes. cancel-superseded-runs force-cancels it instead.
@@ -229,10 +232,10 @@ jobs:
             echo "# Security policy summary"
             echo ""
             echo "- \`pnpm audit:prod\` dependency audit: advisory-only in CI on pull requests, trunk pushes, and manual runs"
-            echo "- \`pnpm security:audit-policy\` dependency audit policy: blocks unreviewed runtime, generated-app, and release-evidence high-risk findings"
-            echo "- \`pnpm security:audit-policy\` release enforcement: blocking in the Release workflow before publish"
+            echo "- \`pnpm security:audit-policy\` dependency audit policy: warns in CI about unreviewed runtime, generated-app, and release-evidence high-risk findings and overdue exception reviews; malformed suppressions block"
+            echo "- \`pnpm security:audit-policy\` release enforcement: blocking in the Release workflow before publish and in the daily Repository Policy Audit"
             echo "- \`gitleaks\` secret scanning: blocking on pull requests, trunk pushes, and manual runs"
-            echo "- Security allowlist metadata: blocking; audit and secret-scan exceptions require owner, reason, and reviewBy/expiresOn"
+            echo "- Security allowlist metadata: blocking when an audit or secret-scan exception lacks owner, reason, or reviewBy/expiresOn; an overdue review date warns in CI and blocks the Release workflow and the daily Repository Policy Audit"
             echo "- Release path: release-triggering changes still pass through CI before merge; publish-specific gates live in the Release workflow"
             echo ""
             echo "## Current run"

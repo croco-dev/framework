@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -11,6 +11,7 @@ type ScriptResult = {
   readonly stdout: string;
   readonly stderr: string;
   readonly status: number | null;
+  readonly summary: string;
 };
 
 describe("security-allowlist-metadata-check.mts", () => {
@@ -799,6 +800,77 @@ describe("security-allowlist-metadata-check.mts", () => {
     );
   });
 
+  it("reports stale review dates as warnings without failing under warn enforcement", () => {
+    const root = createTempRoot();
+    writeRepo(root, {
+      metadata: metadataFixture({ reviewBy: "2026-07-02" }),
+    });
+
+    const result = runScriptWithEnforcement(root, "warn");
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain(
+      "::warning title=Security exception reviews deferred to release::audit.ignoreGhsas[0].reviewBy is stale (2026-07-02 is before 2026-07-03)",
+    );
+    expect(result.stdout).toContain("security-allowlist-metadata: passed");
+    expect(result.summary).toContain(
+      "### Security exception reviews: deferred to the Release workflow",
+    );
+    expect(result.summary).toContain("audit.ignoreGhsas[0].reviewBy is stale");
+    expect(runScript(root).summary).toBe("");
+  });
+
+  it("defers an overdue generated-template review and keeps its pointer under warn enforcement", () => {
+    const root = createTempRoot();
+    writeRepo(root, {
+      metadata: metadataFixture({
+        generatedTemplateAllowlists: [
+          { reviewBy: "2027-01-31" },
+          {
+            pathPattern: "^templates/fixture\\.env$",
+            matchPattern: "^POLAR_ACCESS_TOKEN=",
+            owner: "security",
+            reason: "Intentional scanner fixture.",
+            reviewBy: "2026-07-02",
+          },
+        ],
+      }),
+    });
+
+    const warn = runScriptWithEnforcement(root, "warn");
+    const enforce = runScript(root);
+
+    const stale =
+      "secretScan.generatedTemplates.allowlists[1].reviewBy is stale (2026-07-02 is before 2026-07-03)";
+    expect(warn.stdout).toContain(`deferred to release::${stale}`);
+    expect(warn.stdout).not.toContain(`- ${stale}`);
+    expect(enforce.stdout).toContain(`- ${stale}`);
+    expect(warn.status).toBe(1);
+    expect(warn.stdout).toContain("secretScan.generatedTemplates.allowlists[0]");
+  });
+
+  it("keeps missing review metadata blocking under warn enforcement", () => {
+    const root = createTempRoot();
+    writeRepo(root, {
+      metadata: metadataFixture({ reviewBy: "" }),
+    });
+
+    const result = runScriptWithEnforcement(root, "warn");
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("security-allowlist-metadata: failed.");
+  });
+
+  it("rejects an unknown enforcement mode", () => {
+    const root = createTempRoot();
+    writeRepo(root, { metadata: metadataFixture({}) });
+
+    const result = runScriptWithEnforcement(root, "advisory");
+
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain("CROCO_SECURITY_POLICY_ENFORCEMENT must be enforce or warn");
+  });
+
   it("fails stale expiresOn even when reviewBy is still current", () => {
     const root = createTempRoot();
     writeRepo(root, {
@@ -1151,11 +1223,26 @@ function metadataFixture(
 }
 
 function runScript(root: string, ...args: string[]): ScriptResult {
+  return runScriptWithEnforcement(root, "enforce", ...args);
+}
+
+function runScriptWithEnforcement(
+  root: string,
+  enforcement: string,
+  ...args: string[]
+): ScriptResult {
+  const summaryPath = join(root, "step-summary.md");
+  writeFileSync(summaryPath, "");
   const result = spawnSync(
     "node",
     ["--experimental-strip-types", scriptPath, "--root", root, "--today", "2026-07-03", ...args],
     {
       encoding: "utf-8",
+      env: {
+        ...process.env,
+        CROCO_SECURITY_POLICY_ENFORCEMENT: enforcement,
+        GITHUB_STEP_SUMMARY: summaryPath,
+      },
       timeout: 10_000,
     },
   );
@@ -1164,6 +1251,7 @@ function runScript(root: string, ...args: string[]): ScriptResult {
     stdout: result.stdout,
     stderr: result.stderr,
     status: result.status,
+    summary: readFileSync(summaryPath, "utf-8"),
   };
 }
 

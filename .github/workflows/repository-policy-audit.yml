@@ -35,3 +35,11 @@ jobs:
         run: pnpm branch-protection:check
         env:
           GH_TOKEN: ${{ github.token }}
+      # CI only warns about these. Failing here two weeks before a review date gives the
+      # owner time to act before the Release workflow refuses to publish.
+      - name: Audit security exception reviews
+        if: ${{ !cancelled() }}
+        run: pnpm tracked-files:guard --recovery 'Fix the reported security allowlist metadata' -- pnpm security-allowlists:check -- --today "$(date -u -d '+14 days' +%F)"
+      - name: Enforce dependency audit policy
+        if: ${{ !cancelled() }}
+        run: pnpm tracked-files:guard --recovery 'Fix or review the reported dependency advisory' -- pnpm security:audit-policy -- --today "$(date -u -d '+14 days' +%F)"

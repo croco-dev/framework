@@ -52,6 +52,7 @@ const CI_WORKFLOW_ENVIRONMENT = {
   GITLEAKS_IMAGE:
     "ghcr.io/gitleaks/gitleaks:v8.23.0@sha256:b4b81841085b4060054a71155500a340e3d2e2a5995c186546649e3efd80b84e",
   CROCO_CACHEABLE_FAILURE_CLASS: "${{ inputs.cacheable_failure_class || 'none' }}",
+  CROCO_SECURITY_POLICY_ENFORCEMENT: "warn",
 } as const;
 const CI_WORKFLOW_CONCURRENCY = {
   group: "ci-${{ github.event_name == 'push' && github.ref || github.run_id }}",
@@ -131,6 +132,19 @@ const POLICY_AUDIT_STEP_NAMES = [
   "Cache pnpm store",
   "Install dependencies",
   "Audit effective trunk protection",
+  "Audit security exception reviews",
+  "Enforce dependency audit policy",
+] as const;
+const SECURITY_REVIEW_HORIZON = `--today "$(date -u -d '+14 days' +%F)"`;
+const POLICY_AUDIT_SECURITY_STEPS = [
+  {
+    name: "Audit security exception reviews",
+    run: `pnpm tracked-files:guard --recovery 'Fix the reported security allowlist metadata' -- pnpm security-allowlists:check -- ${SECURITY_REVIEW_HORIZON}`,
+  },
+  {
+    name: "Enforce dependency audit policy",
+    run: `pnpm tracked-files:guard --recovery 'Fix or review the reported dependency advisory' -- pnpm security:audit-policy -- ${SECURITY_REVIEW_HORIZON}`,
+  },
 ] as const;
 
 type JsonRecord = Readonly<Record<string, unknown>>;
@@ -746,6 +760,21 @@ function inspectPolicyAuditJob(job: JsonRecord | undefined, owner: string): read
         `${owner} must run the read-only branch protection audit unconditionally and block on visible drift`,
       ),
     );
+  }
+  for (const expected of POLICY_AUDIT_SECURITY_STEPS) {
+    const step = namedStep(job, expected.name);
+    if (
+      !hasExactKeys(step, ["name", "if", "run"]) ||
+      step?.if !== "${{ !cancelled() }}" ||
+      normalizedRun(step ?? {}) !== expected.run
+    ) {
+      violations.push(
+        policyDiagnostic(
+          "BRANCH_POLICY_AUDIT_SECURITY_STEP_DRIFT",
+          `${owner} must run ${expected.name} after every earlier outcome against the two-week review horizon`,
+        ),
+      );
+    }
   }
   return violations;
 }

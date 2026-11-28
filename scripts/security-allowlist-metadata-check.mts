@@ -3,13 +3,21 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { dirname, relative, resolve } from "node:path";
-import { argv, exit, stdout } from "node:process";
+import { argv, env, exit, stdout } from "node:process";
 import { fileURLToPath } from "node:url";
 import { parse as parseToml } from "smol-toml";
 import {
   readGeneratedTemplateSecretAllowlistsFromMetadata,
   type GeneratedTemplateSecretAllowlistEntry,
 } from "../packages/create-croco-app/src/secret-placeholder-policy.ts";
+import {
+  findOverdueReviews,
+  GENERATED_TEMPLATE_ALLOWLISTS_POINTER,
+  NO_REVIEW_DEADLINE,
+  readGeneratedTemplateReviewDeadlines,
+  readSecurityPolicyEnforcement,
+  reportDeferredSecurityFindings,
+} from "./security-policy-enforcement.mts";
 
 type Options = {
   readonly explicitGitleaksConfigPath: boolean;
@@ -25,6 +33,7 @@ type Options = {
 type Violation = {
   readonly message: string;
   readonly recovery: string;
+  readonly staleReview?: true;
 };
 
 type AuditMetadataEntry = {
@@ -265,9 +274,16 @@ function readMetadata(
   );
   const generatedTemplateAllowlists = readGeneratedTemplateSecretAllowlistsFromMetadata(
     root,
-    today,
+    NO_REVIEW_DEADLINE,
   );
   violations.push(...generatedTemplateAllowlists.violations);
+  violations.push(
+    ...findOverdueReviews(
+      readGeneratedTemplateReviewDeadlines(root),
+      GENERATED_TEMPLATE_ALLOWLISTS_POINTER,
+      today,
+    ).map((review) => ({ ...review, staleReview: true as const })),
+  );
 
   return {
     auditIgnores: [...auditIgnoreGhsas, ...auditIgnoreCves],
@@ -515,6 +531,7 @@ function validateReviewDateField(
     violations.push({
       message: `${pointer}.${field} is stale (${value} is before ${today})`,
       recovery: `Review the exception and update ${pointer}.${field}, or remove the allowlist entry.`,
+      staleReview: true,
     });
   }
 }
@@ -1637,6 +1654,7 @@ function duplicateValues(values: readonly string[]): readonly string[] {
 
 function main(): void {
   const violations: Violation[] = [];
+  const enforcement = readSecurityPolicyEnforcement(env.CROCO_SECURITY_POLICY_ENFORCEMENT);
   const options = parseArgs(argv.slice(2));
   const metadata = readMetadata(options.metadataPath, options.today, violations);
   validateMetadataConfig(options, metadata, violations);
@@ -1648,14 +1666,21 @@ function main(): void {
   validateGitleaksMetadata(effectiveGitleaks, metadata.gitleaksAllowlists, violations);
   validateGeneratedTemplateMetadata(metadata.generatedTemplateAllowlists, violations);
   validateNoInlineGitleaksSuppressions(options, violations);
+  const deferred =
+    enforcement === "warn" ? violations.filter((violation) => violation.staleReview) : [];
+  const blocking = violations.filter((violation) => !deferred.includes(violation));
+  reportDeferredSecurityFindings(
+    "Security exception reviews",
+    deferred.map((review) => `${review.message}. ${review.recovery}`),
+  );
   printResult(
-    violations,
+    blocking,
     effectiveAuditIgnores,
     effectiveGitleaks,
     metadata.generatedTemplateAllowlists,
   );
 
-  if (violations.length > 0) {
+  if (blocking.length > 0) {
     exit(1);
   }
 }

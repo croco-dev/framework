@@ -2,12 +2,20 @@
 
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
-import { argv, exit, stdout } from "node:process";
+import { argv, env, exit, stdout } from "node:process";
 import { fileURLToPath } from "node:url";
 import {
   readGeneratedTemplateSecretAllowlistsFromMetadata,
   scanGeneratedTemplateSecretText,
 } from "../packages/create-croco-app/src/secret-placeholder-policy.ts";
+import {
+  findOverdueReviews,
+  GENERATED_TEMPLATE_ALLOWLISTS_POINTER,
+  NO_REVIEW_DEADLINE,
+  readGeneratedTemplateReviewDeadlines,
+  readSecurityPolicyEnforcement,
+  reportDeferredSecurityFindings,
+} from "./security-policy-enforcement.mts";
 
 type Options = {
   readonly metadataPath: string;
@@ -55,11 +63,28 @@ function log(message = ""): void {
 }
 
 function main(): void {
+  const enforcement = readSecurityPolicyEnforcement(env.CROCO_SECURITY_POLICY_ENFORCEMENT);
   const options = parseArgs(argv.slice(2));
   const violations: Violation[] = [];
   const metadata = readMetadata(options.metadataPath, violations);
-  const allowlistRead = readGeneratedTemplateSecretAllowlistsFromMetadata(metadata, options.today);
+  const allowlistRead = readGeneratedTemplateSecretAllowlistsFromMetadata(
+    metadata,
+    NO_REVIEW_DEADLINE,
+  );
   violations.push(...allowlistRead.violations);
+  const overdueReviews = findOverdueReviews(
+    readGeneratedTemplateReviewDeadlines(metadata),
+    GENERATED_TEMPLATE_ALLOWLISTS_POINTER,
+    options.today,
+  );
+  if (enforcement === "enforce") {
+    violations.push(...overdueReviews);
+  } else {
+    reportDeferredSecurityFindings(
+      "Generated template secret exception reviews",
+      overdueReviews.map((review) => `${review.message}. ${review.recovery}`),
+    );
+  }
 
   validateGeneratedHelperDrift(options.rootDir, violations);
 

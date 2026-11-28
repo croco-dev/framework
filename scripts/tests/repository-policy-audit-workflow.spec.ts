@@ -70,6 +70,35 @@ describe("repository policy audit workflow", () => {
     expect(findRepositoryPolicyAuditWorkflowViolations(mutation)).not.toEqual([]);
   });
 
+  it.each([
+    [
+      "exception review horizon",
+      WORKFLOW.replace(
+        `-- pnpm security-allowlists:check -- --today "$(date -u -d '+14 days' +%F)"`,
+        "-- pnpm security-allowlists:check",
+      ),
+    ],
+    [
+      "dependency audit after a protection failure",
+      WORKFLOW.replace(
+        "      - name: Enforce dependency audit policy\n        if: ${{ !cancelled() }}\n",
+        "      - name: Enforce dependency audit policy\n",
+      ),
+    ],
+    [
+      "non-blocking dependency audit",
+      WORKFLOW.replace(
+        "      - name: Enforce dependency audit policy\n",
+        "      - name: Enforce dependency audit policy\n        continue-on-error: true\n",
+      ),
+    ],
+  ])("rejects a weakened %s", (_name, mutation) => {
+    expect(mutation).not.toBe(WORKFLOW);
+    expect(findRepositoryPolicyAuditWorkflowViolations(mutation)).toContainEqual(
+      expect.stringContaining("BRANCH_POLICY_AUDIT_SECURITY_STEP_DRIFT"),
+    );
+  });
+
   it("rejects a conditional audit job", () => {
     const mutation = WORKFLOW.replace(
       "  audit:\n    runs-on:",

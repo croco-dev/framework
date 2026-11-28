@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
@@ -6,6 +7,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { parse, parseAllDocuments } from "yaml";
 
 import { runDependencyAuditPolicy, runPnpmAudit } from "../dependency-audit-policy.mts";
+import {
+  readSecurityPolicyEnforcement,
+  reportDeferredSecurityFindings,
+} from "../security-policy-enforcement.mts";
 
 const tempRepos: string[] = [];
 let advisoryId = 0;
@@ -1317,6 +1322,199 @@ describe("dependency-audit-policy.mts", () => {
     expect(result.blockingFindings[0]).toEqual(
       expect.objectContaining({
         metadataStatus: "invalid",
+      }),
+    );
+  });
+
+  it("reports unreviewed findings and stale reviews without failing under warn enforcement", () => {
+    const repo = createRepo();
+    writePackage(repo, "packages/runtime-core/package.json", {
+      name: "@croco/runtime-core",
+      version: "0.0.1",
+      dependencies: {
+        "runtime-lib": "1.0.0",
+        "stale-lib": "1.0.0",
+      },
+    });
+    writeMetadata(repo, {
+      audit: {
+        ignoreGhsas: [
+          {
+            id: "GHSA-2345-2345-2345",
+            owner: "security-owner",
+            reason: "Expired runtime exception.",
+            reviewDate: "2026-01-01",
+          },
+        ],
+      },
+      schemaVersion: 1,
+    });
+    writeAudit(repo, [
+      advisory({
+        ghsa: "GHSA-2345-2345-2345",
+        path: "packages__runtime-core>stale-lib>vulnerable",
+        severity: "high",
+      }),
+      advisory({
+        ghsa: "GHSA-3456-3456-3456",
+        path: "packages__runtime-core>runtime-lib>vulnerable",
+        severity: "high",
+      }),
+    ]);
+
+    const result = runDependencyAuditPolicy({
+      auditJsonPath: "audit.json",
+      enforcement: "warn",
+      rootDir: repo,
+      today: "2026-07-03",
+    });
+
+    expect(result.exitCode).toBe(0);
+    expect(result.staleReviews).toEqual([
+      "GHSA-2345-2345-2345 review date 2026-01-01 is before 2026-07-03",
+    ]);
+    expect(result.blockingFindings).toEqual([
+      expect.objectContaining({ directDependency: "runtime-lib", metadataStatus: "missing" }),
+    ]);
+    expect(readFileSync(result.reportPath, "utf-8")).toContain("- Enforcement: warn");
+  });
+
+  it("keeps findings covered by malformed review metadata blocking under warn enforcement", () => {
+    const repo = createRepo();
+    writePackage(repo, "packages/runtime-core/package.json", {
+      name: "@croco/runtime-core",
+      version: "0.0.1",
+      dependencies: { "runtime-lib": "1.0.0" },
+    });
+    writeMetadata(repo, {
+      audit: {
+        ignoreGhsas: [
+          { id: "GHSA-2345-2345-2345", reason: "Owner is missing.", reviewDate: "2027-01-31" },
+        ],
+      },
+      schemaVersion: 1,
+    });
+    writeAudit(repo, [
+      advisory({
+        ghsa: "GHSA-2345-2345-2345",
+        path: "packages__runtime-core>runtime-lib>vulnerable",
+        severity: "high",
+      }),
+    ]);
+
+    const result = runDependencyAuditPolicy({
+      auditJsonPath: "audit.json",
+      enforcement: "warn",
+      rootDir: repo,
+      today: "2026-07-03",
+    });
+
+    expect(result.exitCode).toBe(1);
+    expect(result.blockingFindings).toEqual([
+      expect.objectContaining({ metadataStatus: "invalid" }),
+    ]);
+  });
+
+  it("keeps malformed suppressions blocking under warn enforcement", () => {
+    const repo = createRepo();
+    writePackage(repo, "package.json", {
+      name: "croco",
+      pnpm: {
+        auditConfig: {
+          ignoreGhsas: ["GHSA-hidden-risk"],
+        },
+      },
+      private: true,
+      version: "0.0.0",
+    });
+    writeAudit(repo, []);
+
+    const result = runDependencyAuditPolicy({
+      auditJsonPath: "audit.json",
+      enforcement: "warn",
+      rootDir: repo,
+    });
+
+    expect(result.exitCode).toBe(1);
+  });
+
+  it.each([
+    ["warn", 0, true],
+    ["enforce", 1, false],
+  ] as const)(
+    "runs the CLI under %s enforcement and writes deferred findings to the job summary only when warning",
+    (enforcement, status, summarized) => {
+      const repo = createRepo();
+      writePackage(repo, "packages/runtime-core/package.json", {
+        name: "@croco/runtime-core",
+        version: "0.0.1",
+        dependencies: { "runtime-lib": "1.0.0" },
+      });
+      writeAudit(repo, [
+        advisory({
+          ghsa: "GHSA-3456-3456-3456",
+          path: "packages__runtime-core>runtime-lib>vulnerable",
+          severity: "high",
+        }),
+      ]);
+      const summary = join(repo, "step-summary.md");
+      writeFileSync(summary, "");
+
+      const result = spawnSync(
+        process.execPath,
+        [
+          "--experimental-strip-types",
+          join(repositoryRoot, "scripts", "dependency-audit-policy.mts"),
+          "--root",
+          repo,
+          "--audit-json",
+          "audit.json",
+          "--today",
+          "2026-07-03",
+        ],
+        {
+          encoding: "utf-8",
+          env: {
+            ...process.env,
+            CROCO_SECURITY_POLICY_ENFORCEMENT: enforcement,
+            GITHUB_STEP_SUMMARY: summary,
+          },
+          timeout: 30_000,
+        },
+      );
+
+      expect(result.status).toBe(status);
+      expect(result.stdout).toContain("GHSA-3456-3456-3456 vulnerable via");
+      expect(readFileSync(summary, "utf-8").includes("GHSA-3456-3456-3456")).toBe(summarized);
+    },
+  );
+
+  it("keeps deferred findings in the job summary because passing check output is discarded", () => {
+    const summary = join(createRepo(), "summary.md");
+    writeFileSync(summary, "");
+    const stdoutWrite = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+
+    reportDeferredSecurityFindings("Dependency audit policy", ["GHSA-1 runtime-lib"], summary);
+    reportDeferredSecurityFindings("Dependency audit policy", [], summary);
+
+    expect(readFileSync(summary, "utf-8")).toContain(
+      "### Dependency audit policy: deferred to the Release workflow",
+    );
+    expect(readFileSync(summary, "utf-8")).toContain("- GHSA-1 runtime-lib");
+    expect(stdoutWrite).toHaveBeenCalledTimes(1);
+  });
+
+  it("reads the enforcement mode from the environment and rejects unknown values", () => {
+    expect(readSecurityPolicyEnforcement(undefined)).toBe("enforce");
+    expect(readSecurityPolicyEnforcement("")).toBe("enforce");
+    expect(readSecurityPolicyEnforcement("enforce")).toBe("enforce");
+    expect(readSecurityPolicyEnforcement("warn")).toBe("warn");
+    expect(() => readSecurityPolicyEnforcement("advisory")).toThrow(
+      expect.objectContaining({
+        code: "SECURITY_POLICY_ENFORCEMENT_INVALID",
+        message: expect.stringContaining(
+          "CROCO_SECURITY_POLICY_ENFORCEMENT must be enforce or warn",
+        ),
       }),
     );
   });

@@ -1,6 +1,11 @@
 #!/usr/bin/env node
 
 import { compareStrings } from "../tooling/compareStrings.mjs";
+import {
+  readSecurityPolicyEnforcement,
+  reportDeferredSecurityFindings,
+  type SecurityPolicyEnforcement,
+} from "./security-policy-enforcement.mts";
 
 import { spawnSync } from "node:child_process";
 import {
@@ -90,6 +95,7 @@ type MetadataEntry = {
   readonly owner: string;
   readonly reason: string;
   readonly reviewDate: string;
+  readonly stale: boolean;
   readonly workspaceOnly: boolean;
   readonly valid: boolean;
   readonly errors: readonly string[];
@@ -112,6 +118,7 @@ type DependencyAuditPolicyProblemOptions = {
 
 type RunOptions = {
   readonly auditJsonPath?: string;
+  readonly enforcement?: SecurityPolicyEnforcement;
   readonly metadataPath?: string;
   readonly prodAuditJsonPath?: string;
   readonly reportPath?: string;
@@ -124,8 +131,10 @@ type PolicyResult = {
   readonly advisoryFindings: readonly ClassifiedFinding[];
   readonly blockingFindings: readonly ClassifiedFinding[];
   readonly configuredSuppressions: readonly ConfiguredSuppression[];
+  readonly enforcement: SecurityPolicyEnforcement;
   readonly exitCode: number;
   readonly reportPath: string;
+  readonly staleReviews: readonly string[];
   readonly violations: readonly string[];
 };
 
@@ -210,9 +219,18 @@ class DependencyAuditPolicyProblem extends Error {
 export function runDependencyAuditPolicy(options: RunOptions = {}): PolicyResult {
   const rootDir = resolve(options.rootDir ?? defaultRootDir);
   const today = options.today ?? new Date().toISOString().slice(0, 10);
+  const enforcement = options.enforcement ?? "enforce";
   const reportPath = resolveFromRoot(rootDir, options.reportPath ?? defaultReportPath);
   const manifests = readWorkspaceManifests(rootDir);
-  const metadata = readMetadata(rootDir, options.metadataPath ?? defaultMetadataPath, today);
+  const metadata = readMetadata(
+    rootDir,
+    options.metadataPath ?? defaultMetadataPath,
+    today,
+    enforcement,
+  );
+  const staleReviews = [...metadata.values()]
+    .filter((entry) => entry.stale)
+    .map((entry) => `${entry.id} review date ${entry.reviewDate} is before ${today}`);
   const configuredSuppressions = readConfiguredSuppressions(rootDir);
   const violations = configuredSuppressions.flatMap((suppression) => {
     const metadataEntry = metadata.get(suppression.id);
@@ -237,14 +255,29 @@ export function runDependencyAuditPolicy(options: RunOptions = {}): PolicyResult
   const findings = classifyAuditJson(auditJson, manifests, metadata);
   const blockingFindings = findings.filter(isBlockingFinding);
 
-  writeReport(reportPath, findings, blockingFindings, configuredSuppressions, violations);
+  writeReport(reportPath, {
+    blockingFindings,
+    configuredSuppressions,
+    enforcement,
+    findings,
+    staleReviews,
+    violations,
+  });
 
+  // Warn mode only defers findings that arrive by date. Exception metadata that is malformed
+  // (stale dates are valid in warn mode) still fails, like any other suppression mistake.
+  const enforcedFindings =
+    enforcement === "enforce"
+      ? blockingFindings.length
+      : blockingFindings.filter((finding) => finding.metadataStatus === "invalid").length;
   return {
     advisoryFindings: findings,
     blockingFindings,
     configuredSuppressions,
-    exitCode: blockingFindings.length > 0 || violations.length > 0 ? 1 : 0,
+    enforcement,
+    exitCode: enforcedFindings > 0 || violations.length > 0 ? 1 : 0,
     reportPath,
+    staleReviews,
     violations,
   };
 }
@@ -276,6 +309,7 @@ function parseArgs(args: readonly string[]): RunOptions {
 
   return {
     auditJsonPath: options["audit-json"],
+    enforcement: readSecurityPolicyEnforcement(env.CROCO_SECURITY_POLICY_ENFORCEMENT),
     metadataPath: options.metadata,
     prodAuditJsonPath: options["prod-audit-json"],
     reportPath: options.report,
@@ -1139,6 +1173,7 @@ function readMetadata(
   rootDir: string,
   metadataPath: string,
   today: string,
+  enforcement: SecurityPolicyEnforcement,
 ): ReadonlyMap<string, MetadataEntry> {
   const fullPath = resolveFromRoot(rootDir, metadataPath);
   if (!existsSync(fullPath)) {
@@ -1153,7 +1188,7 @@ function readMetadata(
   for (const key of ["ignoreGhsas", "ignoreCves"] as const) {
     const entries = Array.isArray(root.audit[key]) ? root.audit[key] : [];
     for (const rawEntry of entries) {
-      const entry = readMetadataEntry(rawEntry, today);
+      const entry = readMetadataEntry(rawEntry, today, enforcement);
       if (entry.id) {
         metadata.set(entry.id, entry);
       }
@@ -1162,7 +1197,11 @@ function readMetadata(
   return metadata;
 }
 
-function readMetadataEntry(rawEntry: unknown, today: string): MetadataEntry {
+function readMetadataEntry(
+  rawEntry: unknown,
+  today: string,
+  enforcement: SecurityPolicyEnforcement,
+): MetadataEntry {
   const entry = isRecord(rawEntry) ? rawEntry : {};
   const id = stringValue(entry.id);
   const owner = stringValue(entry.owner);
@@ -1170,13 +1209,14 @@ function readMetadataEntry(rawEntry: unknown, today: string): MetadataEntry {
   const scope = entry.scope;
   const reviewDate =
     stringValue(entry.reviewDate) || stringValue(entry.reviewBy) || stringValue(entry.expiresOn);
+  const stale = isValidDate(reviewDate) && reviewDate < today;
   const errors = [
     id ? "" : "id is required",
     owner ? "" : "owner is required",
     reason ? "" : "reason is required",
     scope === undefined || scope === "workspace" ? "" : "scope must be workspace when specified",
     isValidDate(reviewDate) ? "" : "reviewDate/reviewBy/expiresOn must be YYYY-MM-DD",
-    isValidDate(reviewDate) && reviewDate >= today ? "" : "reviewDate/reviewBy/expiresOn is stale",
+    stale && enforcement === "enforce" ? "reviewDate/reviewBy/expiresOn is stale" : "",
   ].filter(Boolean);
 
   return {
@@ -1185,6 +1225,7 @@ function readMetadataEntry(rawEntry: unknown, today: string): MetadataEntry {
     owner,
     reason,
     reviewDate,
+    stale,
     workspaceOnly: scope === "workspace",
     valid: errors.length === 0,
   };
@@ -1420,27 +1461,50 @@ function findPackageJsonFiles(root: string): readonly string[] {
   return found;
 }
 
+type PolicyReport = {
+  readonly blockingFindings: readonly ClassifiedFinding[];
+  readonly configuredSuppressions: readonly ConfiguredSuppression[];
+  readonly enforcement: SecurityPolicyEnforcement;
+  readonly findings: readonly ClassifiedFinding[];
+  readonly staleReviews: readonly string[];
+  readonly violations: readonly string[];
+};
+
 function writeReport(
   reportPath: string,
-  findings: readonly ClassifiedFinding[],
-  blockingFindings: readonly ClassifiedFinding[],
-  configuredSuppressions: readonly ConfiguredSuppression[],
-  violations: readonly string[],
+  {
+    blockingFindings,
+    configuredSuppressions,
+    enforcement,
+    findings,
+    staleReviews,
+    violations,
+  }: PolicyReport,
 ): void {
   mkdirSync(dirname(reportPath), { recursive: true });
   const advisoryFindings = findings.filter((finding) => !isBlockingFinding(finding));
   const lines = [
     "# Dependency Audit Policy",
     "",
+    `- Enforcement: ${enforcement === "enforce" ? "enforce (findings and stale reviews fail)" : "warn (findings and stale reviews are reported; the Release workflow enforces them)"}`,
     `- Blocking findings: ${blockingFindings.length}`,
     `- Advisory findings: ${advisoryFindings.length}`,
     `- Configured audit suppressions: ${configuredSuppressions.length}`,
+    `- Stale exception reviews: ${staleReviews.length}`,
     `- Policy violations: ${violations.length}`,
     "",
   ];
 
   if (violations.length > 0) {
     lines.push("## Policy Violations", "", ...violations.map((violation) => `- ${violation}`), "");
+  }
+  if (staleReviews.length > 0) {
+    lines.push(
+      "## Stale Exception Reviews",
+      "",
+      ...staleReviews.map((review) => `- ${review}`),
+      "",
+    );
   }
   lines.push(
     "## Findings",
@@ -1499,13 +1563,38 @@ function isValidDate(value: string): boolean {
   return /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(Date.parse(`${value}T00:00:00Z`));
 }
 
+function describeReleaseBlockers(result: PolicyResult): readonly string[] {
+  return [
+    ...result.violations,
+    ...result.blockingFindings.map(
+      (finding) =>
+        `${displayAdvisoryId(finding.advisory)} ${finding.advisory.module_name ?? "unknown"} via ${finding.path} is a ${finding.advisory.severity ?? "unknown"} finding with ${finding.metadataStatus} review metadata.`,
+    ),
+    ...result.staleReviews.map((review) => `${review}.`),
+  ];
+}
+
+function writeDeferredWarnings(result: PolicyResult): void {
+  reportDeferredSecurityFindings("Dependency audit policy", describeReleaseBlockers(result));
+  stdout.write(
+    result.blockingFindings.length + result.staleReviews.length === 0
+      ? "dependency-audit-policy: passed\n"
+      : `dependency-audit-policy: passed with deferred release blockers blocking=${result.blockingFindings.length} stale=${result.staleReviews.length}\n`,
+  );
+}
+
 function main(): void {
   try {
     const result = runDependencyAuditPolicy(parseArgs(argv.slice(2)));
     stdout.write(`dependency-audit-policy: wrote ${relative(process.cwd(), result.reportPath)}\n`);
-    if (result.exitCode === 0) {
+    if (result.exitCode === 0 && result.enforcement === "warn") {
+      writeDeferredWarnings(result);
+    } else if (result.exitCode === 0) {
       stdout.write("dependency-audit-policy: passed\n");
     } else {
+      for (const line of describeReleaseBlockers(result)) {
+        stdout.write(`- ${line}\n`);
+      }
       stdout.write(
         `dependency-audit-policy: failed blocking=${result.blockingFindings.length} violations=${result.violations.length}\n`,
       );
